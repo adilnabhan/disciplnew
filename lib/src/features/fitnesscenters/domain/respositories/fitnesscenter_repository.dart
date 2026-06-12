@@ -18,6 +18,15 @@ final class FitnesscenterRepository {
 
   final Dio _dio = DioClient().dio;
 
+  Options get _options {
+    final token = Feggy.read<AppCubit>()?.state.currentUser?.access;
+    final options = Options(headers: {'X-Platform': platformSource});
+    if (token != null && token.isNotEmpty) {
+      return options.token;
+    }
+    return options;
+  }
+
   /// Helper for map-based responses
   Either<ApiException, T> _handleMapResponse<T>(
     Response<dynamic> res,
@@ -56,11 +65,15 @@ final class FitnesscenterRepository {
       return await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterDetails(id),
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
         ),
         onSuccess:
-            (res) =>
-                _handleMapResponse(res, FitnesscenterDetailsModel.fromJson),
+            (res) => _handleMapResponse(res, (json) {
+              if (json.containsKey('data') && json['data'] is Map<String, dynamic>) {
+                return FitnesscenterDetailsModel.fromJson(json['data'] as Map<String, dynamic>);
+              }
+              return FitnesscenterDetailsModel.fromJson(json);
+            }),
       );
     } on ApiException catch (e) {
       return left(e);
@@ -81,7 +94,7 @@ final class FitnesscenterRepository {
       return await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterMembershipPlans(id),
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
         ),
         onSuccess:
             (res) => _handleListResponse(
@@ -113,7 +126,7 @@ final class FitnesscenterRepository {
       return await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterCategories,
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
           queryParameters: queryParameters,
         ),
         onSuccess:
@@ -146,8 +159,8 @@ final class FitnesscenterRepository {
       return await Feggy.async(
         call: _dio.get<dynamic>(
           nextUrl ?? ApiUris.listFitnesscenter,
-          options: Options(headers: {'X-Platform': platformSource}).token,
-          queryParameters: queryParameters,
+          options: _options,
+          queryParameters: nextUrl != null ? null : queryParameters,
         ),
         onSuccess:
             (res) => _handleMapResponse(res, ListFitnesscenterModel.fromJson),

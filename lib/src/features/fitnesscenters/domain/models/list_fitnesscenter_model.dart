@@ -21,16 +21,20 @@ class SingleFItnessCenterModel with _$SingleFItnessCenterModel {
   const factory SingleFItnessCenterModel({
     @JsonKey(name: 'id') int? id,
     @JsonKey(name: 'name') String? name,
-    @JsonKey(name: 'logo') String? logo,
     @JsonKey(name: 'description') String? description,
-    @JsonKey(name: 'phone_number') String? phoneNumber,
     @JsonKey(name: 'email') String? email,
+    @JsonKey(name: 'phone_number') String? phoneNumber,
+    @JsonKey(name: 'logo') String? logo,
+    @JsonKey(name: 'slug') String? slug,
+    @JsonKey(name: 'active') bool? active,
+    @JsonKey(name: 'is_public') bool? isPublic,
+    @JsonKey(name: 'registration_status') String? registrationStatus,
+    @JsonKey(name: 'categories') List<Category>? categories,
     @JsonKey(name: 'location') Location? location,
-    @JsonKey(name: 'category') List<Category>? category,
-    @JsonKey(name: 'services') List<Service>? services,
-    @JsonKey(name: 'average_rating') double? averageRating,
+    @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
-    @JsonKey(name: 'is_slot_available') bool? isSlotAvailable,
+    @JsonKey(name: 'average_rating') double? averageRating,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _SingleFItnessCenterModel;
 
   factory SingleFItnessCenterModel.fromJson(Map<String, dynamic> json) => _$SingleFItnessCenterModelFromJson(json);
@@ -38,14 +42,10 @@ class SingleFItnessCenterModel with _$SingleFItnessCenterModel {
 
 @freezed
 class Category with _$Category {
-  const factory Category({@JsonKey(name: 'id') int? id, @JsonKey(name: 'name') String? name}) = _Category;
+  const factory Category({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'name') String? name,
+  }) = _Category;
 
   factory Category.fromJson(Map<String, dynamic> json) => _$CategoryFromJson(json);
-}
-
-@freezed
-class Service with _$Service {
-  const factory Service({@JsonKey(name: 'name') String? name}) = _Service;
-
-  factory Service.fromJson(Map<String, dynamic> json) => _$ServiceFromJson(json);
 }

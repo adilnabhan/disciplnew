@@ -16,6 +16,7 @@ class _AppViewState extends State<AppView> {
   void initState() {
     super.initState();
     _cubit = AppCubit();
+    DioClient().registerAuthInterceptor(_cubit);
 
     /// 🔥 IMPORTANT: wait until HydratedCubit restores state
     WidgetsBinding.instance.addPostFrameCallback((_) {

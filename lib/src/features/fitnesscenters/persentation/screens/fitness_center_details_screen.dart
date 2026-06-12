@@ -537,11 +537,6 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
   }
 
   Widget _buildTagsAndLocationCard(FitnesscenterDetailsModel details) {
-    final services = (details.services ?? [])
-        .where((e) => e['name'] != null)
-        .map((e) => '${e['name']}'.pascalCase)
-        .toList();
-
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -551,21 +546,13 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (services.isNotEmpty) ...[
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: services.map((label) => _buildTagChip(label)).toList(),
-            ),
-            const SizedBox(height: 16),
-          ],
           Row(
             children: [
               const Icon(Icons.location_on_outlined, color: Colors.green, size: 16),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  '${_buildLocationString(details.location) ?? 'Location N/A'}${details.distanceKm != null ? ' | ${details.distanceKm} kms away' : ''}',
+                  '${_buildLocationString(details.location) ?? 'Location N/A'}',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -981,8 +968,6 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                       _buildTimeSlotSection('Morning', morningStart, morningEnd),
                       const SizedBox(height: 16),
                       _buildTimeSlotSection('Evening', eveningStart, eveningEnd),
-                      const SizedBox(height: 16),
-                      _buildTimeSlotSection('Ladies Batch Evening', '04:00 PM', '07:00 PM'),
                     ],
                   );
                 },

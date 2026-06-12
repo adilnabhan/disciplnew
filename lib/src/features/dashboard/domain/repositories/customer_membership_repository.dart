@@ -46,12 +46,8 @@ final class CustomerMembershipRepository {
         onSuccess:
             (res) => _handleMapResponse(res, ActiveMembershipModel.fromJson),
         customHandler: (e) {
-          if (e.response?.statusCode == 404 &&
-              (e.response?.data is Map) &&
-              (e.response?.data as Map<String, dynamic>)['detail']
-                  .toString()
-                  .toLowerCase()
-                  .contains('no active membership')) {
+          debugPrint("activeMembership customHandler: statusCode=${e.response?.statusCode}, data=${e.response?.data}");
+          if (e.response?.statusCode == 404) {
             return const ApiException.notFound(
               msg: 'No active membership found',
             );
@@ -60,7 +56,7 @@ final class CustomerMembershipRepository {
         },
       );
     } on ApiException catch (e) {
-      if (e.msg == 'No active membership found') {
+      if (e.msg.toString().toLowerCase().contains('no active membership')) {
         return right(null);
       }
       return left(e);

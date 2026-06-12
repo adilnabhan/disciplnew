@@ -837,31 +837,7 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(left:10,top: 20,bottom: 10), // 👈 Adjust vertical padding here
                 child: AppBar(
-                  leading: Padding(
-                    padding: const EdgeInsets.only(left: 10),
-                    child: InkWell(
-                      onTap: () {
-                        if (Navigator.canPop(context)) {
-                          Navigator.pop(context);
-                        }
-                      },
-                      customBorder: const CircleBorder(),
-                      child: Container(
-                        width: 46,
-                        height: 46,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: SvgPicture.asset(
-                          'assets/images/svg/icons/back_button.svg',
-                          width: 32,
-                          height: 32,
-                        ),
-                      ),
-                    ),
-                  ),
+                  leading: const PopButton().center,
                   title: const Text('Other Details'),
                   toolbarHeight: 50, // Height of the AppBar content
                 ),

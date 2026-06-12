@@ -38,6 +38,7 @@ class DashboardCubit extends Cubit<DashboardState> {
       final response = await CustomerMembershipRepository().activeMembership(
         id: id,
       );
+      print('DashboardCubit: activeMembership response: $response');
       emit(state.copyWith(activeMembershipData: some(response)));
     }
   }

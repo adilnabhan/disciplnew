@@ -10,19 +10,15 @@ class FitnessCenterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Build location string
-    String locationText = '';
+    String locationText = 'Location N/A';
     if (fitnessCenter.location != null) {
       final loc = fitnessCenter.location!;
-      if (loc.street?.isNotEmpty ?? false) {
-        locationText = loc.street!;
-      } else if (loc.city?.isNotEmpty ?? false) {
-        locationText = loc.city!;
+      final parts = [loc.street, loc.city];
+      final validParts = parts.where((e) => e != null && e.toString().isNotEmpty).toList();
+      if (validParts.isNotEmpty) {
+        locationText = validParts.join(', ');
       }
     }
-    if (locationText.isEmpty) {
-      locationText = 'Pudussery';
-    }
-    locationText = "$locationText | 5 Kms away";
 
     return InkWell(
       onTap: () {
@@ -123,89 +119,49 @@ class FitnessCenterTile extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            final phone = fitnessCenter.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
-                            if (phone.isNotEmpty) {
-                              final message = Uri.encodeComponent("Hi, I want to enquire about ${fitnessCenter.name ?? 'the fitness center'}.");
-                              final waUrl = Uri.parse('https://wa.me/$phone?text=$message');
-                              if (await canLaunchUrl(waUrl)) {
-                                await launchUrl(waUrl);
-                              } else {
-                                await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
-                              }
-                            } else {
-                              await Dialogs.showSnack(msg: 'WhatsApp number not available');
-                            }
-                          },
-                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SvgPicture.asset(
-                                  'assets/images/svg/icons/whatsapp_logo.svg',
-                                  width: 18,
-                                  height: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Enquire',
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                    // Enquire via WhatsApp
+                    GestureDetector(
+                      onTap: () async {
+                        final phone = fitnessCenter.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
+                        if (phone.isNotEmpty) {
+                          final message = Uri.encodeComponent("Hi, I want to enquire about ${fitnessCenter.name ?? 'the fitness center'}.");
+                          final waUrl = Uri.parse('https://wa.me/$phone?text=$message');
+                          if (await canLaunchUrl(waUrl)) {
+                            await launchUrl(waUrl);
+                          } else {
+                            await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
+                          }
+                        } else {
+                          await Dialogs.showSnack(msg: 'WhatsApp number not available');
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
-                              Icons.star_rounded,
-                              color: Color(0xFFF2C94C),
-                              size: 16,
+                            SvgPicture.asset(
+                              'assets/images/svg/icons/whatsapp_logo.svg',
+                              width: 18,
+                              height: 18,
                             ),
-                            const SizedBox(width: 3),
-                            RichText(
-                              text: TextSpan(
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 12,
-                                  color: Color(0xFF222222),
-                                ),
-                                children: [
-                                  TextSpan(
-                                    text: '${(fitnessCenter.averageRating ?? 0.0) == 0.0 ? 4.5 : fitnessCenter.averageRating}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF222222),
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: '(${(fitnessCenter.reviewCount ?? 0) == 0 ? 128 : fitnessCenter.reviewCount})',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF666666),
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(width: 6),
+                            const Text(
+                              'Enquire',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
                               ),
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
@@ -218,7 +174,7 @@ class FitnessCenterTile extends StatelessWidget {
   }
 
   Widget _buildCategoryTags() {
-    final categories = fitnessCenter.category ?? [];
+    final categories = fitnessCenter.categories ?? [];
     if (categories.isEmpty) return const SizedBox.shrink();
 
     final visibleCategories = categories.take(2).toList();

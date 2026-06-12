@@ -167,22 +167,6 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                 ],
               ),
             ),
-
-            // Bottom Finish Button Container
-            Padding(
-              padding: const EdgeInsets.only(
-                left: 20,
-                right: 20,
-                bottom: 24,
-                top: 12,
-              ),
-              child: PrimaryPillButton(
-                text: 'Finish',
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-            ),
           ],
         ),
       ),
@@ -542,53 +526,8 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
             );
           }),
 
-          const SizedBox(height: 16),
-
-          // Add a Set Button inside the card
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-            child: _buildOutlineRedButton(
-              text: '+ Add a Set',
-              onTap: () => _addSet(exerciseIndex),
-            ),
-          ),
+          const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
-
-  Widget _buildOutlineRedButton({
-    required String text,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: 34,
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFF4F4),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFF0B5B7), width: 1.0),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x12000000),
-              offset: Offset(0, 1),
-              blurRadius: 5.3,
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: AppColors.primary,
-            ),
-          ),
-        ),
       ),
     );
   }

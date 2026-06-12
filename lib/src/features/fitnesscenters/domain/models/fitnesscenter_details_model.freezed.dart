@@ -33,30 +33,44 @@ mixin _$FitnesscenterDetailsModel {
   String? get email => throw _privateConstructorUsedError;
   @JsonKey(name: 'phone_number')
   String? get phoneNumber => throw _privateConstructorUsedError;
-  @JsonKey(name: 'logo')
-  String? get logo => throw _privateConstructorUsedError;
-  @JsonKey(name: 'categories')
-  List<Amenity>? get categories => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_public')
+  bool? get isPublic => throw _privateConstructorUsedError;
+  @JsonKey(name: 'active')
+  bool? get active => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_subscribed')
+  bool? get isSubscribed => throw _privateConstructorUsedError;
+  @JsonKey(name: 'take_free_trial')
+  bool? get takeFreeTrial => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_on_free_trial')
+  bool? get isOnFreeTrial => throw _privateConstructorUsedError;
   @JsonKey(name: 'location')
   Location? get location => throw _privateConstructorUsedError;
-  @JsonKey(name: 'distance_km')
-  dynamic get distanceKm => throw _privateConstructorUsedError;
-  @JsonKey(name: 'social_media')
-  List<SocialMedia>? get socialMedia => throw _privateConstructorUsedError;
-  @JsonKey(name: 'services')
-  List<dynamic>? get services => throw _privateConstructorUsedError;
   @JsonKey(name: 'working_days')
   List<WorkingDay>? get workingDays => throw _privateConstructorUsedError;
+  @JsonKey(name: 'time_slots')
+  List<dynamic>? get timeSlots => throw _privateConstructorUsedError;
+  @JsonKey(name: 'social_media')
+  List<SocialMedia>? get socialMedia => throw _privateConstructorUsedError;
   @JsonKey(name: 'amenities')
   List<Amenity>? get amenities => throw _privateConstructorUsedError;
+  @JsonKey(name: 'categories')
+  List<Amenity>? get categories => throw _privateConstructorUsedError;
   @JsonKey(name: 'photos')
   List<Photo>? get photos => throw _privateConstructorUsedError;
   @JsonKey(name: 'packages')
   List<Package>? get packages => throw _privateConstructorUsedError;
+  @JsonKey(name: 'subscription_details')
+  dynamic get subscriptionDetails => throw _privateConstructorUsedError;
+  @JsonKey(name: 'birthday_wish_message')
+  dynamic get birthdayWishMessage => throw _privateConstructorUsedError;
+  @JsonKey(name: 'anniversary_wish_message')
+  dynamic get anniversaryWishMessage => throw _privateConstructorUsedError;
+  @JsonKey(name: 'logo')
+  String? get logo => throw _privateConstructorUsedError;
   @JsonKey(name: 'review_count')
   int? get reviewCount => throw _privateConstructorUsedError;
   @JsonKey(name: 'average_rating')
-  int? get averageRating => throw _privateConstructorUsedError;
+  dynamic get averageRating => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_slot_available')
   bool? get isSlotAvailable => throw _privateConstructorUsedError;
 
@@ -83,18 +97,25 @@ abstract class $FitnesscenterDetailsModelCopyWith<$Res> {
     @JsonKey(name: 'description') String? description,
     @JsonKey(name: 'email') String? email,
     @JsonKey(name: 'phone_number') String? phoneNumber,
-    @JsonKey(name: 'logo') String? logo,
-    @JsonKey(name: 'categories') List<Amenity>? categories,
+    @JsonKey(name: 'is_public') bool? isPublic,
+    @JsonKey(name: 'active') bool? active,
+    @JsonKey(name: 'is_subscribed') bool? isSubscribed,
+    @JsonKey(name: 'take_free_trial') bool? takeFreeTrial,
+    @JsonKey(name: 'is_on_free_trial') bool? isOnFreeTrial,
     @JsonKey(name: 'location') Location? location,
-    @JsonKey(name: 'distance_km') dynamic distanceKm,
-    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
-    @JsonKey(name: 'services') List<dynamic>? services,
     @JsonKey(name: 'working_days') List<WorkingDay>? workingDays,
+    @JsonKey(name: 'time_slots') List<dynamic>? timeSlots,
+    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
     @JsonKey(name: 'amenities') List<Amenity>? amenities,
+    @JsonKey(name: 'categories') List<Amenity>? categories,
     @JsonKey(name: 'photos') List<Photo>? photos,
     @JsonKey(name: 'packages') List<Package>? packages,
+    @JsonKey(name: 'subscription_details') dynamic subscriptionDetails,
+    @JsonKey(name: 'birthday_wish_message') dynamic birthdayWishMessage,
+    @JsonKey(name: 'anniversary_wish_message') dynamic anniversaryWishMessage,
+    @JsonKey(name: 'logo') String? logo,
     @JsonKey(name: 'review_count') int? reviewCount,
-    @JsonKey(name: 'average_rating') int? averageRating,
+    @JsonKey(name: 'average_rating') dynamic averageRating,
     @JsonKey(name: 'is_slot_available') bool? isSlotAvailable,
   });
 
@@ -124,16 +145,23 @@ class _$FitnesscenterDetailsModelCopyWithImpl<
     Object? description = freezed,
     Object? email = freezed,
     Object? phoneNumber = freezed,
-    Object? logo = freezed,
-    Object? categories = freezed,
+    Object? isPublic = freezed,
+    Object? active = freezed,
+    Object? isSubscribed = freezed,
+    Object? takeFreeTrial = freezed,
+    Object? isOnFreeTrial = freezed,
     Object? location = freezed,
-    Object? distanceKm = freezed,
-    Object? socialMedia = freezed,
-    Object? services = freezed,
     Object? workingDays = freezed,
+    Object? timeSlots = freezed,
+    Object? socialMedia = freezed,
     Object? amenities = freezed,
+    Object? categories = freezed,
     Object? photos = freezed,
     Object? packages = freezed,
+    Object? subscriptionDetails = freezed,
+    Object? birthdayWishMessage = freezed,
+    Object? anniversaryWishMessage = freezed,
+    Object? logo = freezed,
     Object? reviewCount = freezed,
     Object? averageRating = freezed,
     Object? isSlotAvailable = freezed,
@@ -165,45 +193,60 @@ class _$FitnesscenterDetailsModelCopyWithImpl<
                     ? _value.phoneNumber
                     : phoneNumber // ignore: cast_nullable_to_non_nullable
                         as String?,
-            logo:
-                freezed == logo
-                    ? _value.logo
-                    : logo // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            categories:
-                freezed == categories
-                    ? _value.categories
-                    : categories // ignore: cast_nullable_to_non_nullable
-                        as List<Amenity>?,
+            isPublic:
+                freezed == isPublic
+                    ? _value.isPublic
+                    : isPublic // ignore: cast_nullable_to_non_nullable
+                        as bool?,
+            active:
+                freezed == active
+                    ? _value.active
+                    : active // ignore: cast_nullable_to_non_nullable
+                        as bool?,
+            isSubscribed:
+                freezed == isSubscribed
+                    ? _value.isSubscribed
+                    : isSubscribed // ignore: cast_nullable_to_non_nullable
+                        as bool?,
+            takeFreeTrial:
+                freezed == takeFreeTrial
+                    ? _value.takeFreeTrial
+                    : takeFreeTrial // ignore: cast_nullable_to_non_nullable
+                        as bool?,
+            isOnFreeTrial:
+                freezed == isOnFreeTrial
+                    ? _value.isOnFreeTrial
+                    : isOnFreeTrial // ignore: cast_nullable_to_non_nullable
+                        as bool?,
             location:
                 freezed == location
                     ? _value.location
                     : location // ignore: cast_nullable_to_non_nullable
                         as Location?,
-            distanceKm:
-                freezed == distanceKm
-                    ? _value.distanceKm
-                    : distanceKm // ignore: cast_nullable_to_non_nullable
-                        as dynamic,
-            socialMedia:
-                freezed == socialMedia
-                    ? _value.socialMedia
-                    : socialMedia // ignore: cast_nullable_to_non_nullable
-                        as List<SocialMedia>?,
-            services:
-                freezed == services
-                    ? _value.services
-                    : services // ignore: cast_nullable_to_non_nullable
-                        as List<dynamic>?,
             workingDays:
                 freezed == workingDays
                     ? _value.workingDays
                     : workingDays // ignore: cast_nullable_to_non_nullable
                         as List<WorkingDay>?,
+            timeSlots:
+                freezed == timeSlots
+                    ? _value.timeSlots
+                    : timeSlots // ignore: cast_nullable_to_non_nullable
+                        as List<dynamic>?,
+            socialMedia:
+                freezed == socialMedia
+                    ? _value.socialMedia
+                    : socialMedia // ignore: cast_nullable_to_non_nullable
+                        as List<SocialMedia>?,
             amenities:
                 freezed == amenities
                     ? _value.amenities
                     : amenities // ignore: cast_nullable_to_non_nullable
+                        as List<Amenity>?,
+            categories:
+                freezed == categories
+                    ? _value.categories
+                    : categories // ignore: cast_nullable_to_non_nullable
                         as List<Amenity>?,
             photos:
                 freezed == photos
@@ -215,6 +258,26 @@ class _$FitnesscenterDetailsModelCopyWithImpl<
                     ? _value.packages
                     : packages // ignore: cast_nullable_to_non_nullable
                         as List<Package>?,
+            subscriptionDetails:
+                freezed == subscriptionDetails
+                    ? _value.subscriptionDetails
+                    : subscriptionDetails // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            birthdayWishMessage:
+                freezed == birthdayWishMessage
+                    ? _value.birthdayWishMessage
+                    : birthdayWishMessage // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            anniversaryWishMessage:
+                freezed == anniversaryWishMessage
+                    ? _value.anniversaryWishMessage
+                    : anniversaryWishMessage // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            logo:
+                freezed == logo
+                    ? _value.logo
+                    : logo // ignore: cast_nullable_to_non_nullable
+                        as String?,
             reviewCount:
                 freezed == reviewCount
                     ? _value.reviewCount
@@ -224,7 +287,7 @@ class _$FitnesscenterDetailsModelCopyWithImpl<
                 freezed == averageRating
                     ? _value.averageRating
                     : averageRating // ignore: cast_nullable_to_non_nullable
-                        as int?,
+                        as dynamic,
             isSlotAvailable:
                 freezed == isSlotAvailable
                     ? _value.isSlotAvailable
@@ -265,18 +328,25 @@ abstract class _$$FitnesscenterDetailsModelImplCopyWith<$Res>
     @JsonKey(name: 'description') String? description,
     @JsonKey(name: 'email') String? email,
     @JsonKey(name: 'phone_number') String? phoneNumber,
-    @JsonKey(name: 'logo') String? logo,
-    @JsonKey(name: 'categories') List<Amenity>? categories,
+    @JsonKey(name: 'is_public') bool? isPublic,
+    @JsonKey(name: 'active') bool? active,
+    @JsonKey(name: 'is_subscribed') bool? isSubscribed,
+    @JsonKey(name: 'take_free_trial') bool? takeFreeTrial,
+    @JsonKey(name: 'is_on_free_trial') bool? isOnFreeTrial,
     @JsonKey(name: 'location') Location? location,
-    @JsonKey(name: 'distance_km') dynamic distanceKm,
-    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
-    @JsonKey(name: 'services') List<dynamic>? services,
     @JsonKey(name: 'working_days') List<WorkingDay>? workingDays,
+    @JsonKey(name: 'time_slots') List<dynamic>? timeSlots,
+    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
     @JsonKey(name: 'amenities') List<Amenity>? amenities,
+    @JsonKey(name: 'categories') List<Amenity>? categories,
     @JsonKey(name: 'photos') List<Photo>? photos,
     @JsonKey(name: 'packages') List<Package>? packages,
+    @JsonKey(name: 'subscription_details') dynamic subscriptionDetails,
+    @JsonKey(name: 'birthday_wish_message') dynamic birthdayWishMessage,
+    @JsonKey(name: 'anniversary_wish_message') dynamic anniversaryWishMessage,
+    @JsonKey(name: 'logo') String? logo,
     @JsonKey(name: 'review_count') int? reviewCount,
-    @JsonKey(name: 'average_rating') int? averageRating,
+    @JsonKey(name: 'average_rating') dynamic averageRating,
     @JsonKey(name: 'is_slot_available') bool? isSlotAvailable,
   });
 
@@ -307,16 +377,23 @@ class __$$FitnesscenterDetailsModelImplCopyWithImpl<$Res>
     Object? description = freezed,
     Object? email = freezed,
     Object? phoneNumber = freezed,
-    Object? logo = freezed,
-    Object? categories = freezed,
+    Object? isPublic = freezed,
+    Object? active = freezed,
+    Object? isSubscribed = freezed,
+    Object? takeFreeTrial = freezed,
+    Object? isOnFreeTrial = freezed,
     Object? location = freezed,
-    Object? distanceKm = freezed,
-    Object? socialMedia = freezed,
-    Object? services = freezed,
     Object? workingDays = freezed,
+    Object? timeSlots = freezed,
+    Object? socialMedia = freezed,
     Object? amenities = freezed,
+    Object? categories = freezed,
     Object? photos = freezed,
     Object? packages = freezed,
+    Object? subscriptionDetails = freezed,
+    Object? birthdayWishMessage = freezed,
+    Object? anniversaryWishMessage = freezed,
+    Object? logo = freezed,
     Object? reviewCount = freezed,
     Object? averageRating = freezed,
     Object? isSlotAvailable = freezed,
@@ -348,45 +425,60 @@ class __$$FitnesscenterDetailsModelImplCopyWithImpl<$Res>
                 ? _value.phoneNumber
                 : phoneNumber // ignore: cast_nullable_to_non_nullable
                     as String?,
-        logo:
-            freezed == logo
-                ? _value.logo
-                : logo // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        categories:
-            freezed == categories
-                ? _value._categories
-                : categories // ignore: cast_nullable_to_non_nullable
-                    as List<Amenity>?,
+        isPublic:
+            freezed == isPublic
+                ? _value.isPublic
+                : isPublic // ignore: cast_nullable_to_non_nullable
+                    as bool?,
+        active:
+            freezed == active
+                ? _value.active
+                : active // ignore: cast_nullable_to_non_nullable
+                    as bool?,
+        isSubscribed:
+            freezed == isSubscribed
+                ? _value.isSubscribed
+                : isSubscribed // ignore: cast_nullable_to_non_nullable
+                    as bool?,
+        takeFreeTrial:
+            freezed == takeFreeTrial
+                ? _value.takeFreeTrial
+                : takeFreeTrial // ignore: cast_nullable_to_non_nullable
+                    as bool?,
+        isOnFreeTrial:
+            freezed == isOnFreeTrial
+                ? _value.isOnFreeTrial
+                : isOnFreeTrial // ignore: cast_nullable_to_non_nullable
+                    as bool?,
         location:
             freezed == location
                 ? _value.location
                 : location // ignore: cast_nullable_to_non_nullable
                     as Location?,
-        distanceKm:
-            freezed == distanceKm
-                ? _value.distanceKm
-                : distanceKm // ignore: cast_nullable_to_non_nullable
-                    as dynamic,
-        socialMedia:
-            freezed == socialMedia
-                ? _value._socialMedia
-                : socialMedia // ignore: cast_nullable_to_non_nullable
-                    as List<SocialMedia>?,
-        services:
-            freezed == services
-                ? _value._services
-                : services // ignore: cast_nullable_to_non_nullable
-                    as List<dynamic>?,
         workingDays:
             freezed == workingDays
                 ? _value._workingDays
                 : workingDays // ignore: cast_nullable_to_non_nullable
                     as List<WorkingDay>?,
+        timeSlots:
+            freezed == timeSlots
+                ? _value._timeSlots
+                : timeSlots // ignore: cast_nullable_to_non_nullable
+                    as List<dynamic>?,
+        socialMedia:
+            freezed == socialMedia
+                ? _value._socialMedia
+                : socialMedia // ignore: cast_nullable_to_non_nullable
+                    as List<SocialMedia>?,
         amenities:
             freezed == amenities
                 ? _value._amenities
                 : amenities // ignore: cast_nullable_to_non_nullable
+                    as List<Amenity>?,
+        categories:
+            freezed == categories
+                ? _value._categories
+                : categories // ignore: cast_nullable_to_non_nullable
                     as List<Amenity>?,
         photos:
             freezed == photos
@@ -398,6 +490,26 @@ class __$$FitnesscenterDetailsModelImplCopyWithImpl<$Res>
                 ? _value._packages
                 : packages // ignore: cast_nullable_to_non_nullable
                     as List<Package>?,
+        subscriptionDetails:
+            freezed == subscriptionDetails
+                ? _value.subscriptionDetails
+                : subscriptionDetails // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        birthdayWishMessage:
+            freezed == birthdayWishMessage
+                ? _value.birthdayWishMessage
+                : birthdayWishMessage // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        anniversaryWishMessage:
+            freezed == anniversaryWishMessage
+                ? _value.anniversaryWishMessage
+                : anniversaryWishMessage // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        logo:
+            freezed == logo
+                ? _value.logo
+                : logo // ignore: cast_nullable_to_non_nullable
+                    as String?,
         reviewCount:
             freezed == reviewCount
                 ? _value.reviewCount
@@ -407,7 +519,7 @@ class __$$FitnesscenterDetailsModelImplCopyWithImpl<$Res>
             freezed == averageRating
                 ? _value.averageRating
                 : averageRating // ignore: cast_nullable_to_non_nullable
-                    as int?,
+                    as dynamic,
         isSlotAvailable:
             freezed == isSlotAvailable
                 ? _value.isSlotAvailable
@@ -427,24 +539,31 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
     @JsonKey(name: 'description') this.description,
     @JsonKey(name: 'email') this.email,
     @JsonKey(name: 'phone_number') this.phoneNumber,
-    @JsonKey(name: 'logo') this.logo,
-    @JsonKey(name: 'categories') final List<Amenity>? categories,
+    @JsonKey(name: 'is_public') this.isPublic,
+    @JsonKey(name: 'active') this.active,
+    @JsonKey(name: 'is_subscribed') this.isSubscribed,
+    @JsonKey(name: 'take_free_trial') this.takeFreeTrial,
+    @JsonKey(name: 'is_on_free_trial') this.isOnFreeTrial,
     @JsonKey(name: 'location') this.location,
-    @JsonKey(name: 'distance_km') this.distanceKm,
-    @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
-    @JsonKey(name: 'services') final List<dynamic>? services,
     @JsonKey(name: 'working_days') final List<WorkingDay>? workingDays,
+    @JsonKey(name: 'time_slots') final List<dynamic>? timeSlots,
+    @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
     @JsonKey(name: 'amenities') final List<Amenity>? amenities,
+    @JsonKey(name: 'categories') final List<Amenity>? categories,
     @JsonKey(name: 'photos') final List<Photo>? photos,
     @JsonKey(name: 'packages') final List<Package>? packages,
+    @JsonKey(name: 'subscription_details') this.subscriptionDetails,
+    @JsonKey(name: 'birthday_wish_message') this.birthdayWishMessage,
+    @JsonKey(name: 'anniversary_wish_message') this.anniversaryWishMessage,
+    @JsonKey(name: 'logo') this.logo,
     @JsonKey(name: 'review_count') this.reviewCount,
     @JsonKey(name: 'average_rating') this.averageRating,
     @JsonKey(name: 'is_slot_available') this.isSlotAvailable,
-  }) : _categories = categories,
+  }) : _workingDays = workingDays,
+       _timeSlots = timeSlots,
        _socialMedia = socialMedia,
-       _services = services,
-       _workingDays = workingDays,
        _amenities = amenities,
+       _categories = categories,
        _photos = photos,
        _packages = packages;
 
@@ -467,47 +586,23 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
   @JsonKey(name: 'phone_number')
   final String? phoneNumber;
   @override
-  @JsonKey(name: 'logo')
-  final String? logo;
-  final List<Amenity>? _categories;
+  @JsonKey(name: 'is_public')
+  final bool? isPublic;
   @override
-  @JsonKey(name: 'categories')
-  List<Amenity>? get categories {
-    final value = _categories;
-    if (value == null) return null;
-    if (_categories is EqualUnmodifiableListView) return _categories;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(value);
-  }
-
+  @JsonKey(name: 'active')
+  final bool? active;
+  @override
+  @JsonKey(name: 'is_subscribed')
+  final bool? isSubscribed;
+  @override
+  @JsonKey(name: 'take_free_trial')
+  final bool? takeFreeTrial;
+  @override
+  @JsonKey(name: 'is_on_free_trial')
+  final bool? isOnFreeTrial;
   @override
   @JsonKey(name: 'location')
   final Location? location;
-  @override
-  @JsonKey(name: 'distance_km')
-  final dynamic distanceKm;
-  final List<SocialMedia>? _socialMedia;
-  @override
-  @JsonKey(name: 'social_media')
-  List<SocialMedia>? get socialMedia {
-    final value = _socialMedia;
-    if (value == null) return null;
-    if (_socialMedia is EqualUnmodifiableListView) return _socialMedia;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(value);
-  }
-
-  final List<dynamic>? _services;
-  @override
-  @JsonKey(name: 'services')
-  List<dynamic>? get services {
-    final value = _services;
-    if (value == null) return null;
-    if (_services is EqualUnmodifiableListView) return _services;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(value);
-  }
-
   final List<WorkingDay>? _workingDays;
   @override
   @JsonKey(name: 'working_days')
@@ -519,6 +614,28 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
     return EqualUnmodifiableListView(value);
   }
 
+  final List<dynamic>? _timeSlots;
+  @override
+  @JsonKey(name: 'time_slots')
+  List<dynamic>? get timeSlots {
+    final value = _timeSlots;
+    if (value == null) return null;
+    if (_timeSlots is EqualUnmodifiableListView) return _timeSlots;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  final List<SocialMedia>? _socialMedia;
+  @override
+  @JsonKey(name: 'social_media')
+  List<SocialMedia>? get socialMedia {
+    final value = _socialMedia;
+    if (value == null) return null;
+    if (_socialMedia is EqualUnmodifiableListView) return _socialMedia;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   final List<Amenity>? _amenities;
   @override
   @JsonKey(name: 'amenities')
@@ -526,6 +643,17 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
     final value = _amenities;
     if (value == null) return null;
     if (_amenities is EqualUnmodifiableListView) return _amenities;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  final List<Amenity>? _categories;
+  @override
+  @JsonKey(name: 'categories')
+  List<Amenity>? get categories {
+    final value = _categories;
+    if (value == null) return null;
+    if (_categories is EqualUnmodifiableListView) return _categories;
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(value);
   }
@@ -553,18 +681,30 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
   }
 
   @override
+  @JsonKey(name: 'subscription_details')
+  final dynamic subscriptionDetails;
+  @override
+  @JsonKey(name: 'birthday_wish_message')
+  final dynamic birthdayWishMessage;
+  @override
+  @JsonKey(name: 'anniversary_wish_message')
+  final dynamic anniversaryWishMessage;
+  @override
+  @JsonKey(name: 'logo')
+  final String? logo;
+  @override
   @JsonKey(name: 'review_count')
   final int? reviewCount;
   @override
   @JsonKey(name: 'average_rating')
-  final int? averageRating;
+  final dynamic averageRating;
   @override
   @JsonKey(name: 'is_slot_available')
   final bool? isSlotAvailable;
 
   @override
   String toString() {
-    return 'FitnesscenterDetailsModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, categories: $categories, location: $location, distanceKm: $distanceKm, socialMedia: $socialMedia, services: $services, workingDays: $workingDays, amenities: $amenities, photos: $photos, packages: $packages, reviewCount: $reviewCount, averageRating: $averageRating, isSlotAvailable: $isSlotAvailable)';
+    return 'FitnesscenterDetailsModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, isPublic: $isPublic, active: $active, isSubscribed: $isSubscribed, takeFreeTrial: $takeFreeTrial, isOnFreeTrial: $isOnFreeTrial, location: $location, workingDays: $workingDays, timeSlots: $timeSlots, socialMedia: $socialMedia, amenities: $amenities, categories: $categories, photos: $photos, packages: $packages, subscriptionDetails: $subscriptionDetails, birthdayWishMessage: $birthdayWishMessage, anniversaryWishMessage: $anniversaryWishMessage, logo: $logo, reviewCount: $reviewCount, averageRating: $averageRating, isSlotAvailable: $isSlotAvailable)';
   }
 
   @override
@@ -579,63 +719,92 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
             (identical(other.email, email) || other.email == email) &&
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
-            (identical(other.logo, logo) || other.logo == logo) &&
-            const DeepCollectionEquality().equals(
-              other._categories,
-              _categories,
-            ) &&
+            (identical(other.isPublic, isPublic) ||
+                other.isPublic == isPublic) &&
+            (identical(other.active, active) || other.active == active) &&
+            (identical(other.isSubscribed, isSubscribed) ||
+                other.isSubscribed == isSubscribed) &&
+            (identical(other.takeFreeTrial, takeFreeTrial) ||
+                other.takeFreeTrial == takeFreeTrial) &&
+            (identical(other.isOnFreeTrial, isOnFreeTrial) ||
+                other.isOnFreeTrial == isOnFreeTrial) &&
             (identical(other.location, location) ||
                 other.location == location) &&
-            const DeepCollectionEquality().equals(
-              other.distanceKm,
-              distanceKm,
-            ) &&
-            const DeepCollectionEquality().equals(
-              other._socialMedia,
-              _socialMedia,
-            ) &&
-            const DeepCollectionEquality().equals(other._services, _services) &&
             const DeepCollectionEquality().equals(
               other._workingDays,
               _workingDays,
             ) &&
             const DeepCollectionEquality().equals(
+              other._timeSlots,
+              _timeSlots,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._socialMedia,
+              _socialMedia,
+            ) &&
+            const DeepCollectionEquality().equals(
               other._amenities,
               _amenities,
             ) &&
+            const DeepCollectionEquality().equals(
+              other._categories,
+              _categories,
+            ) &&
             const DeepCollectionEquality().equals(other._photos, _photos) &&
             const DeepCollectionEquality().equals(other._packages, _packages) &&
+            const DeepCollectionEquality().equals(
+              other.subscriptionDetails,
+              subscriptionDetails,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other.birthdayWishMessage,
+              birthdayWishMessage,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other.anniversaryWishMessage,
+              anniversaryWishMessage,
+            ) &&
+            (identical(other.logo, logo) || other.logo == logo) &&
             (identical(other.reviewCount, reviewCount) ||
                 other.reviewCount == reviewCount) &&
-            (identical(other.averageRating, averageRating) ||
-                other.averageRating == averageRating) &&
+            const DeepCollectionEquality().equals(
+              other.averageRating,
+              averageRating,
+            ) &&
             (identical(other.isSlotAvailable, isSlotAvailable) ||
                 other.isSlotAvailable == isSlotAvailable));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     name,
     description,
     email,
     phoneNumber,
-    logo,
-    const DeepCollectionEquality().hash(_categories),
+    isPublic,
+    active,
+    isSubscribed,
+    takeFreeTrial,
+    isOnFreeTrial,
     location,
-    const DeepCollectionEquality().hash(distanceKm),
-    const DeepCollectionEquality().hash(_socialMedia),
-    const DeepCollectionEquality().hash(_services),
     const DeepCollectionEquality().hash(_workingDays),
+    const DeepCollectionEquality().hash(_timeSlots),
+    const DeepCollectionEquality().hash(_socialMedia),
     const DeepCollectionEquality().hash(_amenities),
+    const DeepCollectionEquality().hash(_categories),
     const DeepCollectionEquality().hash(_photos),
     const DeepCollectionEquality().hash(_packages),
+    const DeepCollectionEquality().hash(subscriptionDetails),
+    const DeepCollectionEquality().hash(birthdayWishMessage),
+    const DeepCollectionEquality().hash(anniversaryWishMessage),
+    logo,
     reviewCount,
-    averageRating,
+    const DeepCollectionEquality().hash(averageRating),
     isSlotAvailable,
-  );
+  ]);
 
   /// Create a copy of FitnesscenterDetailsModel
   /// with the given fields replaced by the non-null parameter values.
@@ -660,18 +829,26 @@ abstract class _FitnesscenterDetailsModel implements FitnesscenterDetailsModel {
     @JsonKey(name: 'description') final String? description,
     @JsonKey(name: 'email') final String? email,
     @JsonKey(name: 'phone_number') final String? phoneNumber,
-    @JsonKey(name: 'logo') final String? logo,
-    @JsonKey(name: 'categories') final List<Amenity>? categories,
+    @JsonKey(name: 'is_public') final bool? isPublic,
+    @JsonKey(name: 'active') final bool? active,
+    @JsonKey(name: 'is_subscribed') final bool? isSubscribed,
+    @JsonKey(name: 'take_free_trial') final bool? takeFreeTrial,
+    @JsonKey(name: 'is_on_free_trial') final bool? isOnFreeTrial,
     @JsonKey(name: 'location') final Location? location,
-    @JsonKey(name: 'distance_km') final dynamic distanceKm,
-    @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
-    @JsonKey(name: 'services') final List<dynamic>? services,
     @JsonKey(name: 'working_days') final List<WorkingDay>? workingDays,
+    @JsonKey(name: 'time_slots') final List<dynamic>? timeSlots,
+    @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
     @JsonKey(name: 'amenities') final List<Amenity>? amenities,
+    @JsonKey(name: 'categories') final List<Amenity>? categories,
     @JsonKey(name: 'photos') final List<Photo>? photos,
     @JsonKey(name: 'packages') final List<Package>? packages,
+    @JsonKey(name: 'subscription_details') final dynamic subscriptionDetails,
+    @JsonKey(name: 'birthday_wish_message') final dynamic birthdayWishMessage,
+    @JsonKey(name: 'anniversary_wish_message')
+    final dynamic anniversaryWishMessage,
+    @JsonKey(name: 'logo') final String? logo,
     @JsonKey(name: 'review_count') final int? reviewCount,
-    @JsonKey(name: 'average_rating') final int? averageRating,
+    @JsonKey(name: 'average_rating') final dynamic averageRating,
     @JsonKey(name: 'is_slot_available') final bool? isSlotAvailable,
   }) = _$FitnesscenterDetailsModelImpl;
 
@@ -694,29 +871,38 @@ abstract class _FitnesscenterDetailsModel implements FitnesscenterDetailsModel {
   @JsonKey(name: 'phone_number')
   String? get phoneNumber;
   @override
-  @JsonKey(name: 'logo')
-  String? get logo;
+  @JsonKey(name: 'is_public')
+  bool? get isPublic;
   @override
-  @JsonKey(name: 'categories')
-  List<Amenity>? get categories;
+  @JsonKey(name: 'active')
+  bool? get active;
+  @override
+  @JsonKey(name: 'is_subscribed')
+  bool? get isSubscribed;
+  @override
+  @JsonKey(name: 'take_free_trial')
+  bool? get takeFreeTrial;
+  @override
+  @JsonKey(name: 'is_on_free_trial')
+  bool? get isOnFreeTrial;
   @override
   @JsonKey(name: 'location')
   Location? get location;
   @override
-  @JsonKey(name: 'distance_km')
-  dynamic get distanceKm;
+  @JsonKey(name: 'working_days')
+  List<WorkingDay>? get workingDays;
+  @override
+  @JsonKey(name: 'time_slots')
+  List<dynamic>? get timeSlots;
   @override
   @JsonKey(name: 'social_media')
   List<SocialMedia>? get socialMedia;
   @override
-  @JsonKey(name: 'services')
-  List<dynamic>? get services;
-  @override
-  @JsonKey(name: 'working_days')
-  List<WorkingDay>? get workingDays;
-  @override
   @JsonKey(name: 'amenities')
   List<Amenity>? get amenities;
+  @override
+  @JsonKey(name: 'categories')
+  List<Amenity>? get categories;
   @override
   @JsonKey(name: 'photos')
   List<Photo>? get photos;
@@ -724,11 +910,23 @@ abstract class _FitnesscenterDetailsModel implements FitnesscenterDetailsModel {
   @JsonKey(name: 'packages')
   List<Package>? get packages;
   @override
+  @JsonKey(name: 'subscription_details')
+  dynamic get subscriptionDetails;
+  @override
+  @JsonKey(name: 'birthday_wish_message')
+  dynamic get birthdayWishMessage;
+  @override
+  @JsonKey(name: 'anniversary_wish_message')
+  dynamic get anniversaryWishMessage;
+  @override
+  @JsonKey(name: 'logo')
+  String? get logo;
+  @override
   @JsonKey(name: 'review_count')
   int? get reviewCount;
   @override
   @JsonKey(name: 'average_rating')
-  int? get averageRating;
+  dynamic get averageRating;
   @override
   @JsonKey(name: 'is_slot_available')
   bool? get isSlotAvailable;

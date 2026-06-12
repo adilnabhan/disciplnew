@@ -16,8 +16,13 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
       return;
     }
     emit(state.copyWith(listFitnessCenters: (data: isPagination ? state.listFitnessCenters.data : none(), isPagination: isPagination)));
+    final params = <String, dynamic>{
+      'search': searchQuery ?? state.searchQuery,
+      'category_id': state.selectedCategory?.id,
+    }..removeWhere((key, value) => value == null || (value is String && value.isEmpty));
+
     final response = await FitnesscenterRepository().listFitnesscenter(
-      queryParameters: {'search': searchQuery ?? state.searchQuery, 'category_id': state.selectedCategory?.id},
+      queryParameters: params,
       nextUrl: isPagination ? fitnessCenters?.next : null,
     );
     if (isPagination) {

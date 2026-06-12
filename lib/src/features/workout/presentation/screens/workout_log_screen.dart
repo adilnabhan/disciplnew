@@ -2,7 +2,8 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/completed_badge.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/own_workout_screen.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_plan_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_execution_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
 
 
 class WorkoutLogScreen extends StatefulWidget {
@@ -107,6 +108,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+
     return Scaffold(
       backgroundColor: AppColors.bgcolorgrey,
       appBar: AppBar(
@@ -137,48 +140,54 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 21),
-            _buildMonthNav(),
-            const SizedBox(height: 34),
-            _buildWeekStrip(),
-            const SizedBox(height: 28),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+      body: !isCustomer
+          ? _GuestWorkoutView(
+              onLoginTap: () {
+                context.push(const SentOtpScreen());
+              },
+            )
+          : SafeArea(
+              child: Column(
                 children: [
-                  _WorkoutCard(
-                    index: 1,
-                    title: 'Back\nExercise',
-                    badge: 'Day 3/30',
-                    hasImage: true,
-                    isCompleted: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const Workoutplanscreen(),
+                  const SizedBox(height: 21),
+                  _buildMonthNav(),
+                  const SizedBox(height: 34),
+                  _buildWeekStrip(),
+                  const SizedBox(height: 28),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        _WorkoutCard(
+                          index: 1,
+                          title: 'Back\nExercise',
+                          badge: 'Day 3/30',
+                          hasImage: true,
+                          isCompleted: true,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const WorkoutExecutionScreen(
+                                  workoutModel: WorkoutModel(
+                                    day: 3,
+                                    title: 'Back Exercise',
+                                    exerciseCount: 4,
+                                    isCompleted: false,
+                                    isActive: false,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 18),
-                  const _WorkoutCard(
-                    index: 2,
-                    title: 'Abs\nWorkout',
-                    badge: null,
-                    hasImage: false,
-                    isCompleted: false,
-                  ),
+                  _buildStartButton(),
                 ],
               ),
             ),
-            _buildStartButton(),
-          ],
-        ),
-      ),
     );
   }
 
@@ -449,9 +458,17 @@ class _WorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Completed is beige/taupe color, uncompleted is sleek grey
-    final Color cardBg =
-        isCompleted ? const Color(0xFFB09E92) : const Color(0xFFD1D3D9);
+    final Gradient cardGradient = isCompleted
+        ? const LinearGradient(
+            colors: [Color(0xFFD1CBC6), Color(0xFFB0A9A3)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : const LinearGradient(
+            colors: [Color(0xFFE5E5E5), Color(0xFFD1D3D9)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
 
     return Stack(
       clipBehavior: Clip.none,
@@ -459,136 +476,163 @@ class _WorkoutCard extends StatelessWidget {
         GestureDetector(
           onTap: onTap,
           child: Container(
-            height: 135,
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            image: hasImage
-                ? const DecorationImage(
-                    image: AssetImage('assets/images/png/vectors/workout_plan.png'),
-                    fit: BoxFit.cover,
-                    alignment: Alignment.centerRight,
-                  )
-                : null,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Left side: White nested container
-              Container(
-                width: 170,
-                height: 120,
-                margin: const EdgeInsets.only(left: 10, top: 10, bottom: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
+            height: 140,
+            width: double.infinity,
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              gradient: cardGradient,
+              borderRadius: BorderRadius.circular(20),
+              image: hasImage
+                  ? const DecorationImage(
+                      image: AssetImage('assets/images/png/vectors/workout_plan_creation_image.png'),
+                      fit: BoxFit.cover,
+                      alignment: Alignment.centerRight,
+                    )
+                  : null,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '$index',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF020202),
-                        height: 1.15,
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            title,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF212121),
-                              height: 1.15,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right,
-                          size: 17,
-                          color: Color(0xFF666666),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              // Right side: Badge text & circular white button
-              Expanded(
-                child: Align(
-                  alignment: Alignment.bottomRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 12, right: 16, bottom: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        if (badge != null) ...[
-                          Text(
-                            badge!,
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              height: 1.15,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.chevron_right,
-                            size: 20,
-                            color: Color(0xFF020202),
-                          ),
-                        ),
-                      ],
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Top left: Index
+                Positioned(
+                  left: 24,
+                  top: 20,
+                  child: Text(
+                    '$index',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF222222),
+                      height: 1.15,
                     ),
                   ),
                 ),
-              ),
-            ],
+
+                // Bottom left: Title
+                Positioned(
+                  left: 24,
+                  bottom: 20,
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF222222),
+                      height: 1.15,
+                    ),
+                  ),
+                ),
+
+                // Bottom center/left-ish: Progress dots
+                Positioned(
+                  left: 170,
+                  bottom: 24,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: List.generate(6, (idx) => Container(
+                      width: 14,
+                      height: 14,
+                      margin: const EdgeInsets.only(right: 6),
+                      decoration: BoxDecoration(
+                        color: isCompleted ? const Color(0xFF00FF66) : const Color(0xFFE0E0E0),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isCompleted ? const Color(0xFF009933) : const Color(0xFFBDBDBD),
+                          width: 1.5,
+                        ),
+                      ),
+                    )),
+                  ),
+                ),
+
+                // Bottom right: Circular white button
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F7),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      size: 24,
+                      color: Color(0xFF020202),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-       ),
 
-        // Jagged coral-red star check badge overlay at top right of the card
+        // CompletedBadge overlay at top right of the card
         if (isCompleted)
-          const Positioned(top: -7.0, right: -5.35, child: CompletedBadge()),
+          const Positioned(
+            top: -7.0, 
+            right: -5.35, 
+            child: CompletedBadge(),
+          ),
       ],
     );
   }
 }
+
+class _GuestWorkoutView extends StatelessWidget {
+  const _GuestWorkoutView({required this.onLoginTap});
+
+  final VoidCallback onLoginTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.fitness_center_rounded, size: 80, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'Guest Account',
+              style: AppStyles.text16Px.poppins.w500,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please log in to see workout details.',
+              style: AppStyles.text12Px.poppins.w400,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: onLoginTap,
+                child: const Text('Log In'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+

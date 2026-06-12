@@ -1,9 +1,9 @@
 import 'dart:ui';
 
-import 'package:customer_mobile_app/src/features/workout_log/persentation/persentation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:lottie/lottie.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/widgets/workout_history_calendar.dart';
 import 'package:table_calendar/table_calendar.dart'
     show
         CalendarBuilders,
@@ -82,11 +82,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget homeView(HomeModel homeData) {
+    final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        spacing: 24,
         children: [
           // Carousel Banners (using local assets)
           BannersView(banners: const [
@@ -104,14 +104,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   activeMembership,
                 ) {
                   if (activeMembership == null) return const SizedBox.shrink();
-                  return _buildActiveGymSection(activeMembership).pxy(x: 16);
+                  return Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      _buildActiveGymSection(activeMembership).pxy(x: 16),
+                    ],
+                  );
                 }),
               );
             },
           ),
 
-          // Ready To Level Up Card (always shown for all users)
-          _membershipExpireCard(context),
+          // Reduced gap before calendar/card
+          const SizedBox(height: 8),
+
+          // Ready To Level Up Card for guests, Workout History Calendar for logged-in users
+          if (isGuest)
+            _membershipExpireCard(context)
+          else
+            const WorkoutHistoryCalendar().pxy(x: 8),
+
+          const SizedBox(height: 24),
 
           // Did You Know Section (always shown)
           _buildDidYouKnowSection(),
@@ -803,14 +816,14 @@ Widget _buildDidYouKnowSection() {
               color: const Color(0xff878787),
             ),
           ),
-          const SizedBox(height: 24),
-          Text(
-            'Built by fitness lovers 🧡',
-            style: AppStyles.text14Px.poppins.w400.copyWith(
-              color: const Color(0xff666666),
-            ),
-          ),
-          const SizedBox(height: 132),
+          // const SizedBox(height: 24),
+          // Text(
+          //   'Built by fitness lovers 🧡',
+          //   style: AppStyles.text14Px.poppins.w400.copyWith(
+          //     color: const Color(0xff666666),
+          //   ),
+          // ),
+          const SizedBox(height: 120),
         ],
       ).pxy(x: 20),
     ),

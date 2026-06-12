@@ -26,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     _pageController = PageController(initialPage: widget.navIndex ?? 0);
     _cubit = DashboardCubit(navIndex: widget.navIndex);
-    _fetch();
     _icons = [
       'assets/images/svg/icons/new_home_notselected.svg',
       'assets/images/svg/icons/workout_notseleted.svg',
@@ -45,7 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildProfileTabIcon(bool isSelected) {
     final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
-    final String? profilePicUrl = currentUser?.profilePicture;
+    final String? profilePicUrl = currentUser?.profilePicture as String?;
 
     return Container(
       width: 26,
@@ -65,9 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 profilePicUrl,
                 fit: BoxFit.cover,
                 errorWidget: SvgPicture.asset(
-                  isSelected
-                      ? 'assets/images/svg/icons/person_filled.svg'
-                      : 'assets/images/svg/icons/person.svg',
+                  'assets/images/svg/icons/person.svg',
                   colorFilter: ColorFilter.mode(
                     isSelected ? AppColors.primary : AppColors.textGrey,
                     BlendMode.srcIn,
@@ -75,9 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               )
             : SvgPicture.asset(
-                isSelected
-                    ? 'assets/images/svg/icons/person_filled.svg'
-                    : 'assets/images/svg/icons/person.svg',
+                'assets/images/svg/icons/person.svg',
                 colorFilter: ColorFilter.mode(
                   isSelected ? AppColors.primary : AppColors.textGrey,
                   BlendMode.srcIn,
@@ -87,10 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _fetch() {
-    // Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
-    _cubit.fetchActiveMembership();
-  }
+
 
   @override
   void dispose() {
@@ -117,13 +109,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
         },
         builder: (context, state) {
-          final bool isCustomer =
-              Feggy.read<AppCubit>()?.state.currentUser != null;
-
-          final hasData = state.activeMembershipData.fold(
-            () => false,
-            (either) => either.fold((l) => false, (r) => true),
-          );
           return Scaffold(
             appBar: state.navIndex == 0
                 ? AppBar(
@@ -158,51 +143,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   )
                 : null,
-            body:
-                isCustomer == true
-                    ? state.activeMembershipData.fold(
-                      () => const Center(child: CircularProgressIndicator()),
-                      (either) => either.fold(
-                        (error) {
-                          return error
-                              .maybeWhen(
-                                network: (e) => ErrorUi.network(onTap: _fetch),
-                                notFound:
-                                    (e) => ErrorUi.notFound(onTap: _fetch),
-                                orElse: () => ErrorUi.server(onTap: _fetch),
-                              )
-                              .center;
-                        },
-                        (activeMembership) {
-                          return PageView(
-                            controller: _pageController,
-                            onPageChanged:
-                                (index) => context
-                                    .read<DashboardCubit>()
-                                    .changeNav(index: index),
-                            children: [
-                              HomeScreen(activeMembership: activeMembership),
-                              const WorkoutLogScreen(),
-                              FitnessCentersListingScreen(activeMembership: activeMembership),
-                              const ProfileScreen(),
-                            ],
-                          );
-                        },
-                      ),
-                    )
-                    : PageView(
-                      controller: _pageController,
-                      onPageChanged:
-                          (index) => context.read<DashboardCubit>().changeNav(
-                            index: index,
-                          ),
-                      children: const [
-                        HomeScreen(),
-                        WorkoutLogScreen(),
-                        FitnessCentersListingScreen(),
-                        ProfileScreen(),
-                      ],
-                    ),
+            body: PageView(
+              controller: _pageController,
+              onPageChanged:
+                  (index) => context
+                      .read<DashboardCubit>()
+                      .changeNav(index: index),
+              children: const [
+                HomeScreen(),
+                WorkoutLogScreen(),
+                FitnessCentersListingScreen(),
+                ProfileScreen(),
+              ],
+            ),
             extendBody: true,
             bottomNavigationBar: Container(
               height: 80,

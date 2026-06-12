@@ -1,18 +1,22 @@
+import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:dio/dio.dart';
 
 @immutable
 final class HomeRepository {
   ///* This constructor body for creating singleton widget
   factory HomeRepository() {
-    _instance ??= const HomeRepository._internal();
+    _instance ??= HomeRepository._internal();
     return _instance!;
   }
 
   //* This named constructor for create object for this class
-  const HomeRepository._internal();
+  HomeRepository._internal();
 
   //* This variable for store this class object globally
   static HomeRepository? _instance;
+
+  final Dio _dio = DioClient().dio;
 
   /// @api {GET https://discipl-backend.onrender.com/api/v1/customer/customer-homepage} https://discipl-backend.onrender.com/api/v1/customer/customer-homepage
   /// @apiName home
@@ -24,9 +28,9 @@ final class HomeRepository {
     print('api ---is ${ ApiUris.home}');
     try {
       return await Feggy.async(
-        call: Dio().get<dynamic>(
+        call: _dio.get<dynamic>(
           ApiUris.home,
-          options: Options(headers: {'X-Platform': platformSource}),
+          options: Options(headers: {'X-Platform': platformSource}).token,
         ),
 
         onSuccess: (res) {

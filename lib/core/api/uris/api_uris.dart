@@ -4,7 +4,8 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 @immutable
 final class ApiUris {
   ///* BASE URL
-  static const _baseUrl = String.fromEnvironment('baseUrl');
+  static const _baseUrlEnv = String.fromEnvironment('baseUrl');
+  static const _baseUrl = _baseUrlEnv == '' ? 'https://discipl-backend-u0w9.onrender.com' : _baseUrlEnv;
   static const _v1 = '$_baseUrl/api/v1/';
 
   ///============================= AUTH =============================\\\
@@ -21,6 +22,7 @@ final class ApiUris {
   ///============================= Customer =============================\\\
   static String customerDetails(int id) => '${_v1}customer/manage/$id/';
   static const updateCustomerProfile = '${_v1}customer/manage/profile/health/';
+  
 
   ///============================= Home =============================\\\
   static const home = '${_v1}customer/customer-homepage/';
@@ -41,12 +43,12 @@ final class ApiUris {
 
   ///============================= Fitness Center =============================\\\
   static String fitnesscenterDetails(int id) =>
-      '${_v1}customer/nearest/fitnesscenter/$id/';
+      '${_v1}fitnesscenter/gym/$id/';
 
   static String fitnesscenterMembershipPlans(int id) =>
       '${_v1}customer/membership-plans/$id/';
   static const fitnesscenterCategories = '${_v1}fitnesscenter/categories/';
-  static const listFitnesscenter = '${_v1}customer/nearest/fitnesscenter/';
+  static const listFitnesscenter = '${_v1}fitnesscenter/gym/list/';
 
   ///============================= Reviews =============================\\\
   static const addReview = '${_v1}customer/reviews/';
@@ -58,6 +60,10 @@ final class ApiUris {
 
   static String fitnessCenterReviews(int id) =>
       '${_v1}fitnesscenter/organization/$id/reviews/';
+
+ ///============================= Workout =============================\\\
+ static const exercises = '${_v1}customer/exercises/';
+
 
   static const loginAsGuest = '${_v1}user/login/guest/';
 }

@@ -294,26 +294,34 @@ mixin _$SingleFItnessCenterModel {
   int? get id => throw _privateConstructorUsedError;
   @JsonKey(name: 'name')
   String? get name => throw _privateConstructorUsedError;
-  @JsonKey(name: 'logo')
-  String? get logo => throw _privateConstructorUsedError;
   @JsonKey(name: 'description')
   String? get description => throw _privateConstructorUsedError;
-  @JsonKey(name: 'phone_number')
-  String? get phoneNumber => throw _privateConstructorUsedError;
   @JsonKey(name: 'email')
   String? get email => throw _privateConstructorUsedError;
+  @JsonKey(name: 'phone_number')
+  String? get phoneNumber => throw _privateConstructorUsedError;
+  @JsonKey(name: 'logo')
+  String? get logo => throw _privateConstructorUsedError;
+  @JsonKey(name: 'slug')
+  String? get slug => throw _privateConstructorUsedError;
+  @JsonKey(name: 'active')
+  bool? get active => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_public')
+  bool? get isPublic => throw _privateConstructorUsedError;
+  @JsonKey(name: 'registration_status')
+  String? get registrationStatus => throw _privateConstructorUsedError;
+  @JsonKey(name: 'categories')
+  List<Category>? get categories => throw _privateConstructorUsedError;
   @JsonKey(name: 'location')
   Location? get location => throw _privateConstructorUsedError;
-  @JsonKey(name: 'category')
-  List<Category>? get category => throw _privateConstructorUsedError;
-  @JsonKey(name: 'services')
-  List<Service>? get services => throw _privateConstructorUsedError;
-  @JsonKey(name: 'average_rating')
-  double? get averageRating => throw _privateConstructorUsedError;
+  @JsonKey(name: 'mentor_name')
+  String? get mentorName => throw _privateConstructorUsedError;
   @JsonKey(name: 'review_count')
   int? get reviewCount => throw _privateConstructorUsedError;
-  @JsonKey(name: 'is_slot_available')
-  bool? get isSlotAvailable => throw _privateConstructorUsedError;
+  @JsonKey(name: 'average_rating')
+  double? get averageRating => throw _privateConstructorUsedError;
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt => throw _privateConstructorUsedError;
 
   /// Serializes this SingleFItnessCenterModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -335,16 +343,20 @@ abstract class $SingleFItnessCenterModelCopyWith<$Res> {
   $Res call({
     @JsonKey(name: 'id') int? id,
     @JsonKey(name: 'name') String? name,
-    @JsonKey(name: 'logo') String? logo,
     @JsonKey(name: 'description') String? description,
-    @JsonKey(name: 'phone_number') String? phoneNumber,
     @JsonKey(name: 'email') String? email,
+    @JsonKey(name: 'phone_number') String? phoneNumber,
+    @JsonKey(name: 'logo') String? logo,
+    @JsonKey(name: 'slug') String? slug,
+    @JsonKey(name: 'active') bool? active,
+    @JsonKey(name: 'is_public') bool? isPublic,
+    @JsonKey(name: 'registration_status') String? registrationStatus,
+    @JsonKey(name: 'categories') List<Category>? categories,
     @JsonKey(name: 'location') Location? location,
-    @JsonKey(name: 'category') List<Category>? category,
-    @JsonKey(name: 'services') List<Service>? services,
-    @JsonKey(name: 'average_rating') double? averageRating,
+    @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
-    @JsonKey(name: 'is_slot_available') bool? isSlotAvailable,
+    @JsonKey(name: 'average_rating') double? averageRating,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 
   $LocationCopyWith<$Res>? get location;
@@ -370,16 +382,20 @@ class _$SingleFItnessCenterModelCopyWithImpl<
   $Res call({
     Object? id = freezed,
     Object? name = freezed,
-    Object? logo = freezed,
     Object? description = freezed,
-    Object? phoneNumber = freezed,
     Object? email = freezed,
+    Object? phoneNumber = freezed,
+    Object? logo = freezed,
+    Object? slug = freezed,
+    Object? active = freezed,
+    Object? isPublic = freezed,
+    Object? registrationStatus = freezed,
+    Object? categories = freezed,
     Object? location = freezed,
-    Object? category = freezed,
-    Object? services = freezed,
-    Object? averageRating = freezed,
+    Object? mentorName = freezed,
     Object? reviewCount = freezed,
-    Object? isSlotAvailable = freezed,
+    Object? averageRating = freezed,
+    Object? createdAt = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -393,56 +409,76 @@ class _$SingleFItnessCenterModelCopyWithImpl<
                     ? _value.name
                     : name // ignore: cast_nullable_to_non_nullable
                         as String?,
-            logo:
-                freezed == logo
-                    ? _value.logo
-                    : logo // ignore: cast_nullable_to_non_nullable
-                        as String?,
             description:
                 freezed == description
                     ? _value.description
                     : description // ignore: cast_nullable_to_non_nullable
-                        as String?,
-            phoneNumber:
-                freezed == phoneNumber
-                    ? _value.phoneNumber
-                    : phoneNumber // ignore: cast_nullable_to_non_nullable
                         as String?,
             email:
                 freezed == email
                     ? _value.email
                     : email // ignore: cast_nullable_to_non_nullable
                         as String?,
+            phoneNumber:
+                freezed == phoneNumber
+                    ? _value.phoneNumber
+                    : phoneNumber // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            logo:
+                freezed == logo
+                    ? _value.logo
+                    : logo // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            slug:
+                freezed == slug
+                    ? _value.slug
+                    : slug // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            active:
+                freezed == active
+                    ? _value.active
+                    : active // ignore: cast_nullable_to_non_nullable
+                        as bool?,
+            isPublic:
+                freezed == isPublic
+                    ? _value.isPublic
+                    : isPublic // ignore: cast_nullable_to_non_nullable
+                        as bool?,
+            registrationStatus:
+                freezed == registrationStatus
+                    ? _value.registrationStatus
+                    : registrationStatus // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            categories:
+                freezed == categories
+                    ? _value.categories
+                    : categories // ignore: cast_nullable_to_non_nullable
+                        as List<Category>?,
             location:
                 freezed == location
                     ? _value.location
                     : location // ignore: cast_nullable_to_non_nullable
                         as Location?,
-            category:
-                freezed == category
-                    ? _value.category
-                    : category // ignore: cast_nullable_to_non_nullable
-                        as List<Category>?,
-            services:
-                freezed == services
-                    ? _value.services
-                    : services // ignore: cast_nullable_to_non_nullable
-                        as List<Service>?,
-            averageRating:
-                freezed == averageRating
-                    ? _value.averageRating
-                    : averageRating // ignore: cast_nullable_to_non_nullable
-                        as double?,
+            mentorName:
+                freezed == mentorName
+                    ? _value.mentorName
+                    : mentorName // ignore: cast_nullable_to_non_nullable
+                        as String?,
             reviewCount:
                 freezed == reviewCount
                     ? _value.reviewCount
                     : reviewCount // ignore: cast_nullable_to_non_nullable
                         as int?,
-            isSlotAvailable:
-                freezed == isSlotAvailable
-                    ? _value.isSlotAvailable
-                    : isSlotAvailable // ignore: cast_nullable_to_non_nullable
-                        as bool?,
+            averageRating:
+                freezed == averageRating
+                    ? _value.averageRating
+                    : averageRating // ignore: cast_nullable_to_non_nullable
+                        as double?,
+            createdAt:
+                freezed == createdAt
+                    ? _value.createdAt
+                    : createdAt // ignore: cast_nullable_to_non_nullable
+                        as DateTime?,
           )
           as $Val,
     );
@@ -475,16 +511,20 @@ abstract class _$$SingleFItnessCenterModelImplCopyWith<$Res>
   $Res call({
     @JsonKey(name: 'id') int? id,
     @JsonKey(name: 'name') String? name,
-    @JsonKey(name: 'logo') String? logo,
     @JsonKey(name: 'description') String? description,
-    @JsonKey(name: 'phone_number') String? phoneNumber,
     @JsonKey(name: 'email') String? email,
+    @JsonKey(name: 'phone_number') String? phoneNumber,
+    @JsonKey(name: 'logo') String? logo,
+    @JsonKey(name: 'slug') String? slug,
+    @JsonKey(name: 'active') bool? active,
+    @JsonKey(name: 'is_public') bool? isPublic,
+    @JsonKey(name: 'registration_status') String? registrationStatus,
+    @JsonKey(name: 'categories') List<Category>? categories,
     @JsonKey(name: 'location') Location? location,
-    @JsonKey(name: 'category') List<Category>? category,
-    @JsonKey(name: 'services') List<Service>? services,
-    @JsonKey(name: 'average_rating') double? averageRating,
+    @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
-    @JsonKey(name: 'is_slot_available') bool? isSlotAvailable,
+    @JsonKey(name: 'average_rating') double? averageRating,
+    @JsonKey(name: 'created_at') DateTime? createdAt,
   });
 
   @override
@@ -511,16 +551,20 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
   $Res call({
     Object? id = freezed,
     Object? name = freezed,
-    Object? logo = freezed,
     Object? description = freezed,
-    Object? phoneNumber = freezed,
     Object? email = freezed,
+    Object? phoneNumber = freezed,
+    Object? logo = freezed,
+    Object? slug = freezed,
+    Object? active = freezed,
+    Object? isPublic = freezed,
+    Object? registrationStatus = freezed,
+    Object? categories = freezed,
     Object? location = freezed,
-    Object? category = freezed,
-    Object? services = freezed,
-    Object? averageRating = freezed,
+    Object? mentorName = freezed,
     Object? reviewCount = freezed,
-    Object? isSlotAvailable = freezed,
+    Object? averageRating = freezed,
+    Object? createdAt = freezed,
   }) {
     return _then(
       _$SingleFItnessCenterModelImpl(
@@ -534,56 +578,76 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
                 ? _value.name
                 : name // ignore: cast_nullable_to_non_nullable
                     as String?,
-        logo:
-            freezed == logo
-                ? _value.logo
-                : logo // ignore: cast_nullable_to_non_nullable
-                    as String?,
         description:
             freezed == description
                 ? _value.description
                 : description // ignore: cast_nullable_to_non_nullable
-                    as String?,
-        phoneNumber:
-            freezed == phoneNumber
-                ? _value.phoneNumber
-                : phoneNumber // ignore: cast_nullable_to_non_nullable
                     as String?,
         email:
             freezed == email
                 ? _value.email
                 : email // ignore: cast_nullable_to_non_nullable
                     as String?,
+        phoneNumber:
+            freezed == phoneNumber
+                ? _value.phoneNumber
+                : phoneNumber // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        logo:
+            freezed == logo
+                ? _value.logo
+                : logo // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        slug:
+            freezed == slug
+                ? _value.slug
+                : slug // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        active:
+            freezed == active
+                ? _value.active
+                : active // ignore: cast_nullable_to_non_nullable
+                    as bool?,
+        isPublic:
+            freezed == isPublic
+                ? _value.isPublic
+                : isPublic // ignore: cast_nullable_to_non_nullable
+                    as bool?,
+        registrationStatus:
+            freezed == registrationStatus
+                ? _value.registrationStatus
+                : registrationStatus // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        categories:
+            freezed == categories
+                ? _value._categories
+                : categories // ignore: cast_nullable_to_non_nullable
+                    as List<Category>?,
         location:
             freezed == location
                 ? _value.location
                 : location // ignore: cast_nullable_to_non_nullable
                     as Location?,
-        category:
-            freezed == category
-                ? _value._category
-                : category // ignore: cast_nullable_to_non_nullable
-                    as List<Category>?,
-        services:
-            freezed == services
-                ? _value._services
-                : services // ignore: cast_nullable_to_non_nullable
-                    as List<Service>?,
-        averageRating:
-            freezed == averageRating
-                ? _value.averageRating
-                : averageRating // ignore: cast_nullable_to_non_nullable
-                    as double?,
+        mentorName:
+            freezed == mentorName
+                ? _value.mentorName
+                : mentorName // ignore: cast_nullable_to_non_nullable
+                    as String?,
         reviewCount:
             freezed == reviewCount
                 ? _value.reviewCount
                 : reviewCount // ignore: cast_nullable_to_non_nullable
                     as int?,
-        isSlotAvailable:
-            freezed == isSlotAvailable
-                ? _value.isSlotAvailable
-                : isSlotAvailable // ignore: cast_nullable_to_non_nullable
-                    as bool?,
+        averageRating:
+            freezed == averageRating
+                ? _value.averageRating
+                : averageRating // ignore: cast_nullable_to_non_nullable
+                    as double?,
+        createdAt:
+            freezed == createdAt
+                ? _value.createdAt
+                : createdAt // ignore: cast_nullable_to_non_nullable
+                    as DateTime?,
       ),
     );
   }
@@ -595,18 +659,21 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
   const _$SingleFItnessCenterModelImpl({
     @JsonKey(name: 'id') this.id,
     @JsonKey(name: 'name') this.name,
-    @JsonKey(name: 'logo') this.logo,
     @JsonKey(name: 'description') this.description,
-    @JsonKey(name: 'phone_number') this.phoneNumber,
     @JsonKey(name: 'email') this.email,
+    @JsonKey(name: 'phone_number') this.phoneNumber,
+    @JsonKey(name: 'logo') this.logo,
+    @JsonKey(name: 'slug') this.slug,
+    @JsonKey(name: 'active') this.active,
+    @JsonKey(name: 'is_public') this.isPublic,
+    @JsonKey(name: 'registration_status') this.registrationStatus,
+    @JsonKey(name: 'categories') final List<Category>? categories,
     @JsonKey(name: 'location') this.location,
-    @JsonKey(name: 'category') final List<Category>? category,
-    @JsonKey(name: 'services') final List<Service>? services,
-    @JsonKey(name: 'average_rating') this.averageRating,
+    @JsonKey(name: 'mentor_name') this.mentorName,
     @JsonKey(name: 'review_count') this.reviewCount,
-    @JsonKey(name: 'is_slot_available') this.isSlotAvailable,
-  }) : _category = category,
-       _services = services;
+    @JsonKey(name: 'average_rating') this.averageRating,
+    @JsonKey(name: 'created_at') this.createdAt,
+  }) : _categories = categories;
 
   factory _$SingleFItnessCenterModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$SingleFItnessCenterModelImplFromJson(json);
@@ -618,55 +685,59 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
   @JsonKey(name: 'name')
   final String? name;
   @override
-  @JsonKey(name: 'logo')
-  final String? logo;
-  @override
   @JsonKey(name: 'description')
   final String? description;
-  @override
-  @JsonKey(name: 'phone_number')
-  final String? phoneNumber;
   @override
   @JsonKey(name: 'email')
   final String? email;
   @override
+  @JsonKey(name: 'phone_number')
+  final String? phoneNumber;
+  @override
+  @JsonKey(name: 'logo')
+  final String? logo;
+  @override
+  @JsonKey(name: 'slug')
+  final String? slug;
+  @override
+  @JsonKey(name: 'active')
+  final bool? active;
+  @override
+  @JsonKey(name: 'is_public')
+  final bool? isPublic;
+  @override
+  @JsonKey(name: 'registration_status')
+  final String? registrationStatus;
+  final List<Category>? _categories;
+  @override
+  @JsonKey(name: 'categories')
+  List<Category>? get categories {
+    final value = _categories;
+    if (value == null) return null;
+    if (_categories is EqualUnmodifiableListView) return _categories;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  @override
   @JsonKey(name: 'location')
   final Location? location;
-  final List<Category>? _category;
   @override
-  @JsonKey(name: 'category')
-  List<Category>? get category {
-    final value = _category;
-    if (value == null) return null;
-    if (_category is EqualUnmodifiableListView) return _category;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(value);
-  }
-
-  final List<Service>? _services;
-  @override
-  @JsonKey(name: 'services')
-  List<Service>? get services {
-    final value = _services;
-    if (value == null) return null;
-    if (_services is EqualUnmodifiableListView) return _services;
-    // ignore: implicit_dynamic_type
-    return EqualUnmodifiableListView(value);
-  }
-
-  @override
-  @JsonKey(name: 'average_rating')
-  final double? averageRating;
+  @JsonKey(name: 'mentor_name')
+  final String? mentorName;
   @override
   @JsonKey(name: 'review_count')
   final int? reviewCount;
   @override
-  @JsonKey(name: 'is_slot_available')
-  final bool? isSlotAvailable;
+  @JsonKey(name: 'average_rating')
+  final double? averageRating;
+  @override
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
 
   @override
   String toString() {
-    return 'SingleFItnessCenterModel(id: $id, name: $name, logo: $logo, description: $description, phoneNumber: $phoneNumber, email: $email, location: $location, category: $category, services: $services, averageRating: $averageRating, reviewCount: $reviewCount, isSlotAvailable: $isSlotAvailable)';
+    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, location: $location, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt)';
   }
 
   @override
@@ -676,22 +747,32 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
             other is _$SingleFItnessCenterModelImpl &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.name, name) || other.name == name) &&
-            (identical(other.logo, logo) || other.logo == logo) &&
             (identical(other.description, description) ||
                 other.description == description) &&
+            (identical(other.email, email) || other.email == email) &&
             (identical(other.phoneNumber, phoneNumber) ||
                 other.phoneNumber == phoneNumber) &&
-            (identical(other.email, email) || other.email == email) &&
+            (identical(other.logo, logo) || other.logo == logo) &&
+            (identical(other.slug, slug) || other.slug == slug) &&
+            (identical(other.active, active) || other.active == active) &&
+            (identical(other.isPublic, isPublic) ||
+                other.isPublic == isPublic) &&
+            (identical(other.registrationStatus, registrationStatus) ||
+                other.registrationStatus == registrationStatus) &&
+            const DeepCollectionEquality().equals(
+              other._categories,
+              _categories,
+            ) &&
             (identical(other.location, location) ||
                 other.location == location) &&
-            const DeepCollectionEquality().equals(other._category, _category) &&
-            const DeepCollectionEquality().equals(other._services, _services) &&
-            (identical(other.averageRating, averageRating) ||
-                other.averageRating == averageRating) &&
+            (identical(other.mentorName, mentorName) ||
+                other.mentorName == mentorName) &&
             (identical(other.reviewCount, reviewCount) ||
                 other.reviewCount == reviewCount) &&
-            (identical(other.isSlotAvailable, isSlotAvailable) ||
-                other.isSlotAvailable == isSlotAvailable));
+            (identical(other.averageRating, averageRating) ||
+                other.averageRating == averageRating) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -700,16 +781,20 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
     runtimeType,
     id,
     name,
-    logo,
     description,
-    phoneNumber,
     email,
+    phoneNumber,
+    logo,
+    slug,
+    active,
+    isPublic,
+    registrationStatus,
+    const DeepCollectionEquality().hash(_categories),
     location,
-    const DeepCollectionEquality().hash(_category),
-    const DeepCollectionEquality().hash(_services),
-    averageRating,
+    mentorName,
     reviewCount,
-    isSlotAvailable,
+    averageRating,
+    createdAt,
   );
 
   /// Create a copy of SingleFItnessCenterModel
@@ -732,16 +817,20 @@ abstract class _SingleFItnessCenterModel implements SingleFItnessCenterModel {
   const factory _SingleFItnessCenterModel({
     @JsonKey(name: 'id') final int? id,
     @JsonKey(name: 'name') final String? name,
-    @JsonKey(name: 'logo') final String? logo,
     @JsonKey(name: 'description') final String? description,
-    @JsonKey(name: 'phone_number') final String? phoneNumber,
     @JsonKey(name: 'email') final String? email,
+    @JsonKey(name: 'phone_number') final String? phoneNumber,
+    @JsonKey(name: 'logo') final String? logo,
+    @JsonKey(name: 'slug') final String? slug,
+    @JsonKey(name: 'active') final bool? active,
+    @JsonKey(name: 'is_public') final bool? isPublic,
+    @JsonKey(name: 'registration_status') final String? registrationStatus,
+    @JsonKey(name: 'categories') final List<Category>? categories,
     @JsonKey(name: 'location') final Location? location,
-    @JsonKey(name: 'category') final List<Category>? category,
-    @JsonKey(name: 'services') final List<Service>? services,
-    @JsonKey(name: 'average_rating') final double? averageRating,
+    @JsonKey(name: 'mentor_name') final String? mentorName,
     @JsonKey(name: 'review_count') final int? reviewCount,
-    @JsonKey(name: 'is_slot_available') final bool? isSlotAvailable,
+    @JsonKey(name: 'average_rating') final double? averageRating,
+    @JsonKey(name: 'created_at') final DateTime? createdAt,
   }) = _$SingleFItnessCenterModelImpl;
 
   factory _SingleFItnessCenterModel.fromJson(Map<String, dynamic> json) =
@@ -754,35 +843,47 @@ abstract class _SingleFItnessCenterModel implements SingleFItnessCenterModel {
   @JsonKey(name: 'name')
   String? get name;
   @override
-  @JsonKey(name: 'logo')
-  String? get logo;
-  @override
   @JsonKey(name: 'description')
   String? get description;
-  @override
-  @JsonKey(name: 'phone_number')
-  String? get phoneNumber;
   @override
   @JsonKey(name: 'email')
   String? get email;
   @override
+  @JsonKey(name: 'phone_number')
+  String? get phoneNumber;
+  @override
+  @JsonKey(name: 'logo')
+  String? get logo;
+  @override
+  @JsonKey(name: 'slug')
+  String? get slug;
+  @override
+  @JsonKey(name: 'active')
+  bool? get active;
+  @override
+  @JsonKey(name: 'is_public')
+  bool? get isPublic;
+  @override
+  @JsonKey(name: 'registration_status')
+  String? get registrationStatus;
+  @override
+  @JsonKey(name: 'categories')
+  List<Category>? get categories;
+  @override
   @JsonKey(name: 'location')
   Location? get location;
   @override
-  @JsonKey(name: 'category')
-  List<Category>? get category;
-  @override
-  @JsonKey(name: 'services')
-  List<Service>? get services;
-  @override
-  @JsonKey(name: 'average_rating')
-  double? get averageRating;
+  @JsonKey(name: 'mentor_name')
+  String? get mentorName;
   @override
   @JsonKey(name: 'review_count')
   int? get reviewCount;
   @override
-  @JsonKey(name: 'is_slot_available')
-  bool? get isSlotAvailable;
+  @JsonKey(name: 'average_rating')
+  double? get averageRating;
+  @override
+  @JsonKey(name: 'created_at')
+  DateTime? get createdAt;
 
   /// Create a copy of SingleFItnessCenterModel
   /// with the given fields replaced by the non-null parameter values.
@@ -974,157 +1075,5 @@ abstract class _Category implements Category {
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$CategoryImplCopyWith<_$CategoryImpl> get copyWith =>
-      throw _privateConstructorUsedError;
-}
-
-Service _$ServiceFromJson(Map<String, dynamic> json) {
-  return _Service.fromJson(json);
-}
-
-/// @nodoc
-mixin _$Service {
-  @JsonKey(name: 'name')
-  String? get name => throw _privateConstructorUsedError;
-
-  /// Serializes this Service to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of Service
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  $ServiceCopyWith<Service> get copyWith => throw _privateConstructorUsedError;
-}
-
-/// @nodoc
-abstract class $ServiceCopyWith<$Res> {
-  factory $ServiceCopyWith(Service value, $Res Function(Service) then) =
-      _$ServiceCopyWithImpl<$Res, Service>;
-  @useResult
-  $Res call({@JsonKey(name: 'name') String? name});
-}
-
-/// @nodoc
-class _$ServiceCopyWithImpl<$Res, $Val extends Service>
-    implements $ServiceCopyWith<$Res> {
-  _$ServiceCopyWithImpl(this._value, this._then);
-
-  // ignore: unused_field
-  final $Val _value;
-  // ignore: unused_field
-  final $Res Function($Val) _then;
-
-  /// Create a copy of Service
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({Object? name = freezed}) {
-    return _then(
-      _value.copyWith(
-            name:
-                freezed == name
-                    ? _value.name
-                    : name // ignore: cast_nullable_to_non_nullable
-                        as String?,
-          )
-          as $Val,
-    );
-  }
-}
-
-/// @nodoc
-abstract class _$$ServiceImplCopyWith<$Res> implements $ServiceCopyWith<$Res> {
-  factory _$$ServiceImplCopyWith(
-    _$ServiceImpl value,
-    $Res Function(_$ServiceImpl) then,
-  ) = __$$ServiceImplCopyWithImpl<$Res>;
-  @override
-  @useResult
-  $Res call({@JsonKey(name: 'name') String? name});
-}
-
-/// @nodoc
-class __$$ServiceImplCopyWithImpl<$Res>
-    extends _$ServiceCopyWithImpl<$Res, _$ServiceImpl>
-    implements _$$ServiceImplCopyWith<$Res> {
-  __$$ServiceImplCopyWithImpl(
-    _$ServiceImpl _value,
-    $Res Function(_$ServiceImpl) _then,
-  ) : super(_value, _then);
-
-  /// Create a copy of Service
-  /// with the given fields replaced by the non-null parameter values.
-  @pragma('vm:prefer-inline')
-  @override
-  $Res call({Object? name = freezed}) {
-    return _then(
-      _$ServiceImpl(
-        name:
-            freezed == name
-                ? _value.name
-                : name // ignore: cast_nullable_to_non_nullable
-                    as String?,
-      ),
-    );
-  }
-}
-
-/// @nodoc
-@JsonSerializable()
-class _$ServiceImpl implements _Service {
-  const _$ServiceImpl({@JsonKey(name: 'name') this.name});
-
-  factory _$ServiceImpl.fromJson(Map<String, dynamic> json) =>
-      _$$ServiceImplFromJson(json);
-
-  @override
-  @JsonKey(name: 'name')
-  final String? name;
-
-  @override
-  String toString() {
-    return 'Service(name: $name)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return identical(this, other) ||
-        (other.runtimeType == runtimeType &&
-            other is _$ServiceImpl &&
-            (identical(other.name, name) || other.name == name));
-  }
-
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  int get hashCode => Object.hash(runtimeType, name);
-
-  /// Create a copy of Service
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  @override
-  @pragma('vm:prefer-inline')
-  _$$ServiceImplCopyWith<_$ServiceImpl> get copyWith =>
-      __$$ServiceImplCopyWithImpl<_$ServiceImpl>(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$ServiceImplToJson(this);
-  }
-}
-
-abstract class _Service implements Service {
-  const factory _Service({@JsonKey(name: 'name') final String? name}) =
-      _$ServiceImpl;
-
-  factory _Service.fromJson(Map<String, dynamic> json) = _$ServiceImpl.fromJson;
-
-  @override
-  @JsonKey(name: 'name')
-  String? get name;
-
-  /// Create a copy of Service
-  /// with the given fields replaced by the non-null parameter values.
-  @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
-  _$$ServiceImplCopyWith<_$ServiceImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

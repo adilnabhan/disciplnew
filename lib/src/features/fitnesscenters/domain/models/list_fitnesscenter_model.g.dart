@@ -34,25 +34,29 @@ _$SingleFItnessCenterModelImpl _$$SingleFItnessCenterModelImplFromJson(
 ) => _$SingleFItnessCenterModelImpl(
   id: (json['id'] as num?)?.toInt(),
   name: json['name'] as String?,
-  logo: json['logo'] as String?,
   description: json['description'] as String?,
-  phoneNumber: json['phone_number'] as String?,
   email: json['email'] as String?,
+  phoneNumber: json['phone_number'] as String?,
+  logo: json['logo'] as String?,
+  slug: json['slug'] as String?,
+  active: json['active'] as bool?,
+  isPublic: json['is_public'] as bool?,
+  registrationStatus: json['registration_status'] as String?,
+  categories:
+      (json['categories'] as List<dynamic>?)
+          ?.map((e) => Category.fromJson(e as Map<String, dynamic>))
+          .toList(),
   location:
       json['location'] == null
           ? null
           : Location.fromJson(json['location'] as Map<String, dynamic>),
-  category:
-      (json['category'] as List<dynamic>?)
-          ?.map((e) => Category.fromJson(e as Map<String, dynamic>))
-          .toList(),
-  services:
-      (json['services'] as List<dynamic>?)
-          ?.map((e) => Service.fromJson(e as Map<String, dynamic>))
-          .toList(),
-  averageRating: (json['average_rating'] as num?)?.toDouble(),
+  mentorName: json['mentor_name'] as String?,
   reviewCount: (json['review_count'] as num?)?.toInt(),
-  isSlotAvailable: json['is_slot_available'] as bool?,
+  averageRating: (json['average_rating'] as num?)?.toDouble(),
+  createdAt:
+      json['created_at'] == null
+          ? null
+          : DateTime.parse(json['created_at'] as String),
 );
 
 Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
@@ -60,16 +64,20 @@ Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
 ) => <String, dynamic>{
   'id': instance.id,
   'name': instance.name,
-  'logo': instance.logo,
   'description': instance.description,
-  'phone_number': instance.phoneNumber,
   'email': instance.email,
+  'phone_number': instance.phoneNumber,
+  'logo': instance.logo,
+  'slug': instance.slug,
+  'active': instance.active,
+  'is_public': instance.isPublic,
+  'registration_status': instance.registrationStatus,
+  'categories': instance.categories,
   'location': instance.location,
-  'category': instance.category,
-  'services': instance.services,
-  'average_rating': instance.averageRating,
+  'mentor_name': instance.mentorName,
   'review_count': instance.reviewCount,
-  'is_slot_available': instance.isSlotAvailable,
+  'average_rating': instance.averageRating,
+  'created_at': instance.createdAt?.toIso8601String(),
 };
 
 _$CategoryImpl _$$CategoryImplFromJson(Map<String, dynamic> json) =>
@@ -80,9 +88,3 @@ _$CategoryImpl _$$CategoryImplFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$$CategoryImplToJson(_$CategoryImpl instance) =>
     <String, dynamic>{'id': instance.id, 'name': instance.name};
-
-_$ServiceImpl _$$ServiceImplFromJson(Map<String, dynamic> json) =>
-    _$ServiceImpl(name: json['name'] as String?);
-
-Map<String, dynamic> _$$ServiceImplToJson(_$ServiceImpl instance) =>
-    <String, dynamic>{'name': instance.name};

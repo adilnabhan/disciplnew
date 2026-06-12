@@ -10,10 +10,21 @@ class PopButton extends StatelessWidget {
     if (Navigator.canPop(context) == false) {
       return const SizedBox.shrink();
     }
-    return IconButton.filled(
-      style: IconButton.styleFrom(backgroundColor: AppColors.iconBackground, shape: const CircleBorder()),
-      onPressed: onPressed ?? () => Navigator.pop(context),
-      icon: const Icon(Icons.arrow_back_ios_sharp),
+    return GestureDetector(
+      onTap: onPressed ?? () => Navigator.pop(context),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEEEEEE),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.chevron_left,
+          color: Color(0xFF444444),
+          size: 24,
+        ),
+      ),
     );
   }
 }

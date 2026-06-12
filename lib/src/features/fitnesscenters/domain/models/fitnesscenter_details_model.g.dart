@@ -14,27 +14,30 @@ _$FitnesscenterDetailsModelImpl _$$FitnesscenterDetailsModelImplFromJson(
   description: json['description'] as String?,
   email: json['email'] as String?,
   phoneNumber: json['phone_number'] as String?,
-  logo: json['logo'] as String?,
-  categories:
-      (json['categories'] as List<dynamic>?)
-          ?.map((e) => Amenity.fromJson(e as Map<String, dynamic>))
-          .toList(),
+  isPublic: json['is_public'] as bool?,
+  active: json['active'] as bool?,
+  isSubscribed: json['is_subscribed'] as bool?,
+  takeFreeTrial: json['take_free_trial'] as bool?,
+  isOnFreeTrial: json['is_on_free_trial'] as bool?,
   location:
       json['location'] == null
           ? null
           : Location.fromJson(json['location'] as Map<String, dynamic>),
-  distanceKm: json['distance_km'],
-  socialMedia:
-      (json['social_media'] as List<dynamic>?)
-          ?.map((e) => SocialMedia.fromJson(e as Map<String, dynamic>))
-          .toList(),
-  services: json['services'] as List<dynamic>?,
   workingDays:
       (json['working_days'] as List<dynamic>?)
           ?.map((e) => WorkingDay.fromJson(e as Map<String, dynamic>))
           .toList(),
+  timeSlots: json['time_slots'] as List<dynamic>?,
+  socialMedia:
+      (json['social_media'] as List<dynamic>?)
+          ?.map((e) => SocialMedia.fromJson(e as Map<String, dynamic>))
+          .toList(),
   amenities:
       (json['amenities'] as List<dynamic>?)
+          ?.map((e) => Amenity.fromJson(e as Map<String, dynamic>))
+          .toList(),
+  categories:
+      (json['categories'] as List<dynamic>?)
           ?.map((e) => Amenity.fromJson(e as Map<String, dynamic>))
           .toList(),
   photos:
@@ -45,8 +48,12 @@ _$FitnesscenterDetailsModelImpl _$$FitnesscenterDetailsModelImplFromJson(
       (json['packages'] as List<dynamic>?)
           ?.map((e) => Package.fromJson(e as Map<String, dynamic>))
           .toList(),
+  subscriptionDetails: json['subscription_details'],
+  birthdayWishMessage: json['birthday_wish_message'],
+  anniversaryWishMessage: json['anniversary_wish_message'],
+  logo: json['logo'] as String?,
   reviewCount: (json['review_count'] as num?)?.toInt(),
-  averageRating: (json['average_rating'] as num?)?.toInt(),
+  averageRating: json['average_rating'],
   isSlotAvailable: json['is_slot_available'] as bool?,
 );
 
@@ -58,16 +65,23 @@ Map<String, dynamic> _$$FitnesscenterDetailsModelImplToJson(
   'description': instance.description,
   'email': instance.email,
   'phone_number': instance.phoneNumber,
-  'logo': instance.logo,
-  'categories': instance.categories,
+  'is_public': instance.isPublic,
+  'active': instance.active,
+  'is_subscribed': instance.isSubscribed,
+  'take_free_trial': instance.takeFreeTrial,
+  'is_on_free_trial': instance.isOnFreeTrial,
   'location': instance.location,
-  'distance_km': instance.distanceKm,
-  'social_media': instance.socialMedia,
-  'services': instance.services,
   'working_days': instance.workingDays,
+  'time_slots': instance.timeSlots,
+  'social_media': instance.socialMedia,
   'amenities': instance.amenities,
+  'categories': instance.categories,
   'photos': instance.photos,
   'packages': instance.packages,
+  'subscription_details': instance.subscriptionDetails,
+  'birthday_wish_message': instance.birthdayWishMessage,
+  'anniversary_wish_message': instance.anniversaryWishMessage,
+  'logo': instance.logo,
   'review_count': instance.reviewCount,
   'average_rating': instance.averageRating,
   'is_slot_available': instance.isSlotAvailable,

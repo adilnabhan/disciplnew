@@ -66,6 +66,7 @@ class __SentOtpScreenState extends State<_SentOtpScreen> {
       child: Scaffold(
         appBar: AppBar(
           toolbarHeight: 50,
+          leading: const PopButton().center,
         ),
         body: SafeArea(
           child: ListView(

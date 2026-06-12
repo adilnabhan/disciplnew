@@ -5,6 +5,8 @@ class NotificationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
@@ -69,7 +71,7 @@ class NotificationsScreen extends StatelessWidget {
               const SizedBox(height: 24),
               // Main Empty Text
               Text(
-                'No Notifications',
+                isCustomer ? 'No Notifications' : 'Guest Account',
                 style: AppStyles.text16Px.poppins.w600.copyWith(
                   color: const Color(0xFF212121),
                 ),
@@ -77,13 +79,27 @@ class NotificationsScreen extends StatelessWidget {
               const SizedBox(height: 8),
               // Subtitle
               Text(
-                "You don't have any notifications at the moment. We'll let you know when updates arrive.",
+                isCustomer
+                    ? "You don't have any notifications at the moment. We'll let you know when updates arrive."
+                    : "Please log in to see your notifications.",
                 textAlign: TextAlign.center,
                 style: AppStyles.text12Px.poppins.w400.copyWith(
                   color: const Color(0xFF7A7A7A),
                   height: 1.5,
                 ),
               ),
+              if (!isCustomer) ...[
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      context.push(const SentOtpScreen());
+                    },
+                    child: const Text('Log In'),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -14,6 +14,15 @@ final class ReviewsAndReatingRepository {
   //* This variable for store this class object globally
   static ReviewsAndReatingRepository? _instance;
 
+  Options get _options {
+    final token = Feggy.read<AppCubit>()?.state.currentUser?.access;
+    final options = Options(headers: {'X-Platform': platformSource});
+    if (token != null && token.isNotEmpty) {
+      return options.token;
+    }
+    return options;
+  }
+
   /// @api {POST https://discipl-backend.onrender.com/api/v1/customer/reviews} https://discipl-backend.onrender.com/api/v1/customer/reviews
   /// @apiName add_review
   /// @apiGroup ReviewsAndReating
@@ -34,17 +43,15 @@ final class ReviewsAndReatingRepository {
     required Map<String, dynamic> body,
   }) async {
     try {
+      final options = _options;
+      options.method = 'POST';
+      options.headers ??= {};
+      options.headers!['Content-Type'] = 'application/json';
+
       final response = await Dio().request<dynamic>(
         ApiUris.addReview,
         data: body,
-        options:
-            Options(
-              method: 'POST',
-              headers: {
-                'X-Platform': platformSource,
-                'Content-Type': 'application/json',
-              },
-            ).token,
+        options: options,
       );
 
       print('Add Review Status Code → ${response.statusCode}');
@@ -122,7 +129,7 @@ final class ReviewsAndReatingRepository {
         call: Dio().patch<dynamic>(
           ApiUris.updateReview(id),
           data: body,
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
         ),
         onSuccess: (res) {
           if (res.statusCode == 200) {
@@ -160,7 +167,7 @@ final class ReviewsAndReatingRepository {
         call: Dio().get<dynamic>(
           nextUrl ?? ApiUris.customerPostedReviews,
           queryParameters: queryParameters,
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
         ),
         onSuccess: (res) {
           if (res.statusCode == 200) {
@@ -203,7 +210,7 @@ final class ReviewsAndReatingRepository {
         call: Dio().delete<dynamic>(
           ApiUris.deleteReview(id),
           data: body,
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
         ),
         onSuccess: (res) {
           if (res.statusCode == 200) {
@@ -240,7 +247,7 @@ final class ReviewsAndReatingRepository {
         call: Dio().get<dynamic>(
           ApiUris.fitnessCenterReviews(id),
           queryParameters: queryParameters,
-          options: Options(headers: {'X-Platform': platformSource}).token,
+          options: _options,
         ),
         onSuccess: (res) {
           if (res.statusCode == 200) {

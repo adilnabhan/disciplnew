@@ -7,7 +7,7 @@ class CompletedBadge extends StatelessWidget {
     this.width = 28.0,
     this.height = 27.0,
     this.coreSize = 13.0,
-    this.iconColor = const Color(0xFFF56064),
+    this.iconColor = const Color(0xFF019C37),
     this.coreColor = Colors.white,
   });
 

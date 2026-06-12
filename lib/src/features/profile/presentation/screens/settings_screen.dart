@@ -11,16 +11,22 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late final ProfileCubit _cubit;
+  late final bool _isCustomer;
 
   @override
   void initState() {
     super.initState();
     _cubit = ProfileCubit();
-    _fetch();
+    _isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+    if (_isCustomer) {
+      _fetch();
+    }
   }
 
   Future<void> _fetch() async {
-    await _cubit.fetchCustomerDetails();
+    if (_isCustomer) {
+      await _cubit.fetchCustomerDetails();
+    }
   }
 
   void _showComingSoon(String title) {
@@ -36,6 +42,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+
     return BlocProvider.value(
       value: _cubit,
       child: Scaffold(
@@ -73,158 +81,270 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
-        body: BlocBuilder<ProfileCubit, ProfileState>(
-          builder: (context, state) {
-            return state.customerDetails.fold(
-              () => const Center(child: CircularProgressIndicator()),
-              (either) => either.fold(
-                (error) => ErrorUi.server(onTap: _fetch).center,
-                (customerDetails) {
-                  final displayName = customerDetails.fullName ??
-                      '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'.trim();
-                  final displayPhone = customerDetails.mobileNumber ?? '+91 123 456 7890';
-
-                  return RefreshIndicator(
-                    onRefresh: _fetch,
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        body: !isCustomer
+            ? ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                children: [
+                  // Profile Header Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.01),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
                       children: [
-                        // Profile Header Card
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.01),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Row(
+                        ProfileImage(
+                          isEdit: false,
+                          onChanged: (image) {},
+                          radius: 80.w,
+                          url: null,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              ProfileImage(
-                                isEdit: false,
-                                onChanged: (image) {},
-                                radius: 80.w,
-                                url: customerDetails.profilePicture != null
-                                    ? '${customerDetails.profilePicture}'
-                                    : null,
+                              Text(
+                                'Guest Account',
+                                style: AppStyles.text16Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF212121),
+                                ),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      displayName.isNotEmpty ? displayName : 'Marcus Lee',
-                                      style: AppStyles.text16Px.poppins.w600.copyWith(
-                                        color: const Color(0xFF212121),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      displayPhone,
-                                      style: AppStyles.text12Px.poppins.w400.copyWith(
-                                        color: const Color(0xFF7A7A7A),
-                                      ),
-                                    ),
-                                  ],
+                              const SizedBox(height: 4),
+                              Text(
+                                'Log in to get details',
+                                style: AppStyles.text12Px.poppins.w400.copyWith(
+                                  color: const Color(0xFF7A7A7A),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 24),
-
-                        // Account & Security
-                        _buildSectionHeader('Account & Security'),
-                        _buildGroupedCard([
-                          _buildMenuItem(
-                            icon: Icons.account_circle_outlined,
-                            title: 'Manage Profile',
-                            onTap: () {
-                              context.push(BlocProvider.value(
-                                value: _cubit,
-                                child: ProfileDetailsScreen(customerDetailsModel: customerDetails),
-                              ));
-                            },
-                          ),
-                          _buildMenuItem(
-                            icon: Icons.phone_outlined,
-                            title: 'Change Phone number',
-                            onTap: () => _showComingSoon('Change Phone number'),
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Preferences
-                        _buildSectionHeader('Preferences'),
-                        _buildGroupedCard([
-                          _buildMenuItem(
-                            icon: 'assets/images/svg/vectors/logo.svg',
-                            title: 'About Us',
-                            applyColorFilter: false,
-                            onTap: () => _showComingSoon('About Us'),
-                          ),
-                          _buildMenuItem(
-                            icon: 'assets/images/svg/icons/notification_icon.svg',
-                            title: 'Notifications',
-                            onTap: () => _showComingSoon('Notifications'),
-                          ),
-                          _buildMenuItem(
-                            icon: Icons.contrast,
-                            title: 'Themes',
-                            onTap: () => _showComingSoon('Themes'),
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Support & Legal
-                        _buildSectionHeader('Support & Legal'),
-                        _buildGroupedCard([
-                          _buildMenuItem(
-                            icon: Icons.help_outline_outlined,
-                            title: 'Help Center / FAQ',
-                            onTap: () => _showComingSoon('Help Center / FAQ'),
-                          ),
-                          _buildMenuItem(
-                            icon: Icons.support_agent_outlined,
-                            title: 'Contact Support',
-                            onTap: () => _showComingSoon('Contact Support'),
-                          ),
-                          _buildMenuItem(
-                            icon: Icons.article_outlined,
-                            title: 'Terms & Conditions',
-                            onTap: () => _showComingSoon('Terms & Conditions'),
-                          ),
-                          _buildMenuItem(
-                            icon: Icons.shield_outlined,
-                            title: 'Privacy Policy',
-                            onTap: () => _showComingSoon('Privacy Policy'),
-                          ),
-                        ]),
-                        const SizedBox(height: 24),
-
-                        // Logout
-                        _buildGroupedCard([
-                          _buildMenuItem(
-                            icon: Icons.logout,
-                            title: 'Logout',
-                            isDestructive: true,
-                            onTap: () => const LogoutSheet().show(context),
-                          ),
-                        ]),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Preferences
+                  _buildSectionHeader('Preferences'),
+                  _buildGroupedCard([
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/vectors/logo.svg',
+                      title: 'About Us',
+                      applyColorFilter: false,
+                      onTap: () => _showComingSoon('About Us'),
+                    ),
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/icons/notification_icon.svg',
+                      title: 'Notifications',
+                      onTap: () => _showComingSoon('Notifications'),
+                    ),
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/icons/Themes_icon.svg',
+                      title: 'Themes',
+                      onTap: () => _showComingSoon('Themes'),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // Support & Legal
+                  _buildSectionHeader('Support & Legal'),
+                  _buildGroupedCard([
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/icons/Faq_icon.svg',
+                      title: 'Help Center / FAQ',
+                      onTap: () => _showComingSoon('Help Center / FAQ'),
+                    ),
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/icons/contact_support_icon.svg',
+                      title: 'Contact Support',
+                      onTap: () => _showComingSoon('Contact Support'),
+                    ),
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/icons/terms&condition_icon.svg',
+                      title: 'Terms & Conditions',
+                      onTap: () => _showComingSoon('Terms & Conditions'),
+                    ),
+                    _buildMenuItem(
+                      icon: 'assets/images/svg/icons/privacy_policy.svg',
+                      title: 'Privacy Policy',
+                      onTap: () => _showComingSoon('Privacy Policy'),
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+
+                  // Log In
+                  _buildGroupedCard([
+                    _buildMenuItem(
+                      icon: Icons.login,
+                      title: 'Log In',
+                      onTap: () {
+                        context.push(const SentOtpScreen());
+                      },
+                    ),
+                  ]),
+                ],
+              )
+            : BlocBuilder<ProfileCubit, ProfileState>(
+                builder: (context, state) {
+                  return state.customerDetails.fold(
+                    () => const Center(child: CircularProgressIndicator()),
+                    (either) => either.fold(
+                      (error) => ErrorUi.server(onTap: _fetch).center,
+                      (customerDetails) {
+                        final displayName = customerDetails.fullName ??
+                            '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'.trim();
+                        final displayPhone = customerDetails.mobileNumber ?? '+91 123 456 7890';
+
+                        return RefreshIndicator(
+                          onRefresh: _fetch,
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                            children: [
+                              // Profile Header Card
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.01),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  children: [
+                                    ProfileImage(
+                                      isEdit: false,
+                                      onChanged: (image) {},
+                                      radius: 80.w,
+                                      url: customerDetails.profilePicture != null
+                                          ? '${customerDetails.profilePicture}'
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            displayName.isNotEmpty ? displayName : 'Marcus Lee',
+                                            style: AppStyles.text16Px.poppins.w600.copyWith(
+                                              color: const Color(0xFF212121),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            displayPhone,
+                                            style: AppStyles.text12Px.poppins.w400.copyWith(
+                                              color: const Color(0xFF7A7A7A),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Account & Security
+                              _buildSectionHeader('Account & Security'),
+                              _buildGroupedCard([
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/manage_profile_icon.svg',
+                                  title: 'Manage Profile',
+                                  onTap: () {
+                                    context.push(BlocProvider.value(
+                                      value: _cubit,
+                                      child: ProfileDetailsScreen(customerDetailsModel: customerDetails),
+                                    ));
+                                  },
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/phone_icon.svg',
+                                  title: 'Change Phone number',
+                                  onTap: () => _showComingSoon('Change Phone number'),
+                                ),
+                              ]),
+                              const SizedBox(height: 24),
+
+                              // Preferences
+                              _buildSectionHeader('Preferences'),
+                              _buildGroupedCard([
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/vectors/logo.svg',
+                                  title: 'About Us',
+                                  applyColorFilter: false,
+                                  onTap: () => _showComingSoon('About Us'),
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/notification_icon.svg',
+                                  title: 'Notifications',
+                                  onTap: () => _showComingSoon('Notifications'),
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/Themes_icon.svg',
+                                  title: 'Themes',
+                                  onTap: () => _showComingSoon('Themes'),
+                                ),
+                              ]),
+                              const SizedBox(height: 24),
+
+                              // Support & Legal
+                              _buildSectionHeader('Support & Legal'),
+                              _buildGroupedCard([
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/Faq_icon.svg',
+                                  title: 'Help Center / FAQ',
+                                  onTap: () => _showComingSoon('Help Center / FAQ'),
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/contact_support_icon.svg',
+                                  title: 'Contact Support',
+                                  onTap: () => _showComingSoon('Contact Support'),
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/terms&condition_icon.svg',
+                                  title: 'Terms & Conditions',
+                                  onTap: () => _showComingSoon('Terms & Conditions'),
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/privacy_policy.svg',
+                                  title: 'Privacy Policy',
+                                  onTap: () => _showComingSoon('Privacy Policy'),
+                                ),
+                              ]),
+                              const SizedBox(height: 24),
+
+                              // Logout
+                              _buildGroupedCard([
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/logout_icon.svg',
+                                  title: 'Logout',
+                                  isDestructive: true,
+                                  onTap: () => const LogoutSheet().show(context),
+                                ),
+                              ]),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   );
                 },
               ),
-            );
-          },
-        ),
       ),
     );
   }
