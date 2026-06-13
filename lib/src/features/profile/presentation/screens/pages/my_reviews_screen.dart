@@ -136,15 +136,23 @@ class _MyReviewsScreenState extends State<MyReviewsScreen>
     if (reviews.results?.isEmpty ?? true) {
       return const Center(child: Text('No reviews found'));
     }
-
+    final isPagination = _cubit.state.myReviews.isPagination;
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: reviews.results?.length ?? 0,
+      itemCount: (reviews.results?.length ?? 0) + (isPagination ? 1 : 0),
       separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder:
-          (context, index) =>
-              PreviousGymReviewTile(review: reviews.results![index]),
+      itemBuilder: (context, index) {
+        if (index == (reviews.results?.length ?? 0)) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        return PreviousGymReviewTile(review: reviews.results![index]);
+      },
     );
   }
 }

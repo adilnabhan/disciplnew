@@ -124,7 +124,13 @@ class FitnessCenterTile extends StatelessWidget {
                       onTap: () async {
                         final phone = fitnessCenter.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
                         if (phone.isNotEmpty) {
-                          final message = Uri.encodeComponent("Hi, I want to enquire about ${fitnessCenter.name ?? 'the fitness center'}.");
+                          final message = Uri.encodeComponent(
+                            'Hi,\n\n'
+                            'I would like to know more about your membership plans, facilities, timings, and current offers.\n\n'
+                            'Thank you.\n\n'
+                            '—\n'
+                            'This enquiry was initiated through the Discipl App.',
+                          );
                           final waUrl = Uri.parse('https://wa.me/$phone?text=$message');
                           if (await canLaunchUrl(waUrl)) {
                             await launchUrl(waUrl);

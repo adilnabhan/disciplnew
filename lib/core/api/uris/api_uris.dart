@@ -61,9 +61,11 @@ final class ApiUris {
   static String fitnessCenterReviews(int id) =>
       '${_v1}fitnesscenter/organization/$id/reviews/';
 
- ///============================= Workout =============================\\\
- static const exercises = '${_v1}customer/exercises/';
-
+  ///============================= Workout =============================\\\
+  static const exercises = '${_v1}customer/exercises/';
+  static const muscleGroups = '${_v1}trainer/muscle-groups/';
+  static const equipment = '${_v1}trainer/equipment/';
+  static const exerciseTypes = '${_v1}trainer/exercise-types/';
 
   static const loginAsGuest = '${_v1}user/login/guest/';
 }

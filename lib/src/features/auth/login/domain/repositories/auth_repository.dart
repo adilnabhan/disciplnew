@@ -281,9 +281,14 @@ final class AuthRepository {
     }
   }
 
+  static Either<ApiException, ConstantChoicesModel>? _cachedConstChoices;
+
   Future<Either<ApiException, ConstantChoicesModel>> fetchConstChoices() async {
+    if (_cachedConstChoices != null && _cachedConstChoices!.isRight()) {
+      return _cachedConstChoices!;
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.constantChoices,
           options: Options(
@@ -297,17 +302,24 @@ final class AuthRepository {
           if (res.statusCode == 200) {
             if (res.data != null && res.data is Map) {
               print('responce us---${res.data}');
-              return right(
+              return right<ApiException, ConstantChoicesModel>(
                 ConstantChoicesModel.fromJson(res.data as Map<String, dynamic>),
               );
             }
           }
-          return left(const ApiException.unknown());
+          return left<ApiException, ConstantChoicesModel>(const ApiException.unknown());
         },
       );
+      final typedResponse = response as Either<ApiException, ConstantChoicesModel>;
+      if (typedResponse.isRight()) {
+        _cachedConstChoices = typedResponse;
+      }
+      return typedResponse;
     } on ApiException catch (e) {
       return left(e);
-    } catch (_) {
+    } catch (e, stack) {
+      print('ERROR in fetchConstChoices: $e');
+      print(stack);
       return left(const ApiException.unknown());
     }
   }

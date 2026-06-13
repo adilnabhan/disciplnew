@@ -202,12 +202,21 @@ class _FitnessCentersListingScreenState
         ),
       );
     }
+    final isPagination = _cubit.state.listFitnessCenters.isPagination;
     return ListView.separated(
       controller: _scrollController,
       padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
-      itemCount: fitnessCenters.results!.length,
+      itemCount: fitnessCenters.results!.length + (isPagination ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
+        if (index == fitnessCenters.results!.length) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
         final center = fitnessCenters.results![index];
         return FitnessCenterTile(
           fitnessCenter: center,

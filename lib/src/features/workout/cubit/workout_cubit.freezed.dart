@@ -23,6 +23,12 @@ mixin _$WorkoutState {
       throw _privateConstructorUsedError;
   List<Map<String, String>> get customExercises =>
       throw _privateConstructorUsedError;
+  List<MuscleGroupModel> get muscleGroups => throw _privateConstructorUsedError;
+  List<EquipmentModel> get equipment => throw _privateConstructorUsedError;
+  List<ExerciseTypeModel> get exerciseTypes =>
+      throw _privateConstructorUsedError;
+  bool get isLoadingLookups => throw _privateConstructorUsedError;
+  bool get isCreatingExercise => throw _privateConstructorUsedError;
 
   /// Create a copy of WorkoutState
   /// with the given fields replaced by the non-null parameter values.
@@ -42,6 +48,11 @@ abstract class $WorkoutStateCopyWith<$Res> {
     List<Map<String, dynamic>> exercises,
     List<Map<String, String>> libraryExercises,
     List<Map<String, String>> customExercises,
+    List<MuscleGroupModel> muscleGroups,
+    List<EquipmentModel> equipment,
+    List<ExerciseTypeModel> exerciseTypes,
+    bool isLoadingLookups,
+    bool isCreatingExercise,
   });
 }
 
@@ -63,6 +74,11 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
     Object? exercises = null,
     Object? libraryExercises = null,
     Object? customExercises = null,
+    Object? muscleGroups = null,
+    Object? equipment = null,
+    Object? exerciseTypes = null,
+    Object? isLoadingLookups = null,
+    Object? isCreatingExercise = null,
   }) {
     return _then(
       _value.copyWith(
@@ -81,6 +97,31 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
                     ? _value.customExercises
                     : customExercises // ignore: cast_nullable_to_non_nullable
                         as List<Map<String, String>>,
+            muscleGroups:
+                null == muscleGroups
+                    ? _value.muscleGroups
+                    : muscleGroups // ignore: cast_nullable_to_non_nullable
+                        as List<MuscleGroupModel>,
+            equipment:
+                null == equipment
+                    ? _value.equipment
+                    : equipment // ignore: cast_nullable_to_non_nullable
+                        as List<EquipmentModel>,
+            exerciseTypes:
+                null == exerciseTypes
+                    ? _value.exerciseTypes
+                    : exerciseTypes // ignore: cast_nullable_to_non_nullable
+                        as List<ExerciseTypeModel>,
+            isLoadingLookups:
+                null == isLoadingLookups
+                    ? _value.isLoadingLookups
+                    : isLoadingLookups // ignore: cast_nullable_to_non_nullable
+                        as bool,
+            isCreatingExercise:
+                null == isCreatingExercise
+                    ? _value.isCreatingExercise
+                    : isCreatingExercise // ignore: cast_nullable_to_non_nullable
+                        as bool,
           )
           as $Val,
     );
@@ -100,6 +141,11 @@ abstract class _$$WorkoutStateImplCopyWith<$Res>
     List<Map<String, dynamic>> exercises,
     List<Map<String, String>> libraryExercises,
     List<Map<String, String>> customExercises,
+    List<MuscleGroupModel> muscleGroups,
+    List<EquipmentModel> equipment,
+    List<ExerciseTypeModel> exerciseTypes,
+    bool isLoadingLookups,
+    bool isCreatingExercise,
   });
 }
 
@@ -120,6 +166,11 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
     Object? exercises = null,
     Object? libraryExercises = null,
     Object? customExercises = null,
+    Object? muscleGroups = null,
+    Object? equipment = null,
+    Object? exerciseTypes = null,
+    Object? isLoadingLookups = null,
+    Object? isCreatingExercise = null,
   }) {
     return _then(
       _$WorkoutStateImpl(
@@ -138,6 +189,31 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
                 ? _value._customExercises
                 : customExercises // ignore: cast_nullable_to_non_nullable
                     as List<Map<String, String>>,
+        muscleGroups:
+            null == muscleGroups
+                ? _value._muscleGroups
+                : muscleGroups // ignore: cast_nullable_to_non_nullable
+                    as List<MuscleGroupModel>,
+        equipment:
+            null == equipment
+                ? _value._equipment
+                : equipment // ignore: cast_nullable_to_non_nullable
+                    as List<EquipmentModel>,
+        exerciseTypes:
+            null == exerciseTypes
+                ? _value._exerciseTypes
+                : exerciseTypes // ignore: cast_nullable_to_non_nullable
+                    as List<ExerciseTypeModel>,
+        isLoadingLookups:
+            null == isLoadingLookups
+                ? _value.isLoadingLookups
+                : isLoadingLookups // ignore: cast_nullable_to_non_nullable
+                    as bool,
+        isCreatingExercise:
+            null == isCreatingExercise
+                ? _value.isCreatingExercise
+                : isCreatingExercise // ignore: cast_nullable_to_non_nullable
+                    as bool,
       ),
     );
   }
@@ -150,9 +226,17 @@ class _$WorkoutStateImpl implements _WorkoutState {
     required final List<Map<String, dynamic>> exercises,
     required final List<Map<String, String>> libraryExercises,
     required final List<Map<String, String>> customExercises,
+    final List<MuscleGroupModel> muscleGroups = const [],
+    final List<EquipmentModel> equipment = const [],
+    final List<ExerciseTypeModel> exerciseTypes = const [],
+    this.isLoadingLookups = false,
+    this.isCreatingExercise = false,
   }) : _exercises = exercises,
        _libraryExercises = libraryExercises,
-       _customExercises = customExercises;
+       _customExercises = customExercises,
+       _muscleGroups = muscleGroups,
+       _equipment = equipment,
+       _exerciseTypes = exerciseTypes;
 
   final List<Map<String, dynamic>> _exercises;
   @override
@@ -179,9 +263,43 @@ class _$WorkoutStateImpl implements _WorkoutState {
     return EqualUnmodifiableListView(_customExercises);
   }
 
+  final List<MuscleGroupModel> _muscleGroups;
+  @override
+  @JsonKey()
+  List<MuscleGroupModel> get muscleGroups {
+    if (_muscleGroups is EqualUnmodifiableListView) return _muscleGroups;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_muscleGroups);
+  }
+
+  final List<EquipmentModel> _equipment;
+  @override
+  @JsonKey()
+  List<EquipmentModel> get equipment {
+    if (_equipment is EqualUnmodifiableListView) return _equipment;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_equipment);
+  }
+
+  final List<ExerciseTypeModel> _exerciseTypes;
+  @override
+  @JsonKey()
+  List<ExerciseTypeModel> get exerciseTypes {
+    if (_exerciseTypes is EqualUnmodifiableListView) return _exerciseTypes;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_exerciseTypes);
+  }
+
+  @override
+  @JsonKey()
+  final bool isLoadingLookups;
+  @override
+  @JsonKey()
+  final bool isCreatingExercise;
+
   @override
   String toString() {
-    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises)';
+    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise)';
   }
 
   @override
@@ -200,7 +318,23 @@ class _$WorkoutStateImpl implements _WorkoutState {
             const DeepCollectionEquality().equals(
               other._customExercises,
               _customExercises,
-            ));
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._muscleGroups,
+              _muscleGroups,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._equipment,
+              _equipment,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._exerciseTypes,
+              _exerciseTypes,
+            ) &&
+            (identical(other.isLoadingLookups, isLoadingLookups) ||
+                other.isLoadingLookups == isLoadingLookups) &&
+            (identical(other.isCreatingExercise, isCreatingExercise) ||
+                other.isCreatingExercise == isCreatingExercise));
   }
 
   @override
@@ -209,6 +343,11 @@ class _$WorkoutStateImpl implements _WorkoutState {
     const DeepCollectionEquality().hash(_exercises),
     const DeepCollectionEquality().hash(_libraryExercises),
     const DeepCollectionEquality().hash(_customExercises),
+    const DeepCollectionEquality().hash(_muscleGroups),
+    const DeepCollectionEquality().hash(_equipment),
+    const DeepCollectionEquality().hash(_exerciseTypes),
+    isLoadingLookups,
+    isCreatingExercise,
   );
 
   /// Create a copy of WorkoutState
@@ -225,6 +364,11 @@ abstract class _WorkoutState implements WorkoutState {
     required final List<Map<String, dynamic>> exercises,
     required final List<Map<String, String>> libraryExercises,
     required final List<Map<String, String>> customExercises,
+    final List<MuscleGroupModel> muscleGroups,
+    final List<EquipmentModel> equipment,
+    final List<ExerciseTypeModel> exerciseTypes,
+    final bool isLoadingLookups,
+    final bool isCreatingExercise,
   }) = _$WorkoutStateImpl;
 
   @override
@@ -233,6 +377,16 @@ abstract class _WorkoutState implements WorkoutState {
   List<Map<String, String>> get libraryExercises;
   @override
   List<Map<String, String>> get customExercises;
+  @override
+  List<MuscleGroupModel> get muscleGroups;
+  @override
+  List<EquipmentModel> get equipment;
+  @override
+  List<ExerciseTypeModel> get exerciseTypes;
+  @override
+  bool get isLoadingLookups;
+  @override
+  bool get isCreatingExercise;
 
   /// Create a copy of WorkoutState
   /// with the given fields replaced by the non-null parameter values.

@@ -18,20 +18,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (isCustomer) {
       _fetch();
-      _cubit.fetchConstChoices();
     }
   }
 
   Future<void> _fetch() async {
     await _cubit.fetchCustomerDetails();
+    await _cubit.fetchConstChoices();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<AppCubit, AppState>(
-      builder: (context, appState) {
-        final bool isCustomer =
-            Feggy.read<AppCubit>()?.state.currentUser != null;
+    return BlocListener<AppCubit, AppState>(
+      listenWhen: (previous, current) {
+        return previous.currentUser?.access != current.currentUser?.access;
+      },
+      listener: (context, appState) {
+        if (appState.currentUser != null) {
+          _fetch();
+        }
+      },
+      child: BlocBuilder<AppCubit, AppState>(
+        builder: (context, appState) {
+          final bool isCustomer =
+              Feggy.read<AppCubit>()?.state.currentUser != null;
         return BlocProvider.value(
           value: _cubit,
           child: Scaffold(
@@ -287,17 +296,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         customerDetails,
                                         choicesModel,
                                       ),
-                                      const SizedBox(height: 16),
-                                      ...[
-                                        _ProfileListItem(
-                                          label: 'Delete Account',
-                                          onTap:
-                                              () => DeleteAccountSheet().show(
-                                                context,
-                                              ),
-                                          isLogout: true,
-                                        ),
-                                      ],
                                     ],
                                   ),
                                 );
@@ -309,7 +307,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
           ),
         );
-      },
+        },
+      ),
     );
   }
 
@@ -469,6 +468,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+        const SizedBox(height: 100),
       ],
     );
   }

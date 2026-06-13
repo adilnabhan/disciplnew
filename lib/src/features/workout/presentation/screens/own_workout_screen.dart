@@ -106,7 +106,11 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   'workout_search_debouncer',
                                   const Duration(milliseconds: 500),
                                   () {
-                                    _cubit.loadLibraryExercises(search: v);
+                                    if (currentTab == 0) {
+                                      _cubit.loadLibraryExercises(search: v);
+                                    } else {
+                                      _cubit.loadCustomExercises(search: v);
+                                    }
                                   },
                                 );
                               },
@@ -182,6 +186,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         setSheetState(() {
                                           currentTab = 0;
                                         });
+                                        _cubit.loadLibraryExercises(search: searchController.text);
                                       },
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -234,6 +239,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         setSheetState(() {
                                           currentTab = 1;
                                         });
+                                        _cubit.loadCustomExercises(search: searchController.text);
                                       },
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -319,6 +325,13 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         _showCreateCustomExerciseBottomSheet(
                                           context,
                                           setSheetState,
+                                          onCreated: () {
+                                            setSheetState(() {
+                                              currentTab = 1;
+                                              searchController.clear();
+                                              searchQuery = '';
+                                            });
+                                          },
                                         );
                                       },
                                     ),
@@ -457,13 +470,15 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
   void _showCreateCustomExerciseBottomSheet(
     BuildContext context,
-    StateSetter setSheetState,
-  ) {
+    StateSetter setSheetState, {
+    VoidCallback? onCreated,
+  }) {
     final nameController = TextEditingController();
     final youtubeLinkController = TextEditingController();
-    String? selectedMuscle;
-    String? selectedType;
-    String? selectedEquipment;
+    int? selectedMuscleId;
+    String? selectedTypeCode;
+    int? selectedEquipmentId;
+    final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
       context: context,
@@ -473,6 +488,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
+        final sheetNavigator = Navigator.of(sheetContext);
         return GestureDetector(
           onTap: () => FocusScope.of(sheetContext).unfocus(),
           child: Padding(
@@ -481,479 +497,541 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
             ),
             child: StatefulBuilder(
               builder: (BuildContext context, StateSetter setDialogState) {
-                return Container(
-                  height: MediaQuery.of(sheetContext).size.height * 0.7,
-                  padding: const EdgeInsets.only(top: 24),
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE0E0E0),
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
+                return BlocBuilder<WorkoutCubit, WorkoutState>(
+                  bloc: _cubit,
+                  builder: (context, state) {
+                    if (state.isLoadingLookups) {
+                      return Container(
+                        height: MediaQuery.of(sheetContext).size.height * 0.4,
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: const Center(
+                          child: CircularProgressIndicator(),
                         ),
-                        const Text(
-                          'Create new Workout',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                            height: 20 / 14,
-                            color: AppColors.button,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
+                      );
+                    }
 
-                        // Workout Name
-                        RichText(
-                          text: const TextSpan(
-                            text: 'Workout Name',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w500,
-                              fontSize: 14,
-                              height: 1.0,
-                              letterSpacing: -0.3,
-                              color: AppColors.button,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: ' *',
-                                style: TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: nameController,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w400,
-                            fontSize: 15,
-                            height: 1.0,
-                            letterSpacing: -0.3,
-                            color: AppColors.button,
-                          ),
-                          decoration: InputDecoration(
-                            filled: false,
-                            hintText: 'Enter workout name',
-                            hintStyle: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 15,
-                              height: 1.0,
-                              letterSpacing: -0.3,
-                              color: Color(0xFF888888),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Muscle
-                        const Text(
-                          'Muscle',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                            height: 1.0,
-                            letterSpacing: -0.3,
-                            color: AppColors.button,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: selectedMuscle,
-                          decoration: InputDecoration(
-                            filled: false,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                          ),
-                          hint: const Text(
-                            'Select the muscle',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 15,
-                              height: 1.0,
-                              letterSpacing: -0.3,
-                              color: Color(0xFF888888),
-                            ),
-                          ),
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Color(0xFF9E9E9E),
-                          ),
-                          items:
-                              [
-                                    'Chest',
-                                    'Back',
-                                    'Legs',
-                                    'Shoulders',
-                                    'Arms',
-                                    'Abs',
-                                    'Cardio',
-                                  ]
-                                  .map(
-                                    (m) => DropdownMenuItem(
-                                      value: m,
-                                      child: Text(
-                                        m,
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 15,
-                                          height: 1.0,
-                                          letterSpacing: -0.3,
-                                          color: AppColors.button,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (val) {
-                            setDialogState(() {
-                              selectedMuscle = val;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Type
-                        const Text(
-                          'Type',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                            height: 1.0,
-                            letterSpacing: -0.3,
-                            color: AppColors.button,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: selectedType,
-                          decoration: InputDecoration(
-                            filled: false,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                          ),
-                          hint: const Text(
-                            'Select the type of exercise',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 15,
-                              height: 1.0,
-                              letterSpacing: -0.3,
-                              color: Color(0xFF888888),
-                            ),
-                          ),
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Color(0xFF9E9E9E),
-                          ),
-                          items:
-                              ['Volume×Reps', 'Reps Only', 'Time Only']
-                                  .map(
-                                    (t) => DropdownMenuItem(
-                                      value: t,
-                                      child: Text(
-                                        t,
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 15,
-                                          height: 1.0,
-                                          letterSpacing: -0.3,
-                                          color: AppColors.button,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (val) {
-                            setDialogState(() {
-                              selectedType = val;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Equipment
-                        const Text(
-                          'Equipment',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                            height: 1.0,
-                            letterSpacing: -0.3,
-                            color: AppColors.button,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField<String>(
-                          value: selectedEquipment,
-                          decoration: InputDecoration(
-                            filled: false,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                          ),
-                          hint: const Text(
-                            'Select the equipment used',
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 15,
-                              height: 1.0,
-                              letterSpacing: -0.3,
-                              color: Color(0xFF888888),
-                            ),
-                          ),
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Color(0xFF9E9E9E),
-                          ),
-                          items:
-                              [
-                                    'Dumbbell',
-                                    'Barbell',
-                                    'Machine',
-                                    'Cables',
-                                    'Bodyweight',
-                                  ]
-                                  .map(
-                                    (e) => DropdownMenuItem(
-                                      value: e,
-                                      child: Text(
-                                        e,
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontWeight: FontWeight.w400,
-                                          fontSize: 15,
-                                          height: 1.0,
-                                          letterSpacing: -0.3,
-                                          color: AppColors.button,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (val) {
-                            setDialogState(() {
-                              selectedEquipment = val;
-                            });
-                          },
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Youtube Link
-                        const Text(
-                          'Youtube Link',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                            height: 1.0,
-                            letterSpacing: -0.3,
-                            color: AppColors.button,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: youtubeLinkController,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w400,
-                            fontSize: 15,
-                            height: 1.0,
-                            letterSpacing: -0.3,
-                            color: AppColors.button,
-                          ),
-                          decoration: InputDecoration(
-                            filled: false,
-                            hintText:
-                                'Paste the youtube link of exercise video',
-                            hintStyle: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w400,
-                              fontSize: 15,
-                              height: 1.0,
-                              letterSpacing: -0.3,
-                              color: Color(0xFF888888),
-                            ),
-                            suffixIcon: GestureDetector(
-                              onTap: () async {
-                                final data = await Clipboard.getData(
-                                  Clipboard.kTextPlain,
-                                );
-                                if (data?.text != null) {
-                                  youtubeLinkController.text = data!.text!;
-                                }
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.only(right: 12.0),
-                                child: Icon(
-                                  Icons.content_paste_outlined,
-                                  color: Color(0xFF212121),
-                                  size: 20,
+                    return Form(
+                      key: formKey,
+                      child: Container(
+                        height: MediaQuery.of(sheetContext).size.height * 0.7,
+                      padding: const EdgeInsets.only(top: 24),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: 40,
+                                height: 4,
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE0E0E0),
+                                  borderRadius: BorderRadius.circular(2),
                                 ),
                               ),
                             ),
-                            suffixIconConstraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 20,
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFDDDDDD),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 38),
-
-                        // Create Exercise Button
-                        Center(
-                          child: GestureDetector(
-                            onTap: () {
-                              final name = nameController.text.trim();
-                              final muscle = selectedMuscle ?? 'Chest';
-                              final equipment = selectedEquipment ?? 'Dumbbell';
-                              final type = selectedType ?? 'Volume×Reps';
-
-                              if (name.isNotEmpty) {
-                                _cubit.createCustomExercise(
-                                  name: name,
-                                  muscle: muscle,
-                                  equipment: equipment,
-                                  type: type,
-                                );
-                                setSheetState(() {});
-                                Navigator.pop(sheetContext);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Please enter a workout name',
-                                    ),
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => Navigator.pop(sheetContext),
+                                  child: const Icon(
+                                    Icons.chevron_left,
+                                    color: AppColors.button,
+                                    size: 28,
                                   ),
-                                );
-                              }
-                            },
-                            child: Container(
-                              width: 301,
-                              height: 39,
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x12000000),
-                                    offset: Offset(0, 1),
-                                    blurRadius: 5.3,
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: Text(
-                                  'Create Exercise',
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Create new Workout',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w600,
-                                    fontSize: 15,
-                                    height: 1.0,
-                                    letterSpacing: -0.3,
-                                    color: Colors.white,
+                                    fontSize: 14,
+                                    height: 20 / 14,
+                                    color: AppColors.button,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Workout Name
+                            RichText(
+                              text: const TextSpan(
+                                text: 'Workout Name',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.button,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: ' *',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: nameController,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w400,
+                                fontSize: 15,
+                                height: 1.0,
+                                letterSpacing: -0.3,
+                                color: AppColors.button,
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Required this field';
+                                }
+                                return null;
+                              },
+                              decoration: InputDecoration(
+                                filled: false,
+                                hintText: 'Enter workout name',
+                                hintStyle: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 15,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: Color(0xFF888888),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 20),
+
+                            // Muscle
+                            const Text(
+                              'Muscle',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                height: 1.0,
+                                letterSpacing: -0.3,
+                                color: AppColors.button,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<int>(
+                              value: selectedMuscleId,
+                              validator: (val) {
+                                if (val == null) {
+                                  return 'Required this field';
+                                }
+                                return null;
+                              },
+                              decoration: InputDecoration(
+                                filled: false,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                              ),
+                              hint: const Text(
+                                'Select the muscle',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 15,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: Color(0xFF888888),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                              items: state.muscleGroups
+                                  .map(
+                                    (m) => DropdownMenuItem(
+                                      value: m.id,
+                                      child: Text(
+                                        m.name,
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 15,
+                                          height: 1.0,
+                                          letterSpacing: -0.3,
+                                          color: AppColors.button,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  selectedMuscleId = val;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Type
+                            const Text(
+                              'Type',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                height: 1.0,
+                                letterSpacing: -0.3,
+                                color: AppColors.button,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<String>(
+                              value: selectedTypeCode,
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return 'Required this field';
+                                }
+                                return null;
+                              },
+                              decoration: InputDecoration(
+                                filled: false,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                              ),
+                              hint: const Text(
+                                'Select the type of exercise',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 15,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: Color(0xFF888888),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                              items: state.exerciseTypes
+                                  .map(
+                                    (t) => DropdownMenuItem(
+                                      value: t.id,
+                                      child: Text(
+                                        t.name,
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 15,
+                                          height: 1.0,
+                                          letterSpacing: -0.3,
+                                          color: AppColors.button,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  selectedTypeCode = val;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Equipment
+                            const Text(
+                              'Equipment',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                height: 1.0,
+                                letterSpacing: -0.3,
+                                color: AppColors.button,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            DropdownButtonFormField<int>(
+                              value: selectedEquipmentId,
+                              validator: (val) {
+                                if (val == null) {
+                                  return 'Required this field';
+                                }
+                                return null;
+                              },
+                              decoration: InputDecoration(
+                                filled: false,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                              ),
+                              hint: const Text(
+                                'Select the equipment used',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 15,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: Color(0xFF888888),
+                                ),
+                              ),
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Color(0xFF9E9E9E),
+                              ),
+                              items: state.equipment
+                                  .map(
+                                    (e) => DropdownMenuItem(
+                                      value: e.id,
+                                      child: Text(
+                                        e.name,
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w400,
+                                          fontSize: 15,
+                                          height: 1.0,
+                                          letterSpacing: -0.3,
+                                          color: AppColors.button,
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (val) {
+                                setDialogState(() {
+                                  selectedEquipmentId = val;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Youtube Link
+                            Text.rich(
+                              const TextSpan(
+                                text: 'Youtube Link ',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.button,
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: '(Optional)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: Color(0xFF888888),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextField(
+                              controller: youtubeLinkController,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w400,
+                                fontSize: 15,
+                                height: 1.0,
+                                letterSpacing: -0.3,
+                                color: AppColors.button,
+                              ),
+                              decoration: InputDecoration(
+                                filled: false,
+                                hintText:
+                                    'Paste the youtube link of exercise video',
+                                hintStyle: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 15,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: Color(0xFF888888),
+                                ),
+                                suffixIcon: GestureDetector(
+                                  onTap: () async {
+                                    final data = await Clipboard.getData(
+                                      Clipboard.kTextPlain,
+                                    );
+                                    if (data?.text != null) {
+                                      youtubeLinkController.text = data!.text!;
+                                    }
+                                  },
+                                  child: const Padding(
+                                    padding: EdgeInsets.only(right: 12.0),
+                                    child: Icon(
+                                      Icons.content_paste_outlined,
+                                      color: Color(0xFF212121),
+                                      size: 20,
+                                    ),
+                                  ),
+                                ),
+                                suffixIconConstraints: const BoxConstraints(
+                                  minWidth: 32,
+                                  minHeight: 20,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 38),
+
+                            // Create Exercise Button
+                            Center(
+                              child: GestureDetector(
+                                onTap: state.isCreatingExercise
+                                    ? null
+                                    : () {
+                                        if (!formKey.currentState!.validate()) {
+                                          return;
+                                        }
+                                        final name = nameController.text.trim();
+                                        _cubit.createCustomExercise(
+                                          name: name,
+                                          muscleGroupId: selectedMuscleId!,
+                                          equipmentId: selectedEquipmentId!,
+                                          type: selectedTypeCode!,
+                                          videoUrl: youtubeLinkController.text.trim(),
+                                          onComplete: (success, message) {
+                                            if (success) {
+                                              sheetNavigator.pop();
+                                              onCreated?.call();
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text(message)),
+                                              );
+                                            } else {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                SnackBar(content: Text(message)),
+                                              );
+                                            }
+                                          },
+                                        );
+                                      },
+                                child: Container(
+                                  width: 301,
+                                  height: 39,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x12000000),
+                                        offset: Offset(0, 1),
+                                        blurRadius: 5.3,
+                                      ),
+                                    ],
+                                  ),
+                                  child: Center(
+                                    child: state.isCreatingExercise
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                            ),
+                                          )
+                                        : const Text(
+                                            'Create Exercise',
+                                            style: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 15,
+                                              height: 1.0,
+                                              letterSpacing: -0.3,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  );
+                  },
                 );
               },
             ),

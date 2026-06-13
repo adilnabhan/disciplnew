@@ -61,6 +61,7 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
     if (reviews.results?.reviews?.isEmpty ?? true) {
       return const Center(child: Text('No reviews found!'));
     }
+    final isPagination = _cubit.state.fitnessCenterReviews.isPagination;
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -95,9 +96,19 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
         ListView.separated(
           controller: _scrollController,
           padding: const EdgeInsets.all(16),
-          itemBuilder: (context, index) => _buildReviewItem(reviews.results?.reviews?[index]),
+          itemBuilder: (context, index) {
+            if (index == (reviews.results?.reviews?.length ?? 0)) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            return _buildReviewItem(reviews.results?.reviews?[index]);
+          },
           separatorBuilder: (context, index) => const SizedBox(height: 16),
-          itemCount: reviews.results?.reviews?.length ?? 0,
+          itemCount: (reviews.results?.reviews?.length ?? 0) + (isPagination ? 1 : 0),
         ),
       ],
     );

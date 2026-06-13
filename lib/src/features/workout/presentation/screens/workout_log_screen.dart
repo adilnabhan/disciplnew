@@ -2,6 +2,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/completed_badge.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/own_workout_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/presets_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_execution_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
 
@@ -260,17 +261,56 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   // ── Bottom CTA ────────────────────────────────────────────────────────────
   Widget _buildStartButton() {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 24),
-      child: PrimaryPillButton(
-        text: 'Start your own Workout',
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const OwnWorkoutScreen(),
+      padding: const EdgeInsets.only(top: 16, bottom: 24, left: 20, right: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Button.filled(
+            size: const Size(double.infinity, 45),
+            title: 'Start Empty Workout',
+            style: AppStyles.text14Px.poppins.w600.copyWith(
+              color: Colors.white,
             ),
-          );
-        },
+            icon: const Icon(Icons.add, color: Colors.white, size: 20),
+            raduis: 12,
+            ontap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const OwnWorkoutScreen(),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+          Button.filled(
+            size: const Size(double.infinity, 45),
+            title: 'Start a Preset',
+            buttonColor: const Color(0xFFFFF4F4),
+            side: const BorderSide(color: Color(0xFFF0B5B7)),
+            style: AppStyles.text14Px.poppins.w600.copyWith(
+              color: AppColors.primary,
+            ),
+            icon: SvgPicture.asset(
+              'assets/images/svg/icons/presets.svg',
+              width: 20,
+              height: 20,
+              colorFilter: const ColorFilter.mode(
+                AppColors.primary,
+                BlendMode.srcIn,
+              ),
+            ),
+            raduis: 12,
+            ontap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PresetsScreen(),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -491,9 +531,9 @@ class _WorkoutCard extends StatelessWidget {
                   : null,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
@@ -635,4 +675,3 @@ class _GuestWorkoutView extends StatelessWidget {
     );
   }
 }
-

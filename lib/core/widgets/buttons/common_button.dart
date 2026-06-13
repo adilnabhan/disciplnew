@@ -106,10 +106,12 @@ class _ButtonState extends State<Button> {
               ? GestureDetector(
                 onTap: widget.ontap,
                 child: Container(
-                  height: 48.h,
-                  width: context.width,
+                  height: widget.size?.height ?? 48.h,
+                  width: widget.size?.width ?? context.width,
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppColors.disabledButton),
+                    border: widget.side != BorderSide.none
+                        ? Border.fromBorderSide(widget.side)
+                        : Border.all(color: AppColors.disabledButton),
                     color: Colors.transparent,
                     borderRadius: BorderRadius.circular(widget.raduis),
                   ),
@@ -145,10 +147,12 @@ class _ButtonState extends State<Button> {
                         ? () => widget.ontap()
                         : null,
                 child: Container(
-                  height: 48.h,
-                  width: context.width,
+                  height: widget.size?.height ?? 48.h,
+                  width: widget.size?.width ?? context.width,
                   decoration: BoxDecoration(
-                    border: Border.all(color: widget.color),
+                    border: widget.side != BorderSide.none
+                        ? Border.fromBorderSide(widget.side)
+                        : Border.all(color: widget.color),
                     color: widget.color,
                     borderRadius: BorderRadius.circular(widget.raduis),
                   ),
