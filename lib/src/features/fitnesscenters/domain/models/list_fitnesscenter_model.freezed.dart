@@ -312,6 +312,8 @@ mixin _$SingleFItnessCenterModel {
   String? get registrationStatus => throw _privateConstructorUsedError;
   @JsonKey(name: 'categories')
   List<Category>? get categories => throw _privateConstructorUsedError;
+  @JsonKey(name: 'category')
+  List<Category>? get category => throw _privateConstructorUsedError;
   @JsonKey(name: 'location')
   Location? get location => throw _privateConstructorUsedError;
   @JsonKey(name: 'mentor_name')
@@ -322,6 +324,8 @@ mixin _$SingleFItnessCenterModel {
   double? get averageRating => throw _privateConstructorUsedError;
   @JsonKey(name: 'created_at')
   DateTime? get createdAt => throw _privateConstructorUsedError;
+  @JsonKey(name: 'distance_km')
+  double? get distanceKm => throw _privateConstructorUsedError;
 
   /// Serializes this SingleFItnessCenterModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -352,11 +356,13 @@ abstract class $SingleFItnessCenterModelCopyWith<$Res> {
     @JsonKey(name: 'is_public') bool? isPublic,
     @JsonKey(name: 'registration_status') String? registrationStatus,
     @JsonKey(name: 'categories') List<Category>? categories,
+    @JsonKey(name: 'category') List<Category>? category,
     @JsonKey(name: 'location') Location? location,
     @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') double? averageRating,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'distance_km') double? distanceKm,
   });
 
   $LocationCopyWith<$Res>? get location;
@@ -391,11 +397,13 @@ class _$SingleFItnessCenterModelCopyWithImpl<
     Object? isPublic = freezed,
     Object? registrationStatus = freezed,
     Object? categories = freezed,
+    Object? category = freezed,
     Object? location = freezed,
     Object? mentorName = freezed,
     Object? reviewCount = freezed,
     Object? averageRating = freezed,
     Object? createdAt = freezed,
+    Object? distanceKm = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -454,6 +462,11 @@ class _$SingleFItnessCenterModelCopyWithImpl<
                     ? _value.categories
                     : categories // ignore: cast_nullable_to_non_nullable
                         as List<Category>?,
+            category:
+                freezed == category
+                    ? _value.category
+                    : category // ignore: cast_nullable_to_non_nullable
+                        as List<Category>?,
             location:
                 freezed == location
                     ? _value.location
@@ -479,6 +492,11 @@ class _$SingleFItnessCenterModelCopyWithImpl<
                     ? _value.createdAt
                     : createdAt // ignore: cast_nullable_to_non_nullable
                         as DateTime?,
+            distanceKm:
+                freezed == distanceKm
+                    ? _value.distanceKm
+                    : distanceKm // ignore: cast_nullable_to_non_nullable
+                        as double?,
           )
           as $Val,
     );
@@ -520,11 +538,13 @@ abstract class _$$SingleFItnessCenterModelImplCopyWith<$Res>
     @JsonKey(name: 'is_public') bool? isPublic,
     @JsonKey(name: 'registration_status') String? registrationStatus,
     @JsonKey(name: 'categories') List<Category>? categories,
+    @JsonKey(name: 'category') List<Category>? category,
     @JsonKey(name: 'location') Location? location,
     @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') double? averageRating,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'distance_km') double? distanceKm,
   });
 
   @override
@@ -560,11 +580,13 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
     Object? isPublic = freezed,
     Object? registrationStatus = freezed,
     Object? categories = freezed,
+    Object? category = freezed,
     Object? location = freezed,
     Object? mentorName = freezed,
     Object? reviewCount = freezed,
     Object? averageRating = freezed,
     Object? createdAt = freezed,
+    Object? distanceKm = freezed,
   }) {
     return _then(
       _$SingleFItnessCenterModelImpl(
@@ -623,6 +645,11 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
                 ? _value._categories
                 : categories // ignore: cast_nullable_to_non_nullable
                     as List<Category>?,
+        category:
+            freezed == category
+                ? _value._category
+                : category // ignore: cast_nullable_to_non_nullable
+                    as List<Category>?,
         location:
             freezed == location
                 ? _value.location
@@ -648,6 +675,11 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
                     as DateTime?,
+        distanceKm:
+            freezed == distanceKm
+                ? _value.distanceKm
+                : distanceKm // ignore: cast_nullable_to_non_nullable
+                    as double?,
       ),
     );
   }
@@ -655,7 +687,7 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
+class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
   const _$SingleFItnessCenterModelImpl({
     @JsonKey(name: 'id') this.id,
     @JsonKey(name: 'name') this.name,
@@ -668,12 +700,16 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
     @JsonKey(name: 'is_public') this.isPublic,
     @JsonKey(name: 'registration_status') this.registrationStatus,
     @JsonKey(name: 'categories') final List<Category>? categories,
+    @JsonKey(name: 'category') final List<Category>? category,
     @JsonKey(name: 'location') this.location,
     @JsonKey(name: 'mentor_name') this.mentorName,
     @JsonKey(name: 'review_count') this.reviewCount,
     @JsonKey(name: 'average_rating') this.averageRating,
     @JsonKey(name: 'created_at') this.createdAt,
-  }) : _categories = categories;
+    @JsonKey(name: 'distance_km') this.distanceKm,
+  }) : _categories = categories,
+       _category = category,
+       super._();
 
   factory _$SingleFItnessCenterModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$SingleFItnessCenterModelImplFromJson(json);
@@ -719,6 +755,17 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
     return EqualUnmodifiableListView(value);
   }
 
+  final List<Category>? _category;
+  @override
+  @JsonKey(name: 'category')
+  List<Category>? get category {
+    final value = _category;
+    if (value == null) return null;
+    if (_category is EqualUnmodifiableListView) return _category;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   @JsonKey(name: 'location')
   final Location? location;
@@ -734,10 +781,13 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
   @override
   @JsonKey(name: 'created_at')
   final DateTime? createdAt;
+  @override
+  @JsonKey(name: 'distance_km')
+  final double? distanceKm;
 
   @override
   String toString() {
-    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, location: $location, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt)';
+    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, category: $category, location: $location, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt, distanceKm: $distanceKm)';
   }
 
   @override
@@ -763,6 +813,7 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
               other._categories,
               _categories,
             ) &&
+            const DeepCollectionEquality().equals(other._category, _category) &&
             (identical(other.location, location) ||
                 other.location == location) &&
             (identical(other.mentorName, mentorName) ||
@@ -772,7 +823,9 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
             (identical(other.averageRating, averageRating) ||
                 other.averageRating == averageRating) &&
             (identical(other.createdAt, createdAt) ||
-                other.createdAt == createdAt));
+                other.createdAt == createdAt) &&
+            (identical(other.distanceKm, distanceKm) ||
+                other.distanceKm == distanceKm));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -790,11 +843,13 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
     isPublic,
     registrationStatus,
     const DeepCollectionEquality().hash(_categories),
+    const DeepCollectionEquality().hash(_category),
     location,
     mentorName,
     reviewCount,
     averageRating,
     createdAt,
+    distanceKm,
   );
 
   /// Create a copy of SingleFItnessCenterModel
@@ -813,7 +868,7 @@ class _$SingleFItnessCenterModelImpl implements _SingleFItnessCenterModel {
   }
 }
 
-abstract class _SingleFItnessCenterModel implements SingleFItnessCenterModel {
+abstract class _SingleFItnessCenterModel extends SingleFItnessCenterModel {
   const factory _SingleFItnessCenterModel({
     @JsonKey(name: 'id') final int? id,
     @JsonKey(name: 'name') final String? name,
@@ -826,12 +881,15 @@ abstract class _SingleFItnessCenterModel implements SingleFItnessCenterModel {
     @JsonKey(name: 'is_public') final bool? isPublic,
     @JsonKey(name: 'registration_status') final String? registrationStatus,
     @JsonKey(name: 'categories') final List<Category>? categories,
+    @JsonKey(name: 'category') final List<Category>? category,
     @JsonKey(name: 'location') final Location? location,
     @JsonKey(name: 'mentor_name') final String? mentorName,
     @JsonKey(name: 'review_count') final int? reviewCount,
     @JsonKey(name: 'average_rating') final double? averageRating,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
+    @JsonKey(name: 'distance_km') final double? distanceKm,
   }) = _$SingleFItnessCenterModelImpl;
+  const _SingleFItnessCenterModel._() : super._();
 
   factory _SingleFItnessCenterModel.fromJson(Map<String, dynamic> json) =
       _$SingleFItnessCenterModelImpl.fromJson;
@@ -870,6 +928,9 @@ abstract class _SingleFItnessCenterModel implements SingleFItnessCenterModel {
   @JsonKey(name: 'categories')
   List<Category>? get categories;
   @override
+  @JsonKey(name: 'category')
+  List<Category>? get category;
+  @override
   @JsonKey(name: 'location')
   Location? get location;
   @override
@@ -884,6 +945,9 @@ abstract class _SingleFItnessCenterModel implements SingleFItnessCenterModel {
   @override
   @JsonKey(name: 'created_at')
   DateTime? get createdAt;
+  @override
+  @JsonKey(name: 'distance_km')
+  double? get distanceKm;
 
   /// Create a copy of SingleFItnessCenterModel
   /// with the given fields replaced by the non-null parameter values.

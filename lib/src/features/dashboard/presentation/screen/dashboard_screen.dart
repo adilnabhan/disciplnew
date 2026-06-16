@@ -156,7 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ProfileScreen(),
               ],
             ),
-            extendBody: true,
+            extendBody: false,
             bottomNavigationBar: Container(
               height: 80,
               decoration: const BoxDecoration(

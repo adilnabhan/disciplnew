@@ -11,5 +11,7 @@ class WorkoutState with _$WorkoutState {
     @Default([]) List<ExerciseTypeModel> exerciseTypes,
     @Default(false) bool isLoadingLookups,
     @Default(false) bool isCreatingExercise,
+    @Default(false) bool isLoadingActiveSession,
+    @Default('') String sessionTitle,
   }) = _WorkoutState;
 }

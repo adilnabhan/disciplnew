@@ -4,9 +4,13 @@ import 'package:customer_mobile_app/src/features/workout/presentation/components
 
 class WorkoutExecutionScreen extends StatefulWidget {
   final WorkoutModel workoutModel;
+  final List<Map<String, dynamic>>? exercises;
+  final bool isReadOnly;
 
   const WorkoutExecutionScreen({
     required this.workoutModel,
+    this.exercises,
+    this.isReadOnly = false,
     super.key,
   });
 
@@ -20,41 +24,47 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
   @override
   void initState() {
     super.initState();
-    _exercises = List.generate(widget.workoutModel.exerciseCount, (index) {
-      final title = index == 0
-          ? 'Incline Bench Press'
-          : (index == 1 ? 'Flat Bench Press' : (index == 2 ? 'Chest Fly' : 'Cable Crossover'));
-      final subtitle = index % 2 == 0
-          ? 'Chest / Barbell / Volume×Reps'
-          : 'Chest / Dumbbell / Volume×Reps';
-      return <String, dynamic>{
-        'title': title,
-        'subtitle': subtitle,
-        'sets': <Map<String, dynamic>>[
-          <String, dynamic>{
-            'setNum': 1,
-            'previous': index == 0 ? '10kg×15' : 'no data',
-            'kg': '10',
-            'reps': '15',
-            'checked': true,
-          },
-          <String, dynamic>{
-            'setNum': 2,
-            'previous': index == 0 ? '10kg×15' : 'no data',
-            'kg': '10',
-            'reps': '15',
-            'checked': true,
-          },
-          <String, dynamic>{
-            'setNum': 3,
-            'previous': index == 0 ? '10kg×15' : 'no data',
-            'kg': index == 0 ? '12.5' : '0',
-            'reps': index == 0 ? '15' : '0',
-            'checked': index == 0 ? true : false,
-          },
-        ],
-      };
-    });
+    if (widget.exercises != null) {
+      _exercises = List<Map<String, dynamic>>.from(
+        widget.exercises!.map((e) => Map<String, dynamic>.from(e)),
+      );
+    } else {
+      _exercises = List.generate(widget.workoutModel.exerciseCount, (index) {
+        final title = index == 0
+            ? 'Incline Bench Press'
+            : (index == 1 ? 'Flat Bench Press' : (index == 2 ? 'Chest Fly' : 'Cable Crossover'));
+        final subtitle = index % 2 == 0
+            ? 'Chest / Barbell / Volume×Reps'
+            : 'Chest / Dumbbell / Volume×Reps';
+        return <String, dynamic>{
+          'title': title,
+          'subtitle': subtitle,
+          'sets': <Map<String, dynamic>>[
+            <String, dynamic>{
+              'setNum': 1,
+              'previous': index == 0 ? '10kg×15' : 'no data',
+              'kg': '10',
+              'reps': '15',
+              'checked': true,
+            },
+            <String, dynamic>{
+              'setNum': 2,
+              'previous': index == 0 ? '10kg×15' : 'no data',
+              'kg': '10',
+              'reps': '15',
+              'checked': true,
+            },
+            <String, dynamic>{
+              'setNum': 3,
+              'previous': index == 0 ? '10kg×15' : 'no data',
+              'kg': index == 0 ? '12.5' : '0',
+              'reps': index == 0 ? '15' : '0',
+              'checked': index == 0 ? true : false,
+            },
+          ],
+        };
+      });
+    }
   }
 
   void _addSet(int exerciseIndex) {
@@ -118,7 +128,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                       // Title
                       Expanded(
                         child: Text(
-                          '${widget.workoutModel.title} Plan ${widget.workoutModel.day}',
+                          widget.isReadOnly
+                              ? widget.workoutModel.title
+                              : '${widget.workoutModel.title} Plan ${widget.workoutModel.day}',
                           style: const TextStyle(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w600,
@@ -204,44 +216,68 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${exerciseIndex + 1}. ${exercise['title']}',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF212121),
-                          height: 1.0,
+                  child: GestureDetector(
+                    onTap: () {
+                      debugPrint('DEBUG: Tapped exercise: ${exercise['title']} with ID: ${exercise['id']}');
+                      _showExerciseDetailsBottomSheet(
+                        context,
+                        exercise['id']?.toString(),
+                        exercise['title']?.toString(),
+                      );
+                    },
+                    behavior: HitTestBehavior.opaque,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${exerciseIndex + 1}. ${exercise['title']}',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF212121),
+                            height: 1.0,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        exercise['subtitle'] as String,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                          color: Color(0xFF666666),
-                          height: 1.0,
+                        const SizedBox(height: 16),
+                        Text(
+                          exercise['subtitle'] as String,
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 12,
+                            fontWeight: FontWeight.w400,
+                            color: Color(0xFF666666),
+                            height: 1.0,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 // Play button icon
                 GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Playing exercise demonstration video...',
+                  onTap: () async {
+                    final videoUrlStr = exercise['video_url']?.toString() ?? '';
+                    if (videoUrlStr.isNotEmpty) {
+                      final uri = Uri.parse(videoUrlStr);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not launch video URL.'),
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No video link available for this exercise.'),
                         ),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
+                      );
+                    }
                   },
                   child: Container(
                     width: 36,
@@ -417,6 +453,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                             width: 60,
                             child: TextFormField(
                               initialValue: set['kg'] as String?,
+                              readOnly: widget.isReadOnly,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
@@ -453,6 +490,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                             width: 60,
                             child: TextFormField(
                               initialValue: set['reps'] as String?,
+                              readOnly: widget.isReadOnly,
                               keyboardType: TextInputType.number,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
@@ -483,12 +521,14 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                set['checked'] =
-                                    !(set['checked'] as bool? ?? false);
-                              });
-                            },
+                            onTap: widget.isReadOnly
+                                ? null
+                                : () {
+                                    setState(() {
+                                      set['checked'] =
+                                          !(set['checked'] as bool? ?? false);
+                                    });
+                                  },
                             child: Container(
                               width: 22,
                               height: 22,
@@ -528,6 +568,326 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
 
           const SizedBox(height: 8),
         ],
+      ),
+    );
+  }
+
+  void _showExerciseDetailsBottomSheet(
+    BuildContext context,
+    String? exerciseId,
+    String? exerciseTitle,
+  ) {
+    debugPrint('DEBUG: _showExerciseDetailsBottomSheet called for $exerciseTitle (ID: $exerciseId)');
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
+                future: () async {
+                  final parsedId = int.tryParse(exerciseId ?? '');
+                  if (parsedId != null) {
+                    debugPrint('DEBUG: Trying lookup by ID: $parsedId');
+                    final res = await WorkoutRepository().getExerciseDetailsById(parsedId);
+                    if (res.isRight()) {
+                      debugPrint('DEBUG: ID lookup succeeded!');
+                      return res;
+                    }
+                    debugPrint('DEBUG: ID lookup failed, falling back to title lookup');
+                  }
+                  if (exerciseTitle != null && exerciseTitle.isNotEmpty) {
+                    debugPrint('DEBUG: Trying lookup by title: $exerciseTitle');
+                    return WorkoutRepository().getExerciseDetails(title: exerciseTitle);
+                  }
+                  return left<ApiException, Map<String, dynamic>>(const ApiException.unknown());
+                }(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  }
+
+                  if (snapshot.hasError) {
+                    return _buildErrorState(context, "An unexpected error occurred.");
+                  }
+
+                  final result = snapshot.data;
+                  if (result == null) {
+                    return _buildErrorState(context, "No data available.");
+                  }
+
+                  return result.fold(
+                    (error) => _buildErrorState(context, "Error fetching details: $error"),
+                    (data) => _buildExerciseDetailsContent(context, data, scrollController),
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String message) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline_rounded, color: AppColors.primary, size: 64),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Close', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExerciseDetailsContent(
+    BuildContext context,
+    Map<String, dynamic> data,
+    ScrollController scrollController,
+  ) {
+    final String name = data['name']?.toString() ?? 'Exercise Details';
+    final String description = data['description']?.toString() ?? 'No description available.';
+    final String type = data['type']?.toString() ?? '';
+    final String muscle = data['primary_muscle_group_name']?.toString() ?? '';
+    final String equipment = data['equipment_name']?.toString() ?? '';
+    final String instructions = data['instructions']?.toString() ?? '';
+    final String? videoUrlStr = data['video_url']?.toString();
+
+    final instructionSteps = instructions
+        .split('\n')
+        .map((step) => step.trim())
+        .where((step) => step.isNotEmpty)
+        .toList();
+
+    return Column(
+      children: [
+        // Drag Handle Indicator
+        const SizedBox(height: 12),
+        Container(
+          width: 40,
+          height: 5,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0E0E0),
+            borderRadius: BorderRadius.circular(2.5),
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Title Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF212121),
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF666666)),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
+        const Divider(height: 24, color: Color(0xFFEEEEEE)),
+
+        // Scrollable Body
+        Expanded(
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            children: [
+              // Tags Row
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  if (muscle.isNotEmpty)
+                    _buildDetailTag(muscle, const Color(0xFFFFF0F1), const Color(0xFFD30C15)),
+                  if (equipment.isNotEmpty)
+                    _buildDetailTag(equipment, const Color(0xFFF1F3F9), const Color(0xFF4A5568)),
+                  if (type.isNotEmpty)
+                    _buildDetailTag(type.toUpperCase(), const Color(0xFFE6FFFA), const Color(0xFF00A389)),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // About Section
+              const Text(
+                'About the Exercise',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF212121),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                description,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF666666),
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Video Button if available
+              if (videoUrlStr != null && videoUrlStr.isNotEmpty) ...[
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse(videoUrlStr);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not launch video URL.'),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.play_circle_fill_rounded, color: Colors.white),
+                  label: const Text('Watch Execution Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD30C15),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Instructions Section
+              if (instructionSteps.isNotEmpty) ...[
+                const Text(
+                  'Instructions',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF212121),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...List.generate(instructionSteps.length, (idx) {
+                  final stepText = instructionSteps[idx];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFFFF0F1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${idx + 1}',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFD30C15),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            stepText.replaceFirst(RegExp(r'^\d+\.\s*'), ''), // Strip duplicate numbering if present
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Color(0xFF444444),
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDetailTag(String label, Color bgColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
       ),
     );
   }

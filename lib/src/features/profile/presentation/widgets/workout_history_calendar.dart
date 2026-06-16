@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 class WorkoutHistoryCalendar extends StatefulWidget {
   const WorkoutHistoryCalendar({super.key});
@@ -10,14 +12,147 @@ class WorkoutHistoryCalendar extends StatefulWidget {
   State<WorkoutHistoryCalendar> createState() => _WorkoutHistoryCalendarState();
 }
 
+enum CalendarDayState { completed, missed, rest, future }
+
 class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   DateTime _focusedDay = DateTime.now();
+  final Map<DateTime, CalendarDayState> _dayStates = {};
+  bool _isLoading = false;
+  int _completedRequestsCount = 0;
+  Timer? _loadingTimeoutTimer;
 
-  // Dummy data mimicking the image
-  final List<int> completedDays = [1, 2, 5, 6, 8];
+  @override
+  void initState() {
+    super.initState();
+    _prepopulateDefaultStates();
+    _loadMonthData();
+  }
+
+  @override
+  void dispose() {
+    _loadingTimeoutTimer?.cancel();
+    super.dispose();
+  }
+
+  void _prepopulateDefaultStates() {
+    final year = _focusedDay.year;
+    final month = _focusedDay.month;
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(year, month, day);
+      _dayStates[DateTime(date.year, date.month, date.day)] = date.isAfter(todayOnly)
+          ? CalendarDayState.future
+          : CalendarDayState.rest;
+    }
+  }
+
+  Future<void> _loadMonthData() async {
+    if (!mounted) return;
+    
+    _loadingTimeoutTimer?.cancel();
+    setState(() {
+      _isLoading = true;
+      _completedRequestsCount = 0;
+    });
+
+    final year = _focusedDay.year;
+    final month = _focusedDay.month;
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+
+    // Timeout safety net to make sure loading indicator doesn't get stuck
+    _loadingTimeoutTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted && _isLoading) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(year, month, day);
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      
+      WorkoutRepository().getWorkoutLogForDate(date: dateStr).then((result) {
+        if (!mounted) return;
+        
+        result.fold(
+          (error) {
+            _updateDayState(date, date.isAfter(todayOnly)
+                ? CalendarDayState.future
+                : CalendarDayState.rest, daysInMonth);
+          },
+          (logs) {
+            final dateOnly = DateTime(date.year, date.month, date.day);
+            final isFuture = dateOnly.isAfter(todayOnly);
+
+            bool hasCompleted = logs.any((item) => item['is_completed'] == true);
+
+            if (hasCompleted) {
+              _updateDayState(date, CalendarDayState.completed, daysInMonth);
+            } else if (!isFuture && dateOnly.isBefore(todayOnly)) {
+              if (logs.isNotEmpty) {
+                _updateDayState(date, CalendarDayState.missed, daysInMonth);
+              } else {
+                _updateDayState(date, CalendarDayState.rest, daysInMonth);
+              }
+            } else {
+              _updateDayState(date, CalendarDayState.future, daysInMonth);
+            }
+          },
+        );
+      }).catchError((e) {
+        if (!mounted) return;
+        _updateDayState(date, date.isAfter(todayOnly)
+            ? CalendarDayState.future
+            : CalendarDayState.rest, daysInMonth);
+      });
+    }
+  }
+
+  void _updateDayState(DateTime date, CalendarDayState state, int totalDays) {
+    if (!mounted) return;
+    setState(() {
+      _dayStates[DateTime(date.year, date.month, date.day)] = state;
+      _completedRequestsCount++;
+      if (_completedRequestsCount >= totalDays) {
+        _isLoading = false;
+        _loadingTimeoutTimer?.cancel();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    int completedCount = 0;
+    int missedCount = 0;
+    int restCount = 0;
+
+    final year = _focusedDay.year;
+    final month = _focusedDay.month;
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(year, month, day);
+      final state = _dayStates[DateTime(date.year, date.month, date.day)] ?? CalendarDayState.future;
+      if (state == CalendarDayState.completed) {
+        completedCount++;
+      } else if (state == CalendarDayState.missed) {
+        missedCount++;
+      } else if (state == CalendarDayState.rest) {
+        restCount++;
+      }
+    }
+
+    final totalScheduled = completedCount + missedCount;
+    final double percent = totalScheduled > 0 ? (completedCount / totalScheduled) : 0.0;
+    final int percentInt = (percent * 100).round();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -31,22 +166,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 color: const Color(0xFF222222),
               ),
             ),
-            // InkWell(
-            //   onTap: () {},
-            //   child: Row(
-            //     children: [
-            //       Text(
-            //         'Show all',
-            //         style: AppStyles.text14Px.poppins.w600.copyWith(
-            //           color: AppColors.textDark,
-            //           decoration: TextDecoration.underline,
-            //         ),
-            //       ),
-            //       const SizedBox(width: 4),
-            //       const Icon(Icons.arrow_outward, size: 16),
-            //     ],
-            //   ),
-            // ),
           ],
         ),
         const SizedBox(height: 12),
@@ -99,6 +218,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                               1,
                             );
                           });
+                          _prepopulateDefaultStates();
+                          _loadMonthData();
                         },
                         child: Container(
                           padding: const EdgeInsets.all(6),
@@ -123,6 +244,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                               1,
                             );
                           });
+                          _prepopulateDefaultStates();
+                          _loadMonthData();
                         },
                         child: Container(
                           padding: const EdgeInsets.all(6),
@@ -144,6 +267,17 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
               const SizedBox(height: 22),
 
               // Calendar Grid
+              if (_isLoading)
+                const SizedBox(
+                  height: 2,
+                  child: LinearProgressIndicator(
+                    backgroundColor: Colors.transparent,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                )
+              else
+                const SizedBox(height: 2),
+
               TableCalendar(
                 firstDay: DateTime.utc(2020, 1, 1),
                 lastDay: DateTime.utc(2030, 12, 31),
@@ -151,8 +285,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 startingDayOfWeek: StartingDayOfWeek.monday,
                 rowHeight: 60,
                 headerVisible: false, // Hidden default header
-                availableGestures:
-                    AvailableGestures.none, //  Fixes the scroll issue!
+                availableGestures: AvailableGestures.none, // Fixes the scroll issue!
                 daysOfWeekHeight: 46, // Increased height to allow for a gap
                 calendarBuilders: CalendarBuilders(
                   // Custom Day of Week builder to add bottom padding
@@ -170,13 +303,9 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                       ),
                     );
                   },
-                  defaultBuilder:
-                      (context, day, focusedDay) => _buildDayCell(day),
-                  todayBuilder:
-                      (context, day, focusedDay) => _buildDayCell(day),
-                  outsideBuilder:
-                      (context, day, focusedDay) =>
-                          const SizedBox.shrink(), // Hide outside days
+                  defaultBuilder: (context, day, focusedDay) => _buildDayCell(day),
+                  todayBuilder: (context, day, focusedDay) => _buildDayCell(day),
+                  outsideBuilder: (context, day, focusedDay) => const SizedBox.shrink(), // Hide outside days
                 ),
               ),
 
@@ -194,11 +323,11 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     CircularPercentIndicator(
                       radius: 55.r,
                       lineWidth: 12,
-                      percent: 0.76,
+                      percent: percent,
                       circularStrokeCap: CircularStrokeCap.round,
                       animation: true,
                       center: Text(
-                        '76%\nTotal Done',
+                        '$percentInt%\nTotal Done',
                         textAlign: TextAlign.center,
                         style: AppStyles.text13Px.poppins.w700,
                       ),
@@ -212,21 +341,21 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                         children: [
                           _summaryItem(
                             'Completed Sessions',
-                            '150 Days',
+                            '$completedCount Days',
                             Colors.red.shade100,
                             Colors.red,
                           ),
                           const SizedBox(height: 8),
                           _summaryItem(
                             'Rest Days',
-                            '4 Days',
+                            '$restCount Days',
                             Colors.blue.shade100,
                             Colors.blue,
                           ),
                           const SizedBox(height: 8),
                           _summaryItem(
                             'Missed Sessions',
-                            '38 Days',
+                            '$missedCount Days',
                             Colors.yellow.shade100,
                             Colors.orange,
                           ),
@@ -272,16 +401,9 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     DateTime dateOnly = DateTime(day.year, day.month, day.day);
     DateTime todayOnly = DateTime(now.year, now.month, now.day);
 
-    // Any day after today is strictly future/upcoming
-    bool isFuture = dateOnly.isAfter(todayOnly);
+    final state = _dayStates[dateOnly] ?? CalendarDayState.future;
 
-    // Only past or present days can be completed
-    bool isCompleted = !isFuture && completedDays.contains(day.day);
-
-    // Any past or present day that is not completed is automatically missed
-    bool isMissed = !isFuture && !isCompleted;
-
-    if (isCompleted) {
+    if (state == CalendarDayState.completed) {
       return _dayState(
         day: day,
         bgColor: const Color(0xFFE8F5E9),
@@ -301,7 +423,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         ),
       );
     }
-    if (isMissed) {
+    if (state == CalendarDayState.missed) {
       return _dayState(
         day: day,
         bgColor: const Color(0xFFFFEBEE),
@@ -318,7 +440,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       );
     }
 
-    // Default / Future Day
+    // Default / Future / Rest Day
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
       decoration: BoxDecoration(
@@ -329,7 +451,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       child: Text(
         '${day.day}',
         style: AppStyles.text14Px.poppins.w500.copyWith(
-          color: Colors.grey.shade400,
+          color: state == CalendarDayState.rest ? Colors.black87 : Colors.grey.shade400,
         ),
       ),
     );

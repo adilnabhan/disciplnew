@@ -46,6 +46,10 @@ _$SingleFItnessCenterModelImpl _$$SingleFItnessCenterModelImplFromJson(
       (json['categories'] as List<dynamic>?)
           ?.map((e) => Category.fromJson(e as Map<String, dynamic>))
           .toList(),
+  category:
+      (json['category'] as List<dynamic>?)
+          ?.map((e) => Category.fromJson(e as Map<String, dynamic>))
+          .toList(),
   location:
       json['location'] == null
           ? null
@@ -57,6 +61,7 @@ _$SingleFItnessCenterModelImpl _$$SingleFItnessCenterModelImplFromJson(
       json['created_at'] == null
           ? null
           : DateTime.parse(json['created_at'] as String),
+  distanceKm: (json['distance_km'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
@@ -73,11 +78,13 @@ Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
   'is_public': instance.isPublic,
   'registration_status': instance.registrationStatus,
   'categories': instance.categories,
+  'category': instance.category,
   'location': instance.location,
   'mentor_name': instance.mentorName,
   'review_count': instance.reviewCount,
   'average_rating': instance.averageRating,
   'created_at': instance.createdAt?.toIso8601String(),
+  'distance_km': instance.distanceKm,
 };
 
 _$CategoryImpl _$$CategoryImplFromJson(Map<String, dynamic> json) =>

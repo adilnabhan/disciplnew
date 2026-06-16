@@ -20,8 +20,8 @@ class ExerciseLibraryModel {
       id: json["id"] as int?,
       name: json["name"] as String?,
       type: json["type"] as String?,
-      muscleGroup: json["muscle_group"] as String?,
-      equipment: json["equipment"] as String?,
+      muscleGroup: json["primary_muscle_group_name"] as String? ?? json["muscle_group"] as String?,
+      equipment: json["equipment_name"] as String? ?? json["equipment"] as String?,
       videoUrl: json["video_url"],
     );
   }
@@ -31,7 +31,9 @@ class ExerciseLibraryModel {
         "name": name,
         "type": type,
         "muscle_group": muscleGroup,
+        "primary_muscle_group_name": muscleGroup,
         "equipment": equipment,
+        "equipment_name": equipment,
         "video_url": videoUrl,
       };
 }

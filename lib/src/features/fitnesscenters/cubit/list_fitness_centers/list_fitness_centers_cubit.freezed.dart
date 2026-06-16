@@ -27,6 +27,8 @@ mixin _$ListFitnessCentersState {
   SingleFitnesscenterCategoryModel? get selectedCategory =>
       throw _privateConstructorUsedError;
   String get searchQuery => throw _privateConstructorUsedError;
+  double? get latitude => throw _privateConstructorUsedError;
+  double? get longitude => throw _privateConstructorUsedError;
 
   /// Create a copy of ListFitnessCentersState
   /// with the given fields replaced by the non-null parameter values.
@@ -51,6 +53,8 @@ abstract class $ListFitnessCentersStateCopyWith<$Res> {
     Option<Either<ApiException, FitnesscenterCategoriesModel>> categories,
     SingleFitnesscenterCategoryModel? selectedCategory,
     String searchQuery,
+    double? latitude,
+    double? longitude,
   });
 
   $SingleFitnesscenterCategoryModelCopyWith<$Res>? get selectedCategory;
@@ -78,6 +82,8 @@ class _$ListFitnessCentersStateCopyWithImpl<
     Object? categories = null,
     Object? selectedCategory = freezed,
     Object? searchQuery = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -107,6 +113,16 @@ class _$ListFitnessCentersStateCopyWithImpl<
                     ? _value.searchQuery
                     : searchQuery // ignore: cast_nullable_to_non_nullable
                         as String,
+            latitude:
+                freezed == latitude
+                    ? _value.latitude
+                    : latitude // ignore: cast_nullable_to_non_nullable
+                        as double?,
+            longitude:
+                freezed == longitude
+                    ? _value.longitude
+                    : longitude // ignore: cast_nullable_to_non_nullable
+                        as double?,
           )
           as $Val,
     );
@@ -148,6 +164,8 @@ abstract class _$$ListFitnessCentersStateImplCopyWith<$Res>
     Option<Either<ApiException, FitnesscenterCategoriesModel>> categories,
     SingleFitnesscenterCategoryModel? selectedCategory,
     String searchQuery,
+    double? latitude,
+    double? longitude,
   });
 
   @override
@@ -176,6 +194,8 @@ class __$$ListFitnessCentersStateImplCopyWithImpl<$Res>
     Object? categories = null,
     Object? selectedCategory = freezed,
     Object? searchQuery = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
   }) {
     return _then(
       _$ListFitnessCentersStateImpl(
@@ -204,6 +224,16 @@ class __$$ListFitnessCentersStateImplCopyWithImpl<$Res>
                 ? _value.searchQuery
                 : searchQuery // ignore: cast_nullable_to_non_nullable
                     as String,
+        latitude:
+            freezed == latitude
+                ? _value.latitude
+                : latitude // ignore: cast_nullable_to_non_nullable
+                    as double?,
+        longitude:
+            freezed == longitude
+                ? _value.longitude
+                : longitude // ignore: cast_nullable_to_non_nullable
+                    as double?,
       ),
     );
   }
@@ -217,6 +247,8 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
     this.categories = const None(),
     this.selectedCategory,
     this.searchQuery = '',
+    this.latitude,
+    this.longitude,
   });
 
   @override
@@ -234,10 +266,14 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
   @override
   @JsonKey()
   final String searchQuery;
+  @override
+  final double? latitude;
+  @override
+  final double? longitude;
 
   @override
   String toString() {
-    return 'ListFitnessCentersState(listFitnessCenters: $listFitnessCenters, categories: $categories, selectedCategory: $selectedCategory, searchQuery: $searchQuery)';
+    return 'ListFitnessCentersState(listFitnessCenters: $listFitnessCenters, categories: $categories, selectedCategory: $selectedCategory, searchQuery: $searchQuery, latitude: $latitude, longitude: $longitude)';
   }
 
   @override
@@ -252,7 +288,11 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
             (identical(other.selectedCategory, selectedCategory) ||
                 other.selectedCategory == selectedCategory) &&
             (identical(other.searchQuery, searchQuery) ||
-                other.searchQuery == searchQuery));
+                other.searchQuery == searchQuery) &&
+            (identical(other.latitude, latitude) ||
+                other.latitude == latitude) &&
+            (identical(other.longitude, longitude) ||
+                other.longitude == longitude));
   }
 
   @override
@@ -262,6 +302,8 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
     categories,
     selectedCategory,
     searchQuery,
+    latitude,
+    longitude,
   );
 
   /// Create a copy of ListFitnessCentersState
@@ -285,6 +327,8 @@ abstract class _ListFitnessCentersState implements ListFitnessCentersState {
     final Option<Either<ApiException, FitnesscenterCategoriesModel>> categories,
     final SingleFitnesscenterCategoryModel? selectedCategory,
     final String searchQuery,
+    final double? latitude,
+    final double? longitude,
   }) = _$ListFitnessCentersStateImpl;
 
   @override
@@ -299,6 +343,10 @@ abstract class _ListFitnessCentersState implements ListFitnessCentersState {
   SingleFitnesscenterCategoryModel? get selectedCategory;
   @override
   String get searchQuery;
+  @override
+  double? get latitude;
+  @override
+  double? get longitude;
 
   /// Create a copy of ListFitnessCentersState
   /// with the given fields replaced by the non-null parameter values.

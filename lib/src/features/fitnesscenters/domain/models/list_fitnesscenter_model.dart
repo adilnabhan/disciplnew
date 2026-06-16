@@ -18,6 +18,8 @@ class ListFitnesscenterModel with _$ListFitnesscenterModel {
 
 @freezed
 class SingleFItnessCenterModel with _$SingleFItnessCenterModel {
+  const SingleFItnessCenterModel._();
+
   const factory SingleFItnessCenterModel({
     @JsonKey(name: 'id') int? id,
     @JsonKey(name: 'name') String? name,
@@ -30,14 +32,18 @@ class SingleFItnessCenterModel with _$SingleFItnessCenterModel {
     @JsonKey(name: 'is_public') bool? isPublic,
     @JsonKey(name: 'registration_status') String? registrationStatus,
     @JsonKey(name: 'categories') List<Category>? categories,
+    @JsonKey(name: 'category') List<Category>? category,
     @JsonKey(name: 'location') Location? location,
     @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') double? averageRating,
     @JsonKey(name: 'created_at') DateTime? createdAt,
+    @JsonKey(name: 'distance_km') double? distanceKm,
   }) = _SingleFItnessCenterModel;
 
   factory SingleFItnessCenterModel.fromJson(Map<String, dynamic> json) => _$SingleFItnessCenterModelFromJson(json);
+
+  List<Category>? get gymCategories => categories ?? category;
 }
 
 @freezed

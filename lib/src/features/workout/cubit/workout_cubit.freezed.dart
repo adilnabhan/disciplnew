@@ -29,6 +29,8 @@ mixin _$WorkoutState {
       throw _privateConstructorUsedError;
   bool get isLoadingLookups => throw _privateConstructorUsedError;
   bool get isCreatingExercise => throw _privateConstructorUsedError;
+  bool get isLoadingActiveSession => throw _privateConstructorUsedError;
+  String get sessionTitle => throw _privateConstructorUsedError;
 
   /// Create a copy of WorkoutState
   /// with the given fields replaced by the non-null parameter values.
@@ -53,6 +55,8 @@ abstract class $WorkoutStateCopyWith<$Res> {
     List<ExerciseTypeModel> exerciseTypes,
     bool isLoadingLookups,
     bool isCreatingExercise,
+    bool isLoadingActiveSession,
+    String sessionTitle,
   });
 }
 
@@ -79,6 +83,8 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
     Object? exerciseTypes = null,
     Object? isLoadingLookups = null,
     Object? isCreatingExercise = null,
+    Object? isLoadingActiveSession = null,
+    Object? sessionTitle = null,
   }) {
     return _then(
       _value.copyWith(
@@ -122,6 +128,16 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
                     ? _value.isCreatingExercise
                     : isCreatingExercise // ignore: cast_nullable_to_non_nullable
                         as bool,
+            isLoadingActiveSession:
+                null == isLoadingActiveSession
+                    ? _value.isLoadingActiveSession
+                    : isLoadingActiveSession // ignore: cast_nullable_to_non_nullable
+                        as bool,
+            sessionTitle:
+                null == sessionTitle
+                    ? _value.sessionTitle
+                    : sessionTitle // ignore: cast_nullable_to_non_nullable
+                        as String,
           )
           as $Val,
     );
@@ -146,6 +162,8 @@ abstract class _$$WorkoutStateImplCopyWith<$Res>
     List<ExerciseTypeModel> exerciseTypes,
     bool isLoadingLookups,
     bool isCreatingExercise,
+    bool isLoadingActiveSession,
+    String sessionTitle,
   });
 }
 
@@ -171,6 +189,8 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
     Object? exerciseTypes = null,
     Object? isLoadingLookups = null,
     Object? isCreatingExercise = null,
+    Object? isLoadingActiveSession = null,
+    Object? sessionTitle = null,
   }) {
     return _then(
       _$WorkoutStateImpl(
@@ -214,6 +234,16 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
                 ? _value.isCreatingExercise
                 : isCreatingExercise // ignore: cast_nullable_to_non_nullable
                     as bool,
+        isLoadingActiveSession:
+            null == isLoadingActiveSession
+                ? _value.isLoadingActiveSession
+                : isLoadingActiveSession // ignore: cast_nullable_to_non_nullable
+                    as bool,
+        sessionTitle:
+            null == sessionTitle
+                ? _value.sessionTitle
+                : sessionTitle // ignore: cast_nullable_to_non_nullable
+                    as String,
       ),
     );
   }
@@ -231,6 +261,8 @@ class _$WorkoutStateImpl implements _WorkoutState {
     final List<ExerciseTypeModel> exerciseTypes = const [],
     this.isLoadingLookups = false,
     this.isCreatingExercise = false,
+    this.isLoadingActiveSession = false,
+    this.sessionTitle = '',
   }) : _exercises = exercises,
        _libraryExercises = libraryExercises,
        _customExercises = customExercises,
@@ -296,10 +328,16 @@ class _$WorkoutStateImpl implements _WorkoutState {
   @override
   @JsonKey()
   final bool isCreatingExercise;
+  @override
+  @JsonKey()
+  final bool isLoadingActiveSession;
+  @override
+  @JsonKey()
+  final String sessionTitle;
 
   @override
   String toString() {
-    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise)';
+    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise, isLoadingActiveSession: $isLoadingActiveSession, sessionTitle: $sessionTitle)';
   }
 
   @override
@@ -334,7 +372,11 @@ class _$WorkoutStateImpl implements _WorkoutState {
             (identical(other.isLoadingLookups, isLoadingLookups) ||
                 other.isLoadingLookups == isLoadingLookups) &&
             (identical(other.isCreatingExercise, isCreatingExercise) ||
-                other.isCreatingExercise == isCreatingExercise));
+                other.isCreatingExercise == isCreatingExercise) &&
+            (identical(other.isLoadingActiveSession, isLoadingActiveSession) ||
+                other.isLoadingActiveSession == isLoadingActiveSession) &&
+            (identical(other.sessionTitle, sessionTitle) ||
+                other.sessionTitle == sessionTitle));
   }
 
   @override
@@ -348,6 +390,8 @@ class _$WorkoutStateImpl implements _WorkoutState {
     const DeepCollectionEquality().hash(_exerciseTypes),
     isLoadingLookups,
     isCreatingExercise,
+    isLoadingActiveSession,
+    sessionTitle,
   );
 
   /// Create a copy of WorkoutState
@@ -369,6 +413,8 @@ abstract class _WorkoutState implements WorkoutState {
     final List<ExerciseTypeModel> exerciseTypes,
     final bool isLoadingLookups,
     final bool isCreatingExercise,
+    final bool isLoadingActiveSession,
+    final String sessionTitle,
   }) = _$WorkoutStateImpl;
 
   @override
@@ -387,6 +433,10 @@ abstract class _WorkoutState implements WorkoutState {
   bool get isLoadingLookups;
   @override
   bool get isCreatingExercise;
+  @override
+  bool get isLoadingActiveSession;
+  @override
+  String get sessionTitle;
 
   /// Create a copy of WorkoutState
   /// with the given fields replaced by the non-null parameter values.

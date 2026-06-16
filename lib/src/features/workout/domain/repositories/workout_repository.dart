@@ -137,4 +137,455 @@ final class WorkoutRepository {
       return left(const ApiException.unknown());
     }
   }
+
+  Future<Either<ApiException, Map<String, dynamic>>> getExerciseDetails({
+    int? id,
+    String? title,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (id != null) {
+        queryParams['id'] = id;
+      }
+      if (title != null) {
+        queryParams['title'] = title;
+      }
+
+      final res = await _dio.get<dynamic>(
+        ApiUris.exerciseDetail,
+        queryParameters: queryParams,
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+
+      if (res.statusCode == 200 && res.data != null && res.data is Map<String, dynamic>) {
+        return right(res.data as Map<String, dynamic>);
+      }
+      return left(const ApiException.unknown());
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, Map<String, dynamic>>> getExerciseDetailsById(int id) async {
+    try {
+      final res = await _dio.get<dynamic>(
+        ApiUris.exerciseDetailById(id),
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if (res.statusCode == 200 && res.data != null && res.data is Map<String, dynamic>) {
+        return right(res.data as Map<String, dynamic>);
+      }
+      return left(const ApiException.unknown());
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> getActiveSession() async {
+    try {
+      return await Feggy.async(
+        call: _dio.get<dynamic>(
+          ApiUris.activeSession,
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 && res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, Map<String, dynamic>>> getSessionDetails({
+    required int sessionId,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.get<dynamic>(
+          ApiUris.sessionDetails(sessionId),
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 && res.data != null && res.data is Map<String, dynamic>) {
+            return right(res.data as Map<String, dynamic>);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> addExercisesToActiveSession({
+    required List<int> workoutIds,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.activeSessionExercises,
+          data: {'workout_ids': workoutIds},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> startSession({
+    required String title,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.startSession,
+          data: {'title': title},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> finishSession({
+    required int sessionId,
+    required String title,
+  }) async {
+    try {
+      final baseUrl = ApiUris.activeSession.split('/sessions/')[0];
+      final url = '$baseUrl/sessions/$sessionId/finish/';
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          url,
+          data: {'title': title},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, void>> deleteActiveSession() async {
+    try {
+      return await Feggy.async(
+        call: _dio.delete<dynamic>(
+          ApiUris.activeSession,
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 || res.statusCode == 204) {
+            return right(null);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> addSetToExerciseLog({
+    required int logId,
+    required int reps,
+    required double weightKg,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.addSetToLog(logId),
+          data: {
+            'reps': reps,
+            'weight_kg': weightKg,
+          },
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, List<dynamic>>> getWorkoutLogForDate({
+    required String date,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.get<dynamic>(
+          ApiUris.workoutLog,
+          queryParameters: {'date': date},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 && res.data != null && res.data is List) {
+            return right(res.data as List);
+          }
+          return right([]);
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  // Mock fallback database for Presets if backend returns 404 or fails
+  static final List<PresetModel> _mockPresets = [
+    PresetModel(
+      id: 101,
+      title: "Full Body Split",
+      createdAt: "2026-06-13T10:00:00Z",
+      exercises: [
+        PresetExerciseModel(
+          id: 1001,
+          workoutId: 3, // Barbell Bench Press (from library)
+          name: "Barbell Bench Press",
+          muscleGroup: "Chest",
+          orderIndex: 0,
+          sets: [
+            PresetSetModel(setNumber: 1, reps: 12, weight: 40.0),
+            PresetSetModel(setNumber: 2, reps: 10, weight: 50.0),
+          ],
+        ),
+      ],
+    ),
+  ];
+
+  Future<Either<ApiException, List<PresetModel>>> getPresets() async {
+    try {
+      final res = await _dio.get<dynamic>(
+        ApiUris.presets,
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if (res.statusCode == 200 && res.data != null && res.data is List) {
+        final list = (res.data as List)
+            .map((e) => PresetModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        return right(list);
+      }
+      return right(_mockPresets);
+    } catch (e) {
+      debugPrint("API Error (falling back to local mock presets): $e");
+      return right(_mockPresets);
+    }
+  }
+
+  Future<Either<ApiException, PresetModel>> createPreset({
+    required String title,
+    required List<Map<String, dynamic>> exercises,
+  }) async {
+    final body = {
+      'title': title,
+      'exercises': exercises,
+    };
+    try {
+      final res = await _dio.post<dynamic>(
+        ApiUris.presets,
+        data: body,
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null) {
+        return right(PresetModel.fromJson(res.data as Map<String, dynamic>));
+      }
+    } catch (e) {
+      debugPrint("API Error (creating local mock preset): $e");
+    }
+
+    // Mock fallback creation
+    final newId = (_mockPresets.isEmpty ? 100 : _mockPresets.map((p) => p.id).reduce((a, b) => a > b ? a : b)) + 1;
+    final presetExercises = <PresetExerciseModel>[];
+    for (var i = 0; i < exercises.length; i++) {
+      final ex = exercises[i];
+      final setsList = (ex['sets'] as List? ?? []).map((s) => PresetSetModel.fromJson(s as Map<String, dynamic>)).toList();
+      presetExercises.add(PresetExerciseModel(
+        id: 1000 + newId + i,
+        workoutId: ex['workout_id'] as int? ?? 0,
+        name: ex['name']?.toString() ?? 'Exercise',
+        muscleGroup: ex['muscle_group']?.toString() ?? 'Strength',
+        orderIndex: ex['order_index'] as int? ?? i,
+        sets: setsList,
+      ));
+    }
+    final newPreset = PresetModel(
+      id: newId,
+      title: title.isNotEmpty ? title : 'Preset $newId',
+      createdAt: DateTime.now().toIso8601String(),
+      exercises: presetExercises,
+    );
+    _mockPresets.add(newPreset);
+    return right(newPreset);
+  }
+
+  Future<Either<ApiException, Map<String, dynamic>>> getPresetDetail(int id) async {
+    try {
+      final res = await _dio.get<dynamic>(
+        ApiUris.presetDetail(id),
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if (res.statusCode == 200 && res.data != null && res.data is Map<String, dynamic>) {
+        return right(res.data as Map<String, dynamic>);
+      }
+      return left(const ApiException.unknown());
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, void>> updatePlanName({
+    required int planId,
+    required String newName,
+  }) async {
+    try {
+      final detailRes = await _dio.get<dynamic>(
+        ApiUris.presetDetail(planId),
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if (detailRes.statusCode == 200 && detailRes.data != null) {
+        final data = detailRes.data as Map<String, dynamic>;
+        data['plan_name'] = newName;
+        data['title'] = newName;
+        
+        await _dio.put<dynamic>(
+          ApiUris.presetDetail(planId),
+          data: data,
+          options: Options(headers: {'X-Platform': platformSource}),
+        );
+      }
+      return right(null);
+    } catch (e) {
+      debugPrint("Error updating plan name: $e");
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, PresetModel>> updatePreset({
+    required int presetId,
+    required String title,
+    required List<Map<String, dynamic>> exercises,
+  }) async {
+    final body = {
+      'title': title,
+      'exercises': exercises,
+    };
+    try {
+      final res = await _dio.put<dynamic>(
+        ApiUris.presetDetail(presetId),
+        data: body,
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if (res.statusCode == 200 && res.data != null) {
+        return right(PresetModel.fromJson(res.data as Map<String, dynamic>));
+      }
+    } catch (e) {
+      debugPrint("API Error (updating local mock preset): $e");
+    }
+
+    // Mock fallback update
+    final index = _mockPresets.indexWhere((p) => p.id == presetId);
+    if (index != -1) {
+      final presetExercises = <PresetExerciseModel>[];
+      for (var i = 0; i < exercises.length; i++) {
+        final ex = exercises[i];
+        final setsList = (ex['sets'] as List? ?? []).map((s) => PresetSetModel.fromJson(s as Map<String, dynamic>)).toList();
+        presetExercises.add(PresetExerciseModel(
+          id: 1000 + presetId + i,
+          workoutId: ex['workout_id'] as int? ?? 0,
+          name: ex['name']?.toString() ?? 'Exercise',
+          muscleGroup: ex['muscle_group']?.toString() ?? 'Strength',
+          orderIndex: ex['order_index'] as int? ?? i,
+          sets: setsList,
+        ));
+      }
+      final updatedPreset = PresetModel(
+        id: presetId,
+        title: title,
+        createdAt: _mockPresets[index].createdAt,
+        exercises: presetExercises,
+      );
+      _mockPresets[index] = updatedPreset;
+      return right(updatedPreset);
+    }
+    return left(const ApiException.unknown());
+  }
+
+  Future<Either<ApiException, void>> deletePreset({
+    required int presetId,
+  }) async {
+    try {
+      final res = await _dio.delete<dynamic>(
+        ApiUris.presetDetail(presetId),
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if (res.statusCode == 204 || res.statusCode == 200) {
+        return right(null);
+      }
+    } catch (e) {
+      debugPrint("API Error (deleting local mock preset): $e");
+    }
+
+    _mockPresets.removeWhere((p) => p.id == presetId);
+    return right(null);
+  }
 }

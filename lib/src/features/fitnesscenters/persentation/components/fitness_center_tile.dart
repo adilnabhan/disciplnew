@@ -44,20 +44,56 @@ class FitnessCenterTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fitness center logo/image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: ImageNetwork(
-                fitnessCenter.logo ?? '',
-                height: 126,
-                width: 126,
-                errorWidget: Container(
-                  width: 126,
-                  height: 126,
-                  color: Colors.grey.shade300,
-                  child: const Icon(Icons.image, color: Colors.white, size: 24),
+            // Fitness center logo/image with distance badge
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: ImageNetwork(
+                    fitnessCenter.logo ?? '',
+                    height: 126,
+                    width: 126,
+                    errorWidget: Container(
+                      width: 126,
+                      height: 126,
+                      color: Colors.grey.shade300,
+                      child: const Icon(Icons.image, color: Colors.white, size: 24),
+                    ),
+                  ),
                 ),
-              ),
+                if (fitnessCenter.distanceKm != null)
+                  Positioned(
+                    top: 6,
+                    left: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.75),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: Colors.red,
+                            size: 10,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            '${fitnessCenter.distanceKm!.toStringAsFixed(1)} km away',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 16),
             // Content Column
@@ -159,28 +195,28 @@ class FitnessCenterTile extends StatelessWidget {
                             const Text(
                               'Enquire',
                               style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryTags() {
-    final categories = fitnessCenter.categories ?? [];
+      );
+    }
+  
+    Widget _buildCategoryTags() {
+      final categories = fitnessCenter.gymCategories ?? [];
     if (categories.isEmpty) return const SizedBox.shrink();
 
     final visibleCategories = categories.take(2).toList();

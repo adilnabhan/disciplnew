@@ -5,7 +5,10 @@ import 'package:customer_mobile_app/src/features/workout/presentation/screens/ow
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/presets_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_execution_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/models/preset_model.dart';
 
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
@@ -16,10 +19,40 @@ class WorkoutLogScreen extends StatefulWidget {
 
 class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   DateTime _selectedDate = DateTime.now();
-  DateTime _lastSelectedDate = DateTime.now();
 
   late final ScrollController _scrollController;
   late final List<DateTime> _scrollableDays;
+  bool _showWorkoutCard = false;
+  bool _isLoadingDateLog = true;
+  List<Map<String, dynamic>> _selectedDateWorkouts = [];
+  List<PresetModel> _myPlans = [];
+  ApiException? _activeError;
+
+  void _retryLoading() {
+    _loadMyPlans();
+    _loadActiveSessionTitle();
+    _loadWorkoutLogForSelectedDate();
+  }
+
+  Future<void> _loadMyPlans() async {
+    final response = await WorkoutRepository().getPresets();
+    response.fold((error) {
+      debugPrint('Error loading my plans: $error');
+      if (mounted) {
+        setState(() {
+          _activeError = error;
+        });
+      }
+    }, (
+      list,
+    ) {
+      if (mounted) {
+        setState(() {
+          _myPlans = list;
+        });
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -39,7 +72,83 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     // Center the selected date on layout finish
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _centerSelectedDate(animate: false);
+      _loadMyPlans();
+      _loadActiveSessionTitle();
+      _loadWorkoutLogForSelectedDate();
     });
+  }
+
+  Future<void> _loadWorkoutLogForSelectedDate() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingDateLog = true;
+        _activeError = null;
+      });
+    }
+
+    final String y = _selectedDate.year.toString();
+    final String m = _selectedDate.month.toString().padLeft(2, '0');
+    final String d = _selectedDate.day.toString().padLeft(2, '0');
+    final String dateStr = '$y-$m-$d';
+
+    final response = await WorkoutRepository().getWorkoutLogForDate(
+      date: dateStr,
+    );
+    response.fold(
+      (error) {
+        debugPrint('Error loading workout log for date: $error');
+        if (mounted) {
+          setState(() {
+            _selectedDateWorkouts = [];
+            _isLoadingDateLog = false;
+            _activeError = error;
+          });
+        }
+      },
+      (list) {
+        debugPrint('DEBUG WORKOUT LOG LIST: $list');
+        if (mounted) {
+          setState(() {
+            _selectedDateWorkouts =
+                list.map((e) => e as Map<String, dynamic>).toList();
+            _isLoadingDateLog = false;
+            _activeError = null;
+          });
+        }
+      },
+    );
+  }
+
+  Future<void> _loadActiveSessionTitle() async {
+    final response = await WorkoutRepository().getActiveSession();
+    response.fold(
+      (error) {
+        debugPrint('Error loading active session title in log screen: $error');
+        if (mounted) {
+          setState(() {
+            _showWorkoutCard = false;
+          });
+        }
+      },
+      (data) {
+        if (mounted) {
+          setState(() {
+            bool hasExercises = false;
+            if (data is Map<String, dynamic>) {
+              final exercisesData =
+                  data['logs'] ??
+                  data['exercises'] ??
+                  data['session_exercises'] ??
+                  data['results'];
+              if (exercisesData is List && exercisesData.isNotEmpty) {
+                hasExercises = true;
+              }
+            }
+            _showWorkoutCard = hasExercises;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -87,29 +196,331 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     );
 
     // Block transitioning if the target month is in the future relative to the current month/year
-    if (targetDate.year > today.year || 
+    if (targetDate.year > today.year ||
         (targetDate.year == today.year && targetDate.month > today.month)) {
       return;
     }
 
     setState(() {
-      _lastSelectedDate = _selectedDate;
       _selectedDate = targetDate;
-      _centerSelectedDate();
     });
+    _centerSelectedDate();
+    _loadWorkoutLogForSelectedDate();
   }
 
   void _selectDate(DateTime date) {
     setState(() {
-      _lastSelectedDate = _selectedDate;
       _selectedDate = date;
     });
     _centerSelectedDate();
+    _loadWorkoutLogForSelectedDate();
   }
 
-  @override
+  List<Map<String, dynamic>> _parseWorkoutExercises(dynamic data) {
+    final List<Map<String, dynamic>> result = [];
+
+    void extractExercise(Map<String, dynamic> item) {
+      String? title;
+      String? subtitle;
+      int? exerciseId;
+      String? videoUrl;
+
+      if (item['workout'] is Map<String, dynamic>) {
+        final workout = item['workout'] as Map<String, dynamic>;
+        title = workout['name'] as String?;
+        exerciseId = workout['id'] as int?;
+        final muscle =
+            workout['primary_muscle_group_name'] as String? ??
+            workout['muscle_group'] as String?;
+        final equip =
+            workout['equipment_name'] as String? ??
+            workout['equipment'] as String?;
+        final type = workout['type'] as String?;
+        subtitle = '${muscle ?? ''} / ${equip ?? ''} / ${type ?? ''}';
+        videoUrl = workout['video_url']?.toString();
+      } else if (item['exercise'] is Map<String, dynamic>) {
+        final exercise = item['exercise'] as Map<String, dynamic>;
+        title = exercise['name'] as String?;
+        exerciseId = exercise['id'] as int?;
+        final muscle =
+            exercise['primary_muscle_group_name'] as String? ??
+            exercise['muscle_group'] as String?;
+        final equip =
+            exercise['equipment_name'] as String? ??
+            exercise['equipment'] as String?;
+        final type = exercise['type'] as String?;
+        subtitle = '${muscle ?? ''} / ${equip ?? ''} / ${type ?? ''}';
+        videoUrl = exercise['video_url']?.toString();
+      } else {
+        title =
+            item['workout_name']?.toString() ??
+            item['name']?.toString() ??
+            item['title']?.toString();
+        exerciseId =
+            item['id'] as int? ??
+            item['plan_exercise'] as int? ??
+            item['workout_id'] as int?;
+        final muscle =
+            item['muscle']?.toString() ??
+            item['primary_muscle_group_name']?.toString() ??
+            item['muscle_group']?.toString();
+        final equip =
+            item['equipment_name']?.toString() ?? item['equipment']?.toString();
+        final type = item['type']?.toString();
+        videoUrl = item['video_url']?.toString();
+
+        final List<String> parts = [];
+        if (muscle != null && muscle.isNotEmpty) parts.add(muscle);
+        if (equip != null && equip.isNotEmpty) parts.add(equip);
+        if (type != null && type.isNotEmpty) parts.add(type);
+
+        if (parts.isNotEmpty) {
+          subtitle = parts.join(' / ');
+        } else {
+          subtitle = item['subtitle']?.toString();
+        }
+      }
+
+      if (title == null || title.isEmpty) return;
+
+      final List<Map<String, dynamic>> sets = [];
+      final rawSets = item['set_logs'] ?? item['sets'];
+      if (rawSets is List) {
+        for (var i = 0; i < rawSets.length; i++) {
+          final s = rawSets[i];
+          if (s is Map<String, dynamic>) {
+            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? '10';
+            final repsVal = s['reps'] ?? '15';
+            final prevVal = s['previous_weight_kg'] ?? s['previous'];
+            sets.add({
+              'setNum':
+                  s['set_number'] ?? s['set_num'] ?? s['setNum'] ?? (i + 1),
+              'previous': prevVal?.toString() ?? '10kg×15',
+              'kg': kgVal.toString(),
+              'reps': repsVal.toString(),
+              'checked': s['is_completed'] ?? s['checked'] ?? false,
+            });
+          }
+        }
+      }
+
+      if (sets.isEmpty) {
+        sets.add({
+          'setNum': 1,
+          'previous': '10kg×15',
+          'kg': '10',
+          'reps': '15',
+          'checked': false,
+        });
+      }
+
+      result.add({
+        'id': exerciseId?.toString() ?? '',
+        'title': title,
+        'subtitle': subtitle ?? '',
+        'video_url': videoUrl ?? '',
+        'sets': sets,
+      });
+    }
+
+    if (data is List) {
+      for (var item in data) {
+        if (item is Map<String, dynamic>) {
+          extractExercise(item);
+        }
+      }
+    } else if (data is Map<String, dynamic>) {
+      final exercisesData =
+          data['logs'] ??
+          data['exercises'] ??
+          data['session_exercises'] ??
+          data['results'];
+      if (exercisesData is List) {
+        for (var item in exercisesData) {
+          if (item is Map<String, dynamic>) {
+            extractExercise(item);
+          }
+        }
+      }
+    }
+
+    return result;
+  }
+
+  Widget _buildActiveWorkoutBanner() {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            builder: (context) => const OwnWorkoutScreen(),
+          ),
+        );
+        await _loadMyPlans();
+        await _loadActiveSessionTitle();
+        await _loadWorkoutLogForSelectedDate();
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE8F2FF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFC2DBFF), width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                color: Color(0xFF1E88E5),
+                shape: BoxShape.circle,
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.fitness_center_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Workout in Progress',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: const Color(0xFF1565C0),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tap to resume your draft',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w400,
+                      fontSize: 13,
+                      color: const Color(0xFF1E88E5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFF1E88E5),
+              size: 24,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget build(BuildContext context) {
     final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+    debugPrint('DEBUG BUILD: isCustomer: $isCustomer, date: $_selectedDate');
+
+    final List<Widget> logCards = [];
+
+    int cardIndex = 1;
+
+    if (_selectedDateWorkouts.isNotEmpty) {
+      for (final workoutItem in _selectedDateWorkouts) {
+        final exercisesData =
+            workoutItem['logs'] ??
+            workoutItem['exercises'] ??
+            workoutItem['session_exercises'] ??
+            workoutItem['results'];
+        if (exercisesData is List && exercisesData.isEmpty) {
+          continue; // Skip empty sessions
+        }
+        String? planNameFromMyPlans;
+        final planVal = workoutItem['plan'] ?? workoutItem['plan_id'];
+        if (planVal != null) {
+          final planId = int.tryParse(planVal.toString());
+          if (planId != null) {
+            final match = _myPlans.firstWhere(
+              (p) => p.id == planId,
+              orElse: () => PresetModel(id: -1, title: '', exercises: []),
+            );
+            if (match.id != -1) {
+              planNameFromMyPlans = match.title;
+            }
+          }
+        }
+
+        final backendPlanName = workoutItem['plan_name']?.toString() ?? '';
+        final hasBackendPlanName =
+            backendPlanName.isNotEmpty && backendPlanName != 'My Session';
+
+        final title =
+            (hasBackendPlanName ? backendPlanName : null) ??
+            planNameFromMyPlans ??
+            (backendPlanName.isNotEmpty ? backendPlanName : null) ??
+            workoutItem['title']?.toString() ??
+            workoutItem['plan_day_title']?.toString() ??
+            'Quick Workout';
+        final badge =
+            (hasBackendPlanName ? backendPlanName : null) ??
+            planNameFromMyPlans ??
+            (backendPlanName.isNotEmpty ? backendPlanName : null) ??
+            'Workout';
+        final isCompleted =
+            ((workoutItem['is_completed'] as bool?) ?? false) ||
+            (workoutItem['status']?.toString().toLowerCase() == 'completed');
+        logCards.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _WorkoutCard(
+              index: cardIndex++,
+              title: title,
+              badge: badge,
+              hasImage: true,
+              isCompleted: isCompleted,
+              onTap: () async {
+                final idVal = workoutItem['session_id'] ?? workoutItem['id'];
+                final sessionId =
+                    idVal != null ? int.tryParse(idVal.toString()) : null;
+                debugPrint(
+                  'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
+                );
+                if (sessionId != null) {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder:
+                          (context) => WorkoutDetailsScreen(
+                            sessionId: sessionId,
+                            fallbackTitle: title,
+                          ),
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Could not find session ID for this workout log.',
+                      ),
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+        );
+      }
+    }
+
+    if (logCards.isEmpty) {
+      logCards.add(const _RestDayCard());
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bgcolorgrey,
@@ -141,54 +552,68 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           ),
         ],
       ),
-      body: !isCustomer
-          ? _GuestWorkoutView(
-              onLoginTap: () {
-                context.push(const SentOtpScreen());
-              },
-            )
-          : SafeArea(
-              child: Column(
-                children: [
-                  const SizedBox(height: 21),
-                  _buildMonthNav(),
-                  const SizedBox(height: 34),
-                  _buildWeekStrip(),
-                  const SizedBox(height: 28),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      children: [
-                        _WorkoutCard(
-                          index: 1,
-                          title: 'Back\nExercise',
-                          badge: 'Day 3/30',
-                          hasImage: true,
-                          isCompleted: true,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const WorkoutExecutionScreen(
-                                  workoutModel: WorkoutModel(
-                                    day: 3,
-                                    title: 'Back Exercise',
-                                    exerciseCount: 4,
-                                    isCompleted: false,
-                                    isActive: false,
+      body:
+          !isCustomer
+              ? _GuestWorkoutView(
+                onLoginTap: () {
+                  context.push(const SentOtpScreen());
+                },
+              )
+              : SafeArea(
+                child: SingleChildScrollView(
+                  clipBehavior: Clip.none,
+                  child: Column(
+                    children: [
+                      if (_showWorkoutCard) ...[
+                        const SizedBox(height: 8),
+                        _buildActiveWorkoutBanner(),
+                        const SizedBox(height: 12),
+                      ] else ...[
+                        const SizedBox(height: 21),
+                      ],
+                      _buildMonthNav(),
+                      const SizedBox(height: 34),
+                      _buildWeekStrip(),
+                      const SizedBox(height: 28),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 12),
+                            if (_isLoadingDateLog)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.only(top: 40),
+                                  child: CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      AppColors.primary,
+                                    ),
                                   ),
                                 ),
-                              ),
-                            );
-                          },
+                              )
+                            else if (_activeError != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 20),
+                                child: _activeError!.maybeWhen(
+                                  network: (e) => ErrorUi.network(onTap: _retryLoading),
+                                  notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
+                                  orElse: () => ErrorUi.server(onTap: _retryLoading),
+                                ),
+                              )
+                            else
+                              ...logCards,
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      // Add spacing so the bottom list items aren't hidden behind the floating buttons
+                      const SizedBox(height: 130),
+                    ],
                   ),
-                  _buildStartButton(),
-                ],
+                ),
               ),
-            ),
+      floatingActionButton: !isCustomer ? null : _buildStartButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
@@ -196,10 +621,12 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   Widget _buildMonthNav() {
     final monthLabel =
         '${_selectedDate.day} ${_monthName(_selectedDate.month)} ${_selectedDate.year}';
-    
+
     final today = DateTime.now();
-    final isCurrentOrFutureMonth = _selectedDate.year > today.year || 
-        (_selectedDate.year == today.year && _selectedDate.month >= today.month);
+    final isCurrentOrFutureMonth =
+        _selectedDate.year > today.year ||
+        (_selectedDate.year == today.year &&
+            _selectedDate.month >= today.month);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -218,7 +645,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           ),
           const SizedBox(width: 14),
           _NavArrow(
-            icon: Icons.chevron_right, 
+            icon: Icons.chevron_right,
             onTap: isCurrentOrFutureMonth ? null : () => _changeMonth(1),
           ),
         ],
@@ -261,7 +688,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   // ── Bottom CTA ────────────────────────────────────────────────────────────
   Widget _buildStartButton() {
     return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 24, left: 20, right: 20),
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -273,13 +700,17 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             ),
             icon: const Icon(Icons.add, color: Colors.white, size: 20),
             raduis: 12,
-            ontap: () {
-              Navigator.push(
+            ontap: () async {
+              await Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const OwnWorkoutScreen(),
+                MaterialPageRoute<void>(
+                  builder:
+                      (context) => const OwnWorkoutScreen(isNewSession: true),
                 ),
               );
+              await _loadMyPlans();
+              await _loadActiveSessionTitle();
+              await _loadWorkoutLogForSelectedDate();
             },
           ),
           const SizedBox(height: 12),
@@ -301,13 +732,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               ),
             ),
             raduis: 12,
-            ontap: () {
-              Navigator.push(
+            ontap: () async {
+              await Navigator.push(
                 context,
-                MaterialPageRoute(
+                MaterialPageRoute<void>(
                   builder: (context) => const PresetsScreen(),
                 ),
               );
+              await _loadMyPlans();
+              await _loadActiveSessionTitle();
+              await _loadWorkoutLogForSelectedDate();
             },
           ),
         ],
@@ -340,11 +774,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
 // ── Day tile ─────────────────────────────────────────────────────────────────
 class _DayTile extends StatelessWidget {
-  const _DayTile({
-    required this.date,
-    required this.selected,
-    this.onTap,
-  });
+  const _DayTile({required this.date, required this.selected, this.onTap});
 
   final DateTime date;
   final bool selected;
@@ -401,42 +831,44 @@ class _DayTile extends StatelessWidget {
                 Text(
                   '${date.day}',
                   textAlign: TextAlign.center,
-                  style: selected
-                      ? AppStyles.text16Px.poppins.w700.copyWith(
-                          height: 1.3,
-                          color: Colors.white,
-                        )
-                      : isEnabled
+                  style:
+                      selected
+                          ? AppStyles.text16Px.poppins.w700.copyWith(
+                            height: 1.3,
+                            color: Colors.white,
+                          )
+                          : isEnabled
                           ? AppStyles.text16Px.poppins.w600.copyWith(
-                              height: 1.3,
-                              color: AppColors.button,
-                            )
+                            height: 1.3,
+                            color: AppColors.button,
+                          )
                           : AppStyles.text16Px.poppins.w600.copyWith(
-                              height: 1.3,
-                              color: const Color(0xFF888888),
-                            ),
+                            height: 1.3,
+                            color: const Color(0xFF888888),
+                          ),
                 ),
                 SizedBox(height: selected ? 12 : 4),
                 Text(
                   dayName,
                   textAlign: TextAlign.center,
-                  style: selected
-                      ? AppStyles.text12Px.poppins.w500.copyWith(
-                          fontSize: 12,
-                          height: 1.3,
-                          color: Colors.white,
-                        )
-                      : isEnabled
+                  style:
+                      selected
+                          ? AppStyles.text12Px.poppins.w500.copyWith(
+                            fontSize: 12,
+                            height: 1.3,
+                            color: Colors.white,
+                          )
+                          : isEnabled
                           ? AppStyles.text12Px.poppins.w400.copyWith(
-                              fontSize: 12,
-                              height: 1.3,
-                              color: AppColors.button,
-                            )
+                            fontSize: 12,
+                            height: 1.3,
+                            color: AppColors.button,
+                          )
                           : AppStyles.text12Px.poppins.w400.copyWith(
-                              fontSize: 12,
-                              height: 1.3,
-                              color: const Color(0xFF888888),
-                            ),
+                            fontSize: 12,
+                            height: 1.3,
+                            color: const Color(0xFF888888),
+                          ),
                 ),
                 if (selected) ...[
                   const SizedBox(height: 6),
@@ -470,9 +902,10 @@ class _NavArrow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Icon(
-        icon, 
-        size: 16, 
-        color: onTap != null ? const Color(0xFF434A5D) : const Color(0xFFD1D3D9),
+        icon,
+        size: 16,
+        color:
+            onTap != null ? const Color(0xFF434A5D) : const Color(0xFFD1D3D9),
       ),
     );
   }
@@ -498,23 +931,40 @@ class _WorkoutCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Gradient cardGradient = isCompleted
-        ? const LinearGradient(
-            colors: [Color(0xFFD1CBC6), Color(0xFFB0A9A3)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : const LinearGradient(
-            colors: [Color(0xFFE5E5E5), Color(0xFFD1D3D9)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          );
+    String formattedTitle = title;
+    if (!formattedTitle.contains('\n')) {
+      final parts = formattedTitle.split(' ');
+      if (parts.length > 1) {
+        final middle = (parts.length / 2).ceil();
+        formattedTitle =
+            '${parts.sublist(0, middle).join(' ')}\n${parts.sublist(middle).join(' ')}';
+      }
+    }
+
+    final Gradient cardGradient =
+        isCompleted
+            ? const LinearGradient(
+              colors: [Color(0xFFD1CBC6), Color(0xFFB0A9A3)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            )
+            : const LinearGradient(
+              colors: [Color(0xFFE5E5E5), Color(0xFFD1D3D9)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            );
 
     return Stack(
       clipBehavior: Clip.none,
       children: [
         GestureDetector(
-          onTap: onTap,
+          onTap: () {
+            debugPrint(
+              'DEBUG: Tapped _WorkoutCard with index: $index, title: $title',
+            );
+            if (onTap != null) onTap!();
+          },
+          behavior: HitTestBehavior.opaque,
           child: Container(
             height: 140,
             width: double.infinity,
@@ -522,13 +972,16 @@ class _WorkoutCard extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: cardGradient,
               borderRadius: BorderRadius.circular(20),
-              image: hasImage
-                  ? const DecorationImage(
-                      image: AssetImage('assets/images/png/vectors/workout_plan_creation_image.png'),
-                      fit: BoxFit.cover,
-                      alignment: Alignment.centerRight,
-                    )
-                  : null,
+              image:
+                  hasImage
+                      ? const DecorationImage(
+                        image: AssetImage(
+                          'assets/images/png/vectors/workout_plan_creation_image.png',
+                        ),
+                        fit: BoxFit.cover,
+                        alignment: Alignment.centerRight,
+                      )
+                      : null,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.08),
@@ -559,8 +1012,11 @@ class _WorkoutCard extends StatelessWidget {
                 Positioned(
                   left: 24,
                   bottom: 20,
+                  width: 135,
                   child: Text(
-                    title,
+                    formattedTitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 18,
@@ -570,29 +1026,6 @@ class _WorkoutCard extends StatelessWidget {
                     ),
                   ),
                 ),
-
-                // Bottom center/left-ish: Progress dots
-                Positioned(
-                  left: 170,
-                  bottom: 24,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(6, (idx) => Container(
-                      width: 14,
-                      height: 14,
-                      margin: const EdgeInsets.only(right: 6),
-                      decoration: BoxDecoration(
-                        color: isCompleted ? const Color(0xFF00FF66) : const Color(0xFFE0E0E0),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isCompleted ? const Color(0xFF009933) : const Color(0xFFBDBDBD),
-                          width: 1.5,
-                        ),
-                      ),
-                    )),
-                  ),
-                ),
-
                 // Bottom right: Circular white button
                 Positioned(
                   right: 16,
@@ -625,12 +1058,27 @@ class _WorkoutCard extends StatelessWidget {
 
         // CompletedBadge overlay at top right of the card
         if (isCompleted)
-          const Positioned(
-            top: -7.0, 
-            right: -5.35, 
-            child: CompletedBadge(),
-          ),
+          const Positioned(top: -7.0, right: -5.35, child: CompletedBadge()),
       ],
+    );
+  }
+}
+
+class _RestDayCard extends StatelessWidget {
+  const _RestDayCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: Text(
+          'No workout created on this day .',
+          style: AppStyles.text14Px.poppins.w500.copyWith(
+            color: const Color(0xFF94A3B8),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -648,7 +1096,11 @@ class _GuestWorkoutView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.fitness_center_rounded, size: 80, color: Colors.grey.shade400),
+            Icon(
+              Icons.fitness_center_rounded,
+              size: 80,
+              color: Colors.grey.shade400,
+            ),
             const SizedBox(height: 16),
             Text(
               'Guest Account',

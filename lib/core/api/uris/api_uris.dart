@@ -48,7 +48,7 @@ final class ApiUris {
   static String fitnesscenterMembershipPlans(int id) =>
       '${_v1}customer/membership-plans/$id/';
   static const fitnesscenterCategories = '${_v1}fitnesscenter/categories/';
-  static const listFitnesscenter = '${_v1}fitnesscenter/gym/list/';
+  static const listFitnesscenter = '${_v1}customer/nearest/fitnesscenter/';
 
   ///============================= Reviews =============================\\\
   static const addReview = '${_v1}customer/reviews/';
@@ -63,9 +63,19 @@ final class ApiUris {
 
   ///============================= Workout =============================\\\
   static const exercises = '${_v1}customer/exercises/';
+  static const exerciseDetail = '${_v1}customer/exercises/detail/';
+  static String exerciseDetailById(int id) => '${_v1}customer/exercises/$id/';
   static const muscleGroups = '${_v1}trainer/muscle-groups/';
   static const equipment = '${_v1}trainer/equipment/';
   static const exerciseTypes = '${_v1}trainer/exercise-types/';
+  static const activeSession = '${_v1}customer/sessions/active/';
+  static const activeSessionExercises = '${_v1}customer/sessions/active/exercises/';
+  static const startSession = '${_v1}customer/sessions/start/';
+  static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
+  static String addSetToLog(int logId) => '${_v1}customer/workout-logs/$logId/sets/';
+  static const workoutLog = '${_v1}customer/workout-log/';
+  static const presets = '${_v1}customer/my-plans/';
+  static String presetDetail(int id) => '${_v1}customer/my-plans/$id/';
 
   static const loginAsGuest = '${_v1}user/login/guest/';
 }

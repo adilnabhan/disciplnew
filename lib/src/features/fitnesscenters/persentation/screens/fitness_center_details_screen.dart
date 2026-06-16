@@ -495,17 +495,17 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
           final lat = loc.latitude;
           final lng = loc.longitude;
           Uri mapUri;
-          if (lat != null && lng != null) {
-            mapUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+          if (lat != null && lng != null && lat.toString().trim().isNotEmpty && lng.toString().trim().isNotEmpty && lat.toString() != 'null' && lng.toString() != 'null') {
+            mapUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
           } else {
             final address = [loc.buildingName, loc.street, loc.city, loc.state]
                 .where((e) => e != null && e.isNotEmpty)
                 .join(', ');
-            mapUri = Uri.parse('https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(address)}');
+            mapUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}');
           }
-          if (await canLaunchUrl(mapUri)) {
-            await launchUrl(mapUri);
-          } else {
+          try {
+            await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+          } catch (e) {
             await Dialogs.showSnack(msg: 'Could not open maps');
           }
         } else {
