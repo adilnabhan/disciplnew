@@ -7,6 +7,7 @@ part 'workout_cubit.freezed.dart';
 class WorkoutCubit extends Cubit<WorkoutState> {
   List<Map<String, String>> _allLibraryExercises = [];
   List<Map<String, String>> _allCustomExercises = [];
+  String? startedAt;
 
   WorkoutCubit({bool startFresh = false, PresetModel? presetToStart})
       : super(
@@ -581,6 +582,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       (data) {
         print('DEBUG: Successfully loaded active session data from API!');
         if (isClosed) return;
+        if (data is Map<String, dynamic>) {
+          startedAt = data['started_at']?.toString();
+        }
         final parsedExercises = _parseActiveSessionExercises(data);
         String title = '';
         if (data is Map<String, dynamic>) {

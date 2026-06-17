@@ -1,6 +1,8 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/profile_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/profile_details_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/contact_support_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -40,6 +42,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
@@ -77,7 +86,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           title: Text(
             'Settings',
             style: AppStyles.text18Px.poppins.w600.copyWith(
-              color: const Color(0xFF212121),
             ),
           ),
         ),
@@ -140,7 +148,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: 'assets/images/svg/vectors/logo.svg',
                       title: 'About Us',
                       applyColorFilter: false,
-                      onTap: () => _showComingSoon('About Us'),
+                      onTap: () => _launchUrl('https://thediscipl.com/#about'),
                     ),
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/notification_icon.svg',
@@ -166,17 +174,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/contact_support_icon.svg',
                       title: 'Contact Support',
-                      onTap: () => _showComingSoon('Contact Support'),
+                      onTap: () => context.push(const ContactSupportScreen()),
                     ),
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/terms&condition_icon.svg',
                       title: 'Terms & Conditions',
-                      onTap: () => _showComingSoon('Terms & Conditions'),
+                      onTap: () => _launchUrl('https://thediscipl.com/terms-conditions'),
                     ),
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/privacy_policy.svg',
                       title: 'Privacy Policy',
-                      onTap: () => _showComingSoon('Privacy Policy'),
+                      onTap: () => _launchUrl('https://thediscipl.com/privacy-policy'),
                     ),
                   ]),
                   const SizedBox(height: 24),
@@ -287,7 +295,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   icon: 'assets/images/svg/vectors/logo.svg',
                                   title: 'About Us',
                                   applyColorFilter: false,
-                                  onTap: () => _showComingSoon('About Us'),
+                                  onTap: () => _launchUrl('https://thediscipl.com/#about'),
                                 ),
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/notification_icon.svg',
@@ -313,17 +321,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/contact_support_icon.svg',
                                   title: 'Contact Support',
-                                  onTap: () => _showComingSoon('Contact Support'),
+                                  onTap: () => context.push(const ContactSupportScreen()),
                                 ),
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/terms&condition_icon.svg',
                                   title: 'Terms & Conditions',
-                                  onTap: () => _showComingSoon('Terms & Conditions'),
+                                  onTap: () => _launchUrl('https://thediscipl.com/terms-conditions'),
                                 ),
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/privacy_policy.svg',
                                   title: 'Privacy Policy',
-                                  onTap: () => _showComingSoon('Privacy Policy'),
+                                  onTap: () => _launchUrl('https://thediscipl.com/privacy-policy'),
                                 ),
                               ]),
                               const SizedBox(height: 24),

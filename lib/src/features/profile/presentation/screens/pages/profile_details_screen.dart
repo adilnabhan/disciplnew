@@ -345,7 +345,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           leading: const PopButton().center,
           title: Text(
             'Profile Details',
-            style: AppStyles.text16Px.poppins.w500,
+            style: AppStyles.text18Px.poppins.w600,
           ),
         ),
         body: Form(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
@@ -27,6 +28,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   late final TextEditingController _titleController;
   late final FocusNode _titleFocusNode;
   bool _isFinishing = false;
+  Timer? _timer;
+  int _elapsedSeconds = 0;
 
   @override
   void initState() {
@@ -54,8 +57,60 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   void dispose() {
     _titleController.dispose();
     _titleFocusNode.dispose();
+    _timer?.cancel();
     _cubit.close();
     super.dispose();
+  }
+
+  void _startTimer() {
+    if (_timer != null) return;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _syncTimer() {
+    // If timer is already running (started locally for a new session), don't overwrite
+    if (_timer != null) return;
+
+    final startedAtStr = _cubit.startedAt;
+    if (startedAtStr != null) {
+      final start = DateTime.tryParse(startedAtStr);
+      if (start != null) {
+        final now = DateTime.now();
+        final startLocal = start.isUtc ? start.toLocal() : start;
+        final diff = now.difference(startLocal);
+        final elapsed = diff.inSeconds;
+        if (elapsed >= 0) {
+          setState(() {
+            _elapsedSeconds = elapsed;
+          });
+          _startTimer();
+        }
+      }
+    } else if (_cubit.state.exercises.isNotEmpty) {
+      _startTimer();
+    }
+  }
+
+  String _formatTimer(int totalSeconds) {
+    final int hours = totalSeconds ~/ 3600;
+    final int minutes = (totalSeconds % 3600) ~/ 60;
+    final int seconds = totalSeconds % 60;
+
+    final String minutesStr = minutes.toString().padLeft(2, '0');
+    final String secondsStr = seconds.toString().padLeft(2, '0');
+
+    if (hours > 0) {
+      final String hoursStr = hours.toString().padLeft(2, '0');
+      return '$hoursStr:$minutesStr:$secondsStr';
+    } else {
+      return '$minutesStr:$secondsStr';
+    }
   }
 
   void _addSet(int exerciseIndex) {
@@ -196,6 +251,24 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     color: Color(0xFFDDDDDD),
                                   ),
                                 ),
+                                suffixIcon: searchQuery.isNotEmpty
+                                    ? IconButton(
+                                        padding: EdgeInsets.zero,
+                                        icon: const Icon(Icons.clear, color: Color(0xFF9E9E9E), size: 20),
+                                        onPressed: () {
+                                          searchController.clear();
+                                          setSheetState(() {
+                                            searchQuery = '';
+                                          });
+                                          EasyDebounce.cancel('workout_search_debouncer');
+                                          if (currentTab == 0) {
+                                            _cubit.loadLibraryExercises(search: '');
+                                          } else {
+                                            _cubit.loadCustomExercises(search: '');
+                                          }
+                                        },
+                                      )
+                                    : null,
                               ),
                             ),
                           ),
@@ -496,6 +569,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             subtitle: item['subtitle']!,
                             videoUrl: item['video_url'],
                           );
+                          if (!widget.isPresetCreation) {
+                            _startTimer();
+                          }
                           setSheetState(() {});
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
@@ -1090,6 +1166,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   ),
                                 ),
                               ),
+                              const SizedBox(height: 32),
                             ],
                           ),
                         ),
@@ -1211,6 +1288,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     return BlocConsumer<WorkoutCubit, WorkoutState>(
       bloc: _cubit,
       listener: (context, state) {
+        if (!widget.isPresetCreation && state.exercises.isNotEmpty) {
+          _syncTimer();
+        }
         if (_titleController.text != state.sessionTitle &&
             !_titleFocusNode.hasFocus) {
           if ((widget.isNewSession &&
@@ -1333,15 +1413,46 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             padding: const EdgeInsets.only(
                               left: 51,
                             ), // button width (40) + gap (11)
-                            child: Text(
-                              '$totalExercises Exercises',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w400,
-                                fontSize: 14,
-                                height: 1.0,
-                                color: Color(0xFF888888),
-                              ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  '$totalExercises Exercises',
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 14,
+                                    height: 1.0,
+                                    color: Color(0xFF888888),
+                                  ),
+                                ),
+                                if (!widget.isPresetCreation) ...[
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    '•',
+                                    style: TextStyle(
+                                      color: Color(0xFF888888),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Icon(
+                                    Icons.timer_outlined,
+                                    size: 15,
+                                    color: Color(0xFF888888),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    _formatTimer(_elapsedSeconds),
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                      height: 1.0,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ],

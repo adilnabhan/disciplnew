@@ -47,7 +47,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             backgroundColor: AppColors.bgcolorgrey,
             appBar: AppBar(
               automaticallyImplyLeading: false,
-              title: Text('Profile', style: AppStyles.text16Px.poppins.w500),
+              centerTitle: false,
+              title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
               actions: [
                 GestureDetector(
                   onTap: () {
@@ -355,7 +356,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 12),
         Text(
           'Health Status',
-          style: AppStyles.text16Px.poppins.w500.copyWith(
+          style: AppStyles.text16Px.poppins.w600.copyWith(
             color: AppColors.textDark,
           ),
         ),
@@ -407,7 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // ── Lifestyle section ──
           Text(
             'Lifestyle',
-            style: AppStyles.text16Px.poppins.w500.copyWith(
+            style: AppStyles.text16Px.poppins.w600.copyWith(
               color: AppColors.textDark,
             ),
           ),

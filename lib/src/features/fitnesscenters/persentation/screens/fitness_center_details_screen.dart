@@ -1410,7 +1410,7 @@ class _GymGalleryViewerDialogState extends State<GymGalleryViewerDialog> {
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
               child: Container(
-                color: Colors.black.withOpacity(0.92),
+                color: Colors.black.withValues(alpha:  0.92),
               ),
             ),
           ),
@@ -1427,7 +1427,7 @@ class _GymGalleryViewerDialogState extends State<GymGalleryViewerDialog> {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
+                      color: AppColors.bgcolorgrey.withValues(alpha:  0.3),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

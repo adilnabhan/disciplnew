@@ -14,10 +14,15 @@ class _FitnessCentersListingScreenState
     extends State<FitnessCentersListingScreen> {
   late final ListFitnessCentersCubit _cubit;
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  final ValueNotifier<bool> _showClearButton = ValueNotifier<bool>(false);
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(() {
+      _showClearButton.value = _searchController.text.isNotEmpty;
+    });
     _cubit = ListFitnessCentersCubit();
     _fetch();
     _scrollController.addListener(() {
@@ -32,6 +37,8 @@ class _FitnessCentersListingScreenState
   void dispose() {
     _cubit.close();
     _scrollController.dispose();
+    _searchController.dispose();
+    _showClearButton.dispose();
     super.dispose();
   }
 
@@ -89,7 +96,15 @@ class _FitnessCentersListingScreenState
             ),
           ),
         ),
-        body: BlocBuilder<ListFitnessCentersCubit, ListFitnessCentersState>(
+        body: BlocConsumer<ListFitnessCentersCubit, ListFitnessCentersState>(
+          listenWhen: (previous, current) {
+            final wasLoading = previous.listFitnessCenters.data.fold(() => true, (_) => false);
+            final isLoaded = current.listFitnessCenters.data.fold(() => false, (_) => true);
+            return wasLoading && isLoaded;
+          },
+          listener: (context, state) {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
           builder: (context, state) {
             return state.categories.fold(
               () => const Center(child: CircularProgressIndicator()),
@@ -257,6 +272,8 @@ class _FitnessCentersListingScreenState
             bottom: 0,
             child: Center(
               child: TextField(
+                controller: _searchController,
+                textAlignVertical: TextAlignVertical.center,
                 onChanged: (value) {
                   EasyDebounce.debounce(
                     'search-fitness-center',
@@ -264,17 +281,32 @@ class _FitnessCentersListingScreenState
                     () => _cubit.search(value),
                   );
                 },
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   filled: false,
                   fillColor: Colors.transparent,
                   hintText: 'Search by name,place,...',
-                  hintStyle: TextStyle(
+                  hintStyle: const TextStyle(
                     color: Color(0xFF8E8E93),
                     fontSize: 16,
                     fontWeight: FontWeight.w400,
                   ),
                   border: InputBorder.none,
                   isCollapsed: true,
+                  suffixIcon: ValueListenableBuilder<bool>(
+                    valueListenable: _showClearButton,
+                    builder: (context, show, child) {
+                      if (!show) return const SizedBox.shrink();
+                      return IconButton(
+                        icon: const Icon(Icons.clear, color: Color(0xFF9E9E9E), size: 20),
+                        padding: EdgeInsets.zero,
+                        onPressed: () {
+                          _searchController.clear();
+                          EasyDebounce.cancel('search-fitness-center');
+                          _cubit.search('');
+                        },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
