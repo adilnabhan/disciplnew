@@ -326,6 +326,10 @@ mixin _$SingleFItnessCenterModel {
   DateTime? get createdAt => throw _privateConstructorUsedError;
   @JsonKey(name: 'distance_km')
   double? get distanceKm => throw _privateConstructorUsedError;
+  @JsonKey(name: 'latitude')
+  dynamic get latitude => throw _privateConstructorUsedError;
+  @JsonKey(name: 'longitude')
+  dynamic get longitude => throw _privateConstructorUsedError;
 
   /// Serializes this SingleFItnessCenterModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -363,6 +367,8 @@ abstract class $SingleFItnessCenterModelCopyWith<$Res> {
     @JsonKey(name: 'average_rating') double? averageRating,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'distance_km') double? distanceKm,
+    @JsonKey(name: 'latitude') dynamic latitude,
+    @JsonKey(name: 'longitude') dynamic longitude,
   });
 
   $LocationCopyWith<$Res>? get location;
@@ -404,6 +410,8 @@ class _$SingleFItnessCenterModelCopyWithImpl<
     Object? averageRating = freezed,
     Object? createdAt = freezed,
     Object? distanceKm = freezed,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -497,6 +505,16 @@ class _$SingleFItnessCenterModelCopyWithImpl<
                     ? _value.distanceKm
                     : distanceKm // ignore: cast_nullable_to_non_nullable
                         as double?,
+            latitude:
+                freezed == latitude
+                    ? _value.latitude
+                    : latitude // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            longitude:
+                freezed == longitude
+                    ? _value.longitude
+                    : longitude // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
           )
           as $Val,
     );
@@ -545,6 +563,8 @@ abstract class _$$SingleFItnessCenterModelImplCopyWith<$Res>
     @JsonKey(name: 'average_rating') double? averageRating,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'distance_km') double? distanceKm,
+    @JsonKey(name: 'latitude') dynamic latitude,
+    @JsonKey(name: 'longitude') dynamic longitude,
   });
 
   @override
@@ -587,6 +607,8 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
     Object? averageRating = freezed,
     Object? createdAt = freezed,
     Object? distanceKm = freezed,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
   }) {
     return _then(
       _$SingleFItnessCenterModelImpl(
@@ -680,6 +702,16 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
                 ? _value.distanceKm
                 : distanceKm // ignore: cast_nullable_to_non_nullable
                     as double?,
+        latitude:
+            freezed == latitude
+                ? _value.latitude
+                : latitude // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        longitude:
+            freezed == longitude
+                ? _value.longitude
+                : longitude // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
       ),
     );
   }
@@ -707,6 +739,8 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
     @JsonKey(name: 'average_rating') this.averageRating,
     @JsonKey(name: 'created_at') this.createdAt,
     @JsonKey(name: 'distance_km') this.distanceKm,
+    @JsonKey(name: 'latitude') this.latitude,
+    @JsonKey(name: 'longitude') this.longitude,
   }) : _categories = categories,
        _category = category,
        super._();
@@ -784,10 +818,16 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
   @override
   @JsonKey(name: 'distance_km')
   final double? distanceKm;
+  @override
+  @JsonKey(name: 'latitude')
+  final dynamic latitude;
+  @override
+  @JsonKey(name: 'longitude')
+  final dynamic longitude;
 
   @override
   String toString() {
-    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, category: $category, location: $location, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt, distanceKm: $distanceKm)';
+    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, category: $category, location: $location, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt, distanceKm: $distanceKm, latitude: $latitude, longitude: $longitude)';
   }
 
   @override
@@ -825,12 +865,14 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.distanceKm, distanceKm) ||
-                other.distanceKm == distanceKm));
+                other.distanceKm == distanceKm) &&
+            const DeepCollectionEquality().equals(other.latitude, latitude) &&
+            const DeepCollectionEquality().equals(other.longitude, longitude));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     name,
@@ -850,7 +892,9 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
     averageRating,
     createdAt,
     distanceKm,
-  );
+    const DeepCollectionEquality().hash(latitude),
+    const DeepCollectionEquality().hash(longitude),
+  ]);
 
   /// Create a copy of SingleFItnessCenterModel
   /// with the given fields replaced by the non-null parameter values.
@@ -888,6 +932,8 @@ abstract class _SingleFItnessCenterModel extends SingleFItnessCenterModel {
     @JsonKey(name: 'average_rating') final double? averageRating,
     @JsonKey(name: 'created_at') final DateTime? createdAt,
     @JsonKey(name: 'distance_km') final double? distanceKm,
+    @JsonKey(name: 'latitude') final dynamic latitude,
+    @JsonKey(name: 'longitude') final dynamic longitude,
   }) = _$SingleFItnessCenterModelImpl;
   const _SingleFItnessCenterModel._() : super._();
 
@@ -948,6 +994,12 @@ abstract class _SingleFItnessCenterModel extends SingleFItnessCenterModel {
   @override
   @JsonKey(name: 'distance_km')
   double? get distanceKm;
+  @override
+  @JsonKey(name: 'latitude')
+  dynamic get latitude;
+  @override
+  @JsonKey(name: 'longitude')
+  dynamic get longitude;
 
   /// Create a copy of SingleFItnessCenterModel
   /// with the given fields replaced by the non-null parameter values.

@@ -29,6 +29,7 @@ mixin _$ListFitnessCentersState {
   String get searchQuery => throw _privateConstructorUsedError;
   double? get latitude => throw _privateConstructorUsedError;
   double? get longitude => throw _privateConstructorUsedError;
+  bool get showLocationBanner => throw _privateConstructorUsedError;
 
   /// Create a copy of ListFitnessCentersState
   /// with the given fields replaced by the non-null parameter values.
@@ -55,6 +56,7 @@ abstract class $ListFitnessCentersStateCopyWith<$Res> {
     String searchQuery,
     double? latitude,
     double? longitude,
+    bool showLocationBanner,
   });
 
   $SingleFitnesscenterCategoryModelCopyWith<$Res>? get selectedCategory;
@@ -84,6 +86,7 @@ class _$ListFitnessCentersStateCopyWithImpl<
     Object? searchQuery = null,
     Object? latitude = freezed,
     Object? longitude = freezed,
+    Object? showLocationBanner = null,
   }) {
     return _then(
       _value.copyWith(
@@ -123,6 +126,11 @@ class _$ListFitnessCentersStateCopyWithImpl<
                     ? _value.longitude
                     : longitude // ignore: cast_nullable_to_non_nullable
                         as double?,
+            showLocationBanner:
+                null == showLocationBanner
+                    ? _value.showLocationBanner
+                    : showLocationBanner // ignore: cast_nullable_to_non_nullable
+                        as bool,
           )
           as $Val,
     );
@@ -166,6 +174,7 @@ abstract class _$$ListFitnessCentersStateImplCopyWith<$Res>
     String searchQuery,
     double? latitude,
     double? longitude,
+    bool showLocationBanner,
   });
 
   @override
@@ -196,6 +205,7 @@ class __$$ListFitnessCentersStateImplCopyWithImpl<$Res>
     Object? searchQuery = null,
     Object? latitude = freezed,
     Object? longitude = freezed,
+    Object? showLocationBanner = null,
   }) {
     return _then(
       _$ListFitnessCentersStateImpl(
@@ -234,6 +244,11 @@ class __$$ListFitnessCentersStateImplCopyWithImpl<$Res>
                 ? _value.longitude
                 : longitude // ignore: cast_nullable_to_non_nullable
                     as double?,
+        showLocationBanner:
+            null == showLocationBanner
+                ? _value.showLocationBanner
+                : showLocationBanner // ignore: cast_nullable_to_non_nullable
+                    as bool,
       ),
     );
   }
@@ -247,8 +262,9 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
     this.categories = const None(),
     this.selectedCategory,
     this.searchQuery = '',
-    this.latitude,
-    this.longitude,
+    this.latitude = 11.2588,
+    this.longitude = 75.7804,
+    this.showLocationBanner = false,
   });
 
   @override
@@ -267,13 +283,18 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
   @JsonKey()
   final String searchQuery;
   @override
+  @JsonKey()
   final double? latitude;
   @override
+  @JsonKey()
   final double? longitude;
+  @override
+  @JsonKey()
+  final bool showLocationBanner;
 
   @override
   String toString() {
-    return 'ListFitnessCentersState(listFitnessCenters: $listFitnessCenters, categories: $categories, selectedCategory: $selectedCategory, searchQuery: $searchQuery, latitude: $latitude, longitude: $longitude)';
+    return 'ListFitnessCentersState(listFitnessCenters: $listFitnessCenters, categories: $categories, selectedCategory: $selectedCategory, searchQuery: $searchQuery, latitude: $latitude, longitude: $longitude, showLocationBanner: $showLocationBanner)';
   }
 
   @override
@@ -292,7 +313,9 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
             (identical(other.latitude, latitude) ||
                 other.latitude == latitude) &&
             (identical(other.longitude, longitude) ||
-                other.longitude == longitude));
+                other.longitude == longitude) &&
+            (identical(other.showLocationBanner, showLocationBanner) ||
+                other.showLocationBanner == showLocationBanner));
   }
 
   @override
@@ -304,6 +327,7 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
     searchQuery,
     latitude,
     longitude,
+    showLocationBanner,
   );
 
   /// Create a copy of ListFitnessCentersState
@@ -329,6 +353,7 @@ abstract class _ListFitnessCentersState implements ListFitnessCentersState {
     final String searchQuery,
     final double? latitude,
     final double? longitude,
+    final bool showLocationBanner,
   }) = _$ListFitnessCentersStateImpl;
 
   @override
@@ -347,6 +372,8 @@ abstract class _ListFitnessCentersState implements ListFitnessCentersState {
   double? get latitude;
   @override
   double? get longitude;
+  @override
+  bool get showLocationBanner;
 
   /// Create a copy of ListFitnessCentersState
   /// with the given fields replaced by the non-null parameter values.

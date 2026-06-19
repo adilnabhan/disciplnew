@@ -1,5 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
 
 class FitnessCenterTile extends StatelessWidget {
   const FitnessCenterTile({required this.fitnessCenter, this.activeMembership, super.key});
@@ -17,6 +18,37 @@ class FitnessCenterTile extends StatelessWidget {
       final validParts = parts.where((e) => e != null && e.toString().isNotEmpty).toList();
       if (validParts.isNotEmpty) {
         locationText = validParts.join(', ');
+      }
+    }
+
+    final gymLat = fitnessCenter.gymLatitude;
+    final gymLon = fitnessCenter.gymLongitude;
+    final hasCoordinates = gymLat != null && gymLon != null;
+
+    double? displayDistance;
+    if (fitnessCenter.distanceKm != null) {
+      displayDistance = fitnessCenter.distanceKm;
+    } else {
+      try {
+        final cubit = context.read<ListFitnessCentersCubit>();
+        final userLat = cubit.state.latitude;
+        final userLon = cubit.state.longitude;
+        if (userLat != null && userLon != null && gymLat != null && gymLon != null) {
+          final distanceInMeters = Geolocator.distanceBetween(userLat, userLon, gymLat, gymLon);
+          displayDistance = distanceInMeters / 1000.0;
+        }
+      } catch (_) {
+        try {
+          final cubit = Feggy.read<ListFitnessCentersCubit>();
+          if (cubit != null) {
+            final userLat = cubit.state.latitude;
+            final userLon = cubit.state.longitude;
+            if (userLat != null && userLon != null && gymLat != null && gymLon != null) {
+              final distanceInMeters = Geolocator.distanceBetween(userLat, userLon, gymLat, gymLon);
+              displayDistance = distanceInMeters / 1000.0;
+            }
+          }
+        } catch (_) {}
       }
     }
 
@@ -61,7 +93,7 @@ class FitnessCenterTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (fitnessCenter.distanceKm != null)
+                if (displayDistance != null)
                   Positioned(
                     top: 6,
                     left: 6,
@@ -81,7 +113,7 @@ class FitnessCenterTile extends StatelessWidget {
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            '${fitnessCenter.distanceKm!.toStringAsFixed(1)} km away',
+                            '${displayDistance.toStringAsFixed(1)} km away',
                             style: const TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 9,
@@ -155,65 +187,115 @@ class FitnessCenterTile extends StatelessWidget {
                         ),
                       ],
                     ),
-                    // Enquire via WhatsApp
-                    GestureDetector(
-                      onTap: () async {
-                        final phone = fitnessCenter.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
-                        if (phone.isNotEmpty) {
-                          final message = Uri.encodeComponent(
-                            'Hi,\n\n'
-                            'I would like to know more about your membership plans, facilities, timings, and current offers.\n\n'
-                            'Thank you.\n\n'
-                            '—\n'
-                            'This enquiry was initiated through the Discipl App.',
-                          );
-                          final waUrl = Uri.parse('https://wa.me/$phone?text=$message');
-                          if (await canLaunchUrl(waUrl)) {
-                            await launchUrl(waUrl);
-                          } else {
-                            await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
-                          }
-                        } else {
-                          await Dialogs.showSnack(msg: 'WhatsApp number not available');
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SvgPicture.asset(
-                              'assets/images/svg/icons/whatsapp_logo.svg',
-                              width: 18,
-                              height: 18,
+                    // Action Buttons Row
+                    Row(
+                      children: [
+                        // Enquire via WhatsApp
+                        GestureDetector(
+                          onTap: () async {
+                            final phone = fitnessCenter.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
+                            if (phone.isNotEmpty) {
+                              final message = Uri.encodeComponent(
+                                'Hi,\n\n'
+                                'I would like to know more about your membership plans, facilities, timings, and current offers.\n\n'
+                                'Thank you.\n\n'
+                                '—\n'
+                                'This enquiry was initiated through the Discipl App.',
+                              );
+                              final waUrl = Uri.parse('https://wa.me/$phone?text=$message');
+                              if (await canLaunchUrl(waUrl)) {
+                                await launchUrl(waUrl);
+                              } else {
+                                await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
+                              }
+                            } else {
+                              await Dialogs.showSnack(msg: 'WhatsApp number not available');
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'Enquire',
-                              style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SvgPicture.asset(
+                                  'assets/images/svg/icons/whatsapp_logo.svg',
+                                  width: 18,
+                                  height: 18,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Enquire',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        if (hasCoordinates) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () async {
+                              final mapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$gymLat,$gymLon');
+                              try {
+                                if (await canLaunchUrl(mapsUrl)) {
+                                  await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
+                                } else {
+                                  await Dialogs.showSnack(msg: 'Could not launch maps');
+                                }
+                              } catch (e) {
+                                await Dialogs.showSnack(msg: 'Could not open maps');
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.primary, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.navigation_rounded,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Navigate',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
   
     Widget _buildCategoryTags() {
       final categories = fitnessCenter.gymCategories ?? [];

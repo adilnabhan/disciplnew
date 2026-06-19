@@ -154,11 +154,12 @@ final class FitnesscenterRepository {
   Future<Either<ApiException, ListFitnesscenterModel>> listFitnesscenter({
     required Map<String, dynamic> queryParameters,
     String? nextUrl,
+    bool allGyms = false,
   }) async {
     try {
       return await Feggy.async(
         call: _dio.get<dynamic>(
-          nextUrl ?? ApiUris.listFitnesscenter,
+          nextUrl ?? (allGyms ? ApiUris.listAllFitnesscenter : ApiUris.listFitnesscenter),
           options: _options,
           queryParameters: nextUrl != null ? null : queryParameters,
         ),

@@ -2,6 +2,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/profile_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/profile_details_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/contact_support_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/faq_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -153,7 +154,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/notification_icon.svg',
                       title: 'Notifications',
-                      onTap: () => _showComingSoon('Notifications'),
+                      onTap: () => context.push(const NotificationsScreen()),
                     ),
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/Themes_icon.svg',
@@ -169,7 +170,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/Faq_icon.svg',
                       title: 'Help Center / FAQ',
-                      onTap: () => _showComingSoon('Help Center / FAQ'),
+                      onTap: () => context.push(const FaqScreen()),
                     ),
                     _buildMenuItem(
                       icon: 'assets/images/svg/icons/contact_support_icon.svg',
@@ -300,7 +301,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/notification_icon.svg',
                                   title: 'Notifications',
-                                  onTap: () => _showComingSoon('Notifications'),
+                                  onTap: () => context.push(const NotificationsScreen()),
                                 ),
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/Themes_icon.svg',
@@ -316,7 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/Faq_icon.svg',
                                   title: 'Help Center / FAQ',
-                                  onTap: () => _showComingSoon('Help Center / FAQ'),
+                                  onTap: () => context.push(const FaqScreen()),
                                 ),
                                 _buildMenuItem(
                                   icon: 'assets/images/svg/icons/contact_support_icon.svg',

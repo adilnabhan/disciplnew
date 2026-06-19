@@ -62,6 +62,8 @@ _$SingleFItnessCenterModelImpl _$$SingleFItnessCenterModelImplFromJson(
           ? null
           : DateTime.parse(json['created_at'] as String),
   distanceKm: (json['distance_km'] as num?)?.toDouble(),
+  latitude: json['latitude'],
+  longitude: json['longitude'],
 );
 
 Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
@@ -85,6 +87,8 @@ Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
   'average_rating': instance.averageRating,
   'created_at': instance.createdAt?.toIso8601String(),
   'distance_km': instance.distanceKm,
+  'latitude': instance.latitude,
+  'longitude': instance.longitude,
 };
 
 _$CategoryImpl _$$CategoryImplFromJson(Map<String, dynamic> json) =>

@@ -39,11 +39,29 @@ class SingleFItnessCenterModel with _$SingleFItnessCenterModel {
     @JsonKey(name: 'average_rating') double? averageRating,
     @JsonKey(name: 'created_at') DateTime? createdAt,
     @JsonKey(name: 'distance_km') double? distanceKm,
+    @JsonKey(name: 'latitude') dynamic latitude,
+    @JsonKey(name: 'longitude') dynamic longitude,
   }) = _SingleFItnessCenterModel;
 
   factory SingleFItnessCenterModel.fromJson(Map<String, dynamic> json) => _$SingleFItnessCenterModelFromJson(json);
 
   List<Category>? get gymCategories => categories ?? category;
+
+  double? get gymLatitude {
+    final lat = latitude ?? location?.latitude;
+    if (lat == null) return null;
+    if (lat is num) return lat.toDouble();
+    if (lat is String) return double.tryParse(lat);
+    return null;
+  }
+
+  double? get gymLongitude {
+    final lng = longitude ?? location?.longitude;
+    if (lng == null) return null;
+    if (lng is num) return lng.toDouble();
+    if (lng is String) return double.tryParse(lng);
+    return null;
+  }
 }
 
 @freezed
