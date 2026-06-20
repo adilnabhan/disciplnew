@@ -299,37 +299,22 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   }
 
   void addSet(int exerciseIndex) {
-    final updatedExercises = List<Map<String, dynamic>>.from(
-      state.exercises.map((e) => Map<String, dynamic>.from(e)),
-    );
-    final sets = List<Map<String, dynamic>>.from(
-      updatedExercises[exerciseIndex]['sets'] as List,
-    );
-    final lastSet = sets.isNotEmpty ? sets.last : null;
-    final newSetNum = sets.length + 1;
+    if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
-    sets.add(<String, dynamic>{
-      'setNum': newSetNum,
-      'previous': 'no data',
-      'kg': lastSet != null ? lastSet['kg'] : '-',
-      'reps': lastSet != null ? lastSet['reps'] : '-',
-      'checked': false,
-    });
-    updatedExercises[exerciseIndex]['sets'] = sets;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    final logIdStr = updatedExercises[exerciseIndex]['id']?.toString();
+    final exercise = state.exercises[exerciseIndex];
+    final logIdStr = exercise['id']?.toString();
     final logId = int.tryParse(logIdStr ?? '');
 
     if (logId != null) {
-      final reps =
-          lastSet != null
-              ? int.tryParse(lastSet['reps']?.toString() ?? '15') ?? 15
-              : 15;
-      final weight =
-          lastSet != null
-              ? double.tryParse(lastSet['kg']?.toString() ?? '10.0') ?? 10.0
-              : 10.0;
+      final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
+      final lastSet = sets.isNotEmpty ? sets.last : null;
+
+      final reps = lastSet != null
+          ? int.tryParse(lastSet['reps']?.toString() ?? '15') ?? 15
+          : 15;
+      final weight = lastSet != null
+          ? double.tryParse(lastSet['kg']?.toString() ?? '10.0') ?? 10.0
+          : 10.0;
 
       WorkoutRepository()
           .addSetToExerciseLog(logId: logId, reps: reps, weightKg: weight)
@@ -354,26 +339,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     required String subtitle,
     String? videoUrl,
   }) async {
-    final updatedExercises = List<Map<String, dynamic>>.from(
-      state.exercises.map((e) => Map<String, dynamic>.from(e)),
-    );
-    updatedExercises.add(<String, dynamic>{
-      'id': id.toString(),
-      'title': title,
-      'subtitle': subtitle,
-      'video_url': videoUrl ?? '',
-      'sets': <Map<String, dynamic>>[
-        <String, dynamic>{
-          'setNum': 1,
-          'previous': 'no data',
-          'kg': '10',
-          'reps': '15',
-          'checked': false,
-        },
-      ],
-    });
-    emit(state.copyWith(exercises: updatedExercises));
-
     final result = await WorkoutRepository().addExercisesToActiveSession(
       workoutIds: [id],
     );
@@ -880,11 +845,15 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? '10';
             final repsVal = s['reps'] ?? '15';
             final prevVal = s['previous_weight_kg'] ?? s['previous'];
+            var prevStr = prevVal?.toString() ?? 'no data';
+            if (prevStr == '10kg×15' || prevStr == '10*15' || prevStr == '10.0kg x 15' || prevStr == '10kg x 15') {
+              prevStr = 'no data';
+            }
             sets.add({
               'id': s['id'],
               'setNum':
                   s['set_number'] ?? s['set_num'] ?? s['setNum'] ?? (i + 1),
-              'previous': prevVal?.toString() ?? 'no data',
+              'previous': prevStr,
               'kg': kgVal.toString(),
               'reps': repsVal.toString(),
               'checked': s['is_completed'] ?? s['checked'] ?? false,

@@ -313,10 +313,14 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? '10';
             final repsVal = s['reps'] ?? '15';
             final prevVal = s['previous_weight_kg'] ?? s['previous'];
+            var prevStr = prevVal?.toString() ?? 'no data';
+            if (prevStr == '10kg×15' || prevStr == '10*15' || prevStr == '10.0kg x 15' || prevStr == '10kg x 15') {
+              prevStr = 'no data';
+            }
             sets.add({
               'setNum':
                   s['set_number'] ?? s['set_num'] ?? s['setNum'] ?? (i + 1),
-              'previous': prevVal?.toString() ?? 'no data',
+              'previous': prevStr,
               'kg': kgVal.toString(),
               'reps': repsVal.toString(),
               'checked': s['is_completed'] ?? s['checked'] ?? false,
