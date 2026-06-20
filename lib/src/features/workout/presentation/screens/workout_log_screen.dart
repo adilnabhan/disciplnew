@@ -105,12 +105,33 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           });
         }
       },
-      (list) {
+      (list) async {
         debugPrint('DEBUG WORKOUT LOG LIST: $list');
+        final enrichedList = <Map<String, dynamic>>[];
+        for (final item in list) {
+          final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
+          final sessionId = map['session_id'] ?? map['id'];
+          if (sessionId != null) {
+            try {
+              final idInt = int.parse(sessionId.toString());
+              final detailsRes = await WorkoutRepository().getSessionDetails(sessionId: idInt);
+              detailsRes.fold(
+                (_) => null,
+                (details) {
+                  if (details['started_at'] != null) map['started_at'] = details['started_at'];
+                  if (details['completed_at'] != null) map['completed_at'] = details['completed_at'];
+                  if (details['duration'] != null) map['duration'] = details['duration'];
+                }
+              );
+            } catch (e) {
+              debugPrint('Error fetching session details: $e');
+            }
+          }
+          enrichedList.add(map);
+        }
         if (mounted) {
           setState(() {
-            _selectedDateWorkouts =
-                list.map((e) => e as Map<String, dynamic>).toList();
+            _selectedDateWorkouts = enrichedList;
             _isLoadingDateLog = false;
             _activeError = null;
           });
@@ -295,7 +316,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             sets.add({
               'setNum':
                   s['set_number'] ?? s['set_num'] ?? s['setNum'] ?? (i + 1),
-              'previous': prevVal?.toString() ?? '10kg×15',
+              'previous': prevVal?.toString() ?? 'no data',
               'kg': kgVal.toString(),
               'reps': repsVal.toString(),
               'checked': s['is_completed'] ?? s['checked'] ?? false,
@@ -304,10 +325,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         }
       }
 
+      sets.sort((a, b) {
+        final aNum = int.tryParse(a['setNum']?.toString() ?? '') ?? 0;
+        final bNum = int.tryParse(b['setNum']?.toString() ?? '') ?? 0;
+        return aNum.compareTo(bNum);
+      });
+
       if (sets.isEmpty) {
         sets.add({
           'setNum': 1,
-          'previous': '10kg×15',
+          'previous': 'no data',
           'kg': '10',
           'reps': '15',
           'checked': false,
@@ -423,6 +450,29 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     );
   }
 
+  String _formatDuration(String? startedAtStr, String? completedAtStr) {
+    if (startedAtStr == null || completedAtStr == null) return '--:--';
+    try {
+      final start = DateTime.parse(startedAtStr);
+      final end = DateTime.parse(completedAtStr);
+      final diff = end.difference(start);
+
+      final hours = diff.inHours;
+      final minutes = diff.inMinutes.remainder(60);
+      final seconds = diff.inSeconds.remainder(60);
+
+      if (hours > 0) {
+        return '${hours}h ${minutes}m';
+      } else if (minutes > 0) {
+        return '${minutes}m ${seconds}s';
+      } else {
+        return '${seconds}s';
+      }
+    } catch (e) {
+      return '--:--';
+    }
+  }
+
   Widget build(BuildContext context) {
     final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
     debugPrint('DEBUG BUILD: isCustomer: $isCustomer, date: $_selectedDate');
@@ -456,25 +506,38 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           }
         }
 
+        final rawTitle = workoutItem['title']?.toString() ?? '';
+        final hasRawTitle = rawTitle.isNotEmpty && rawTitle != 'My Workout Plan';
+
         final backendPlanName = workoutItem['plan_name']?.toString() ?? '';
         final hasBackendPlanName =
-            backendPlanName.isNotEmpty && backendPlanName != 'My Session';
+            backendPlanName.isNotEmpty && backendPlanName != 'My Workout Plan';
 
         final title =
+            (hasRawTitle ? rawTitle : null) ??
             (hasBackendPlanName ? backendPlanName : null) ??
             planNameFromMyPlans ??
+            (rawTitle.isNotEmpty ? rawTitle : null) ??
             (backendPlanName.isNotEmpty ? backendPlanName : null) ??
-            workoutItem['title']?.toString() ??
             workoutItem['plan_day_title']?.toString() ??
             'Quick Workout';
         final badge =
+            (hasRawTitle ? rawTitle : null) ??
             (hasBackendPlanName ? backendPlanName : null) ??
             planNameFromMyPlans ??
+            (rawTitle.isNotEmpty ? rawTitle : null) ??
             (backendPlanName.isNotEmpty ? backendPlanName : null) ??
             'Workout';
         final isCompleted =
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
+        final startedAt = workoutItem['started_at']?.toString() ?? workoutItem['created_at']?.toString() ?? workoutItem['start_time']?.toString();
+        final completedAt = workoutItem['completed_at']?.toString() ?? workoutItem['updated_at']?.toString() ?? workoutItem['end_time']?.toString();
+        
+        String durationStr = _formatDuration(startedAt, completedAt);
+        if (durationStr == '--:--' && workoutItem['duration'] != null) {
+          durationStr = workoutItem['duration'].toString();
+        }
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -484,6 +547,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               badge: badge,
               hasImage: true,
               isCompleted: isCompleted,
+              duration: durationStr,
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -919,6 +983,7 @@ class _WorkoutCard extends StatelessWidget {
     required this.badge,
     required this.hasImage,
     required this.isCompleted,
+    this.duration,
     this.onTap,
   });
 
@@ -927,6 +992,7 @@ class _WorkoutCard extends StatelessWidget {
   final String? badge;
   final bool hasImage;
   final bool isCompleted;
+  final String? duration;
   final VoidCallback? onTap;
 
   @override
@@ -992,26 +1058,10 @@ class _WorkoutCard extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                // Top left: Index
+                // Top left: Title
                 Positioned(
                   left: 24,
                   top: 20,
-                  child: Text(
-                    '$index',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF222222),
-                      height: 1.15,
-                    ),
-                  ),
-                ),
-
-                // Bottom left: Title
-                Positioned(
-                  left: 24,
-                  bottom: 20,
                   width: 135,
                   child: Text(
                     formattedTitle,
@@ -1024,6 +1074,45 @@ class _WorkoutCard extends StatelessWidget {
                       color: Color(0xFF222222),
                       height: 1.15,
                     ),
+                  ),
+                ),
+
+                // Bottom left: Duration
+                Positioned(
+                  left: 24,
+                  bottom: 20,
+                  width: 135,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer_outlined, color: Color(0xFFF0B5B7), size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Duration',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        duration ?? '--:--',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF4A4A4A),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // Bottom right: Circular white button

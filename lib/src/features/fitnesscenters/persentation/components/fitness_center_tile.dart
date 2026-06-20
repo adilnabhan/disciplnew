@@ -54,6 +54,14 @@ class FitnessCenterTile extends StatelessWidget {
 
     return InkWell(
       onTap: () {
+        final currentUser = context.read<AppCubit>().state.currentUser;
+        if (currentUser == null) {
+          GuestLoginSheet.show(
+            context,
+            message: 'Log in to explore fitness centers near you, view gym details, and send enquiries.',
+          );
+          return;
+        }
         if (fitnessCenter.id != null) {
           context.push(FitnessCenterDetailsScreen(fitnessCenterId: fitnessCenter.id ?? 0, activeMembership: activeMembership));
         } else {
@@ -193,6 +201,14 @@ class FitnessCenterTile extends StatelessWidget {
                         // Enquire via WhatsApp
                         GestureDetector(
                           onTap: () async {
+                            final currentUser = context.read<AppCubit>().state.currentUser;
+                            if (currentUser == null) {
+                              GuestLoginSheet.show(
+                                context,
+                                message: 'Log in to explore fitness centers near you, view gym details, and send enquiries.',
+                              );
+                              return;
+                            }
                             final phone = fitnessCenter.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
                             if (phone.isNotEmpty) {
                               final message = Uri.encodeComponent(

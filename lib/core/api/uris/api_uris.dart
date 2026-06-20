@@ -75,7 +75,10 @@ final class ApiUris {
   static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
   static String addSetToLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/sets/';
+  static String updateSetLog(int setLogId) =>
+      '${_v1}customer/set-logs/$setLogId/';
   static const workoutLog = '${_v1}customer/workout-log/';
+  static const restDay = '${_v1}customer/sessions/rest-day/';
   static const presets = '${_v1}customer/my-plans/';
   static String presetDetail(int id) => '${_v1}customer/my-plans/$id/';
 

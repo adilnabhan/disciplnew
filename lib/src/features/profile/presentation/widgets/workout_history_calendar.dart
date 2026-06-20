@@ -6,7 +6,9 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 class WorkoutHistoryCalendar extends StatefulWidget {
-  const WorkoutHistoryCalendar({super.key});
+  const WorkoutHistoryCalendar({this.startDate, super.key});
+
+  final DateTime? startDate;
 
   @override
   State<WorkoutHistoryCalendar> createState() => _WorkoutHistoryCalendarState();
@@ -23,9 +25,50 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   
   bool _isEditing = false;
   final Set<DateTime> _selectedRestDays = {};
+  
+  final Map<DateTime, int> _dayPlanDayIds = {};
+  final Map<DateTime, int> _dayCustomerWorkoutPlanIds = {};
+  int? _fallbackPlanId;
+  int? _fallbackPlanDayId;
 
-  // MOCK: Replace this with the actual API data once available
-  DateTime? _firstWorkoutDate = DateTime.now().subtract(const Duration(days: 10)); // Placeholder
+  T? _firstNonNull<T>(Iterable<T?> values) {
+    for (final v in values) {
+      if (v != null) return v;
+    }
+    return null;
+  }
+
+  DateTime get _firstWorkoutDate {
+    return widget.startDate ?? DateTime.now().subtract(const Duration(days: 30));
+  }
+
+  Future<void> _loadFallbackPlanInfo() async {
+    try {
+      final presetsRes = await WorkoutRepository().getPresets();
+      presetsRes.fold(
+        (error) => null,
+        (presetsList) async {
+          if (presetsList.isNotEmpty) {
+            final activePreset = presetsList.first;
+            _fallbackPlanId = activePreset.id;
+            
+            final detailRes = await WorkoutRepository().getPresetDetail(activePreset.id);
+            detailRes.fold(
+              (error) => null,
+              (detail) {
+                final days = detail['days'] as List? ?? [];
+                if (days.isNotEmpty) {
+                  _fallbackPlanDayId = int.tryParse(days.first['id'].toString());
+                }
+              }
+            );
+          }
+        }
+      );
+    } catch (e) {
+      debugPrint('Error loading fallback plan info: $e');
+    }
+  }
 
   void _toggleEditMode() {
     setState(() {
@@ -38,34 +81,82 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           }
         });
       } else {
+        final List<Map<String, dynamic>> restDaysToUpdate = [];
+        int? finalPlanId;
+
         final year = _focusedDay.year;
         final month = _focusedDay.month;
         final daysInMonth = DateTime(year, month + 1, 0).day;
-        final today = DateTime.now();
-        final todayOnly = DateTime(today.year, today.month, today.day);
-        
-        final startDate = _firstWorkoutDate;
-        final startDateOnly = startDate != null 
-            ? DateTime(startDate.year, startDate.month, startDate.day) 
-            : DateTime(todayOnly.year, todayOnly.month, 1);
 
         for (int day = 1; day <= daysInMonth; day++) {
           final date = DateTime(year, month, day);
-          final oldState = _dayStates[date] ?? CalendarDayState.future;
-          
-          if (_selectedRestDays.contains(date)) {
-             if (oldState != CalendarDayState.completed) {
-                _dayStates[date] = CalendarDayState.rest;
-             }
-          } else {
-             if (oldState == CalendarDayState.rest) {
-                if (date.isAfter(todayOnly) || date.isBefore(startDateOnly) || date.isAtSameMomentAs(todayOnly)) {
-                  _dayStates[date] = CalendarDayState.future;
-                } else {
-                  _dayStates[date] = CalendarDayState.missed;
-                }
-             }
+          final dateOnly = DateTime(date.year, date.month, date.day);
+          final oldState = _dayStates[dateOnly] ?? CalendarDayState.future;
+          final isCurrentlyRest = oldState == CalendarDayState.rest;
+          final shouldBeRest = _selectedRestDays.contains(dateOnly);
+
+          if (isCurrentlyRest != shouldBeRest) {
+            final planDayId = _dayPlanDayIds[dateOnly] ?? 
+                              _firstNonNull(_dayPlanDayIds.values) ?? 
+                              _fallbackPlanDayId;
+            
+            final customerWorkoutPlanId = _dayCustomerWorkoutPlanIds[dateOnly] ?? 
+                                          _firstNonNull(_dayCustomerWorkoutPlanIds.values) ?? 
+                                          _fallbackPlanId;
+
+            if (planDayId != null) {
+              if (customerWorkoutPlanId != null) {
+                finalPlanId = customerWorkoutPlanId;
+              }
+              restDaysToUpdate.add({
+                'plan_day_id': planDayId,
+                'date': DateFormat('yyyy-MM-dd').format(dateOnly),
+                'is_rest_day': shouldBeRest,
+              });
+            } else {
+              debugPrint('Warning: Could not toggle rest day for $dateOnly because planDayId is null');
+            }
           }
+        }
+
+        if (restDaysToUpdate.isNotEmpty) {
+          finalPlanId ??= _fallbackPlanId;
+          if (finalPlanId != null) {
+            setState(() {
+              _isLoading = true;
+            });
+            WorkoutRepository().updateRestDaysBulk(
+              customerWorkoutPlanId: finalPlanId,
+              restDays: restDaysToUpdate,
+            ).then((res) {
+              if (!mounted) return;
+              res.fold(
+                (err) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(err.msg ?? 'Failed to update rest days.'),
+                      backgroundColor: const Color(0xFFC60000),
+                    ),
+                  );
+                  setState(() {
+                    _isLoading = false;
+                  });
+                  _loadMonthData();
+                },
+                (data) {
+                  debugPrint('Successfully updated rest days in bulk: $data');
+                  _loadMonthData();
+                },
+              );
+            });
+          } else {
+            debugPrint('Error: customerWorkoutPlanId and fallbackPlanId are null.');
+            _prepopulateDefaultStates();
+            _loadMonthData();
+          }
+        } else {
+          _prepopulateDefaultStates();
+          _loadMonthData();
         }
       }
     });
@@ -74,8 +165,10 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   @override
   void initState() {
     super.initState();
-    _prepopulateDefaultStates();
-    _loadMonthData();
+    _loadFallbackPlanInfo().then((_) {
+      _prepopulateDefaultStates();
+      _loadMonthData();
+    });
   }
 
   @override
@@ -92,20 +185,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final todayOnly = DateTime(today.year, today.month, today.day);
 
     final startDate = _firstWorkoutDate;
-    final startDateOnly = startDate != null 
-        ? DateTime(startDate.year, startDate.month, startDate.day) 
-        : DateTime(todayOnly.year, todayOnly.month, 1);
+    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
       final dateOnly = DateTime(date.year, date.month, date.day);
       
-      if (dateOnly.isAfter(todayOnly) || dateOnly.isBefore(startDateOnly)) {
-        _dayStates[dateOnly] = CalendarDayState.future;
-      } else if (dateOnly.isAtSameMomentAs(todayOnly)) {
+      if (dateOnly.isBefore(startDateOnly) || dateOnly.isAfter(todayOnly) || dateOnly.isAtSameMomentAs(todayOnly)) {
         _dayStates[dateOnly] = CalendarDayState.future;
       } else {
-        // Only set missed if it hasn't been explicitly set to rest by user during session
         if (_dayStates[dateOnly] != CalendarDayState.rest) {
           _dayStates[dateOnly] = CalendarDayState.missed;
         }
@@ -128,9 +216,10 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     final today = DateTime.now();
     final todayOnly = DateTime(today.year, today.month, today.day);
+    final startDate = _firstWorkoutDate;
+    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
-    // Timeout safety net to make sure loading indicator doesn't get stuck
-    _loadingTimeoutTimer = Timer(const Duration(seconds: 4), () {
+    _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (mounted && _isLoading) {
         setState(() {
           _isLoading = false;
@@ -147,40 +236,81 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         
         result.fold(
           (error) {
-            _updateDayState(date, date.isAfter(todayOnly)
-                ? CalendarDayState.future
-                : CalendarDayState.rest, daysInMonth);
+            final dateOnly = DateTime(date.year, date.month, date.day);
+            CalendarDayState state;
+            if (dateOnly.isBefore(startDateOnly) || dateOnly.isAfter(todayOnly) || dateOnly.isAtSameMomentAs(todayOnly)) {
+              state = CalendarDayState.future;
+            } else {
+              state = CalendarDayState.missed;
+            }
+            _updateDayState(date, state, daysInMonth);
           },
           (logs) {
             final dateOnly = DateTime(date.year, date.month, date.day);
-            final isFuture = dateOnly.isAfter(todayOnly);
             
-            final startDate = _firstWorkoutDate;
-            final startDateOnly = startDate != null 
-                ? DateTime(startDate.year, startDate.month, startDate.day) 
-                : DateTime(today.year, today.month, 1);
+            bool isCompleted = false;
+            bool isRestDay = false;
+            int? planDayId;
+            int? customerWorkoutPlanId;
 
-            bool hasCompleted = logs.any((item) => item['is_completed'] == true);
-
-            if (hasCompleted) {
-              _updateDayState(date, CalendarDayState.completed, daysInMonth);
-            } else if (!isFuture && dateOnly.isBefore(todayOnly) && !dateOnly.isBefore(startDateOnly)) {
-              // If it's already rest (e.g. from local selection), keep it rest, otherwise missed
-              if (_dayStates[dateOnly] == CalendarDayState.rest) {
-                _updateDayState(date, CalendarDayState.rest, daysInMonth);
-              } else {
-                _updateDayState(date, CalendarDayState.missed, daysInMonth);
+            for (final log in logs) {
+              if (log is Map<String, dynamic>) {
+                if (log['is_completed'] == true || log['status']?.toString().toLowerCase() == 'completed') {
+                  isCompleted = true;
+                }
+                if (log['is_rest_day'] == true || log['status']?.toString().toLowerCase() == 'rest_day') {
+                  isRestDay = true;
+                }
+                if (log['plan_day'] != null) {
+                  planDayId = int.tryParse(log['plan_day'].toString());
+                }
+                if (log['plan_day_id'] != null) {
+                  planDayId = int.tryParse(log['plan_day_id'].toString());
+                }
+                if (log['customer_workout_plan'] != null) {
+                  customerWorkoutPlanId = int.tryParse(log['customer_workout_plan'].toString());
+                }
+                if (log['customer_workout_plan_id'] != null) {
+                  customerWorkoutPlanId = int.tryParse(log['customer_workout_plan_id'].toString());
+                }
               }
-            } else {
-              _updateDayState(date, CalendarDayState.future, daysInMonth);
             }
+
+            if (planDayId != null) {
+              _dayPlanDayIds[dateOnly] = planDayId;
+            }
+            if (customerWorkoutPlanId != null) {
+              _dayCustomerWorkoutPlanIds[dateOnly] = customerWorkoutPlanId;
+            }
+
+            CalendarDayState state;
+            if (isCompleted) {
+              state = CalendarDayState.completed;
+            } else if (isRestDay) {
+              state = CalendarDayState.rest;
+            } else if (dateOnly.isBefore(startDateOnly)) {
+              state = CalendarDayState.future;
+            } else if (dateOnly.isAfter(todayOnly)) {
+              state = CalendarDayState.future;
+            } else if (dateOnly.isAtSameMomentAs(todayOnly)) {
+              state = CalendarDayState.future;
+            } else {
+              state = CalendarDayState.missed;
+            }
+
+            _updateDayState(date, state, daysInMonth);
           },
         );
       }).catchError((e) {
         if (!mounted) return;
-        _updateDayState(date, date.isAfter(todayOnly)
-            ? CalendarDayState.future
-            : CalendarDayState.rest, daysInMonth);
+        final dateOnly = DateTime(date.year, date.month, date.day);
+        CalendarDayState state;
+        if (dateOnly.isBefore(startDateOnly) || dateOnly.isAfter(todayOnly) || dateOnly.isAtSameMomentAs(todayOnly)) {
+          state = CalendarDayState.future;
+        } else {
+          state = CalendarDayState.missed;
+        }
+        _updateDayState(date, state, daysInMonth);
       });
     }
   }
@@ -476,7 +606,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     final state = _dayStates[dateOnly] ?? CalendarDayState.future;
 
-    if (_isEditing && state != CalendarDayState.completed && !dateOnly.isBefore(startDateOnly)) {
+    if (_isEditing && state != CalendarDayState.completed && !dateOnly.isBefore(startDateOnly) && !dateOnly.isBefore(todayOnly)) {
       final isSelected = _selectedRestDays.contains(dateOnly);
       return GestureDetector(
         onTap: () {

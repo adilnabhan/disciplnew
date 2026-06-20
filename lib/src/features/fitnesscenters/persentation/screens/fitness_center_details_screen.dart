@@ -1287,6 +1287,14 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         child: GestureDetector(
           onTap: () async {
+            final currentUser = context.read<AppCubit>().state.currentUser;
+            if (currentUser == null) {
+              GuestLoginSheet.show(
+                context,
+                message: 'Log in to explore fitness centers near you, view gym details, and send enquiries.',
+              );
+              return;
+            }
             final phone = details.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
             if (phone.isNotEmpty) {
               final message = Uri.encodeComponent(

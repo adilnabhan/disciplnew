@@ -82,11 +82,21 @@ class _HomeScreenState extends State<HomeScreen> {
           // Reduced gap before calendar/card
           const SizedBox(height: 8),
 
-          // Ready To Level Up Card for guests, Workout History Calendar for logged-in users
           if (isGuest)
             _membershipExpireCard(context)
           else
-            const WorkoutHistoryCalendar().pxy(x: 8),
+            BlocBuilder<DashboardCubit, DashboardState>(
+              bloc: _dashboardCubit,
+              builder: (context, state) {
+                final activeMembership = state.activeMembershipData.fold(
+                  () => null,
+                  (either) => either.fold((_) => null, (m) => m),
+                );
+                return WorkoutHistoryCalendar(
+                  startDate: activeMembership?.startDate,
+                ).pxy(x: 8);
+              },
+            ),
 
           const SizedBox(height: 24),
 

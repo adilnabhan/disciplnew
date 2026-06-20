@@ -4,12 +4,12 @@ import 'package:customer_mobile_app/src/features/workout/presentation/components
 
 class WorkoutExecutionScreen extends StatefulWidget {
   final WorkoutModel workoutModel;
-  final List<Map<String, dynamic>>? exercises;
+  final List<Map<String, dynamic>> exercises;
   final bool isReadOnly;
 
   const WorkoutExecutionScreen({
     required this.workoutModel,
-    this.exercises,
+    required this.exercises,
     this.isReadOnly = false,
     super.key,
   });
@@ -24,47 +24,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.exercises != null) {
-      _exercises = List<Map<String, dynamic>>.from(
-        widget.exercises!.map((e) => Map<String, dynamic>.from(e)),
-      );
-    } else {
-      _exercises = List.generate(widget.workoutModel.exerciseCount, (index) {
-        final title = index == 0
-            ? 'Incline Bench Press'
-            : (index == 1 ? 'Flat Bench Press' : (index == 2 ? 'Chest Fly' : 'Cable Crossover'));
-        final subtitle = index % 2 == 0
-            ? 'Chest / Barbell / Volume×Reps'
-            : 'Chest / Dumbbell / Volume×Reps';
-        return <String, dynamic>{
-          'title': title,
-          'subtitle': subtitle,
-          'sets': <Map<String, dynamic>>[
-            <String, dynamic>{
-              'setNum': 1,
-              'previous': index == 0 ? '10kg×15' : 'no data',
-              'kg': '10',
-              'reps': '15',
-              'checked': true,
-            },
-            <String, dynamic>{
-              'setNum': 2,
-              'previous': index == 0 ? '10kg×15' : 'no data',
-              'kg': '10',
-              'reps': '15',
-              'checked': true,
-            },
-            <String, dynamic>{
-              'setNum': 3,
-              'previous': index == 0 ? '10kg×15' : 'no data',
-              'kg': index == 0 ? '12.5' : '0',
-              'reps': index == 0 ? '15' : '0',
-              'checked': index == 0 ? true : false,
-            },
-          ],
-        };
-      });
-    }
+    _exercises = List<Map<String, dynamic>>.from(
+      widget.exercises.map((e) => Map<String, dynamic>.from(e)),
+    );
   }
 
   void _addSet(int exerciseIndex) {
@@ -77,12 +39,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
 
       sets.add(<String, dynamic>{
         'setNum': newSetNum,
-        'previous':
-            lastSet != null
-                ? '${lastSet['kg']}kg×${lastSet['reps']}'
-                : '10kg×15',
-        'kg': lastSet != null ? lastSet['kg'] : '10',
-        'reps': lastSet != null ? lastSet['reps'] : '15',
+        'previous': 'no data',
+        'kg': lastSet != null ? lastSet['kg'] : '-',
+        'reps': lastSet != null ? lastSet['reps'] : '-',
         'checked': false,
       });
       _exercises[exerciseIndex]['sets'] = sets;

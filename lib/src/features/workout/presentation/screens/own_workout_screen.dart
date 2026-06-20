@@ -251,24 +251,35 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     color: Color(0xFFDDDDDD),
                                   ),
                                 ),
-                                suffixIcon: searchQuery.isNotEmpty
-                                    ? IconButton(
-                                        padding: EdgeInsets.zero,
-                                        icon: const Icon(Icons.clear, color: Color(0xFF9E9E9E), size: 20),
-                                        onPressed: () {
-                                          searchController.clear();
-                                          setSheetState(() {
-                                            searchQuery = '';
-                                          });
-                                          EasyDebounce.cancel('workout_search_debouncer');
-                                          if (currentTab == 0) {
-                                            _cubit.loadLibraryExercises(search: '');
-                                          } else {
-                                            _cubit.loadCustomExercises(search: '');
-                                          }
-                                        },
-                                      )
-                                    : null,
+                                suffixIcon:
+                                    searchQuery.isNotEmpty
+                                        ? IconButton(
+                                          padding: EdgeInsets.zero,
+                                          icon: const Icon(
+                                            Icons.clear,
+                                            color: Color(0xFF9E9E9E),
+                                            size: 20,
+                                          ),
+                                          onPressed: () {
+                                            searchController.clear();
+                                            setSheetState(() {
+                                              searchQuery = '';
+                                            });
+                                            EasyDebounce.cancel(
+                                              'workout_search_debouncer',
+                                            );
+                                            if (currentTab == 0) {
+                                              _cubit.loadLibraryExercises(
+                                                search: '',
+                                              );
+                                            } else {
+                                              _cubit.loadCustomExercises(
+                                                search: '',
+                                              );
+                                            }
+                                          },
+                                        )
+                                        : null,
                               ),
                             ),
                           ),
@@ -1836,7 +1847,10 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     if (videoUrlStr.isNotEmpty) {
                       final uri = Uri.parse(videoUrlStr);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(

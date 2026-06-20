@@ -238,7 +238,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   Expanded(
                     child: Text(
                       title,
-                      style: AppStyles.text22Px.poppins.w700.copyWith(
+                      style: AppStyles.text20Px.poppins.w600.copyWith(
                         color: Colors.black,
                         height: 1.2,
                       ),
@@ -383,7 +383,13 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final muscle = log['muscle']?.toString() ?? '';
     final equipment = log['equipment']?.toString() ?? '';
     final videoUrl = log['effective_video_url']?.toString() ?? '';
-    final setLogs = log['set_logs'] as List? ?? [];
+    final setLogs = List<Map<String, dynamic>>.from(log['set_logs'] as List? ?? []);
+    setLogs.sort((a, b) {
+      final aNum = int.tryParse(a['set_number']?.toString() ?? '') ?? 0;
+      final bNum = int.tryParse(b['set_number']?.toString() ?? '') ?? 0;
+      return aNum.compareTo(bNum);
+    });
+
 
     // Resolve type
     String? type;
