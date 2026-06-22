@@ -28,10 +28,12 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   List<PresetModel> _myPlans = [];
   ApiException? _activeError;
 
-  void _retryLoading() {
-    _loadMyPlans();
-    _loadActiveSessionTitle();
-    _loadWorkoutLogForSelectedDate();
+  Future<void> _retryLoading() async {
+    await Future.wait([
+      _loadMyPlans(),
+      _loadActiveSessionTitle(),
+      _loadWorkoutLogForSelectedDate(),
+    ]);
   }
 
   Future<void> _loadMyPlans() async {
@@ -628,55 +630,59 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                 },
               )
               : SafeArea(
-                child: SingleChildScrollView(
-                  clipBehavior: Clip.none,
-                  child: Column(
-                    children: [
-                      if (_showWorkoutCard) ...[
-                        const SizedBox(height: 8),
-                        _buildActiveWorkoutBanner(),
-                        const SizedBox(height: 12),
-                      ] else ...[
-                        const SizedBox(height: 21),
-                      ],
-                      _buildMonthNav(),
-                      const SizedBox(height: 34),
-                      _buildWeekStrip(),
-                      const SizedBox(height: 28),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const SizedBox(height: 12),
-                            if (_isLoadingDateLog)
-                              const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.only(top: 40),
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppColors.primary,
+                child: RefreshIndicator(
+                  onRefresh: _retryLoading,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    clipBehavior: Clip.none,
+                    child: Column(
+                      children: [
+                        if (_showWorkoutCard) ...[
+                          const SizedBox(height: 8),
+                          _buildActiveWorkoutBanner(),
+                          const SizedBox(height: 12),
+                        ] else ...[
+                          const SizedBox(height: 21),
+                        ],
+                        _buildMonthNav(),
+                        const SizedBox(height: 34),
+                        _buildWeekStrip(),
+                        const SizedBox(height: 28),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 12),
+                              if (_isLoadingDateLog)
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(top: 40),
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
                                     ),
                                   ),
-                                ),
-                              )
-                            else if (_activeError != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 20),
-                                child: _activeError!.maybeWhen(
-                                  network: (e) => ErrorUi.network(onTap: _retryLoading),
-                                  notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
-                                  orElse: () => ErrorUi.server(onTap: _retryLoading),
-                                ),
-                              )
-                            else
-                              ...logCards,
-                          ],
+                                )
+                              else if (_activeError != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 20),
+                                  child: _activeError!.maybeWhen(
+                                    network: (e) => ErrorUi.network(onTap: _retryLoading),
+                                    notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
+                                    orElse: () => ErrorUi.server(onTap: _retryLoading),
+                                  ),
+                                )
+                              else
+                                ...logCards,
+                            ],
+                          ),
                         ),
-                      ),
-                      // Add spacing so the bottom list items aren't hidden behind the floating buttons
-                      const SizedBox(height: 130),
-                    ],
+                        // Add spacing so the bottom list items aren't hidden behind the floating buttons
+                        const SizedBox(height: 130),
+                      ],
+                    ),
                   ),
                 ),
               ),

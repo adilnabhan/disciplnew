@@ -47,62 +47,66 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget homeView() {
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Carousel Banners (using local assets)
-          BannersView(banners: const [
-            'assets/images/carousel_images/discipl_carousel .png',
-            'assets/images/carousel_images/carousel_discipl.jpg',
-          ]).pxy(x: 16),
-
-          // Active Gym Section (only if user has active membership data)
-          BlocBuilder<DashboardCubit, DashboardState>(
-            bloc: _dashboardCubit,
-            builder: (context, dashboardState) {
-              return dashboardState.activeMembershipData.fold(
-                () => const SizedBox.shrink(),
-                (either) => either.fold((_) => const SizedBox.shrink(), (
-                  activeMembership,
-                ) {
-                  if (activeMembership == null) return const SizedBox.shrink();
-                  return Column(
-                    children: [
-                      const SizedBox(height: 24),
-                      _buildActiveGymSection(activeMembership).pxy(x: 16),
-                    ],
-                  );
-                }),
-              );
-            },
-          ),
-
-          // Reduced gap before calendar/card
-          const SizedBox(height: 8),
-
-          if (isGuest)
-            _membershipExpireCard(context)
-          else
+    return RefreshIndicator(
+      onRefresh: _fetchActiveMembership,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Carousel Banners (using local assets)
+            BannersView(banners: const [
+              'assets/images/carousel_images/discipl_carousel .png',
+              'assets/images/carousel_images/carousel_discipl.jpg',
+            ]).pxy(x: 16),
+  
+            // Active Gym Section (only if user has active membership data)
             BlocBuilder<DashboardCubit, DashboardState>(
               bloc: _dashboardCubit,
-              builder: (context, state) {
-                final activeMembership = state.activeMembershipData.fold(
-                  () => null,
-                  (either) => either.fold((_) => null, (m) => m),
+              builder: (context, dashboardState) {
+                return dashboardState.activeMembershipData.fold(
+                  () => const SizedBox.shrink(),
+                  (either) => either.fold((_) => const SizedBox.shrink(), (
+                    activeMembership,
+                  ) {
+                    if (activeMembership == null) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        _buildActiveGymSection(activeMembership).pxy(x: 16),
+                      ],
+                    );
+                  }),
                 );
-                return WorkoutHistoryCalendar(
-                  startDate: activeMembership?.startDate,
-                ).pxy(x: 8);
               },
             ),
-
-          const SizedBox(height: 24),
-
-          // Did You Know Section (always shown)
-          _buildDidYouKnowSection(),
-        ],
+  
+            // Reduced gap before calendar/card
+            const SizedBox(height: 8),
+  
+            if (isGuest)
+              _membershipExpireCard(context)
+            else
+              BlocBuilder<DashboardCubit, DashboardState>(
+                bloc: _dashboardCubit,
+                builder: (context, state) {
+                  final activeMembership = state.activeMembershipData.fold(
+                    () => null,
+                    (either) => either.fold((_) => null, (m) => m),
+                  );
+                  return WorkoutHistoryCalendar(
+                    startDate: activeMembership?.startDate,
+                  ).pxy(x: 8);
+                },
+              ),
+  
+            const SizedBox(height: 24),
+  
+            // Did You Know Section (always shown)
+            _buildDidYouKnowSection(),
+          ],
+        ),
       ),
     );
   }

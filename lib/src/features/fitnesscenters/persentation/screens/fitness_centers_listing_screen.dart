@@ -210,55 +210,66 @@ class _FitnessCentersListingScreenState
 
   Widget _fitnessCentersListViewBuild(ListFitnesscenterModel fitnessCenters) {
     if (fitnessCenters.results?.isEmpty ?? true) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              'No fitness centers found!',
-              style: AppStyles.text16Px.poppins.w500.copyWith(color: const Color(0xFF666666)),
-            ),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary, width: 1),
-                backgroundColor: AppColors.primary.withValues(alpha: 0.05),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+      return RefreshIndicator(
+        onRefresh: _fetch,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.6,
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'No fitness centers found!',
+                  style: AppStyles.text16Px.poppins.w500.copyWith(color: const Color(0xFF666666)),
                 ),
-              ),
-              onPressed: () {
-                context.push(AllFitnessCentersListingScreen(activeMembership: widget.activeMembership));
-              },
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'View all fitness centers',
-                    style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.primary),
+                const SizedBox(height: 16),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary, width: 1),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.05),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 16,
-                    color: AppColors.primary,
+                  onPressed: () {
+                    context.push(AllFitnessCentersListingScreen(activeMembership: widget.activeMembership));
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View all fitness centers',
+                        style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.primary),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
     }
     final isPagination = _cubit.state.listFitnessCenters.isPagination;
     final results = fitnessCenters.results!;
 
-    return ListView.separated(
-      controller: _scrollController,
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
-      itemCount: results.length + 1 + (isPagination ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+    return RefreshIndicator(
+      onRefresh: _fetch,
+      child: ListView.separated(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
+        itemCount: results.length + 1 + (isPagination ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         if (index < results.length) {
           final center = results[index];
@@ -323,8 +334,9 @@ class _FitnessCentersListingScreenState
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _searchBar() {
     return Container(

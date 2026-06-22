@@ -215,19 +215,30 @@ class _AllFitnessCentersListingScreenState
 
   Widget _fitnessCentersListViewBuild(ListFitnesscenterModel fitnessCenters) {
     if (fitnessCenters.results?.isEmpty ?? true) {
-      return Center(
-        child: Text(
-          'No fitness centers found!',
-          style: AppStyles.text16Px.poppins.w400.textGrey,
+      return RefreshIndicator(
+        onRefresh: _fetch,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.6,
+            alignment: Alignment.center,
+            child: Text(
+              'No fitness centers found!',
+              style: AppStyles.text16Px.poppins.w400.textGrey,
+            ),
+          ),
         ),
       );
     }
     final isPagination = _cubit.state.listFitnessCenters.isPagination;
-    return ListView.separated(
-      controller: _scrollController,
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
-      itemCount: fitnessCenters.results!.length + (isPagination ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+    return RefreshIndicator(
+      onRefresh: _fetch,
+      child: ListView.separated(
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 96),
+        itemCount: fitnessCenters.results!.length + (isPagination ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
         if (index == fitnessCenters.results!.length) {
           return const Center(
@@ -243,8 +254,9 @@ class _AllFitnessCentersListingScreenState
           activeMembership: widget.activeMembership,
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _searchBar() {
     return Container(
