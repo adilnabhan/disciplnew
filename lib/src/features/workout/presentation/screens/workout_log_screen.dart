@@ -312,8 +312,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         for (var i = 0; i < rawSets.length; i++) {
           final s = rawSets[i];
           if (s is Map<String, dynamic>) {
-            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? '10';
-            final repsVal = s['reps'] ?? '15';
+            final targetWeight = s['target_weight'] ?? s['targetWeight'];
+            final targetReps = s['target_reps'] ?? s['targetReps'];
+            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight ?? '10';
+            final repsVal = s['reps'] ?? targetReps ?? '15';
             final prevVal = s['previous_weight_kg'] ?? s['previous'];
             var prevStr = prevVal?.toString() ?? 'no data';
             if (prevStr == '10kg×15' || prevStr == '10*15' || prevStr == '10.0kg x 15' || prevStr == '10kg x 15') {

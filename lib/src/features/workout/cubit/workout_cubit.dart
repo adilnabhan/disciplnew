@@ -164,9 +164,10 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       }
 
       // 3. Now start a brand new session!
-      print('DEBUG: Starting preset session with title: ${preset.title}...');
+      print('DEBUG: Starting preset session with title: ${preset.title} and ID: ${preset.id}...');
       final result = await WorkoutRepository().startSession(
         title: preset.title,
+        presetId: preset.id,
       );
 
       await result.fold(
@@ -176,18 +177,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         },
         (data) async {
           print('DEBUG: Successfully started preset session on backend!');
-
-          // 4. Add each exercise in the preset to the session
-          final workoutIds = preset.exercises.map((e) => e.workoutId).toList();
-          final addRes = await WorkoutRepository().addExercisesToActiveSession(
-            workoutIds: workoutIds,
-          );
-          addRes.fold(
-            (err) => print('DEBUG: Error adding preset exercises: $err'),
-            (ok) => print(
-              'DEBUG: Successfully added preset exercises to active session!',
-            ),
-          );
 
           // 5. Reload active session from backend
           await loadActiveSession();
@@ -202,6 +191,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   }
 
   Future<void> finishSession({required String title}) async {
+    await flushPendingUpdates();
     final activeRes = await WorkoutRepository().getActiveSession();
     int? activeSessionId;
     int? planDayId;
@@ -267,6 +257,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   }
 
   Future<void> saveDraftSession(String title) async {
+    await flushPendingUpdates();
     if (title.isNotEmpty) {
       await updateSessionTitle(title);
     }
@@ -481,43 +472,55 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     _updateDebouncers[setLogId]?.cancel();
     _updateDebouncers[setLogId] = Timer(const Duration(milliseconds: 800), () {
       _updateDebouncers.remove(setLogId);
+      _performSetUpdate(setLogId);
+    });
+  }
 
-      Map<String, dynamic>? currentSet;
-      for (final exercise in state.exercises) {
-        final sets = exercise['sets'] as List?;
-        if (sets != null) {
-          for (final s in sets) {
-            if (s is Map<String, dynamic> && s['id'] == setLogId) {
-              currentSet = s;
-              break;
-            }
+  Future<void> _performSetUpdate(int setLogId) async {
+    Map<String, dynamic>? currentSet;
+    for (final exercise in state.exercises) {
+      final sets = exercise['sets'] as List?;
+      if (sets != null) {
+        for (final s in sets) {
+          if (s is Map<String, dynamic> && s['id'] == setLogId) {
+            currentSet = s;
+            break;
           }
         }
-        if (currentSet != null) break;
       }
+      if (currentSet != null) break;
+    }
 
-      if (currentSet != null) {
-        final reps = int.tryParse(currentSet['reps']?.toString() ?? '');
-        final weightKg = double.tryParse(currentSet['kg']?.toString() ?? '');
-        final isCompleted = currentSet['checked'] as bool?;
+    if (currentSet != null) {
+      final reps = int.tryParse(currentSet['reps']?.toString() ?? '');
+      final weightKg = double.tryParse(currentSet['kg']?.toString() ?? '');
+      final isCompleted = currentSet['checked'] as bool?;
 
-        WorkoutRepository()
-            .updateSetLog(
-              setLogId: setLogId,
-              reps: reps,
-              weightKg: weightKg,
-              isCompleted: isCompleted,
-            )
-            .then((result) {
-              result.fold(
-                (error) => print('DEBUG: Error updating set $setLogId: $error'),
-                (success) => print(
-                  'DEBUG: Successfully updated set $setLogId on backend',
-                ),
-              );
-            });
-      }
-    });
+      final result = await WorkoutRepository().updateSetLog(
+        setLogId: setLogId,
+        reps: reps,
+        weightKg: weightKg,
+        isCompleted: isCompleted,
+      );
+      result.fold(
+        (error) => print('DEBUG: Error updating set $setLogId: $error'),
+        (success) => print(
+          'DEBUG: Successfully updated set $setLogId on backend',
+        ),
+      );
+    }
+  }
+
+  Future<void> flushPendingUpdates() async {
+    if (_updateDebouncers.isEmpty) return;
+    final ids = List<int>.from(_updateDebouncers.keys);
+    for (final timer in _updateDebouncers.values) {
+      timer.cancel();
+    }
+    _updateDebouncers.clear();
+
+    final futures = ids.map((id) => _performSetUpdate(id));
+    await Future.wait(futures);
   }
 
   void toggleSetChecked(int exerciseIndex, int setIndex) {
@@ -906,8 +909,10 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         for (var i = 0; i < rawSets.length; i++) {
           final s = rawSets[i];
           if (s is Map<String, dynamic>) {
-            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? '10';
-            final repsVal = s['reps'] ?? '15';
+            final targetWeight = s['target_weight'] ?? s['targetWeight'];
+            final targetReps = s['target_reps'] ?? s['targetReps'];
+            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight ?? '10';
+            final repsVal = s['reps'] ?? targetReps ?? '15';
             final prevVal = s['previous_weight_kg'] ?? s['previous'];
             var prevStr = prevVal?.toString() ?? 'no data';
             if (prevStr == '10kg×15' || prevStr == '10*15' || prevStr == '10.0kg x 15' || prevStr == '10kg x 15') {
