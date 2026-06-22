@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.discipl.customer"
     compileSdk = 36
-    ndkVersion = "29.0.14033849"
+    ndkVersion = "27.1.12297006"
 
     defaultConfig {
         applicationId = "com.discipl.customer"

@@ -37,6 +37,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     _cubit = WorkoutCubit(
       startFresh: widget.isPresetCreation ? false : widget.isNewSession,
       presetToStart: widget.presetToStart,
+      isPresetCreation: widget.isPresetCreation,
     );
     _titleController = TextEditingController();
     _titleFocusNode = FocusNode();
@@ -1756,6 +1757,14 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       _isFinishing = true;
                     });
                     Navigator.pop(context);
+                  } else if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(cubit.state.errorMessage ?? 'Failed to save preset. Please try again.'),
+                        backgroundColor: Colors.red.shade600,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
                   }
                 } else {
                   setState(() {

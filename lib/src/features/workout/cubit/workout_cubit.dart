@@ -9,15 +9,19 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   List<Map<String, String>> _allLibraryExercises = [];
   List<Map<String, String>> _allCustomExercises = [];
   String? startedAt;
+  final bool isPresetCreation;
 
-  WorkoutCubit({bool startFresh = false, PresetModel? presetToStart})
-    : super(
-        const WorkoutState(
-          exercises: [],
-          libraryExercises: [],
-          customExercises: [],
-        ),
-      ) {
+  WorkoutCubit({
+    bool startFresh = false,
+    PresetModel? presetToStart,
+    this.isPresetCreation = false,
+  }) : super(
+         const WorkoutState(
+           exercises: [],
+           libraryExercises: [],
+           customExercises: [],
+         ),
+       ) {
     _init(startFresh, presetToStart);
   }
 
@@ -29,6 +33,10 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         loadCustomExercises(),
         loadLookups(),
       ]);
+      if (isPresetCreation) {
+        emit(state.copyWith(isLoadingActiveSession: false));
+        return;
+      }
       if (presetToStart != null) {
         await startPresetSession(presetToStart);
       } else if (startFresh) {
@@ -301,6 +309,33 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   void addSet(int exerciseIndex) {
     if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
+    if (isPresetCreation) {
+      final updatedExercises = List<Map<String, dynamic>>.from(
+        state.exercises.map((e) => Map<String, dynamic>.from(e)),
+      );
+      final exercise = updatedExercises[exerciseIndex];
+      final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
+      final lastSet = sets.isNotEmpty ? sets.last : null;
+
+      final reps = lastSet != null
+          ? int.tryParse(lastSet['reps']?.toString() ?? '15') ?? 15
+          : 15;
+      final weight = lastSet != null
+          ? double.tryParse(lastSet['kg']?.toString() ?? '10.0') ?? 10.0
+          : 10.0;
+
+      sets.add({
+        'setNum': sets.length + 1,
+        'previous': 'no data',
+        'kg': weight.toString(),
+        'reps': reps.toString(),
+        'checked': false,
+      });
+      exercise['sets'] = sets;
+      emit(state.copyWith(exercises: updatedExercises));
+      return;
+    }
+
     final exercise = state.exercises[exerciseIndex];
     final logIdStr = exercise['id']?.toString();
     final logId = int.tryParse(logIdStr ?? '');
@@ -339,6 +374,29 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     required String subtitle,
     String? videoUrl,
   }) async {
+    if (isPresetCreation) {
+      final updatedExercises = List<Map<String, dynamic>>.from(
+        state.exercises.map((e) => Map<String, dynamic>.from(e)),
+      );
+      updatedExercises.add({
+        'id': id.toString(),
+        'title': title,
+        'subtitle': subtitle,
+        'video_url': videoUrl ?? '',
+        'sets': [
+          {
+            'setNum': 1,
+            'previous': 'no data',
+            'kg': '10.0',
+            'reps': '15',
+            'checked': false,
+          }
+        ],
+      });
+      emit(state.copyWith(exercises: updatedExercises));
+      return;
+    }
+
     final result = await WorkoutRepository().addExercisesToActiveSession(
       workoutIds: [id],
     );
@@ -476,6 +534,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     updatedExercises[exerciseIndex]['sets'] = sets;
     emit(state.copyWith(exercises: updatedExercises));
 
+    if (isPresetCreation) return;
+
     final setLogId = set['id'] as int?;
     if (setLogId != null) {
       _updateDebouncers[setLogId]?.cancel();
@@ -515,6 +575,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     updatedExercises[exerciseIndex]['sets'] = sets;
     emit(state.copyWith(exercises: updatedExercises));
 
+    if (isPresetCreation) return;
+
     final setLogId = set['id'] as int?;
     if (setLogId != null) {
       _debounceSetUpdate(setLogId);
@@ -533,6 +595,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     sets[setIndex] = set;
     updatedExercises[exerciseIndex]['sets'] = sets;
     emit(state.copyWith(exercises: updatedExercises));
+
+    if (isPresetCreation) return;
 
     final setLogId = set['id'] as int?;
     if (setLogId != null) {

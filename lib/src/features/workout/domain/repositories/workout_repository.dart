@@ -460,27 +460,6 @@ final class WorkoutRepository {
     }
   }
 
-  // Mock fallback database for Presets if backend returns 404 or fails
-  static final List<PresetModel> _mockPresets = [
-    PresetModel(
-      id: 101,
-      title: "Full Body Split",
-      createdAt: "2026-06-13T10:00:00Z",
-      exercises: [
-        PresetExerciseModel(
-          id: 1001,
-          workoutId: 3, // Barbell Bench Press (from library)
-          name: "Barbell Bench Press",
-          muscleGroup: "Chest",
-          orderIndex: 0,
-          sets: [
-            PresetSetModel(setNumber: 1, reps: 12, weight: 40.0),
-            PresetSetModel(setNumber: 2, reps: 10, weight: 50.0),
-          ],
-        ),
-      ],
-    ),
-  ];
 
   Future<Either<ApiException, List<PresetModel>>> getPresets() async {
     try {
@@ -495,10 +474,10 @@ final class WorkoutRepository {
                 .toList();
         return right(list);
       }
-      return right(_mockPresets);
+      return right([]);
     } catch (e) {
-      debugPrint("API Error (falling back to local mock presets): $e");
-      return right(_mockPresets);
+      debugPrint('API Error loading presets: $e');
+      return right([]);
     }
   }
 
@@ -517,42 +496,11 @@ final class WorkoutRepository {
           res.data != null) {
         return right(PresetModel.fromJson(res.data as Map<String, dynamic>));
       }
+      return left(const ApiException.unknown());
     } catch (e) {
-      debugPrint("API Error (creating local mock preset): $e");
+      debugPrint('API Error creating preset: $e');
+      return left(const ApiException.unknown());
     }
-
-    // Mock fallback creation
-    final newId =
-        (_mockPresets.isEmpty
-            ? 100
-            : _mockPresets.map((p) => p.id).reduce((a, b) => a > b ? a : b)) +
-        1;
-    final presetExercises = <PresetExerciseModel>[];
-    for (var i = 0; i < exercises.length; i++) {
-      final ex = exercises[i];
-      final setsList =
-          (ex['sets'] as List? ?? [])
-              .map((s) => PresetSetModel.fromJson(s as Map<String, dynamic>))
-              .toList();
-      presetExercises.add(
-        PresetExerciseModel(
-          id: 1000 + newId + i,
-          workoutId: ex['workout_id'] as int? ?? 0,
-          name: ex['name']?.toString() ?? 'Exercise',
-          muscleGroup: ex['muscle_group']?.toString() ?? 'Strength',
-          orderIndex: ex['order_index'] as int? ?? i,
-          sets: setsList,
-        ),
-      );
-    }
-    final newPreset = PresetModel(
-      id: newId,
-      title: title.isNotEmpty ? title : 'Preset $newId',
-      createdAt: DateTime.now().toIso8601String(),
-      exercises: presetExercises,
-    );
-    _mockPresets.add(newPreset);
-    return right(newPreset);
   }
 
   Future<Either<ApiException, Map<String, dynamic>>> getPresetDetail(
@@ -619,41 +567,11 @@ final class WorkoutRepository {
       if (res.statusCode == 200 && res.data != null) {
         return right(PresetModel.fromJson(res.data as Map<String, dynamic>));
       }
+      return left(const ApiException.unknown());
     } catch (e) {
-      debugPrint("API Error (updating local mock preset): $e");
+      debugPrint('API Error updating preset: $e');
+      return left(const ApiException.unknown());
     }
-
-    // Mock fallback update
-    final index = _mockPresets.indexWhere((p) => p.id == presetId);
-    if (index != -1) {
-      final presetExercises = <PresetExerciseModel>[];
-      for (var i = 0; i < exercises.length; i++) {
-        final ex = exercises[i];
-        final setsList =
-            (ex['sets'] as List? ?? [])
-                .map((s) => PresetSetModel.fromJson(s as Map<String, dynamic>))
-                .toList();
-        presetExercises.add(
-          PresetExerciseModel(
-            id: 1000 + presetId + i,
-            workoutId: ex['workout_id'] as int? ?? 0,
-            name: ex['name']?.toString() ?? 'Exercise',
-            muscleGroup: ex['muscle_group']?.toString() ?? 'Strength',
-            orderIndex: ex['order_index'] as int? ?? i,
-            sets: setsList,
-          ),
-        );
-      }
-      final updatedPreset = PresetModel(
-        id: presetId,
-        title: title,
-        createdAt: _mockPresets[index].createdAt,
-        exercises: presetExercises,
-      );
-      _mockPresets[index] = updatedPreset;
-      return right(updatedPreset);
-    }
-    return left(const ApiException.unknown());
   }
 
   Future<Either<ApiException, void>> deletePreset({
@@ -667,12 +585,11 @@ final class WorkoutRepository {
       if (res.statusCode == 204 || res.statusCode == 200) {
         return right(null);
       }
+      return left(const ApiException.unknown());
     } catch (e) {
-      debugPrint("API Error (deleting local mock preset): $e");
+      debugPrint('API Error deleting preset: $e');
+      return left(const ApiException.unknown());
     }
-
-    _mockPresets.removeWhere((p) => p.id == presetId);
-    return right(null);
   }
 
   Future<Either<ApiException, Map<String, dynamic>>> toggleRestDay({

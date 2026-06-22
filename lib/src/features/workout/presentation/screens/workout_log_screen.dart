@@ -781,37 +781,37 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadWorkoutLogForSelectedDate();
             },
           ),
-          const SizedBox(height: 12),
-          Button.filled(
-            size: const Size(double.infinity, 45),
-            title: 'Start a Preset',
-            buttonColor: const Color(0xFFFFF4F4),
-            side: const BorderSide(color: Color(0xFFF0B5B7)),
-            style: AppStyles.text14Px.poppins.w600.copyWith(
-              color: AppColors.primary,
-            ),
-            icon: SvgPicture.asset(
-              'assets/images/svg/icons/presets.svg',
-              width: 20,
-              height: 20,
-              colorFilter: const ColorFilter.mode(
-                AppColors.primary,
-                BlendMode.srcIn,
-              ),
-            ),
-            raduis: 12,
-            ontap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (context) => const PresetsScreen(),
-                ),
-              );
-              await _loadMyPlans();
-              await _loadActiveSessionTitle();
-              await _loadWorkoutLogForSelectedDate();
-            },
-          ),
+          // const SizedBox(height: 12),
+          // Button.filled(
+          //   size: const Size(double.infinity, 45),
+          //   title: 'Start a Preset',
+          //   buttonColor: const Color(0xFFFFF4F4),
+          //   side: const BorderSide(color: Color(0xFFF0B5B7)),
+          //   style: AppStyles.text14Px.poppins.w600.copyWith(
+          //     color: AppColors.primary,
+          //   ),
+          //   icon: SvgPicture.asset(
+          //     'assets/images/svg/icons/presets.svg',
+          //     width: 20,
+          //     height: 20,
+          //     colorFilter: const ColorFilter.mode(
+          //       AppColors.primary,
+          //       BlendMode.srcIn,
+          //     ),
+          //   ),
+          //   raduis: 12,
+          //   ontap: () async {
+          //     await Navigator.push(
+          //       context,
+          //       MaterialPageRoute<void>(
+          //         builder: (context) => const PresetsScreen(),
+          //       ),
+          //     );
+          //     await _loadMyPlans();
+          //     await _loadActiveSessionTitle();
+          //     await _loadWorkoutLogForSelectedDate();
+          //   },
+          // ),
         ],
       ),
     );

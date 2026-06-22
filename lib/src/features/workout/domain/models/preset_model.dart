@@ -2,12 +2,14 @@ class PresetModel {
   final int id;
   final String title;
   final String? createdAt;
+  final int? planDayId;
   final List<PresetExerciseModel> exercises;
 
   PresetModel({
     required this.id,
     required this.title,
     this.createdAt,
+    this.planDayId,
     required this.exercises,
   });
 
@@ -16,6 +18,7 @@ class PresetModel {
       id: json['id'] as int? ?? 0,
       title: json['plan_name'] as String? ?? json['title'] as String? ?? '',
       createdAt: json['created_at'] as String?,
+      planDayId: json['plan_day_id'] as int?,
       exercises: (json['exercises'] as List? ?? [])
           .map((e) => PresetExerciseModel.fromJson(e as Map<String, dynamic>))
           .toList(),
@@ -28,6 +31,7 @@ class PresetModel {
       'title': title,
       'plan_name': title,
       if (createdAt != null) 'created_at': createdAt,
+      if (planDayId != null) 'plan_day_id': planDayId,
       'exercises': exercises.map((e) => e.toJson()).toList(),
     };
   }
