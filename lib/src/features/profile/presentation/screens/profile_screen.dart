@@ -346,13 +346,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Health Status section ──
-        // Text(
-        //   'Profile details',
-        //   style: AppStyles.text18Px.poppins.w500.copyWith(
-        //     color: AppColors.textDark,
-        //   ),
-        // ),
+        // ── Assigned Gym & Trainer section ──
+        if (customerDetails.assignedFitnessCenter != null || customerDetails.assignedTrainer != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            'Assigned Gym & Personal Trainer',
+            style: AppStyles.text16Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (customerDetails.assignedFitnessCenter != null) ...[
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.iconBackground,
+                        ),
+                        child: ClipOval(
+                          child: customerDetails.assignedFitnessCenter!['logo'] != null
+                              ? Image.network(
+                                  customerDetails.assignedFitnessCenter!['logo'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: AppColors.primary),
+                                )
+                              : const Icon(Icons.fitness_center, color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Fitness Center',
+                              style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                            ),
+                            Text(
+                              customerDetails.assignedFitnessCenter!['name'] ?? 'N/A',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (customerDetails.assignedTrainer != null) const Divider(height: 24, thickness: 0.5),
+                ],
+                if (customerDetails.assignedTrainer != null) ...[
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppColors.iconBackground,
+                        ),
+                        child: ClipOval(
+                          child: customerDetails.assignedTrainer!['profile_image'] != null
+                              ? Image.network(
+                                  customerDetails.assignedTrainer!['profile_image'],
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Icon(Icons.person, color: AppColors.primary),
+                                )
+                              : const Icon(Icons.person, color: AppColors.primary),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Personal Trainer',
+                              style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                            ),
+                            Text(
+                              customerDetails.assignedTrainer!['name'] ?? 'N/A',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (customerDetails.trainerNotes != null && customerDetails.trainerNotes!.isNotEmpty) ...[
+                  const Divider(height: 24, thickness: 0.5),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Trainer's Feedback & Notes",
+                        style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        customerDetails.trainerNotes!,
+                        style: AppStyles.text13Px.poppins.w500.copyWith(
+                          color: AppColors.textDark,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
         const SizedBox(height: 12),
         Text(
           'Health Status',

@@ -112,9 +112,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildActiveGymSection(ActiveMembershipModel activeMembership) {
-    final remainingDays =
-        activeMembership.endDate?.toLocal().difference(DateTime.now()).inDays ??
-        0;
+    final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
+    final remainingDays = isPending
+        ? 0
+        : (activeMembership.endDate?.toLocal().difference(DateTime.now()).inDays ?? 0);
+
     return InkWell(
       onTap: () {
         final gymId = activeMembership.organization?.id;
@@ -131,7 +133,10 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF1D1D2), width: 0.8),
+          border: Border.all(
+            color: isPending ? const Color(0xFFFFB74D) : const Color(0xFFF1D1D2),
+            width: 0.8,
+          ),
           boxShadow: const [
             BoxShadow(
               color: Color(0x1E888888),
@@ -181,28 +186,34 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 4,
                         ),
                         decoration: ShapeDecoration(
-                          gradient: const LinearGradient(
-                            begin: Alignment(0, 0.50),
-                            end: Alignment(1, 0.50),
-                            colors: [
-                              Color(0xFFF7F7F7),
-                              Color(0xFFDDDDDD),
-                              Color(0xFFF7F7F7),
-                            ],
+                          gradient: LinearGradient(
+                            begin: const Alignment(0, 0.50),
+                            end: const Alignment(1, 0.50),
+                            colors: isPending
+                                ? [
+                                    const Color(0xFFFFF3E0),
+                                    const Color(0xFFFFE0B2),
+                                    const Color(0xFFFFF3E0),
+                                  ]
+                                : [
+                                    const Color(0xFFF7F7F7),
+                                    const Color(0xFFDDDDDD),
+                                    const Color(0xFFF7F7F7),
+                                  ],
                           ),
                           shape: RoundedRectangleBorder(
-                            side: const BorderSide(
+                            side: BorderSide(
                               width: 0.50,
                               strokeAlign: BorderSide.strokeAlignOutside,
-                              color: Color(0xFFDDDDDD),
+                              color: isPending ? const Color(0xFFFFB74D) : const Color(0xFFDDDDDD),
                             ),
                             borderRadius: BorderRadius.circular(5),
                           ),
                         ),
                         child: Text(
-                          activeMembership.planName ?? '',
-                          style: AppStyles.text12Px.poppins.w400.copyWith(
-                            color: Colors.black,
+                          isPending ? 'Pending Approval' : (activeMembership.planName ?? ''),
+                          style: AppStyles.text12Px.poppins.w500.copyWith(
+                            color: isPending ? const Color(0xFFE65100) : Colors.black,
                           ),
                         ),
                       ),
@@ -231,30 +242,37 @@ class _HomeScreenState extends State<HomeScreen> {
             const Divider(color: Color(0xFFF1D1D2), height: 1).pxy(y: 16),
             // Subscription Expires In
             Align(
-              child: Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Subscription Expires in',
-                      style: AppStyles.text12Px.poppins.w400.copyWith(
-                        color: const Color(0xFF222222),
-                      ),
-                    ),
-                    TextSpan(
-                      text: ' ',
+              child: isPending
+                  ? Text(
+                      'Awaiting approval from gym administrator',
                       style: AppStyles.text12Px.poppins.w500.copyWith(
-                        color: const Color(0xFF222222),
+                        color: const Color(0xFFE65100),
+                      ),
+                    )
+                  : Text.rich(
+                      TextSpan(
+                        children: [
+                          TextSpan(
+                            text: 'Subscription Expires in',
+                            style: AppStyles.text12Px.poppins.w400.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
+                          ),
+                          TextSpan(
+                            text: ' ',
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
+                          ),
+                          TextSpan(
+                            text: '$remainingDays Days',
+                            style: AppStyles.text12Px.poppins.w600.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    TextSpan(
-                      text: '$remainingDays Days',
-                      style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: const Color(0xFF222222),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),

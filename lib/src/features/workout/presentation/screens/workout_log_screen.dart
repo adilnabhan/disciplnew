@@ -316,9 +316,20 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             final targetReps = s['target_reps'] ?? s['targetReps'];
             final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight ?? '10';
             final repsVal = s['reps'] ?? targetReps ?? '15';
-            final prevVal = s['previous_weight_kg'] ?? s['previous'];
-            var prevStr = prevVal?.toString() ?? 'no data';
-            if (prevStr == '10kg×15' || prevStr == '10*15' || prevStr == '10.0kg x 15' || prevStr == '10kg x 15') {
+            final prevRaw = s['previous'];
+            final prevWeightRaw = s['previous_weight_kg'];
+            String prevStr;
+            if (prevRaw != null && prevRaw.toString().isNotEmpty && prevRaw.toString() != 'no data') {
+              prevStr = prevRaw.toString();
+            } else if (prevWeightRaw != null) {
+              final w = double.tryParse(prevWeightRaw.toString());
+              if (w != null) {
+                final wStr = w == w.truncateToDouble() ? w.toInt().toString() : w.toString();
+                prevStr = '${wStr}kg';
+              } else {
+                prevStr = 'no data';
+              }
+            } else {
               prevStr = 'no data';
             }
             sets.add({

@@ -97,6 +97,14 @@ mixin _$CustomerDetailsModel {
   String? get healthConditionsOther => throw _privateConstructorUsedError;
   @JsonKey(name: 'target_goal_other')
   String? get targetGoalOther => throw _privateConstructorUsedError;
+  @JsonKey(name: 'assigned_fitness_center')
+  Map<String, dynamic>? get assignedFitnessCenter =>
+      throw _privateConstructorUsedError;
+  @JsonKey(name: 'assigned_trainer')
+  Map<String, dynamic>? get assignedTrainer =>
+      throw _privateConstructorUsedError;
+  @JsonKey(name: 'trainer_notes')
+  String? get trainerNotes => throw _privateConstructorUsedError;
 
   /// Serializes this CustomerDetailsModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -154,6 +162,10 @@ abstract class $CustomerDetailsModelCopyWith<$Res> {
     @JsonKey(name: 'target_goal') List<String>? targetGoal,
     @JsonKey(name: 'health_conditions_other') String? healthConditionsOther,
     @JsonKey(name: 'target_goal_other') String? targetGoalOther,
+    @JsonKey(name: 'assigned_fitness_center')
+    Map<String, dynamic>? assignedFitnessCenter,
+    @JsonKey(name: 'assigned_trainer') Map<String, dynamic>? assignedTrainer,
+    @JsonKey(name: 'trainer_notes') String? trainerNotes,
   });
 }
 
@@ -213,6 +225,9 @@ class _$CustomerDetailsModelCopyWithImpl<
     Object? targetGoal = freezed,
     Object? healthConditionsOther = freezed,
     Object? targetGoalOther = freezed,
+    Object? assignedFitnessCenter = freezed,
+    Object? assignedTrainer = freezed,
+    Object? trainerNotes = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -406,6 +421,21 @@ class _$CustomerDetailsModelCopyWithImpl<
                     ? _value.targetGoalOther
                     : targetGoalOther // ignore: cast_nullable_to_non_nullable
                         as String?,
+            assignedFitnessCenter:
+                freezed == assignedFitnessCenter
+                    ? _value.assignedFitnessCenter
+                    : assignedFitnessCenter // ignore: cast_nullable_to_non_nullable
+                        as Map<String, dynamic>?,
+            assignedTrainer:
+                freezed == assignedTrainer
+                    ? _value.assignedTrainer
+                    : assignedTrainer // ignore: cast_nullable_to_non_nullable
+                        as Map<String, dynamic>?,
+            trainerNotes:
+                freezed == trainerNotes
+                    ? _value.trainerNotes
+                    : trainerNotes // ignore: cast_nullable_to_non_nullable
+                        as String?,
           )
           as $Val,
     );
@@ -460,6 +490,10 @@ abstract class _$$CustomerDetailsModelImplCopyWith<$Res>
     @JsonKey(name: 'target_goal') List<String>? targetGoal,
     @JsonKey(name: 'health_conditions_other') String? healthConditionsOther,
     @JsonKey(name: 'target_goal_other') String? targetGoalOther,
+    @JsonKey(name: 'assigned_fitness_center')
+    Map<String, dynamic>? assignedFitnessCenter,
+    @JsonKey(name: 'assigned_trainer') Map<String, dynamic>? assignedTrainer,
+    @JsonKey(name: 'trainer_notes') String? trainerNotes,
   });
 }
 
@@ -515,6 +549,9 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
     Object? targetGoal = freezed,
     Object? healthConditionsOther = freezed,
     Object? targetGoalOther = freezed,
+    Object? assignedFitnessCenter = freezed,
+    Object? assignedTrainer = freezed,
+    Object? trainerNotes = freezed,
   }) {
     return _then(
       _$CustomerDetailsModelImpl(
@@ -708,6 +745,21 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
                 ? _value.targetGoalOther
                 : targetGoalOther // ignore: cast_nullable_to_non_nullable
                     as String?,
+        assignedFitnessCenter:
+            freezed == assignedFitnessCenter
+                ? _value._assignedFitnessCenter
+                : assignedFitnessCenter // ignore: cast_nullable_to_non_nullable
+                    as Map<String, dynamic>?,
+        assignedTrainer:
+            freezed == assignedTrainer
+                ? _value._assignedTrainer
+                : assignedTrainer // ignore: cast_nullable_to_non_nullable
+                    as Map<String, dynamic>?,
+        trainerNotes:
+            freezed == trainerNotes
+                ? _value.trainerNotes
+                : trainerNotes // ignore: cast_nullable_to_non_nullable
+                    as String?,
       ),
     );
   }
@@ -755,11 +807,18 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     @JsonKey(name: 'target_goal') final List<String>? targetGoal,
     @JsonKey(name: 'health_conditions_other') this.healthConditionsOther,
     @JsonKey(name: 'target_goal_other') this.targetGoalOther,
+    @JsonKey(name: 'assigned_fitness_center')
+    final Map<String, dynamic>? assignedFitnessCenter,
+    @JsonKey(name: 'assigned_trainer')
+    final Map<String, dynamic>? assignedTrainer,
+    @JsonKey(name: 'trainer_notes') this.trainerNotes,
   }) : _memberships = memberships,
        _injuries = injuries,
        _medicalConditions = medicalConditions,
        _healthConditions = healthConditions,
-       _targetGoal = targetGoal;
+       _targetGoal = targetGoal,
+       _assignedFitnessCenter = assignedFitnessCenter,
+       _assignedTrainer = assignedTrainer;
 
   factory _$CustomerDetailsModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$CustomerDetailsModelImplFromJson(json);
@@ -920,10 +979,36 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
   @override
   @JsonKey(name: 'target_goal_other')
   final String? targetGoalOther;
+  final Map<String, dynamic>? _assignedFitnessCenter;
+  @override
+  @JsonKey(name: 'assigned_fitness_center')
+  Map<String, dynamic>? get assignedFitnessCenter {
+    final value = _assignedFitnessCenter;
+    if (value == null) return null;
+    if (_assignedFitnessCenter is EqualUnmodifiableMapView)
+      return _assignedFitnessCenter;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(value);
+  }
+
+  final Map<String, dynamic>? _assignedTrainer;
+  @override
+  @JsonKey(name: 'assigned_trainer')
+  Map<String, dynamic>? get assignedTrainer {
+    final value = _assignedTrainer;
+    if (value == null) return null;
+    if (_assignedTrainer is EqualUnmodifiableMapView) return _assignedTrainer;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(value);
+  }
+
+  @override
+  @JsonKey(name: 'trainer_notes')
+  final String? trainerNotes;
 
   @override
   String toString() {
-    return 'CustomerDetailsModel(id: $id, emergencyContactName: $emergencyContactName, emergencyContactNumber: $emergencyContactNumber, height: $height, weight: $weight, profilePicture: $profilePicture, profession: $profession, isActiveMember: $isActiveMember, memberships: $memberships, fullName: $fullName, created: $created, modified: $modified, mobileNumber: $mobileNumber, firstName: $firstName, lastName: $lastName, email: $email, isHealthy: $isHealthy, dateOfBirth: $dateOfBirth, gender: $gender, bloodGroup: $bloodGroup, jobSatisfaction: $jobSatisfaction, activeScale: $activeScale, averageWorkingHours: $averageWorkingHours, averageSleepingHours: $averageSleepingHours, fitnessLevel: $fitnessLevel, stressLevel: $stressLevel, weightGoal: $weightGoal, targetWeight: $targetWeight, sleepGoal: $sleepGoal, bmi: $bmi, bmr: $bmr, bfPercentage: $bfPercentage, injuries: $injuries, medicalConditions: $medicalConditions, healthConditions: $healthConditions, targetGoal: $targetGoal, healthConditionsOther: $healthConditionsOther, targetGoalOther: $targetGoalOther)';
+    return 'CustomerDetailsModel(id: $id, emergencyContactName: $emergencyContactName, emergencyContactNumber: $emergencyContactNumber, height: $height, weight: $weight, profilePicture: $profilePicture, profession: $profession, isActiveMember: $isActiveMember, memberships: $memberships, fullName: $fullName, created: $created, modified: $modified, mobileNumber: $mobileNumber, firstName: $firstName, lastName: $lastName, email: $email, isHealthy: $isHealthy, dateOfBirth: $dateOfBirth, gender: $gender, bloodGroup: $bloodGroup, jobSatisfaction: $jobSatisfaction, activeScale: $activeScale, averageWorkingHours: $averageWorkingHours, averageSleepingHours: $averageSleepingHours, fitnessLevel: $fitnessLevel, stressLevel: $stressLevel, weightGoal: $weightGoal, targetWeight: $targetWeight, sleepGoal: $sleepGoal, bmi: $bmi, bmr: $bmr, bfPercentage: $bfPercentage, injuries: $injuries, medicalConditions: $medicalConditions, healthConditions: $healthConditions, targetGoal: $targetGoal, healthConditionsOther: $healthConditionsOther, targetGoalOther: $targetGoalOther, assignedFitnessCenter: $assignedFitnessCenter, assignedTrainer: $assignedTrainer, trainerNotes: $trainerNotes)';
   }
 
   @override
@@ -1018,7 +1103,17 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
             (identical(other.healthConditionsOther, healthConditionsOther) ||
                 other.healthConditionsOther == healthConditionsOther) &&
             (identical(other.targetGoalOther, targetGoalOther) ||
-                other.targetGoalOther == targetGoalOther));
+                other.targetGoalOther == targetGoalOther) &&
+            const DeepCollectionEquality().equals(
+              other._assignedFitnessCenter,
+              _assignedFitnessCenter,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._assignedTrainer,
+              _assignedTrainer,
+            ) &&
+            (identical(other.trainerNotes, trainerNotes) ||
+                other.trainerNotes == trainerNotes));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1063,6 +1158,9 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     const DeepCollectionEquality().hash(_targetGoal),
     healthConditionsOther,
     targetGoalOther,
+    const DeepCollectionEquality().hash(_assignedFitnessCenter),
+    const DeepCollectionEquality().hash(_assignedTrainer),
+    trainerNotes,
   ]);
 
   /// Create a copy of CustomerDetailsModel
@@ -1125,6 +1223,11 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
     @JsonKey(name: 'health_conditions_other')
     final String? healthConditionsOther,
     @JsonKey(name: 'target_goal_other') final String? targetGoalOther,
+    @JsonKey(name: 'assigned_fitness_center')
+    final Map<String, dynamic>? assignedFitnessCenter,
+    @JsonKey(name: 'assigned_trainer')
+    final Map<String, dynamic>? assignedTrainer,
+    @JsonKey(name: 'trainer_notes') final String? trainerNotes,
   }) = _$CustomerDetailsModelImpl;
 
   factory _CustomerDetailsModel.fromJson(Map<String, dynamic> json) =
@@ -1244,6 +1347,15 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
   @override
   @JsonKey(name: 'target_goal_other')
   String? get targetGoalOther;
+  @override
+  @JsonKey(name: 'assigned_fitness_center')
+  Map<String, dynamic>? get assignedFitnessCenter;
+  @override
+  @JsonKey(name: 'assigned_trainer')
+  Map<String, dynamic>? get assignedTrainer;
+  @override
+  @JsonKey(name: 'trainer_notes')
+  String? get trainerNotes;
 
   /// Create a copy of CustomerDetailsModel
   /// with the given fields replaced by the non-null parameter values.

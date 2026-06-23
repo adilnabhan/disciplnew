@@ -63,6 +63,10 @@ _$CustomerDetailsModelImpl _$$CustomerDetailsModelImplFromJson(
       (json['target_goal'] as List<dynamic>?)?.map((e) => e as String).toList(),
   healthConditionsOther: json['health_conditions_other'] as String?,
   targetGoalOther: json['target_goal_other'] as String?,
+  assignedFitnessCenter:
+      json['assigned_fitness_center'] as Map<String, dynamic>?,
+  assignedTrainer: json['assigned_trainer'] as Map<String, dynamic>?,
+  trainerNotes: json['trainer_notes'] as String?,
 );
 
 Map<String, dynamic> _$$CustomerDetailsModelImplToJson(
@@ -106,6 +110,9 @@ Map<String, dynamic> _$$CustomerDetailsModelImplToJson(
   'target_goal': instance.targetGoal,
   'health_conditions_other': instance.healthConditionsOther,
   'target_goal_other': instance.targetGoalOther,
+  'assigned_fitness_center': instance.assignedFitnessCenter,
+  'assigned_trainer': instance.assignedTrainer,
+  'trainer_notes': instance.trainerNotes,
 };
 
 _$MembershipImpl _$$MembershipImplFromJson(Map<String, dynamic> json) =>

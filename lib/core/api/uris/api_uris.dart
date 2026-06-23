@@ -6,7 +6,7 @@ final class ApiUris {
   ///* BASE URL
   static const _baseUrlEnv = String.fromEnvironment('baseUrl');
   static const _baseUrl =
-      _baseUrlEnv == '' ? 'https://discipl-backend.onrender.com' : _baseUrlEnv;
+      _baseUrlEnv == '' ? 'https://discipl-backend-u0w9.onrender.com' : _baseUrlEnv;
   static const _v1 = '$_baseUrl/api/v1/';
 
   ///============================= AUTH =============================\\\

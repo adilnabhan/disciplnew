@@ -46,6 +46,9 @@ class CustomerDetailsModel with _$CustomerDetailsModel {
 
     @JsonKey(name: 'health_conditions_other') String? healthConditionsOther,
     @JsonKey(name: 'target_goal_other') String? targetGoalOther,
+    @JsonKey(name: 'assigned_fitness_center') Map<String, dynamic>? assignedFitnessCenter,
+    @JsonKey(name: 'assigned_trainer') Map<String, dynamic>? assignedTrainer,
+    @JsonKey(name: 'trainer_notes') String? trainerNotes,
   }) = _CustomerDetailsModel;
 
   factory CustomerDetailsModel.fromJson(Map<String, dynamic> json) =>
