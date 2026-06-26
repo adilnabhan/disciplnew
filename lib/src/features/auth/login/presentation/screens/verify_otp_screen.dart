@@ -86,7 +86,11 @@ class _VerifyOtpScreenState extends State<_VerifyOtpScreen> {
 
               if ((r?.customer?.profileCompleteness ?? 0) >= 3) {
                 context.read<AppCubit>().addUser(r!);
-                context.pushAndRemoveUntil(const DashboardScreen());
+                if (r?.customer?.organizationId == null) {
+                  context.pushAndRemoveUntil(const DashboardScreen(navIndex: 2));
+                } else {
+                  context.pushAndRemoveUntil(const DashboardScreen());
+                }
               } else {
                 context.pushReplacement(
                   CreateAccountScreen(

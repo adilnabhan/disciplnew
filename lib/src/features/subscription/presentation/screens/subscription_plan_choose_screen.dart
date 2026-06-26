@@ -49,6 +49,7 @@ class __SubscriptionPlanChooseScreenState
               Dialogs.showSnack(msg: error.msg);
             },
             (razorpayOrder) async {
+              context.read<AppCubit>().updateOrganizationId(_cubit.orgId);
               context.pushAndRemoveUntil(const DashboardScreen());
             },
           );

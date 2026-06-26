@@ -550,9 +550,6 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final isCompleted =
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
-        if (!isCompleted) {
-          continue;
-        }
         final startedAt = workoutItem['started_at']?.toString() ?? workoutItem['created_at']?.toString() ?? workoutItem['start_time']?.toString();
         final completedAt = workoutItem['completed_at']?.toString() ?? workoutItem['updated_at']?.toString() ?? workoutItem['end_time']?.toString();
         
@@ -570,6 +567,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               hasImage: true,
               isCompleted: isCompleted,
               duration: durationStr,
+              trainerName: workoutItem['trainer_name']?.toString(),
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -578,9 +576,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
                 );
                 if (sessionId != null) {
-                  await Navigator.push(
+                  final refresh = await Navigator.push<dynamic>(
                     context,
-                    MaterialPageRoute<void>(
+                    MaterialPageRoute<dynamic>(
                       builder:
                           (context) => WorkoutDetailsScreen(
                             sessionId: sessionId,
@@ -588,6 +586,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                           ),
                     ),
                   );
+                  if (refresh == true) {
+                    _loadWorkoutLogForSelectedDate();
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -1011,6 +1012,7 @@ class _WorkoutCard extends StatelessWidget {
     required this.isCompleted,
     this.duration,
     this.onTap,
+    this.trainerName,
   });
 
   final int index;
@@ -1020,6 +1022,7 @@ class _WorkoutCard extends StatelessWidget {
   final bool isCompleted;
   final String? duration;
   final VoidCallback? onTap;
+  final String? trainerName;
 
   @override
   Widget build(BuildContext context) {
@@ -1088,18 +1091,50 @@ class _WorkoutCard extends StatelessWidget {
                 Positioned(
                   left: 24,
                   top: 20,
-                  width: 135,
-                  child: Text(
-                    formattedTitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF222222),
-                      height: 1.15,
-                    ),
+                  width: 160,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formattedTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF222222),
+                          height: 1.15,
+                        ),
+                      ),
+                      if (trainerName != null && trainerName!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline_rounded,
+                              size: 12,
+                              color: Color(0xFF666666),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                trainerName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF555555),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ),
 

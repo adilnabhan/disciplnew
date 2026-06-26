@@ -5,56 +5,59 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 final class ApiUris {
   ///* BASE URL
   static const _baseUrlEnv = String.fromEnvironment('baseUrl');
-  static const _baseUrl =
-      _baseUrlEnv == '' ? 'https://discipl-backend-u0w9.onrender.com' : _baseUrlEnv;
-  static const _v1 = '$_baseUrl/api/v1/';
+  static final _baseUrl = _baseUrlEnv == ''
+      ? 'https://discipl-backend.onrender.com'
+      : (_baseUrlEnv.endsWith('/')
+          ? _baseUrlEnv.substring(0, _baseUrlEnv.length - 1)
+          : _baseUrlEnv);
+  static final _v1 = '$_baseUrl/api/v1/';
 
   ///============================= AUTH =============================\\\
-  static const sentOtp = '${_v1}user/send-otp/';
-  static const loginWithOtp = '${_v1}user/otp/verify/';
-  static const verifyOtp = '${_v1}user/otp/verification/registration/';
-  static const tokenRefresh = '${_v1}user/token/refresh/';
-  static const onboarding = '${_v1}user/onboarding/';
+  static final sentOtp = '${_v1}user/send-otp/';
+  static final loginWithOtp = '${_v1}user/otp/verify/';
+  static final verifyOtp = '${_v1}user/otp/verification/registration/';
+  static final tokenRefresh = '${_v1}user/token/refresh/';
+  static final onboarding = '${_v1}user/onboarding/';
   static String onboardingUpdate(int id) => '${_v1}customer/manage/$id/update/';
-  static const logout = '${_v1}user/logout/';
-  // static const tokenRefresh = '${_v1}user/token/refresh/';
-  static const constantChoices = '${_v1}customer/constant-choices';
+  static final logout = '${_v1}user/logout/';
+  // static final tokenRefresh = '${_v1}user/token/refresh/';
+  static final constantChoices = '${_v1}customer/constant-choices';
 
   ///============================= Customer =============================\\\
   static String customerDetails(int id) => '${_v1}customer/manage/$id/';
-  static const updateCustomerProfile = '${_v1}customer/manage/profile/health/';
+  static final updateCustomerProfile = '${_v1}customer/manage/profile/health/';
 
   ///============================= Home =============================\\\
-  static const home = '${_v1}customer/customer-homepage/';
+  static final home = '${_v1}customer/customer-homepage/';
 
   ///============================= Payment =============================\\\
-  static const paymentHistory = '${_v1}customer/payment-history/';
-  static const paymentDetailsHistory = '${_v1}customer/payment-detail-history/';
+  static final paymentHistory = '${_v1}customer/payment-history/';
+  static final paymentDetailsHistory = '${_v1}customer/payment-detail-history/';
 
   ///============================= Membership =============================\\\
   static String activeMembership(int id) =>
       '${_v1}customer/manage/$id/active-membership/';
-  static const allMemberships = '${_v1}customer/membership-org/';
+  static final allMemberships = '${_v1}customer/membership-org/';
 
   ///============================= Subscription =============================\\\
-  static const initiateRazorpayOrder =
+  static final initiateRazorpayOrder =
       '${_v1}subscription/customer/create-subscription/';
-  static const checkPaymentStatus = '${_v1}subscription/payment/status/';
+  static final checkPaymentStatus = '${_v1}subscription/payment/status/';
 
   ///============================= Fitness Center =============================\\\
   static String fitnesscenterDetails(int id) => '${_v1}fitnesscenter/gym/$id/';
 
   static String fitnesscenterMembershipPlans(int id) =>
       '${_v1}customer/membership-plans/$id/';
-  static const fitnesscenterCategories = '${_v1}fitnesscenter/categories/';
-  static const listFitnesscenter = '${_v1}customer/nearest/fitnesscenter/';
-  static const listAllFitnesscenter = '${_v1}fitnesscenter/gym/list/';
+  static final fitnesscenterCategories = '${_v1}fitnesscenter/categories/';
+  static final listFitnesscenter = '${_v1}customer/nearest/fitnesscenter/';
+  static final listAllFitnesscenter = '${_v1}fitnesscenter/gym/list/';
 
   ///============================= Reviews =============================\\\
-  static const addReview = '${_v1}customer/reviews/';
+  static final addReview = '${_v1}customer/reviews/';
 
   static String updateReview(int id) => '${_v1}customer/reviews/$id/';
-  static const customerPostedReviews = '${_v1}customer/reviews/';
+  static final customerPostedReviews = '${_v1}customer/reviews/';
 
   static String deleteReview(int id) => '${_v1}customer/reviews/$id/';
 
@@ -62,25 +65,25 @@ final class ApiUris {
       '${_v1}fitnesscenter/organization/$id/reviews/';
 
   ///============================= Workout =============================\\\
-  static const exercises = '${_v1}customer/exercises/';
-  static const exerciseDetail = '${_v1}customer/exercises/detail/';
+  static final exercises = '${_v1}customer/exercises/';
+  static final exerciseDetail = '${_v1}customer/exercises/detail/';
   static String exerciseDetailById(int id) => '${_v1}customer/exercises/$id/';
-  static const muscleGroups = '${_v1}trainer/muscle-groups/';
-  static const equipment = '${_v1}trainer/equipment/';
-  static const exerciseTypes = '${_v1}trainer/exercise-types/';
-  static const activeSession = '${_v1}customer/sessions/active/';
-  static const activeSessionExercises =
+  static final muscleGroups = '${_v1}trainer/muscle-groups/';
+  static final equipment = '${_v1}trainer/equipment/';
+  static final exerciseTypes = '${_v1}trainer/exercise-types/';
+  static final activeSession = '${_v1}customer/sessions/active/';
+  static final activeSessionExercises =
       '${_v1}customer/sessions/active/exercises/';
-  static const startSession = '${_v1}customer/sessions/start/';
+  static final startSession = '${_v1}customer/sessions/start/';
   static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
   static String addSetToLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/sets/';
   static String updateSetLog(int setLogId) =>
       '${_v1}customer/set-logs/$setLogId/';
-  static const workoutLog = '${_v1}customer/workout-log/';
-  static const restDay = '${_v1}customer/sessions/rest-day/';
-  static const presets = '${_v1}customer/presets/';
+  static final workoutLog = '${_v1}customer/workout-log/';
+  static final restDay = '${_v1}customer/sessions/rest-day/';
+  static final presets = '${_v1}customer/presets/';
   static String presetDetail(int id) => '${_v1}customer/presets/$id/';
 
-  static const loginAsGuest = '${_v1}user/login/guest/';
+  static final loginAsGuest = '${_v1}user/login/guest/';
 }

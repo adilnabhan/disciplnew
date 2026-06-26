@@ -576,6 +576,8 @@ mixin _$CustomerDataModel {
   bool? get isActiveMember => throw _privateConstructorUsedError;
   @JsonKey(name: 'profile_completeness')
   int? get profileCompleteness => throw _privateConstructorUsedError;
+  @JsonKey(name: 'organization_id')
+  int? get organizationId => throw _privateConstructorUsedError;
 
   /// Serializes this CustomerDataModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -598,6 +600,7 @@ abstract class $CustomerDataModelCopyWith<$Res> {
     @JsonKey(name: 'id') int? id,
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') int? profileCompleteness,
+    @JsonKey(name: 'organization_id') int? organizationId,
   });
 }
 
@@ -619,6 +622,7 @@ class _$CustomerDataModelCopyWithImpl<$Res, $Val extends CustomerDataModel>
     Object? id = freezed,
     Object? isActiveMember = freezed,
     Object? profileCompleteness = freezed,
+    Object? organizationId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -636,6 +640,11 @@ class _$CustomerDataModelCopyWithImpl<$Res, $Val extends CustomerDataModel>
                 freezed == profileCompleteness
                     ? _value.profileCompleteness
                     : profileCompleteness // ignore: cast_nullable_to_non_nullable
+                        as int?,
+            organizationId:
+                freezed == organizationId
+                    ? _value.organizationId
+                    : organizationId // ignore: cast_nullable_to_non_nullable
                         as int?,
           )
           as $Val,
@@ -656,6 +665,7 @@ abstract class _$$CustomerDataModelImplCopyWith<$Res>
     @JsonKey(name: 'id') int? id,
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') int? profileCompleteness,
+    @JsonKey(name: 'organization_id') int? organizationId,
   });
 }
 
@@ -676,6 +686,7 @@ class __$$CustomerDataModelImplCopyWithImpl<$Res>
     Object? id = freezed,
     Object? isActiveMember = freezed,
     Object? profileCompleteness = freezed,
+    Object? organizationId = freezed,
   }) {
     return _then(
       _$CustomerDataModelImpl(
@@ -694,6 +705,11 @@ class __$$CustomerDataModelImplCopyWithImpl<$Res>
                 ? _value.profileCompleteness
                 : profileCompleteness // ignore: cast_nullable_to_non_nullable
                     as int?,
+        organizationId:
+            freezed == organizationId
+                ? _value.organizationId
+                : organizationId // ignore: cast_nullable_to_non_nullable
+                    as int?,
       ),
     );
   }
@@ -706,6 +722,7 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
     @JsonKey(name: 'id') this.id,
     @JsonKey(name: 'is_active_member') this.isActiveMember,
     @JsonKey(name: 'profile_completeness') this.profileCompleteness,
+    @JsonKey(name: 'organization_id') this.organizationId,
   });
 
   factory _$CustomerDataModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -720,10 +737,13 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
   @override
   @JsonKey(name: 'profile_completeness')
   final int? profileCompleteness;
+  @override
+  @JsonKey(name: 'organization_id')
+  final int? organizationId;
 
   @override
   String toString() {
-    return 'CustomerDataModel(id: $id, isActiveMember: $isActiveMember, profileCompleteness: $profileCompleteness)';
+    return 'CustomerDataModel(id: $id, isActiveMember: $isActiveMember, profileCompleteness: $profileCompleteness, organizationId: $organizationId)';
   }
 
   @override
@@ -735,13 +755,20 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
             (identical(other.isActiveMember, isActiveMember) ||
                 other.isActiveMember == isActiveMember) &&
             (identical(other.profileCompleteness, profileCompleteness) ||
-                other.profileCompleteness == profileCompleteness));
+                other.profileCompleteness == profileCompleteness) &&
+            (identical(other.organizationId, organizationId) ||
+                other.organizationId == organizationId));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode =>
-      Object.hash(runtimeType, id, isActiveMember, profileCompleteness);
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    isActiveMember,
+    profileCompleteness,
+    organizationId,
+  );
 
   /// Create a copy of CustomerDataModel
   /// with the given fields replaced by the non-null parameter values.
@@ -765,6 +792,7 @@ abstract class _CustomerDataModel implements CustomerDataModel {
     @JsonKey(name: 'id') final int? id,
     @JsonKey(name: 'is_active_member') final bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') final int? profileCompleteness,
+    @JsonKey(name: 'organization_id') final int? organizationId,
   }) = _$CustomerDataModelImpl;
 
   factory _CustomerDataModel.fromJson(Map<String, dynamic> json) =
@@ -779,6 +807,9 @@ abstract class _CustomerDataModel implements CustomerDataModel {
   @override
   @JsonKey(name: 'profile_completeness')
   int? get profileCompleteness;
+  @override
+  @JsonKey(name: 'organization_id')
+  int? get organizationId;
 
   /// Create a copy of CustomerDataModel
   /// with the given fields replaced by the non-null parameter values.

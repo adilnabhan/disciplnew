@@ -4,6 +4,9 @@ import 'package:flutter/scheduler.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:lottie/lottie.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/widgets/workout_history_calendar.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:customer_mobile_app/src/features/home/cubit/home_cubit.dart';
+import 'package:customer_mobile_app/src/features/home/domain/models/home_model.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -17,24 +20,31 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
+  late final HomeCubit _homeCubit;
 
   @override
   void initState() {
     super.initState();
     _dashboardCubit = DashboardCubit();
+    _homeCubit = HomeCubit();
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
     if (!isGuest) {
       _fetchActiveMembership();
+      _homeCubit.fetchHomeData();
     }
   }
 
   @override
   void dispose() {
+    _homeCubit.close();
     super.dispose();
   }
 
   Future<void> _fetchActiveMembership() async {
     await _dashboardCubit.fetchActiveMembership();
+    if (Feggy.read<AppCubit>()?.state.currentUser != null) {
+      await _homeCubit.fetchHomeData();
+    }
   }
 
   @override
@@ -55,12 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Carousel Banners (using local assets)
-            BannersView(banners: const [
-              'assets/images/carousel_images/discipl_carousel .png',
-              'assets/images/carousel_images/carousel_discipl.jpg',
-            ]).pxy(x: 16),
-  
             // Active Gym Section (only if user has active membership data)
             BlocBuilder<DashboardCubit, DashboardState>(
               bloc: _dashboardCubit,
@@ -73,15 +77,56 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (activeMembership == null) return const SizedBox.shrink();
                     return Column(
                       children: [
-                        const SizedBox(height: 24),
                         _buildActiveGymSection(activeMembership).pxy(x: 16),
+                        const SizedBox(height: 24),
                       ],
                     );
                   }),
                 );
               },
             ),
+
+            // Carousel Banners (using local assets)
+            BannersView(banners: const [
+              'assets/images/carousel_images/discipl_carousel .png',
+              'assets/images/carousel_images/carousel_discipl.jpg',
+            ]).pxy(x: 16),
   
+            // Trainer Card under Banners View
+            if (!isGuest)
+              BlocBuilder<HomeCubit, HomeState>(
+                bloc: _homeCubit,
+                builder: (context, homeState) {
+                  return homeState.homeData.fold(
+                    () => const SizedBox.shrink(),
+                    (either) => either.fold(
+                      (_) => const SizedBox.shrink(),
+                      (homeModel) {
+                        final trainer = homeModel.assignedTrainer;
+                        if (trainer == null) return const SizedBox.shrink();
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'Assigned Trainer',
+                                style: AppStyles.text14Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF222222),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            _buildTrainerCard(trainer).pxy(x: 16),
+                          ],
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+
             // Reduced gap before calendar/card
             const SizedBox(height: 8),
   
@@ -280,6 +325,174 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildTrainerCard(AssignedTrainerModel trainer) {
+    final experience = trainer.experienceYears ?? 0;
+    final specializations = trainer.specializations ?? [];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Circular avatar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(30),
+                child: Container(
+                  width: 60,
+                  height: 60,
+                  color: Colors.grey.shade200,
+                  child: trainer.profileImage != null && trainer.profileImage!.isNotEmpty
+                      ? ImageNetwork(
+                          trainer.profileImage!,
+                          height: 60,
+                          width: 60,
+                          fit: BoxFit.cover,
+                          errorWidget: const Icon(Icons.person, color: Colors.grey, size: 30),
+                        )
+                      : const Icon(Icons.person, color: Colors.grey, size: 30),
+                ),
+              ),
+              const SizedBox(width: 14),
+
+              // Trainer details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      trainer.name ?? '',
+                      style: AppStyles.text15Px.poppins.w600.copyWith(
+                        color: const Color(0xFF222222),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // Experience Tag
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF7F7F7),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            color: Colors.orange,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$experience yrs experience',
+                            style: AppStyles.text10Px.poppins.w500.copyWith(
+                              color: const Color(0xFF666666),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          if (specializations.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 6,
+              runSpacing: 4,
+              children: specializations.map((spec) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFECEF),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    spec,
+                    style: AppStyles.text10Px.poppins.w500.copyWith(
+                      color: AppColors.primary,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+
+          if (trainer.bio != null && trainer.bio!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              trainer.bio!,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppStyles.text12Px.poppins.w400.copyWith(
+                color: const Color(0xFF666666),
+                height: 1.3,
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          // "Chat Now" WhatsApp launch button
+          Button.filled(
+            size: const Size(double.infinity, 40),
+            title: 'Chat Now',
+            buttonColor: const Color(0xFF25D366),
+            style: AppStyles.text13Px.poppins.w600.copyWith(
+              color: Colors.white,
+            ),
+            icon: SvgPicture.asset(
+              'assets/images/svg/icons/whatsapp_logo.svg',
+              width: 18,
+              height: 18,
+              colorFilter: const ColorFilter.mode(
+                Colors.white,
+                BlendMode.srcIn,
+              ),
+            ),
+            raduis: 10,
+            ontap: () async {
+              final phone = trainer.mobile?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
+              if (phone.isNotEmpty) {
+                final message = Uri.encodeComponent(
+                  'Hi ${trainer.name},\n\n'
+                  'I would like to connect with you regarding my workouts and training plans.\n\n'
+                  'Thank you.',
+                );
+                final waUrl = Uri.parse('https://wa.me/$phone?text=$message');
+                if (await canLaunchUrl(waUrl)) {
+                  await launchUrl(waUrl, mode: LaunchMode.externalApplication);
+                } else {
+                  await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
+                }
+              } else {
+                await Dialogs.showSnack(msg: 'WhatsApp number not available');
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 

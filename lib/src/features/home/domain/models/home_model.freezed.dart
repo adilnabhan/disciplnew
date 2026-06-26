@@ -29,6 +29,9 @@ mixin _$HomeModel {
   List<String>? get banners => throw _privateConstructorUsedError;
   @JsonKey(name: 'fitness_center_banners')
   List<String>? get fitnessCenterBanners => throw _privateConstructorUsedError;
+  @JsonKey(name: 'assigned_trainer')
+  AssignedTrainerModel? get assignedTrainer =>
+      throw _privateConstructorUsedError;
 
   /// Serializes this HomeModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -50,9 +53,11 @@ abstract class $HomeModelCopyWith<$Res> {
     @JsonKey(name: 'subscription') Subscription? subscription,
     @JsonKey(name: 'banners') List<String>? banners,
     @JsonKey(name: 'fitness_center_banners') List<String>? fitnessCenterBanners,
+    @JsonKey(name: 'assigned_trainer') AssignedTrainerModel? assignedTrainer,
   });
 
   $SubscriptionCopyWith<$Res>? get subscription;
+  $AssignedTrainerModelCopyWith<$Res>? get assignedTrainer;
 }
 
 /// @nodoc
@@ -74,6 +79,7 @@ class _$HomeModelCopyWithImpl<$Res, $Val extends HomeModel>
     Object? subscription = freezed,
     Object? banners = freezed,
     Object? fitnessCenterBanners = freezed,
+    Object? assignedTrainer = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -97,6 +103,11 @@ class _$HomeModelCopyWithImpl<$Res, $Val extends HomeModel>
                     ? _value.fitnessCenterBanners
                     : fitnessCenterBanners // ignore: cast_nullable_to_non_nullable
                         as List<String>?,
+            assignedTrainer:
+                freezed == assignedTrainer
+                    ? _value.assignedTrainer
+                    : assignedTrainer // ignore: cast_nullable_to_non_nullable
+                        as AssignedTrainerModel?,
           )
           as $Val,
     );
@@ -115,6 +126,22 @@ class _$HomeModelCopyWithImpl<$Res, $Val extends HomeModel>
       return _then(_value.copyWith(subscription: value) as $Val);
     });
   }
+
+  /// Create a copy of HomeModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $AssignedTrainerModelCopyWith<$Res>? get assignedTrainer {
+    if (_value.assignedTrainer == null) {
+      return null;
+    }
+
+    return $AssignedTrainerModelCopyWith<$Res>(_value.assignedTrainer!, (
+      value,
+    ) {
+      return _then(_value.copyWith(assignedTrainer: value) as $Val);
+    });
+  }
 }
 
 /// @nodoc
@@ -131,10 +158,13 @@ abstract class _$$HomeModelImplCopyWith<$Res>
     @JsonKey(name: 'subscription') Subscription? subscription,
     @JsonKey(name: 'banners') List<String>? banners,
     @JsonKey(name: 'fitness_center_banners') List<String>? fitnessCenterBanners,
+    @JsonKey(name: 'assigned_trainer') AssignedTrainerModel? assignedTrainer,
   });
 
   @override
   $SubscriptionCopyWith<$Res>? get subscription;
+  @override
+  $AssignedTrainerModelCopyWith<$Res>? get assignedTrainer;
 }
 
 /// @nodoc
@@ -155,6 +185,7 @@ class __$$HomeModelImplCopyWithImpl<$Res>
     Object? subscription = freezed,
     Object? banners = freezed,
     Object? fitnessCenterBanners = freezed,
+    Object? assignedTrainer = freezed,
   }) {
     return _then(
       _$HomeModelImpl(
@@ -178,6 +209,11 @@ class __$$HomeModelImplCopyWithImpl<$Res>
                 ? _value._fitnessCenterBanners
                 : fitnessCenterBanners // ignore: cast_nullable_to_non_nullable
                     as List<String>?,
+        assignedTrainer:
+            freezed == assignedTrainer
+                ? _value.assignedTrainer
+                : assignedTrainer // ignore: cast_nullable_to_non_nullable
+                    as AssignedTrainerModel?,
       ),
     );
   }
@@ -192,6 +228,7 @@ class _$HomeModelImpl implements _HomeModel {
     @JsonKey(name: 'banners') final List<String>? banners,
     @JsonKey(name: 'fitness_center_banners')
     final List<String>? fitnessCenterBanners,
+    @JsonKey(name: 'assigned_trainer') this.assignedTrainer,
   }) : _banners = banners,
        _fitnessCenterBanners = fitnessCenterBanners;
 
@@ -228,8 +265,12 @@ class _$HomeModelImpl implements _HomeModel {
   }
 
   @override
+  @JsonKey(name: 'assigned_trainer')
+  final AssignedTrainerModel? assignedTrainer;
+
+  @override
   String toString() {
-    return 'HomeModel(isSubscribed: $isSubscribed, subscription: $subscription, banners: $banners, fitnessCenterBanners: $fitnessCenterBanners)';
+    return 'HomeModel(isSubscribed: $isSubscribed, subscription: $subscription, banners: $banners, fitnessCenterBanners: $fitnessCenterBanners, assignedTrainer: $assignedTrainer)';
   }
 
   @override
@@ -245,7 +286,9 @@ class _$HomeModelImpl implements _HomeModel {
             const DeepCollectionEquality().equals(
               other._fitnessCenterBanners,
               _fitnessCenterBanners,
-            ));
+            ) &&
+            (identical(other.assignedTrainer, assignedTrainer) ||
+                other.assignedTrainer == assignedTrainer));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -256,6 +299,7 @@ class _$HomeModelImpl implements _HomeModel {
     subscription,
     const DeepCollectionEquality().hash(_banners),
     const DeepCollectionEquality().hash(_fitnessCenterBanners),
+    assignedTrainer,
   );
 
   /// Create a copy of HomeModel
@@ -279,6 +323,8 @@ abstract class _HomeModel implements HomeModel {
     @JsonKey(name: 'banners') final List<String>? banners,
     @JsonKey(name: 'fitness_center_banners')
     final List<String>? fitnessCenterBanners,
+    @JsonKey(name: 'assigned_trainer')
+    final AssignedTrainerModel? assignedTrainer,
   }) = _$HomeModelImpl;
 
   factory _HomeModel.fromJson(Map<String, dynamic> json) =
@@ -296,6 +342,9 @@ abstract class _HomeModel implements HomeModel {
   @override
   @JsonKey(name: 'fitness_center_banners')
   List<String>? get fitnessCenterBanners;
+  @override
+  @JsonKey(name: 'assigned_trainer')
+  AssignedTrainerModel? get assignedTrainer;
 
   /// Create a copy of HomeModel
   /// with the given fields replaced by the non-null parameter values.
@@ -609,4 +658,350 @@ abstract class _Subscription implements Subscription {
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$SubscriptionImplCopyWith<_$SubscriptionImpl> get copyWith =>
       throw _privateConstructorUsedError;
+}
+
+AssignedTrainerModel _$AssignedTrainerModelFromJson(Map<String, dynamic> json) {
+  return _AssignedTrainerModel.fromJson(json);
+}
+
+/// @nodoc
+mixin _$AssignedTrainerModel {
+  @JsonKey(name: 'id')
+  int? get id => throw _privateConstructorUsedError;
+  @JsonKey(name: 'name')
+  String? get name => throw _privateConstructorUsedError;
+  @JsonKey(name: 'profile_image')
+  String? get profileImage => throw _privateConstructorUsedError;
+  @JsonKey(name: 'mobile')
+  String? get mobile => throw _privateConstructorUsedError;
+  @JsonKey(name: 'experience_years')
+  int? get experienceYears => throw _privateConstructorUsedError;
+  @JsonKey(name: 'bio')
+  String? get bio => throw _privateConstructorUsedError;
+  @JsonKey(name: 'specializations')
+  List<String>? get specializations => throw _privateConstructorUsedError;
+
+  /// Serializes this AssignedTrainerModel to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of AssignedTrainerModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $AssignedTrainerModelCopyWith<AssignedTrainerModel> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $AssignedTrainerModelCopyWith<$Res> {
+  factory $AssignedTrainerModelCopyWith(
+    AssignedTrainerModel value,
+    $Res Function(AssignedTrainerModel) then,
+  ) = _$AssignedTrainerModelCopyWithImpl<$Res, AssignedTrainerModel>;
+  @useResult
+  $Res call({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'name') String? name,
+    @JsonKey(name: 'profile_image') String? profileImage,
+    @JsonKey(name: 'mobile') String? mobile,
+    @JsonKey(name: 'experience_years') int? experienceYears,
+    @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'specializations') List<String>? specializations,
+  });
+}
+
+/// @nodoc
+class _$AssignedTrainerModelCopyWithImpl<
+  $Res,
+  $Val extends AssignedTrainerModel
+>
+    implements $AssignedTrainerModelCopyWith<$Res> {
+  _$AssignedTrainerModelCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of AssignedTrainerModel
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = freezed,
+    Object? name = freezed,
+    Object? profileImage = freezed,
+    Object? mobile = freezed,
+    Object? experienceYears = freezed,
+    Object? bio = freezed,
+    Object? specializations = freezed,
+  }) {
+    return _then(
+      _value.copyWith(
+            id:
+                freezed == id
+                    ? _value.id
+                    : id // ignore: cast_nullable_to_non_nullable
+                        as int?,
+            name:
+                freezed == name
+                    ? _value.name
+                    : name // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            profileImage:
+                freezed == profileImage
+                    ? _value.profileImage
+                    : profileImage // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            mobile:
+                freezed == mobile
+                    ? _value.mobile
+                    : mobile // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            experienceYears:
+                freezed == experienceYears
+                    ? _value.experienceYears
+                    : experienceYears // ignore: cast_nullable_to_non_nullable
+                        as int?,
+            bio:
+                freezed == bio
+                    ? _value.bio
+                    : bio // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            specializations:
+                freezed == specializations
+                    ? _value.specializations
+                    : specializations // ignore: cast_nullable_to_non_nullable
+                        as List<String>?,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$AssignedTrainerModelImplCopyWith<$Res>
+    implements $AssignedTrainerModelCopyWith<$Res> {
+  factory _$$AssignedTrainerModelImplCopyWith(
+    _$AssignedTrainerModelImpl value,
+    $Res Function(_$AssignedTrainerModelImpl) then,
+  ) = __$$AssignedTrainerModelImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'name') String? name,
+    @JsonKey(name: 'profile_image') String? profileImage,
+    @JsonKey(name: 'mobile') String? mobile,
+    @JsonKey(name: 'experience_years') int? experienceYears,
+    @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'specializations') List<String>? specializations,
+  });
+}
+
+/// @nodoc
+class __$$AssignedTrainerModelImplCopyWithImpl<$Res>
+    extends _$AssignedTrainerModelCopyWithImpl<$Res, _$AssignedTrainerModelImpl>
+    implements _$$AssignedTrainerModelImplCopyWith<$Res> {
+  __$$AssignedTrainerModelImplCopyWithImpl(
+    _$AssignedTrainerModelImpl _value,
+    $Res Function(_$AssignedTrainerModelImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of AssignedTrainerModel
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = freezed,
+    Object? name = freezed,
+    Object? profileImage = freezed,
+    Object? mobile = freezed,
+    Object? experienceYears = freezed,
+    Object? bio = freezed,
+    Object? specializations = freezed,
+  }) {
+    return _then(
+      _$AssignedTrainerModelImpl(
+        id:
+            freezed == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                    as int?,
+        name:
+            freezed == name
+                ? _value.name
+                : name // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        profileImage:
+            freezed == profileImage
+                ? _value.profileImage
+                : profileImage // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        mobile:
+            freezed == mobile
+                ? _value.mobile
+                : mobile // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        experienceYears:
+            freezed == experienceYears
+                ? _value.experienceYears
+                : experienceYears // ignore: cast_nullable_to_non_nullable
+                    as int?,
+        bio:
+            freezed == bio
+                ? _value.bio
+                : bio // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        specializations:
+            freezed == specializations
+                ? _value._specializations
+                : specializations // ignore: cast_nullable_to_non_nullable
+                    as List<String>?,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$AssignedTrainerModelImpl implements _AssignedTrainerModel {
+  const _$AssignedTrainerModelImpl({
+    @JsonKey(name: 'id') this.id,
+    @JsonKey(name: 'name') this.name,
+    @JsonKey(name: 'profile_image') this.profileImage,
+    @JsonKey(name: 'mobile') this.mobile,
+    @JsonKey(name: 'experience_years') this.experienceYears,
+    @JsonKey(name: 'bio') this.bio,
+    @JsonKey(name: 'specializations') final List<String>? specializations,
+  }) : _specializations = specializations;
+
+  factory _$AssignedTrainerModelImpl.fromJson(Map<String, dynamic> json) =>
+      _$$AssignedTrainerModelImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'id')
+  final int? id;
+  @override
+  @JsonKey(name: 'name')
+  final String? name;
+  @override
+  @JsonKey(name: 'profile_image')
+  final String? profileImage;
+  @override
+  @JsonKey(name: 'mobile')
+  final String? mobile;
+  @override
+  @JsonKey(name: 'experience_years')
+  final int? experienceYears;
+  @override
+  @JsonKey(name: 'bio')
+  final String? bio;
+  final List<String>? _specializations;
+  @override
+  @JsonKey(name: 'specializations')
+  List<String>? get specializations {
+    final value = _specializations;
+    if (value == null) return null;
+    if (_specializations is EqualUnmodifiableListView) return _specializations;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
+  @override
+  String toString() {
+    return 'AssignedTrainerModel(id: $id, name: $name, profileImage: $profileImage, mobile: $mobile, experienceYears: $experienceYears, bio: $bio, specializations: $specializations)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$AssignedTrainerModelImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.profileImage, profileImage) ||
+                other.profileImage == profileImage) &&
+            (identical(other.mobile, mobile) || other.mobile == mobile) &&
+            (identical(other.experienceYears, experienceYears) ||
+                other.experienceYears == experienceYears) &&
+            (identical(other.bio, bio) || other.bio == bio) &&
+            const DeepCollectionEquality().equals(
+              other._specializations,
+              _specializations,
+            ));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(
+    runtimeType,
+    id,
+    name,
+    profileImage,
+    mobile,
+    experienceYears,
+    bio,
+    const DeepCollectionEquality().hash(_specializations),
+  );
+
+  /// Create a copy of AssignedTrainerModel
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$AssignedTrainerModelImplCopyWith<_$AssignedTrainerModelImpl>
+  get copyWith =>
+      __$$AssignedTrainerModelImplCopyWithImpl<_$AssignedTrainerModelImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$AssignedTrainerModelImplToJson(this);
+  }
+}
+
+abstract class _AssignedTrainerModel implements AssignedTrainerModel {
+  const factory _AssignedTrainerModel({
+    @JsonKey(name: 'id') final int? id,
+    @JsonKey(name: 'name') final String? name,
+    @JsonKey(name: 'profile_image') final String? profileImage,
+    @JsonKey(name: 'mobile') final String? mobile,
+    @JsonKey(name: 'experience_years') final int? experienceYears,
+    @JsonKey(name: 'bio') final String? bio,
+    @JsonKey(name: 'specializations') final List<String>? specializations,
+  }) = _$AssignedTrainerModelImpl;
+
+  factory _AssignedTrainerModel.fromJson(Map<String, dynamic> json) =
+      _$AssignedTrainerModelImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'id')
+  int? get id;
+  @override
+  @JsonKey(name: 'name')
+  String? get name;
+  @override
+  @JsonKey(name: 'profile_image')
+  String? get profileImage;
+  @override
+  @JsonKey(name: 'mobile')
+  String? get mobile;
+  @override
+  @JsonKey(name: 'experience_years')
+  int? get experienceYears;
+  @override
+  @JsonKey(name: 'bio')
+  String? get bio;
+  @override
+  @JsonKey(name: 'specializations')
+  List<String>? get specializations;
+
+  /// Create a copy of AssignedTrainerModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$AssignedTrainerModelImplCopyWith<_$AssignedTrainerModelImpl>
+  get copyWith => throw _privateConstructorUsedError;
 }

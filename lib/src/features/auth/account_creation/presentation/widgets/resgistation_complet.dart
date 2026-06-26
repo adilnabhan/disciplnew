@@ -58,7 +58,11 @@ class SetupCompleteStep extends StatelessWidget {
                 title: 'Find my Fitness Center',
                 ontap: () {
                   context.read<AppCubit>().addUser(login!);
-                  context.pushAndRemoveUntil(const DashboardScreen());
+                  if (login?.customer?.organizationId == null) {
+                    context.pushAndRemoveUntil(const DashboardScreen(navIndex: 2));
+                  } else {
+                    context.pushAndRemoveUntil(const DashboardScreen());
+                  }
                 },
               ),
               const SizedBox(height: 20),

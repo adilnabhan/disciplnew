@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
 
@@ -18,6 +19,9 @@ class WorkoutDetailsScreen extends StatefulWidget {
 class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   late Future<Either<ApiException, Map<String, dynamic>>> _detailsFuture;
   List<ExerciseLibraryModel> _exercises = [];
+  bool _isFinishing = false;
+  Map<String, dynamic>? _sessionData;
+  final Map<int, Timer> _debounceTimers = {};
 
   @override
   void initState() {
@@ -26,12 +30,155 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     _loadExercises();
   }
 
+  @override
+  void dispose() {
+    for (final timer in _debounceTimers.values) {
+      timer.cancel();
+    }
+    super.dispose();
+  }
+
   void _loadDetails() {
     setState(() {
+      _sessionData = null;
       _detailsFuture = WorkoutRepository().getSessionDetails(
         sessionId: widget.sessionId,
+      ).then((res) {
+        res.fold(
+          (_) => null,
+          (data) {
+            if (mounted) {
+              setState(() {
+                _sessionData = data;
+              });
+            }
+          },
+        );
+        return res;
+      });
+    });
+  }
+
+  void _debounceUpdateSet(int setLogId, {int? reps, double? weightKg}) {
+    _debounceTimers[setLogId]?.cancel();
+    _debounceTimers[setLogId] = Timer(const Duration(milliseconds: 600), () async {
+      final res = await WorkoutRepository().updateSetLog(
+        setLogId: setLogId,
+        reps: reps,
+        weightKg: weightKg,
+      );
+      res.fold(
+        (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to update set: ${error.msg}')),
+            );
+          }
+        },
+        (_) => null,
       );
     });
+  }
+
+  void _addSet(Map<String, dynamic> log) async {
+    final setLogs = List<Map<String, dynamic>>.from(log['set_logs'] as List? ?? []);
+    final lastSet = setLogs.isNotEmpty ? setLogs.last : null;
+    
+    final int defaultReps = lastSet != null
+        ? (int.tryParse(lastSet['reps']?.toString() ?? '') ?? 10)
+        : (int.tryParse(log['target_reps']?.toString() ?? '') ?? 10);
+        
+    final double defaultWeight = lastSet != null
+        ? (double.tryParse(lastSet['weight_kg']?.toString() ?? '') ?? 0.0)
+        : (double.tryParse(log['target_weight']?.toString() ?? '') ?? 0.0);
+
+    final exerciseLogId = log['id'] as int?;
+    if (exerciseLogId == null) return;
+
+    final res = await WorkoutRepository().addSetToExerciseLog(
+      logId: exerciseLogId,
+      reps: defaultReps,
+      weightKg: defaultWeight,
+      isCompleted: false,
+    );
+
+    res.fold(
+      (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add set: ${error.msg}')),
+          );
+        }
+      },
+      (newLogData) {
+        if (mounted && _sessionData != null) {
+          setState(() {
+            final logsList = _sessionData!['logs'] as List;
+            final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
+            if (targetLogIndex != -1) {
+              logsList[targetLogIndex] = Map<String, dynamic>.from(newLogData as Map);
+            }
+          });
+        }
+      },
+    );
+  }
+
+  void _deleteSet(int exerciseLogId, int setLogId) async {
+    final res = await WorkoutRepository().deleteSetLog(setLogId: setLogId);
+    res.fold(
+      (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete set: ${error.msg}')),
+          );
+        }
+      },
+      (_) {
+        if (mounted && _sessionData != null) {
+          setState(() {
+            final logsList = _sessionData!['logs'] as List;
+            final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
+            if (targetLogIndex != -1) {
+              final targetLog = Map<String, dynamic>.from(logsList[targetLogIndex]);
+              final targetSets = List<Map<String, dynamic>>.from(targetLog['set_logs'] ?? []);
+              targetSets.removeWhere((s) => s['id'] == setLogId);
+              for (var i = 0; i < targetSets.length; i++) {
+                targetSets[i]['set_number'] = i + 1;
+              }
+              targetLog['set_logs'] = targetSets;
+              logsList[targetLogIndex] = targetLog;
+            }
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildOutlineRedButton({
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        height: 36,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF4F4),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFF0B5B7), width: 1.0),
+        ),
+        child: Center(
+          child: Text(
+            text,
+            style: AppStyles.text14Px.poppins.w600.copyWith(
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   void _loadExercises() async {
@@ -122,7 +269,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       body: FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
         future: _detailsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          if (snapshot.connectionState == ConnectionState.waiting && _sessionData == null) {
             return const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -130,18 +277,25 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             );
           }
 
-          if (snapshot.hasError) {
+          if (snapshot.hasError && _sessionData == null) {
             return _buildErrorState('An unexpected error occurred.');
           }
 
           final result = snapshot.data;
-          if (result == null) {
+          if (result == null && _sessionData == null) {
             return _buildErrorState('No details found for this session.');
           }
 
-          return result.fold(
+          if (_sessionData != null) {
+            return _buildContent(_sessionData!);
+          }
+
+          return result!.fold(
             (error) => _buildErrorState('Error loading details: ${error.msg}'),
-            _buildContent,
+            (data) {
+              _sessionData = data;
+              return _buildContent(data);
+            },
           );
         },
       ),
@@ -338,8 +492,13 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         else
           ...List.generate(logs.length, (index) {
             final log = logs[index] as Map<String, dynamic>;
-            return _buildExerciseCard(log, index);
+            return _buildExerciseCard(log, index, status);
           }),
+
+        if (status != 'COMPLETED') ...[
+          const SizedBox(height: 24),
+          _buildFinishButton(),
+        ],
 
         const SizedBox(height: 40),
       ],
@@ -377,7 +536,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     );
   }
 
-  Widget _buildExerciseCard(Map<String, dynamic> log, int index) {
+  Widget _buildExerciseCard(Map<String, dynamic> log, int index, String status) {
     final workoutName = log['workout_name']?.toString() ?? 'Exercise';
     final planExerciseId = log['plan_exercise'] ?? log['workout_id'] ?? log['id'];
     final muscle = log['muscle']?.toString() ?? '';
@@ -389,7 +548,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       final bNum = int.tryParse(b['set_number']?.toString() ?? '') ?? 0;
       return aNum.compareTo(bNum);
     });
-
 
     // Resolve type
     String? type;
@@ -425,7 +583,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -511,6 +669,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           const Divider(height: 1, color: Color(0xFFF1F1F1)),
 
           // Table header row
+          // Table header row
           Padding(
             padding: const EdgeInsets.only(
               left: 16,
@@ -529,10 +688,21 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                   ),
                 ),
+                if (status != 'COMPLETED')
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      'Previous',
+                      style: AppStyles.text12Px.poppins.w500.copyWith(
+                        color: const Color(0xFF212121),
+                      ),
+                    ),
+                  ),
                 Expanded(
                   flex: 3,
                   child: Text(
-                    'Weight',
+                    status == 'COMPLETED' ? 'Weight' : 'Weight (kg)',
+                    textAlign: status == 'COMPLETED' ? TextAlign.left : TextAlign.center,
                     style: AppStyles.text12Px.poppins.w500.copyWith(
                       color: const Color(0xFF212121),
                     ),
@@ -564,8 +734,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             ),
           ),
 
-          const Divider(height: 1, color: Color(0xFFF1F1F1)),
-
           // Sets list rows
           if (setLogs.isEmpty)
             Padding(
@@ -581,7 +749,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             )
           else
             ...List.generate(setLogs.length, (setIndex) {
-              final set = setLogs[setIndex] as Map<String, dynamic>;
+              final set = setLogs[setIndex];
               final setNum = set['set_number'] ?? (setIndex + 1);
               final weight = set['weight_kg']?.toString() ?? '0.00';
               final reps = set['reps']?.toString() ?? '0';
@@ -596,50 +764,232 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                     child: Row(
                       children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            '$setNum',
-                            style: AppStyles.text14Px.poppins.w400.copyWith(
-                              color: const Color(0xFF212121),
+                        if (status == 'COMPLETED') ...[
+                          Expanded(
+                            flex: 2,
+                            child: Text(
+                              '$setNum',
+                              style: AppStyles.text14Px.poppins.w400.copyWith(
+                                color: const Color(0xFF212121),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            '$weight kg',
-                            style: AppStyles.text14Px.poppins.w400.copyWith(
-                              color: const Color(0xFF212121),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              '$weight kg',
+                              style: AppStyles.text14Px.poppins.w400.copyWith(
+                                color: const Color(0xFF212121),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 3,
-                          child: Text(
-                            reps,
-                            textAlign: TextAlign.center,
-                            style: AppStyles.text14Px.poppins.w400.copyWith(
-                              color: const Color(0xFF212121),
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              reps,
+                              textAlign: TextAlign.center,
+                              style: AppStyles.text14Px.poppins.w400.copyWith(
+                                color: const Color(0xFF212121),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: Icon(
-                              isCompleted
-                                  ? Icons.check_circle_rounded
-                                  : Icons.radio_button_unchecked_rounded,
-                              color:
+                          Expanded(
+                            flex: 2,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Icon(
+                                isCompleted
+                                    ? Icons.check_circle_rounded
+                                    : Icons.radio_button_unchecked_rounded,
+                                color: isCompleted
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFCCCCCC),
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          // Editable pending set row
+                          // Set number & Delete button
+                          Expanded(
+                            flex: 2,
+                            child: Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () async {
+                                    final setLogId = set['id'] as int?;
+                                    if (setLogId != null) {
+                                      final confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          backgroundColor: Colors.white,
+                                          title: const Text('Delete Set'),
+                                          content: Text('Are you sure you want to delete set $setNum?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                                            ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        _deleteSet(log['id'] as int, setLogId);
+                                      }
+                                    }
+                                  },
+                                  child: const Icon(
+                                    Icons.remove_circle_outline_rounded,
+                                    color: Colors.red,
+                                    size: 18,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$setNum',
+                                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                                    color: const Color(0xFF212121),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          // Previous
+                          Expanded(
+                            flex: 3,
+                            child: Text(
+                              (set['previous'] == 'no data' || set['previous'] == null) ? '-' : set['previous'].toString(),
+                              style: AppStyles.text12Px.poppins.w400.copyWith(
+                                color: const Color(0xFF666666),
+                              ),
+                            ),
+                          ),
+                          // Weight input field
+                          Expanded(
+                            flex: 3,
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: SizedBox(
+                                width: 65,
+                                child: TextFormField(
+                                  key: ValueKey('weight_${set['id']}'),
+                                  initialValue: set['weight_kg'] != null && set['weight_kg'].toString() != 'null' ? set['weight_kg'].toString() : '',
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  textAlign: TextAlign.center,
+                                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                                    color: const Color(0xFF212121),
+                                  ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF1F3F9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    hintText: set['target_weight'] != null ? '${set['target_weight']}' : '-',
+                                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                                  ),
+                                  onChanged: (val) {
+                                    final double? parsedWeight = double.tryParse(val);
+                                    set['weight_kg'] = parsedWeight;
+                                    _debounceUpdateSet(
+                                      set['id'] as int,
+                                      reps: set['reps'] != null ? int.tryParse(set['reps'].toString()) : null,
+                                      weightKg: parsedWeight,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Reps input field
+                          Expanded(
+                            flex: 3,
+                            child: Align(
+                              alignment: Alignment.center,
+                              child: SizedBox(
+                                width: 60,
+                                child: TextFormField(
+                                  key: ValueKey('reps_${set['id']}'),
+                                  initialValue: set['reps'] != null && set['reps'].toString() != 'null' ? set['reps'].toString() : '',
+                                  keyboardType: TextInputType.number,
+                                  textAlign: TextAlign.center,
+                                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                                    color: const Color(0xFF212121),
+                                  ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF1F3F9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    hintText: set['target_reps'] != null ? '${set['target_reps']}' : '-',
+                                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                                  ),
+                                  onChanged: (val) {
+                                    final int? parsedReps = int.tryParse(val);
+                                    set['reps'] = parsedReps;
+                                    _debounceUpdateSet(
+                                      set['id'] as int,
+                                      reps: parsedReps,
+                                      weightKg: set['weight_kg'] != null ? double.tryParse(set['weight_kg'].toString()) : null,
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Done checkmark
+                          Expanded(
+                            flex: 2,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: GestureDetector(
+                                onTap: () async {
+                                  final setLogId = set['id'] as int?;
+                                  if (setLogId != null) {
+                                    setState(() {
+                                      set['is_completed'] = !isCompleted;
+                                    });
+                                    final res = await WorkoutRepository().updateSetLog(
+                                      setLogId: setLogId,
+                                      isCompleted: !isCompleted,
+                                    );
+                                    res.fold(
+                                      (error) {
+                                        setState(() {
+                                          set['is_completed'] = isCompleted;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to update set: ${error.msg}')),
+                                        );
+                                      },
+                                      (_) => null,
+                                    );
+                                  }
+                                },
+                                child: Icon(
                                   isCompleted
+                                      ? Icons.check_circle_rounded
+                                      : Icons.radio_button_unchecked_rounded,
+                                  color: isCompleted
                                       ? const Color(0xFF10B981)
                                       : const Color(0xFFCCCCCC),
-                              size: 20,
+                                  size: 22,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -649,9 +999,60 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               );
             }),
 
+          if (status != 'COMPLETED') ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+              child: _buildOutlineRedButton(
+                text: '+ Add Set',
+                onTap: () => _addSet(log),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 12),
         ],
       ),
     );
+  }
+
+  Widget _buildFinishButton() {
+    return _isFinishing
+        ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
+        : Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Button.filled(
+              size: const Size(double.infinity, 48),
+              title: 'Finish Workout',
+              style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
+              icon: const Icon(Icons.check, color: Colors.white, size: 20),
+              raduis: 12,
+              ontap: () async {
+                setState(() {
+                  _isFinishing = true;
+                });
+                final res = await WorkoutRepository().finishSession(
+                  sessionId: widget.sessionId,
+                  title: widget.fallbackTitle,
+                );
+                res.fold(
+                  (error) {
+                    setState(() {
+                      _isFinishing = false;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to finish workout: ${error.msg}')),
+                    );
+                  },
+                  (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Workout finished successfully!')),
+                    );
+                    Navigator.pop(context, true);
+                  },
+                );
+              },
+            ),
+          );
   }
 }

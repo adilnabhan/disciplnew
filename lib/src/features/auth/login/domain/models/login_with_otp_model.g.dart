@@ -58,6 +58,7 @@ _$CustomerDataModelImpl _$$CustomerDataModelImplFromJson(
   id: (json['id'] as num?)?.toInt(),
   isActiveMember: json['is_active_member'] as bool?,
   profileCompleteness: (json['profile_completeness'] as num?)?.toInt(),
+  organizationId: (json['organization_id'] as num?)?.toInt(),
 );
 
 Map<String, dynamic> _$$CustomerDataModelImplToJson(
@@ -66,4 +67,5 @@ Map<String, dynamic> _$$CustomerDataModelImplToJson(
   'id': instance.id,
   'is_active_member': instance.isActiveMember,
   'profile_completeness': instance.profileCompleteness,
+  'organization_id': instance.organizationId,
 };

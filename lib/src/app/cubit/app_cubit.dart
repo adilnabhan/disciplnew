@@ -129,6 +129,16 @@ class AppCubit extends HydratedCubit<AppState> {
     emit(state.copyWith(currentUser: user));
   }
 
+  void updateOrganizationId(int? organizationId) {
+    final user = state.currentUser;
+    if (user != null && user.customer != null) {
+      final updatedCustomer = user.customer!.copyWith(organizationId: organizationId);
+      final updatedUser = user.copyWith(customer: updatedCustomer);
+      LocalStorageService().saveUser(updatedUser);
+      emit(state.copyWith(currentUser: updatedUser));
+    }
+  }
+
   void removeUser() {
     LocalStorageService().clearUser();
     emit(state.copyWith(currentUser: null));

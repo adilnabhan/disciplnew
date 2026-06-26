@@ -11,6 +11,7 @@ class HomeModel with _$HomeModel {
     @JsonKey(name: 'subscription') Subscription? subscription,
     @JsonKey(name: 'banners') List<String>? banners,
     @JsonKey(name: 'fitness_center_banners') List<String>? fitnessCenterBanners,
+    @JsonKey(name: 'assigned_trainer') AssignedTrainerModel? assignedTrainer,
   }) = _HomeModel;
 
   factory HomeModel.fromJson(Map<String, dynamic> json) => _$HomeModelFromJson(json);
@@ -28,4 +29,19 @@ class Subscription with _$Subscription {
   }) = _Subscription;
 
   factory Subscription.fromJson(Map<String, dynamic> json) => _$SubscriptionFromJson(json);
+}
+
+@freezed
+class AssignedTrainerModel with _$AssignedTrainerModel {
+  const factory AssignedTrainerModel({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'name') String? name,
+    @JsonKey(name: 'profile_image') String? profileImage,
+    @JsonKey(name: 'mobile') String? mobile,
+    @JsonKey(name: 'experience_years') int? experienceYears,
+    @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'specializations') List<String>? specializations,
+  }) = _AssignedTrainerModel;
+
+  factory AssignedTrainerModel.fromJson(Map<String, dynamic> json) => _$AssignedTrainerModelFromJson(json);
 }

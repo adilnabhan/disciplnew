@@ -121,7 +121,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
               ),
             ),
 
-            // Scrollable Content
+             // Scrollable Content
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(
@@ -138,6 +138,59 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                 ],
               ),
             ),
+            if (!widget.isReadOnly) ...[
+              Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 24, top: 12),
+                child: PrimaryPillButton(
+                  text: 'Finish Workout',
+                  onTap: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        title: const Text(
+                          'Finish Workout',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        content: const Text(
+                          'Are you sure you want to finish this workout session?',
+                          style: TextStyle(fontFamily: 'Poppins'),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Finish',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && mounted) {
+                      Navigator.pop(context, true);
+                    }
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

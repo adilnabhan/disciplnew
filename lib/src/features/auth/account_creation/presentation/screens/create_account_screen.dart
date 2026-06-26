@@ -599,23 +599,40 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                       (r) => login = r, // Success model
                     ),
                   );
-                  context.read<AppCubit>().addUser(login!);
+                  final finalUser = login ?? widget.loginSuccessModel;
+                  if (finalUser != null) {
+                    context.read<AppCubit>().addUser(finalUser);
+                  }
                 }
               },
             ),
           );
         },
-        child: Scaffold(
-          // appBar: AppBar(
-          //   toolbarHeight: 40,
-          //   leading:
-          //       _currentStep > 0
-          //           ? IconButton(
-          //             icon: const Icon(Icons.arrow_back_ios),
-          //             onPressed: _previousStep,
-          //           )
-          //           : null,
-          // ),
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (_currentStep > 0) {
+              _previousStep();
+            } else {
+              Navigator.of(context).pop();
+            }
+          },
+          child: Scaffold(
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                onPressed: () {
+                  if (_currentStep > 0) {
+                    _previousStep();
+                  } else {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+            ),
           body: Container(
             padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
             height: MediaQuery.of(context).size.height,
@@ -698,8 +715,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                   (r) => login = r, // Success model
                                 ),
                               );
-                              id = login!.customer?.id;
-                              print('id iss--${login!.customer?.id}');
+                              // Fallback to loginSuccessModel if state onboardingUser is empty
+                              id = login?.customer?.id ?? widget.loginSuccessModel?.customer?.id;
+                              print('id iss--${id}');
 
                               if (id != null) {
                                 context
@@ -729,6 +747,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                                 'profile_completeness': 1,
                                               },
                                     );
+                              } else {
+                                // If still no ID, just advance to next step
+                                _nextStep();
                               }
                               // _nextStep();
                             },
@@ -767,7 +788,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                   (r) => login = r, // Success model
                                 ),
                               );
-                              id = login?.customer?.id;
+                              // Fallback to loginSuccessModel if state onboardingUser is empty
+                              id = login?.customer?.id ?? widget.loginSuccessModel?.customer?.id;
                               if (id != null) {
                                 context
                                     .read<CreateAccountCubit>()
@@ -790,6 +812,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                                     otherConditions,
                                               },
                                     );
+                              } else {
+                                // If still no ID, just advance to next step
+                                _nextStep();
                               }
                             },
                             onSkip: () {
@@ -828,7 +853,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                               print(targetGoal.contains('Other'));
                               print(targetGoal);
 
-                              id = login?.customer?.id;
+                              id = login?.customer?.id ?? widget.loginSuccessModel?.customer?.id;
                               if (id != null) {
                                 context
                                     .read<CreateAccountCubit>()
@@ -839,18 +864,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                                         'target_goal_other': targetGoalOther,
                                         'profile_completeness': 3,
                                       },
-                                      // targetGoal.contains('Other')
-                                      //     ? {
-                                      //       'target_goal': targetGoal,
-                                      //       'target_goal_other':
-                                      //           targetGoalOther,
-                                      //       'profile_completeness': 3,
-                                      //     }
-                                      //     : {
-                                      //       'target_goal': targetGoal,
-                                      //       'profile_completeness': 3,
-                                      //     },
                                     );
+                              } else {
+                                _nextStep();
                               }
                             },
                           );
@@ -926,6 +942,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   ),
                 ),
               ],
+            ),
             ),
           ),
         ),
