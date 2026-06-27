@@ -1793,6 +1793,12 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
   Widget _buildExerciseCard(Map<String, dynamic> exercise, int exerciseIndex) {
     final sets = exercise['sets'] as List<Map<String, dynamic>>;
+    final subtitle = (exercise['subtitle']?.toString() ?? '').toLowerCase();
+    final isTimeBased = subtitle.contains('cardio') ||
+        subtitle.contains('flexibility') ||
+        subtitle.contains('hiit') ||
+        sets.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
+    final repsHeader = isTimeBased ? 'Sec' : 'Rep';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -1963,12 +1969,12 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ),
                   ),
                 ),
-                const Expanded(
+                Expanded(
                   flex: 2,
                   child: Text(
-                    'Rep',
+                    repsHeader,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
