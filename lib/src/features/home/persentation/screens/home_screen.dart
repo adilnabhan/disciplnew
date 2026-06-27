@@ -158,9 +158,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildActiveGymSection(ActiveMembershipModel activeMembership) {
     final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
+    final now = DateTime.now();
+    final localEndDate = activeMembership.endDate?.toLocal();
     final remainingDays = isPending
         ? 0
-        : (activeMembership.endDate?.toLocal().difference(DateTime.now()).inDays ?? 0);
+        : (localEndDate != null
+            ? DateTime(localEndDate.year, localEndDate.month, localEndDate.day)
+                .difference(DateTime(now.year, now.month, now.day))
+                .inDays
+            : 0);
+    final bool isExpired = !isPending && (activeMembership.status?.toLowerCase() == 'expired' || remainingDays < 0);
 
     return InkWell(
       onTap: () {
@@ -179,7 +186,9 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isPending ? const Color(0xFFFFB74D) : const Color(0xFFF1D1D2),
+            color: isPending 
+                ? const Color(0xFFFFB74D) 
+                : (isExpired ? const Color(0xFFD30C15) : const Color(0xFFF1D1D2)),
             width: 0.8,
           ),
           boxShadow: const [
@@ -294,30 +303,37 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: const Color(0xFFE65100),
                       ),
                     )
-                  : Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Subscription Expires in',
-                            style: AppStyles.text12Px.poppins.w400.copyWith(
-                              color: const Color(0xFF222222),
-                            ),
+                  : isExpired
+                      ? Text(
+                          'Subscription Expired',
+                          style: AppStyles.text12Px.poppins.w600.copyWith(
+                            color: const Color(0xFFD30C15),
                           ),
+                        )
+                      : Text.rich(
                           TextSpan(
-                            text: ' ',
-                            style: AppStyles.text12Px.poppins.w500.copyWith(
-                              color: const Color(0xFF222222),
-                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Subscription Expires in',
+                                style: AppStyles.text12Px.poppins.w400.copyWith(
+                                  color: const Color(0xFF222222),
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' ',
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  color: const Color(0xFF222222),
+                                ),
+                              ),
+                              TextSpan(
+                                text: '$remainingDays Days',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF222222),
+                                ),
+                              ),
+                            ],
                           ),
-                          TextSpan(
-                            text: '$remainingDays Days',
-                            style: AppStyles.text12Px.poppins.w600.copyWith(
-                              color: const Color(0xFF222222),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
             ),
           ],
         ),
@@ -533,7 +549,7 @@ Widget _buildDidYouKnowSection() {
           ),
           // const SizedBox(height: 24),
           // Text(
-          //   'Built by fitness lovers 🧡',
+          //   'Built by fitness lovers \u{1F9E1}',
           //   style: AppStyles.text14Px.poppins.w400.copyWith(
           //     color: const Color(0xff666666),
           //   ),
@@ -754,5 +770,3 @@ class _BannersViewState extends State<BannersView> {
     );
   }
 }
-
-

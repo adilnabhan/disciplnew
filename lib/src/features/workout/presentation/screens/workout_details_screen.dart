@@ -357,6 +357,17 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final logs = data['logs'] as List? ?? [];
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
+    bool isWithinOneHour = false;
+    if (completedAt != null && completedAt != 'null') {
+      try {
+        final completedTime = DateTime.parse(completedAt).toLocal();
+        final now = DateTime.now();
+        isWithinOneHour = now.difference(completedTime).inMinutes < 60;
+      } catch (_) {}
+    }
+
+    final bool isEditable = status != 'COMPLETED' || isWithinOneHour;
+
     final duration = _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
 
@@ -492,7 +503,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         else
           ...List.generate(logs.length, (index) {
             final log = logs[index] as Map<String, dynamic>;
-            return _buildExerciseCard(log, index, status);
+            return _buildExerciseCard(log, index, isEditable);
           }),
 
         if (status != 'COMPLETED') ...[
@@ -536,7 +547,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     );
   }
 
-  Widget _buildExerciseCard(Map<String, dynamic> log, int index, String status) {
+  Widget _buildExerciseCard(Map<String, dynamic> log, int index, bool isEditable) {
     final workoutName = log['workout_name']?.toString() ?? 'Exercise';
     final planExerciseId = log['plan_exercise'] ?? log['workout_id'] ?? log['id'];
     final muscle = log['muscle']?.toString() ?? '';
@@ -575,6 +586,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     if (equipment.isNotEmpty) tags.add(equipment);
     if (type != null && type.isNotEmpty) tags.add(type);
     final subtitle = tags.join(' / ');
+
+    final String repsHeader = setLogs.isNotEmpty && setLogs.any((s) => s['input_type'] == 'seconds') ? 'Secs' : 'Reps';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -688,7 +701,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                   ),
                 ),
-                if (status != 'COMPLETED')
+                if (isEditable)
                   Expanded(
                     flex: 3,
                     child: Text(
@@ -701,8 +714,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                 Expanded(
                   flex: 3,
                   child: Text(
-                    status == 'COMPLETED' ? 'Weight' : 'Weight (kg)',
-                    textAlign: status == 'COMPLETED' ? TextAlign.left : TextAlign.center,
+                    !isEditable ? 'Weight' : 'Weight (kg)',
+                    textAlign: !isEditable ? TextAlign.left : TextAlign.center,
                     style: AppStyles.text12Px.poppins.w500.copyWith(
                       color: const Color(0xFF212121),
                     ),
@@ -711,7 +724,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                 Expanded(
                   flex: 3,
                   child: Text(
-                    'Reps',
+                    repsHeader,
                     textAlign: TextAlign.center,
                     style: AppStyles.text12Px.poppins.w500.copyWith(
                       color: const Color(0xFF212121),
@@ -764,7 +777,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                     child: Row(
                       children: [
-                        if (status == 'COMPLETED') ...[
+                        if (!isEditable) ...[
                           Expanded(
                             flex: 2,
                             child: Text(
@@ -999,7 +1012,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               );
             }),
 
-          if (status != 'COMPLETED') ...[
+          if (isEditable) ...[
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
