@@ -153,8 +153,8 @@ class _AaddReviewScreenState extends State<AaddReviewScreen> {
                       Text(
                         membership.startDate != null
                             ? DateFormat(
-                              'dd MMM yyyy',
-                            ).format(membership.startDate!)
+                                'dd MMM yyyy',
+                              ).format(membership.startDate!.toLocal())
                             : '-',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           fontWeight: FontWeight.bold,

@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:lottie/lottie.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/widgets/workout_history_calendar.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/customer_membership_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/home_cubit.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/home_model.dart';
@@ -65,6 +66,62 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Expired Warning Banner
+            BlocBuilder<DashboardCubit, DashboardState>(
+              bloc: _dashboardCubit,
+              builder: (context, dashboardState) {
+                return dashboardState.activeMembershipData.fold(
+                  () => const SizedBox.shrink(),
+                  (either) => either.fold((_) => const SizedBox.shrink(), (
+                    activeMembership,
+                  ) {
+                    if (activeMembership == null) return const SizedBox.shrink();
+                    final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
+                    final now = DateTime.now();
+                    final localEndDate = activeMembership.endDate?.toLocal();
+                    final remainingDays = isPending
+                        ? 0
+                        : (localEndDate != null
+                            ? DateTime(localEndDate.year, localEndDate.month, localEndDate.day)
+                                .difference(DateTime(now.year, now.month, now.day))
+                                .inDays
+                            : 0);
+                    final bool isExpired = !isPending && (activeMembership.status?.toLowerCase() == 'expired' || remainingDays < 0);
+                    if (!isExpired) return const SizedBox.shrink();
+
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF2F2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFD1D1), width: 1),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            '⚠ ',
+                            style: TextStyle(fontSize: 16, color: Color(0xFFD30C15)),
+                          ),
+                          Expanded(
+                            child: Text(
+                              'Your membership plan has expired. Please renew your subscription to continue enjoying premium benefits.',
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: const Color(0xFFD30C15),
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+
             // Active Gym Section (only if user has active membership data)
             BlocBuilder<DashboardCubit, DashboardState>(
               bloc: _dashboardCubit,
@@ -171,15 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return InkWell(
       onTap: () {
-        final gymId = activeMembership.organization?.id;
-        if (gymId != null) {
-          context.push(
-            FitnessCenterDetailsScreen(
-              fitnessCenterId: gymId,
-              activeMembership: activeMembership,
-            ),
-          );
-        }
+        context.push(
+          CustomerMembershipDetailsScreen(
+            membership: activeMembership,
+          ),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(16),

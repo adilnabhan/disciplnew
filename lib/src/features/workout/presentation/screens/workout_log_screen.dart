@@ -557,6 +557,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         if (durationStr == '--:--' && workoutItem['duration'] != null) {
           durationStr = workoutItem['duration'].toString();
         }
+        final bool isExpired = workoutItem['membership_status']?.toString().toLowerCase() == 'expired';
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -568,6 +569,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               isCompleted: isCompleted,
               duration: durationStr,
               trainerName: workoutItem['trainer_name']?.toString(),
+              isMembershipExpired: isExpired,
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -1013,6 +1015,7 @@ class _WorkoutCard extends StatelessWidget {
     this.duration,
     this.onTap,
     this.trainerName,
+    this.isMembershipExpired = false,
   });
 
   final int index;
@@ -1023,6 +1026,7 @@ class _WorkoutCard extends StatelessWidget {
   final String? duration;
   final VoidCallback? onTap;
   final String? trainerName;
+  final bool isMembershipExpired;
 
   @override
   Widget build(BuildContext context) {
@@ -1209,6 +1213,28 @@ class _WorkoutCard extends StatelessWidget {
         // CompletedBadge overlay at top right of the card
         if (isCompleted)
           const Positioned(top: -7.0, right: -5.35, child: CompletedBadge()),
+        if (isMembershipExpired)
+          Positioned(
+            top: -7.0,
+            right: isCompleted ? 32.0 : -5.35,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFD30C15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+              child: const Text(
+                'Expired',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

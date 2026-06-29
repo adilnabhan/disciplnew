@@ -12,7 +12,7 @@ class PaymentHistoryTile extends StatelessWidget {
     final paymentType = paymentHistory.paymentType ?? 'Unknown';
     final date = paymentHistory.paymentDate;
     final formattedDate =
-        date != null ? DateFormat('dd MMM yyyy').format(date) : 'Unknown Date';
+        date != null ? DateFormat('dd MMM yyyy').format(date.toLocal()) : 'Unknown Date';
 
     IconData icon;
     Color iconColor;

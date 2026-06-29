@@ -465,6 +465,32 @@ final class WorkoutRepository {
     }
   }
 
+  Future<Either<ApiException, Map<String, dynamic>>> getWorkoutCalendarForMonth({
+    required int year,
+    required int month,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.get<dynamic>(
+          'customer/workout-calendar/',
+          queryParameters: {'year': year, 'month': month},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 && res.data != null && res.data is Map<String, dynamic>) {
+            return right(res.data as Map<String, dynamic>);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
 
   Future<Either<ApiException, List<PresetModel>>> getPresets() async {
     try {

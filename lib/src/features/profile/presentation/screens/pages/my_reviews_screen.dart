@@ -365,7 +365,7 @@ class CurrentGymCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  membership.startDate?.format('dd MMM yyyy') ?? '23 May 2025',
+                  membership.startDate?.toLocal().format('dd MMM yyyy') ?? '23 May 2025',
                   style: AppStyles.text14Px.poppins.w600.copyWith(
                     color: Colors.black54,
                   ),
