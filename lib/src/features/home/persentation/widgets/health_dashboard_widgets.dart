@@ -1,5 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/core/network/dio_client.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 // ============================================================================
 // 1. HEALTH DASHBOARD WIDGET (SECTION RENDERED ON HOME SCREEN)
@@ -656,11 +657,13 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   bool _isLoading = true;
   final TextEditingController _postController = TextEditingController();
   XFile? _selectedImage;
+  Map<String, dynamic>? _todaysWorkout;
 
   @override
   void initState() {
     super.initState();
     _fetchFeed();
+    _fetchTodaysWorkout();
   }
 
   Future<void> _fetchFeed() async {
@@ -675,6 +678,23 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _fetchTodaysWorkout() async {
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final response = await WorkoutRepository().getWorkoutLogForDate(date: dateStr);
+      response.fold(
+        (error) => null,
+        (list) {
+          if (list.isNotEmpty) {
+            setState(() {
+              _todaysWorkout = list.first as Map<String, dynamic>;
+            });
+          }
+        },
+      );
+    } catch (_) {}
   }
 
   Future<void> _pickImage() async {
@@ -754,7 +774,53 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // Create Post card
+                if (_todaysWorkout != null)
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xffFFF4F4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xffF0B5B7)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Today's Workout Logged!",
+                                style: AppStyles.text12Px.poppins.w600.copyWith(color: AppColors.primary),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _todaysWorkout!['title']?.toString() ?? 'My Workout',
+                                style: AppStyles.text14Px.poppins.w600.dark,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "Status: ${_todaysWorkout!['status']?.toString().toUpperCase() ?? 'COMPLETED'}",
+                                style: AppStyles.text12Px.poppins.copyWith(color: Colors.grey.shade700),
+                              ),
+                            ],
+                          ),
+                        ),
+                        TextButton.icon(
+                          onPressed: () {
+                            final wTitle = _todaysWorkout!['title']?.toString() ?? 'My Workout';
+                            _postController.text = "Just completed my workout today: $wTitle! 🏋️‍♂️";
+                          },
+                          icon: const Icon(Icons.share, size: 16, color: AppColors.primary),
+                          label: const Text(
+                            "Share",
+                            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.all(16),

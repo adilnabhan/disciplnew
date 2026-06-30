@@ -10,6 +10,7 @@ class OwnWorkoutScreen extends StatefulWidget {
   final PresetModel? presetToEdit;
   final PresetCubit? presetCubit;
   final PresetModel? presetToStart;
+  final int? sessionId;
 
   const OwnWorkoutScreen({
     super.key,
@@ -18,6 +19,7 @@ class OwnWorkoutScreen extends StatefulWidget {
     this.presetToEdit,
     this.presetCubit,
     this.presetToStart,
+    this.sessionId,
   });
 
   @override
@@ -39,6 +41,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
       startFresh: widget.isPresetCreation ? false : widget.isNewSession,
       presetToStart: widget.presetToStart,
       isPresetCreation: widget.isPresetCreation,
+      sessionId: widget.sessionId,
     );
     _titleController = TextEditingController();
     _titleFocusNode = FocusNode();

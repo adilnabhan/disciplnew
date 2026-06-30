@@ -264,11 +264,13 @@ final class WorkoutRepository {
   Future<Either<ApiException, dynamic>> startSession({
     required String title,
     int? presetId,
+    int? sessionId,
   }) async {
     try {
       final body = <String, dynamic>{
         'title': title,
         if (presetId != null) 'preset_id': presetId,
+        if (sessionId != null) 'session_id': sessionId,
       };
       return await Feggy.async(
         call: _dio.post<dynamic>(

@@ -10,11 +10,13 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   List<Map<String, String>> _allCustomExercises = [];
   String? startedAt;
   final bool isPresetCreation;
+  final int? sessionId;
 
   WorkoutCubit({
     bool startFresh = false,
     PresetModel? presetToStart,
     this.isPresetCreation = false,
+    this.sessionId,
   }) : super(
          const WorkoutState(
            exercises: [],
@@ -37,7 +39,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         emit(state.copyWith(isLoadingActiveSession: false));
         return;
       }
-      if (presetToStart != null) {
+      if (sessionId != null) {
+        await resumeOrCreateSessionById(sessionId!);
+      } else if (presetToStart != null) {
         await startPresetSession(presetToStart);
       } else if (startFresh) {
         await startNewSession();
@@ -46,6 +50,38 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       }
     } catch (e) {
       print('DEBUG: Exception during WorkoutCubit _init: $e');
+      emit(state.copyWith(isLoadingActiveSession: false));
+    }
+  }
+
+  Future<void> resumeOrCreateSessionById(int targetSessionId) async {
+    emit(
+      state.copyWith(
+        exercises: [],
+        sessionTitle: 'My Session',
+        isLoadingActiveSession: true,
+      ),
+    );
+    try {
+      print('DEBUG: Calling startSession with session_id: $targetSessionId...');
+      final result = await WorkoutRepository().startSession(
+        title: 'My Session',
+        sessionId: targetSessionId,
+      );
+
+      await result.fold(
+        (error) async {
+          print('DEBUG: Error starting/resuming session by ID: $error');
+          emit(state.copyWith(isLoadingActiveSession: false));
+        },
+        (data) async {
+          print('DEBUG: Successfully started/resumed session by ID on backend!');
+          await loadActiveSession();
+          emit(state.copyWith(isLoadingActiveSession: false));
+        },
+      );
+    } catch (e) {
+      print('DEBUG: Exception in resumeOrCreateSessionById: $e');
       emit(state.copyWith(isLoadingActiveSession: false));
     }
   }

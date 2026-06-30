@@ -673,17 +673,31 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
                 );
                 if (sessionId != null) {
-                  final refresh = await Navigator.push<dynamic>(
-                    context,
-                    MaterialPageRoute<dynamic>(
-                      builder:
-                          (context) => WorkoutDetailsScreen(
-                            sessionId: sessionId,
-                            fallbackTitle: title,
-                          ),
-                    ),
-                  );
-                  if (refresh == true) {
+                  if (isCompleted) {
+                    final refresh = await Navigator.push<dynamic>(
+                      context,
+                      MaterialPageRoute<dynamic>(
+                        builder:
+                            (context) => WorkoutDetailsScreen(
+                              sessionId: sessionId,
+                              fallbackTitle: title,
+                            ),
+                      ),
+                    );
+                    if (refresh == true) {
+                      _loadWorkoutLogForSelectedDate();
+                    }
+                  } else {
+                    final refresh = await Navigator.push<dynamic>(
+                      context,
+                      MaterialPageRoute<dynamic>(
+                        builder:
+                            (context) => OwnWorkoutScreen(
+                              isNewSession: false,
+                              sessionId: sessionId,
+                            ),
+                      ),
+                    );
                     _loadWorkoutLogForSelectedDate();
                   }
                 } else {
