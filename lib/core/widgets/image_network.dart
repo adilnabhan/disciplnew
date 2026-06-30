@@ -119,9 +119,9 @@ class ImageNetwork extends StatelessWidget {
       // ❌ NO resizing → keeps full clarity
       // memCacheWidth / memCacheHeight REMOVED
 
-      // Faster appearance
-      fadeInDuration: Duration.zero,
-      fadeOutDuration: Duration.zero,
+      // Faster appearance with premium subtle fade
+      fadeInDuration: const Duration(milliseconds: 250),
+      fadeOutDuration: const Duration(milliseconds: 250),
 
       // Keep shimmer
       placeholder: (_, __) {

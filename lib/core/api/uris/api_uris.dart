@@ -78,6 +78,8 @@ final class ApiUris {
   static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
   static String addSetToLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/sets/';
+  static String deleteWorkoutLog(int logId) =>
+      '${_v1}customer/workout-logs/$logId/';
   static String updateSetLog(int setLogId) =>
       '${_v1}customer/set-logs/$setLogId/';
   static final workoutLog = '${_v1}customer/workout-log/';

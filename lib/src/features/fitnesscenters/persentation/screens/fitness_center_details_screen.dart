@@ -4,10 +4,32 @@ import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 
 class FitnessCenterDetailsScreen extends StatefulWidget {
-  const FitnessCenterDetailsScreen({required this.fitnessCenterId, this.activeMembership, super.key});
+  const FitnessCenterDetailsScreen({
+    required this.fitnessCenterId,
+    this.activeMembership,
+    this.previewData,
+    super.key,
+  });
 
   final int fitnessCenterId;
   final ActiveMembershipModel? activeMembership;
+  final SingleFItnessCenterModel? previewData;
+
+  static FitnesscenterDetailsModel fromPreview(SingleFItnessCenterModel preview) {
+    return FitnesscenterDetailsModel(
+      id: preview.id,
+      name: preview.name,
+      description: preview.description,
+      email: preview.email,
+      phoneNumber: preview.phoneNumber,
+      location: preview.location,
+      logo: preview.logo,
+      categories: preview.gymCategories?.map((c) => Amenity(id: c.id, name: c.name)).toList(),
+      reviewCount: preview.reviewCount,
+      averageRating: preview.averageRating,
+      photos: preview.logo != null ? [Photo(id: 0, image: preview.logo, isPrimary: true)] : [],
+    );
+  }
 
   @override
   State<FitnessCenterDetailsScreen> createState() => _FitnessCenterDetailsScreenState();
@@ -24,7 +46,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
   @override
   void initState() {
     super.initState();
-    _cubit = FitnessCenterDetailsCubit(id: widget.fitnessCenterId);
+    final FitnesscenterDetailsModel? initialDetails = widget.previewData != null
+        ? FitnessCenterDetailsScreen.fromPreview(widget.previewData!)
+        : null;
+    _cubit = FitnessCenterDetailsCubit(id: widget.fitnessCenterId, previewData: initialDetails);
     _fetch();
   }
 
@@ -97,26 +122,28 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
         backgroundColor: AppColors.lightGrey,
         body: BlocBuilder<FitnessCenterDetailsCubit, FitnessCenterDetailsState>(
           builder: (context, state) {
-            return state.fitnessCenterDetails.fold(
-              () => const Center(child: CircularProgressIndicator()),
-              (either) => either.fold(
-                (error) {
-                  return error
-                      .maybeWhen(network: (e) => ErrorUi.network(onTap: _fetchDetails), notFound: (e) => ErrorUi.notFound(onTap: _fetchDetails), orElse: () => ErrorUi.server(onTap: _fetchDetails))
-                      .center;
-                },
-                (details) => state.fitnessCenterReviews.fold(
-                  () => const Center(child: CircularProgressIndicator()),
-                  (either) => either.fold(
-                    (error) {
-                      return error
-                          .maybeWhen(network: (e) => ErrorUi.network(onTap: _fetchReviews), notFound: (e) => ErrorUi.notFound(onTap: _fetchReviews), orElse: () => ErrorUi.server(onTap: _fetchReviews))
-                          .center;
-                    },
-                    (reviews) {
-                      return _buildDetailsView(details, reviews);
-                    },
-                  ),
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: state.fitnessCenterDetails.fold(
+                () => _buildShimmerDetailsView(key: const ValueKey('shimmer')),
+                (eitherDetails) => eitherDetails.fold(
+                  (error) => error
+                      .maybeWhen(
+                        network: (e) => ErrorUi.network(onTap: _fetchDetails),
+                        notFound: (e) => ErrorUi.notFound(onTap: _fetchDetails),
+                        orElse: () => ErrorUi.server(onTap: _fetchDetails),
+                      )
+                      .center,
+                  (details) {
+                    final reviews = state.fitnessCenterReviews.fold(
+                      () => null,
+                      (eitherReviews) => eitherReviews.fold(
+                        (error) => null,
+                        (r) => r,
+                      ),
+                    );
+                    return _buildDetailsView(details, reviews, key: const ValueKey('details'));
+                  },
                 ),
               ),
             );
@@ -143,7 +170,114 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     );
   }
 
-  Widget _buildDetailsView(FitnesscenterDetailsModel details, FitnessCenterReviewsModel reviews) {
+  Widget _buildShimmerDetailsView({Key? key}) {
+    return SingleChildScrollView(
+      key: key,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Shimmer header
+              Shimmer.fromColors(
+                baseColor: Colors.grey.shade300,
+                highlightColor: Colors.grey.shade100,
+                child: Container(
+                  height: 300,
+                  width: double.infinity,
+                  color: Colors.grey.shade300,
+                ),
+              ),
+              // Interactive Back button (rendered immediately)
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.3),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.4),
+                              width: 1.0,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.chevron_left,
+                            color: Color(0xFF444444),
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Shimmer Profile Card
+              Positioned(
+                bottom: -90,
+                left: 16,
+                right: 16,
+                child: Shimmer.fromColors(
+                  baseColor: Colors.grey.shade300,
+                  highlightColor: Colors.grey.shade100,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    height: 112,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 106),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Column(
+                children: [
+                  Container(
+                    height: 80,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    height: 200,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailsView(FitnesscenterDetailsModel details, FitnessCenterReviewsModel? reviews, {Key? key}) {
     final photos = details.photos?.where((photo) => photo.image != null).toList() ?? [];
     final hasPhotos = photos.isNotEmpty;
 
@@ -152,6 +286,7 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
       _startCarouselTimer(images.length);
 
       return SingleChildScrollView(
+        key: key,
         child: Column(
           children: [
             Stack(
@@ -298,6 +433,7 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     } else {
       // No photos included: remove the carousel and top stack entirely
       return SingleChildScrollView(
+        key: key,
         child: Column(
           children: [
             SafeArea(
@@ -351,10 +487,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     }
   }
 
-  Widget _buildProfileCard(FitnesscenterDetailsModel details, FitnessCenterReviewsModel reviews) {
+  Widget _buildProfileCard(FitnesscenterDetailsModel details, FitnessCenterReviewsModel? reviews) {
     final logoUrl = details.logo;
-    final avgRating = (reviews.results?.avgRating as num?)?.toDouble() ?? 4.5;
-    final reviewCount = reviews.results?.reviewCount ?? 0;
+    final avgRating = reviews != null ? ((reviews.results?.avgRating as num?)?.toDouble() ?? 4.5) : 4.5;
+    final reviewCount = reviews != null ? (reviews.results?.reviewCount ?? 0) : 0;
     final packagesCount = details.packages?.length ?? 0;
 
     return Container(
@@ -422,10 +558,20 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         _buildStatItem('$packagesCount', 'Packages'),
-                        _buildRatingItem(
-                          avgRating.toStringAsFixed(1),
-                          '($reviewCount)',
-                        ),
+                        reviews == null
+                            ? Shimmer.fromColors(
+                                baseColor: Colors.grey.shade300,
+                                highlightColor: Colors.grey.shade100,
+                                child: Container(
+                                  width: 50,
+                                  height: 36,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : _buildRatingItem(
+                                avgRating.toStringAsFixed(1),
+                                '($reviewCount)',
+                              ),
                         _buildDirectionItem(details),
                       ],
                     ),
@@ -810,47 +956,51 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     }
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Wrap(
-        spacing: 16,
-        runSpacing: 16,
-        alignment: WrapAlignment.start,
-        children: amenitiesList.map((amenity) {
-          final name = amenity.name ?? 'Amenity';
-          final icon = _getAmenityIcon(name);
-          return SizedBox(
-            width: 72,
-            child: Column(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    color: AppColors.primary,
-                    size: 24,
-                  ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const columns = 4;
+          const spacing = 8.0;
+          final itemWidth =
+              (constraints.maxWidth - spacing * (columns - 1)) / columns;
+          return Wrap(
+            spacing: spacing,
+            runSpacing: 12,
+            children: amenitiesList.map((amenity) {
+              final name = amenity.name ?? 'Amenity';
+              final icon = _getAmenityIcon(name);
+              return SizedBox(
+                width: itemWidth,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.05),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: AppColors.primary, size: 22),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      name,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  name,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
+              );
+            }).toList(),
           );
-        }).toList(),
+        },
       ),
     );
   }

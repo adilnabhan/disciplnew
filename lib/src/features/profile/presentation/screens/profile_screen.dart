@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -293,6 +294,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                         const SizedBox(height: 16),
                                       ],
+                                      () {
+                                        Membership? activeMembership;
+                                        if (customerDetails.memberships != null &&
+                                            customerDetails.memberships!.isNotEmpty) {
+                                          for (final m in customerDetails.memberships!) {
+                                            if (m.isActive == true ||
+                                                m.status?.toLowerCase() == 'active') {
+                                              activeMembership = m;
+                                              break;
+                                            }
+                                          }
+                                          activeMembership ??=
+                                              customerDetails.memberships!.first;
+                                        }
+                                        return _buildMembershipCard(activeMembership);
+                                      }(),
                                       _buildOtherDetailsSection(
                                         customerDetails,
                                         choicesModel,
@@ -350,7 +367,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (customerDetails.assignedFitnessCenter != null || customerDetails.assignedTrainer != null) ...[
           const SizedBox(height: 12),
           Text(
-            'Assigned Gym & Personal Trainer',
+            'Assigned Gym ',
             style: AppStyles.text16Px.poppins.w600.copyWith(
               color: AppColors.textDark,
             ),
@@ -385,7 +402,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: ClipOval(
                           child: customerDetails.assignedFitnessCenter!['logo'] != null
                               ? Image.network(
-                                  customerDetails.assignedFitnessCenter!['logo'],
+                                  customerDetails.assignedFitnessCenter!['logo'] as String,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: AppColors.primary),
                                 )
@@ -402,7 +419,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
                             ),
                             Text(
-                              customerDetails.assignedFitnessCenter!['name'] ?? 'N/A',
+                              customerDetails.assignedFitnessCenter!['name'] as String? ?? 'N/A',
                               style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
                             ),
                           ],
@@ -425,7 +442,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: ClipOval(
                           child: customerDetails.assignedTrainer!['profile_image'] != null
                               ? Image.network(
-                                  customerDetails.assignedTrainer!['profile_image'],
+                                  customerDetails.assignedTrainer!['profile_image'] as String,
                                   fit: BoxFit.cover,
                                   errorBuilder: (_, __, ___) => const Icon(Icons.person, color: AppColors.primary),
                                 )
@@ -442,7 +459,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
                             ),
                             Text(
-                              customerDetails.assignedTrainer!['name'] ?? 'N/A',
+                              customerDetails.assignedTrainer!['name'] as String? ?? 'N/A',
                               style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
                             ),
                           ],
@@ -592,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 100),
+        const SizedBox(height: 40),
       ],
     );
   }
@@ -653,6 +670,401 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMembershipCard(Membership? membership) {
+    if (membership == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          Text(
+            'Membership',
+            style: AppStyles.text16Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.grey.shade200, width: 1.5),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade400,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.fitness_center,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'No Active Membership',
+                        style: AppStyles.text16Px.poppins.w600.copyWith(
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Please contact your gym to activate.',
+                        style: AppStyles.text12Px.poppins.w500.copyWith(
+                          color: AppColors.textGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      );
+    }
+
+    final String statusStr = membership.status ?? 'Pending';
+    final bool isActive = membership.isActive ?? false;
+    final bool isPending = statusStr.toLowerCase() == 'pending';
+    final localEndDate = membership.endDate?.toLocal();
+    final bool isExpired = !isPending && (statusStr.toLowerCase() == 'expired' || (localEndDate != null && localEndDate.difference(DateTime.now()).inDays < 0));
+    final bool actualIsActive = isActive && !isExpired && !isPending;
+
+    // Remaining days calculation
+    var remainingDays = 0;
+    if (localEndDate != null) {
+      remainingDays = localEndDate.difference(DateTime.now()).inDays;
+      if (remainingDays < 0) remainingDays = 0;
+    }
+
+    // Progress calculation
+    var progress = 0.0;
+    if (membership.startDate != null && membership.endDate != null) {
+      final totalSec =
+          membership.endDate!.difference(membership.startDate!).inSeconds;
+      final elapsedSec =
+          DateTime.now().difference(membership.startDate!).inSeconds;
+      if (totalSec > 0) {
+        progress = elapsedSec / totalSec;
+        if (progress > 1.0) progress = 1.0;
+        if (progress < 0.0) progress = 0.0;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          'Membership',
+          style: AppStyles.text16Px.poppins.w600.copyWith(
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color:
+                  actualIsActive
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : isExpired
+                      ? Colors.red.withValues(alpha: 0.3)
+                      : Colors.orange.withValues(alpha: 0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Card Header
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors:
+                        actualIsActive
+                            ? [Colors.green.shade50, Colors.green.shade100]
+                            : isExpired
+                            ? [Colors.red.shade50, Colors.red.shade100]
+                            : [Colors.orange.shade50, Colors.orange.shade100],
+                  ),
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color:
+                            actualIsActive
+                                ? Colors.green
+                                : isExpired
+                                ? Colors.red
+                                : Colors.orange,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        actualIsActive
+                            ? Icons.fitness_center
+                            : isExpired
+                            ? Icons.cancel
+                            : Icons.pending,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            membership.membershipName ?? 'Standard Plan',
+                            style: AppStyles.text16Px.poppins.w600.copyWith(
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                actualIsActive
+                                    ? Icons.check_circle
+                                    : isExpired
+                                    ? Icons.cancel
+                                    : Icons.schedule,
+                                size: 14,
+                                color:
+                                    actualIsActive
+                                        ? Colors.green
+                                        : isExpired
+                                        ? Colors.red
+                                        : Colors.orange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                actualIsActive
+                                    ? 'Active'
+                                    : isExpired
+                                    ? 'Expired'
+                                    : 'Pending',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
+                                  color:
+                                      actualIsActive
+                                          ? Colors.green
+                                          : isExpired
+                                          ? Colors.red
+                                          : Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Card Content
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Progress bar (only for active/expired)
+                    if (membership.startDate != null &&
+                        membership.endDate != null) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Membership Progress',
+                            style: AppStyles.text13Px.poppins.w600.copyWith(
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          Text(
+                            '${(progress * 100).toInt()}%',
+                            style: AppStyles.text13Px.poppins.w600.copyWith(
+                              color: actualIsActive ? Colors.green : Colors.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: Colors.grey.shade100,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          actualIsActive ? Colors.green : Colors.red,
+                        ),
+                        minHeight: 6,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        !isExpired
+                            ? '🕒 $remainingDays days remaining'
+                            : '✅ Membership completed',
+                        style: AppStyles.text12Px.poppins.w500.copyWith(
+                          color:
+                              !isExpired ? Colors.orange.shade800 : Colors.red,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+
+                    // Details Grid
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMembershipDetailItem(
+                            icon: Icons.calendar_today,
+                            label: 'Start Date',
+                            value:
+                                membership.startDate != null
+                                    ? DateFormat(
+                                      'dd MMM yyyy',
+                                    ).format(membership.startDate!.toLocal())
+                                    : 'N/A',
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMembershipDetailItem(
+                            icon: Icons.event_busy,
+                            label: 'Expiry Date',
+                            value:
+                                membership.endDate != null
+                                    ? DateFormat(
+                                      'dd MMM yyyy',
+                                    ).format(membership.endDate!.toLocal())
+                                    : 'N/A',
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMembershipDetailItem(
+                            icon: Icons.currency_rupee,
+                            label: 'Amount Paid',
+                            value:
+                                membership.amount != null
+                                    ? '₹${membership.amount}'
+                                    : 'N/A',
+                            color: Colors.green,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMembershipDetailItem(
+                            icon: Icons.payment,
+                            label: 'Payment Status',
+                            value:
+                                (membership.paymentStatus ?? 'N/A')
+                                    .toUpperCase(),
+                            color:
+                                (membership.paymentStatus ?? '')
+                                            .toLowerCase() ==
+                                        'completed'
+                                    ? Colors.green
+                                    : Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildMembershipDetailItem(
+                      icon: Icons.category,
+                      label: 'Membership Type',
+                      value: membership.isTrial == true ? 'Trial' : 'Regular',
+                      color: Colors.purple,
+                      fullWidth: true,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  Widget _buildMembershipDetailItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    bool fullWidth = false,
+  }) {
+    return Container(
+      width: fullWidth ? double.infinity : null,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: AppStyles.text12Px.poppins.w500.copyWith(
+                  color: AppColors.textGrey,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppStyles.text13Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 }

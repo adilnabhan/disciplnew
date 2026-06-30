@@ -8,7 +8,9 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> fetchHomeData() async {
     print('home calling');
-    emit(state.copyWith(homeData: none()));
+    if (state.homeData.isNone()) {
+      emit(state.copyWith(homeData: none()));
+    }
     final response = await HomeRepository().home();
     emit(state.copyWith(homeData: some(response)));
   }

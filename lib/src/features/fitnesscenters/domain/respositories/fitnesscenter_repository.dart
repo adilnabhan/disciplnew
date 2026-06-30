@@ -2,7 +2,6 @@ import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:dio/dio.dart';
 
-@immutable
 final class FitnesscenterRepository {
   ///* This constructor body for creating singleton widget
   factory FitnesscenterRepository() {
@@ -15,6 +14,10 @@ final class FitnesscenterRepository {
 
   //* This variable for store this class object globally
   static FitnesscenterRepository? _instance;
+
+  // Caching variables
+  FitnesscenterCategoriesModel? _cachedCategories;
+  final Map<int, List<FitnesscenterMembershipPlansModel>> _cachedMembershipPlans = {};
 
   final Dio _dio = DioClient().dio;
 
@@ -90,8 +93,11 @@ final class FitnesscenterRepository {
   /// @apiSuccess {List<FitnesscenterMembershipPlansModel>} response Success response
   Future<Either<ApiException, List<FitnesscenterMembershipPlansModel>>>
   fitnesscenterMembershipPlans({required int id}) async {
+    if (_cachedMembershipPlans.containsKey(id)) {
+      return right(_cachedMembershipPlans[id]!);
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterMembershipPlans(id),
           options: _options,
@@ -102,6 +108,11 @@ final class FitnesscenterRepository {
               FitnesscenterMembershipPlansModel.fromJson,
             ),
       );
+      response.fold(
+        (_) => null,
+        (plans) => _cachedMembershipPlans[id] = plans,
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -122,8 +133,11 @@ final class FitnesscenterRepository {
   /// @apiSuccess {FitnesscenterCategoriesModel} response Success response
   Future<Either<ApiException, FitnesscenterCategoriesModel>>
   fitnesscenterCategories({Map<String, dynamic>? queryParameters}) async {
+    if (_cachedCategories != null && (queryParameters == null || queryParameters.isEmpty)) {
+      return right(_cachedCategories!);
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterCategories,
           options: _options,
@@ -133,6 +147,15 @@ final class FitnesscenterRepository {
             (res) =>
                 _handleMapResponse(res, FitnesscenterCategoriesModel.fromJson),
       );
+      response.fold(
+        (_) => null,
+        (categories) {
+          if (queryParameters == null || queryParameters.isEmpty) {
+            _cachedCategories = categories;
+          }
+        },
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {

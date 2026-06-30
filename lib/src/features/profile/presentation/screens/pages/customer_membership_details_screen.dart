@@ -237,7 +237,7 @@ class CustomerMembershipDetailsScreen extends StatelessWidget {
                             !isExpired
                                 ? '🕒 $remainingDays days remaining'
                                 : '✅ Membership completed',
-                            style: AppStyles.text11Px.poppins.w500.copyWith(
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
                               color: !isExpired ? Colors.orange.shade800 : Colors.red,
                             ),
                           ),
@@ -426,7 +426,7 @@ class CustomerMembershipDetailsScreen extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: AppStyles.text11Px.poppins.w500.copyWith(color: color),
+                  style: AppStyles.text12Px.poppins.w500.copyWith(color: color),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),

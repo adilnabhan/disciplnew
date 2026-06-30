@@ -104,7 +104,10 @@ class _ButtonState extends State<Button> {
       child:
           widget.outlined ?? false
               ? GestureDetector(
-                onTap: widget.ontap,
+                onTap:
+                    (!widget.isLoading && !widget.isDisabled)
+                        ? () => widget.ontap()
+                        : null,
                 child: Container(
                   height: widget.size?.height ?? 48.h,
                   width: widget.size?.width ?? context.width,

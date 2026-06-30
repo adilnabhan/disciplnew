@@ -3,7 +3,6 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/models.dart';
 import 'package:dio/dio.dart';
 
-@immutable
 final class WorkoutRepository {
   factory WorkoutRepository() {
     _instance ??= WorkoutRepository._internal();
@@ -13,6 +12,12 @@ final class WorkoutRepository {
   WorkoutRepository._internal();
 
   static WorkoutRepository? _instance;
+
+  // Caching variables
+  List<MuscleGroupModel>? _cachedMuscleGroups;
+  List<EquipmentModel>? _cachedEquipment;
+  List<ExerciseTypeModel>? _cachedExerciseTypes;
+  final Map<String, List<ExerciseLibraryModel>> _cachedExerciseLibraries = {};
 
   final Dio _dio = DioClient().dio;
 
@@ -33,8 +38,12 @@ final class WorkoutRepository {
   Future<Either<ApiException, List<ExerciseLibraryModel>>> getExerciseLibrary({
     Map<String, dynamic>? queryParameters,
   }) async {
+    final cacheKey = queryParameters?.toString() ?? 'default';
+    if (_cachedExerciseLibraries.containsKey(cacheKey)) {
+      return right(_cachedExerciseLibraries[cacheKey]!);
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.exercises,
           queryParameters: queryParameters,
@@ -43,6 +52,11 @@ final class WorkoutRepository {
         onSuccess:
             (res) => _handleListResponse(res, ExerciseLibraryModel.fromJson),
       );
+      response.fold(
+        (_) => null,
+        (list) => _cachedExerciseLibraries[cacheKey] = list,
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -52,14 +66,22 @@ final class WorkoutRepository {
   }
 
   Future<Either<ApiException, List<MuscleGroupModel>>> getMuscleGroups() async {
+    if (_cachedMuscleGroups != null) {
+      return right(_cachedMuscleGroups!);
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.muscleGroups,
           options: Options(headers: {'X-Platform': platformSource}),
         ),
         onSuccess: (res) => _handleListResponse(res, MuscleGroupModel.fromJson),
       );
+      response.fold(
+        (_) => null,
+        (list) => _cachedMuscleGroups = list,
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -69,14 +91,22 @@ final class WorkoutRepository {
   }
 
   Future<Either<ApiException, List<EquipmentModel>>> getEquipment() async {
+    if (_cachedEquipment != null) {
+      return right(_cachedEquipment!);
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.equipment,
           options: Options(headers: {'X-Platform': platformSource}),
         ),
         onSuccess: (res) => _handleListResponse(res, EquipmentModel.fromJson),
       );
+      response.fold(
+        (_) => null,
+        (list) => _cachedEquipment = list,
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -87,8 +117,11 @@ final class WorkoutRepository {
 
   Future<Either<ApiException, List<ExerciseTypeModel>>>
   getExerciseTypes() async {
+    if (_cachedExerciseTypes != null) {
+      return right(_cachedExerciseTypes!);
+    }
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.exerciseTypes,
           options: Options(headers: {'X-Platform': platformSource}),
@@ -96,6 +129,11 @@ final class WorkoutRepository {
         onSuccess:
             (res) => _handleListResponse(res, ExerciseTypeModel.fromJson),
       );
+      response.fold(
+        (_) => null,
+        (list) => _cachedExerciseTypes = list,
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -107,6 +145,7 @@ final class WorkoutRepository {
   Future<Either<ApiException, ExerciseLibraryModel>> createCustomExercise({
     required Map<String, dynamic> body,
   }) async {
+    _cachedExerciseLibraries.clear();
     try {
       return await Feggy.async(
         call: _dio.post<dynamic>(
@@ -417,6 +456,32 @@ final class WorkoutRepository {
       return await Feggy.async(
         call: _dio.delete<dynamic>(
           ApiUris.updateSetLog(setLogId),
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 ||
+              res.statusCode == 204 ||
+              res.statusCode == 201) {
+            return right(null);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, void>> deleteWorkoutLog({
+    required int logId,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.delete<dynamic>(
+          ApiUris.deleteWorkoutLog(logId),
           options: Options(headers: {'X-Platform': platformSource}),
         ),
         onSuccess: (res) {

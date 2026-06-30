@@ -63,7 +63,11 @@ class FitnessCenterTile extends StatelessWidget {
           return;
         }
         if (fitnessCenter.id != null) {
-          context.push(FitnessCenterDetailsScreen(fitnessCenterId: fitnessCenter.id ?? 0, activeMembership: activeMembership));
+          context.push(FitnessCenterDetailsScreen(
+            fitnessCenterId: fitnessCenter.id ?? 0,
+            activeMembership: activeMembership,
+            previewData: fitnessCenter,
+          ));
         } else {
           Dialogs.showSnack(msg: 'Fitness center not found');
         }

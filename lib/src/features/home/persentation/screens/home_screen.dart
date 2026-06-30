@@ -9,7 +9,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/home_cubit.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/home_model.dart';
 
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.activeMembership});
 
@@ -31,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
     if (!isGuest) {
       _fetchActiveMembership();
-      _homeCubit.fetchHomeData();
     }
   }
 
@@ -42,18 +40,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchActiveMembership() async {
-    await _dashboardCubit.fetchActiveMembership();
-    if (Feggy.read<AppCubit>()?.state.currentUser != null) {
-      await _homeCubit.fetchHomeData();
-    }
+    await Future.wait([
+      _dashboardCubit.fetchActiveMembership(),
+      if (Feggy.read<AppCubit>()?.state.currentUser != null)
+        _homeCubit.fetchHomeData(),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xffF7F7F7),
-      body: homeView(),
-    );
+    return Scaffold(backgroundColor: const Color(0xffF7F7F7), body: homeView());
   }
 
   Widget homeView() {
@@ -61,7 +57,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return RefreshIndicator(
       onRefresh: _fetchActiveMembership,
       child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
         padding: const EdgeInsets.symmetric(vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -75,35 +73,60 @@ class _HomeScreenState extends State<HomeScreen> {
                   (either) => either.fold((_) => const SizedBox.shrink(), (
                     activeMembership,
                   ) {
-                    if (activeMembership == null) return const SizedBox.shrink();
-                    final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
+                    if (activeMembership == null)
+                      return const SizedBox.shrink();
+                    final bool isPending =
+                        activeMembership.status?.toLowerCase() == 'pending';
                     final now = DateTime.now();
                     final localEndDate = activeMembership.endDate?.toLocal();
-                    final remainingDays = isPending
-                        ? 0
-                        : (localEndDate != null
-                            ? DateTime(localEndDate.year, localEndDate.month, localEndDate.day)
-                                .difference(DateTime(now.year, now.month, now.day))
-                                .inDays
-                            : 0);
-                    final bool isExpired = !isPending && (activeMembership.status?.toLowerCase() == 'expired' || remainingDays < 0);
+                    final remainingDays =
+                        isPending
+                            ? 0
+                            : (localEndDate != null
+                                ? DateTime(
+                                      localEndDate.year,
+                                      localEndDate.month,
+                                      localEndDate.day,
+                                    )
+                                    .difference(
+                                      DateTime(now.year, now.month, now.day),
+                                    )
+                                    .inDays
+                                : 0);
+                    final bool isExpired =
+                        !isPending &&
+                        (activeMembership.status?.toLowerCase() == 'expired' ||
+                            remainingDays < 0);
                     if (!isExpired) return const SizedBox.shrink();
 
                     return Container(
                       width: double.infinity,
-                      margin: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      margin: const EdgeInsets.only(
+                        left: 16,
+                        right: 16,
+                        bottom: 16,
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFFFF2F2),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFFFD1D1), width: 1),
+                        border: Border.all(
+                          color: const Color(0xFFFFD1D1),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
                             '⚠ ',
-                            style: TextStyle(fontSize: 16, color: Color(0xFFD30C15)),
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFFD30C15),
+                            ),
                           ),
                           Expanded(
                             child: Text(
@@ -131,7 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   (either) => either.fold((_) => const SizedBox.shrink(), (
                     activeMembership,
                   ) {
-                    if (activeMembership == null) return const SizedBox.shrink();
+                    if (activeMembership == null)
+                      return const SizedBox.shrink();
                     return Column(
                       children: [
                         _buildActiveGymSection(activeMembership).pxy(x: 16),
@@ -144,11 +168,13 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // Carousel Banners (using local assets)
-            BannersView(banners: const [
-              'assets/images/carousel_images/discipl_carousel .png',
-              'assets/images/carousel_images/carousel_discipl.jpg',
-            ]).pxy(x: 16),
-  
+            BannersView(
+              banners: const [
+                'assets/images/carousel_images/discipl_carousel .png',
+                'assets/images/carousel_images/carousel_discipl.jpg',
+              ],
+            ).pxy(x: 16),
+
             // Trainer Card under Banners View
             if (!isGuest)
               BlocBuilder<HomeCubit, HomeState>(
@@ -156,37 +182,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 builder: (context, homeState) {
                   return homeState.homeData.fold(
                     () => const SizedBox.shrink(),
-                    (either) => either.fold(
-                      (_) => const SizedBox.shrink(),
-                      (homeModel) {
-                        final trainer = homeModel.assignedTrainer;
-                        if (trainer == null) return const SizedBox.shrink();
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 20),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                'Assigned Trainer',
-                                style: AppStyles.text14Px.poppins.w600.copyWith(
-                                  color: const Color(0xFF222222),
-                                ),
+                    (either) => either.fold((_) => const SizedBox.shrink(), (
+                      homeModel,
+                    ) {
+                      final trainer = homeModel.assignedTrainer;
+                      if (trainer == null) return const SizedBox.shrink();
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Assigned Trainer',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(
+                                color: const Color(0xFF222222),
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            _buildTrainerCard(trainer).pxy(x: 16),
-                          ],
-                        );
-                      },
-                    ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildTrainerCard(trainer).pxy(x: 16),
+                        ],
+                      );
+                    }),
                   );
                 },
               ),
 
             // Reduced gap before calendar/card
             const SizedBox(height: 8),
-  
+
             if (isGuest)
               _membershipExpireCard(context)
             else
@@ -202,9 +227,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   ).pxy(x: 8);
                 },
               ),
-  
+
             const SizedBox(height: 24),
-  
+
             // Did You Know Section (always shown)
             _buildDidYouKnowSection(),
           ],
@@ -217,179 +242,187 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
     final now = DateTime.now();
     final localEndDate = activeMembership.endDate?.toLocal();
-    final remainingDays = isPending
-        ? 0
-        : (localEndDate != null
-            ? DateTime(localEndDate.year, localEndDate.month, localEndDate.day)
-                .difference(DateTime(now.year, now.month, now.day))
-                .inDays
-            : 0);
-    final bool isExpired = !isPending && (activeMembership.status?.toLowerCase() == 'expired' || remainingDays < 0);
+    final remainingDays =
+        isPending
+            ? 0
+            : (localEndDate != null
+                ? DateTime(
+                  localEndDate.year,
+                  localEndDate.month,
+                  localEndDate.day,
+                ).difference(DateTime(now.year, now.month, now.day)).inDays
+                : 0);
+    final bool isExpired =
+        !isPending &&
+        (activeMembership.status?.toLowerCase() == 'expired' ||
+            remainingDays < 0);
 
-    return InkWell(
-      onTap: () {
-        context.push(
-          CustomerMembershipDetailsScreen(
-            membership: activeMembership,
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isPending 
-                ? const Color(0xFFFFB74D) 
-                : (isExpired ? const Color(0xFFD30C15) : const Color(0xFFF1D1D2)),
-            width: 0.8,
-          ),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x1E888888),
-              blurRadius: 8,
-              offset: Offset(0, 4),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color:
+              isPending
+                  ? const Color(0xFFFFB74D)
+                  : (isExpired
+                      ? const Color(0xFFD30C15)
+                      : const Color(0xFFF1D1D2)),
+          width: 0.8,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Row: Gym logo, name, plan, and trailing icon
-            Row(
-              children: [
-                // Gym Logo
-                Container(
-                  decoration: const ShapeDecoration(
-                    shape: OvalBorder(
-                      side: BorderSide(color: Color(0xFFCF0B10)),
-                    ),
-                  ),
-                  child: AbsorbPointer(
-                    child: ProfileImage(
-                      isEdit: false,
-                      radius: 48,
-                      url: activeMembership.organization?.logo ?? '',
-                    ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1E888888),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Gym logo, name, plan, and trailing icon
+          Row(
+            children: [
+              // Gym Logo
+              Container(
+                decoration: const ShapeDecoration(
+                  shape: OvalBorder(side: BorderSide(color: Color(0xFFCF0B10))),
+                ),
+                child: AbsorbPointer(
+                  child: ProfileImage(
+                    isEdit: false,
+                    radius: 48,
+                    url: activeMembership.organization?.logo ?? '',
                   ),
                 ),
-                const SizedBox(width: 14),
-                // Gym Name and Plan
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        activeMembership.organization?.name ?? '',
-                        style: AppStyles.text13Px.poppins.w500.copyWith(
-                          color: const Color(0xFF222222),
-                        ),
+              ),
+              const SizedBox(width: 14),
+              // Gym Name and Plan
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      activeMembership.organization?.name ?? '',
+                      style: AppStyles.text15Px.poppins.w600.copyWith(
+                        color: const Color(0xFF222222),
                       ),
-                      const SizedBox(height: 6),
+                    ),
+                    const SizedBox(height: 6),
 
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 4,
-                        ),
-                        decoration: ShapeDecoration(
-                          gradient: LinearGradient(
-                            begin: const Alignment(0, 0.50),
-                            end: const Alignment(1, 0.50),
-                            colors: isPending
-                                ? [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 4,
+                      ),
+                      decoration: ShapeDecoration(
+                        gradient: LinearGradient(
+                          begin: const Alignment(0, 0.50),
+                          end: const Alignment(1, 0.50),
+                          colors:
+                              isPending
+                                  ? [
                                     const Color(0xFFFFF3E0),
                                     const Color(0xFFFFE0B2),
                                     const Color(0xFFFFF3E0),
                                   ]
-                                : [
+                                  : [
                                     const Color(0xFFF7F7F7),
                                     const Color(0xFFDDDDDD),
                                     const Color(0xFFF7F7F7),
                                   ],
-                          ),
-                          shape: RoundedRectangleBorder(
-                            side: BorderSide(
-                              width: 0.50,
-                              strokeAlign: BorderSide.strokeAlignOutside,
-                              color: isPending ? const Color(0xFFFFB74D) : const Color(0xFFDDDDDD),
-                            ),
-                            borderRadius: BorderRadius.circular(5),
-                          ),
                         ),
-                        child: Text(
-                          isPending ? 'Pending Approval' : (activeMembership.planName ?? ''),
-                          style: AppStyles.text12Px.poppins.w500.copyWith(
-                            color: isPending ? const Color(0xFFE65100) : Colors.black,
+                        shape: RoundedRectangleBorder(
+                          side: BorderSide(
+                            width: 0.50,
+                            strokeAlign: BorderSide.strokeAlignOutside,
+                            color:
+                                isPending
+                                    ? const Color(0xFFFFB74D)
+                                    : const Color(0xFFDDDDDD),
                           ),
+                          borderRadius: BorderRadius.circular(5),
                         ),
                       ),
-                    ],
-                  ),
+                      child: Text(
+                        isPending
+                            ? 'Pending Approval'
+                            : (activeMembership.planName ?? ''),
+                        style: AppStyles.text12Px.poppins.w600.copyWith(
+                          color:
+                              isPending
+                                  ? const Color(0xFFE65100)
+                                  : Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                // Trailing Icon
-                const SizedBox(width: 14),
-                Container(
-                  width: 24,
-                  height: 24,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFDDDDDD),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    size: 12,
-                    color: Color(0xFF222222),
-                  ),
-                ),
-              ],
-            ),
-            // Divider
-            const Divider(color: Color(0xFFF1D1D2), height: 1).pxy(y: 16),
-            // Subscription Expires In
-            Align(
-              child: isPending
-                  ? Text(
+              ),
+              // Trailing Icon
+              // const SizedBox(width: 14),
+              // Container(
+              //   width: 24,
+              //   height: 24,
+              //   alignment: Alignment.center,
+              //   decoration: const BoxDecoration(
+              //     color: Color(0xFFDDDDDD),
+              //     shape: BoxShape.circle,
+              //   ),
+              //   child: const Icon(
+              //     Icons.arrow_forward_ios_rounded,
+              //     size: 12,
+              //     color: Color(0xFF222222),
+              //   ),
+              // ),
+            ],
+          ),
+          // Divider
+          const Divider(color: Color(0xFFF1D1D2), height: 1).pxy(y: 16),
+          // Subscription Expires In
+          Align(
+            child:
+                isPending
+                    ? Text(
                       'Awaiting approval from gym administrator',
                       style: AppStyles.text12Px.poppins.w500.copyWith(
                         color: const Color(0xFFE65100),
                       ),
                     )
-                  : isExpired
-                      ? Text(
-                          'Subscription Expired',
-                          style: AppStyles.text12Px.poppins.w600.copyWith(
-                            color: const Color(0xFFD30C15),
-                          ),
-                        )
-                      : Text.rich(
+                    : isExpired
+                    ? Text(
+                      'Subscription Expired',
+                      style: AppStyles.text12Px.poppins.w600.copyWith(
+                        color: const Color(0xFFD30C15),
+                      ),
+                    )
+                    : Text.rich(
+                      TextSpan(
+                        children: [
                           TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Subscription Expires in',
-                                style: AppStyles.text12Px.poppins.w400.copyWith(
-                                  color: const Color(0xFF222222),
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' ',
-                                style: AppStyles.text12Px.poppins.w500.copyWith(
-                                  color: const Color(0xFF222222),
-                                ),
-                              ),
-                              TextSpan(
-                                text: '$remainingDays Days',
-                                style: AppStyles.text12Px.poppins.w600.copyWith(
-                                  color: const Color(0xFF222222),
-                                ),
-                              ),
-                            ],
+                            text: 'Subscription Expires in',
+                            style: AppStyles.text12Px.poppins.w400.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
                           ),
-                        ),
-            ),
-          ],
-        ),
+                          TextSpan(
+                            text: ' ',
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
+                          ),
+                          TextSpan(
+                            text: '$remainingDays Days',
+                            style: AppStyles.text12Px.poppins.w600.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+          ),
+        ],
       ),
     );
   }
@@ -426,15 +459,25 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 60,
                   height: 60,
                   color: Colors.grey.shade200,
-                  child: trainer.profileImage != null && trainer.profileImage!.isNotEmpty
-                      ? ImageNetwork(
-                          trainer.profileImage!,
-                          height: 60,
-                          width: 60,
-                          fit: BoxFit.cover,
-                          errorWidget: const Icon(Icons.person, color: Colors.grey, size: 30),
-                        )
-                      : const Icon(Icons.person, color: Colors.grey, size: 30),
+                  child:
+                      trainer.profileImage != null &&
+                              trainer.profileImage!.isNotEmpty
+                          ? ImageNetwork(
+                            trainer.profileImage!,
+                            height: 60,
+                            width: 60,
+                            fit: BoxFit.cover,
+                            errorWidget: const Icon(
+                              Icons.person,
+                              color: Colors.grey,
+                              size: 30,
+                            ),
+                          )
+                          : const Icon(
+                            Icons.person,
+                            color: Colors.grey,
+                            size: 30,
+                          ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -454,7 +497,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // Experience Tag
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF7F7F7),
                         borderRadius: BorderRadius.circular(6),
@@ -488,21 +534,25 @@ class _HomeScreenState extends State<HomeScreen> {
             Wrap(
               spacing: 6,
               runSpacing: 4,
-              children: specializations.map((spec) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFECEF),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    spec,
-                    style: AppStyles.text10Px.poppins.w500.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
-                );
-              }).toList(),
+              children:
+                  specializations.map((spec) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFECEF),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        spec,
+                        style: AppStyles.text10Px.poppins.w500.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    );
+                  }).toList(),
             ),
           ],
 
@@ -540,7 +590,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             raduis: 10,
             ontap: () async {
-              final phone = trainer.mobile?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
+              final phone =
+                  trainer.mobile?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
               if (phone.isNotEmpty) {
                 final message = Uri.encodeComponent(
                   'Hi ${trainer.name},\n\n'
@@ -563,8 +614,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 }
-
-
 
 Widget _buildDidYouKnowSection() {
   return ColoredBox(
@@ -630,10 +679,7 @@ Widget _membershipExpireCard(BuildContext context) {
           ),
         ],
       ),
-      padding: const EdgeInsets.symmetric(
-        vertical: 32,
-        horizontal: 24,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -676,8 +722,6 @@ Widget _membershipExpireCard(BuildContext context) {
     ),
   );
 }
-
-
 
 class BannersView extends StatefulWidget {
   const BannersView({required this.banners, super.key});
@@ -741,22 +785,23 @@ class _BannersViewState extends State<BannersView> {
         aspectRatio: 16 / 9,
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
-          child: isAsset
-              ? Image.asset(
-                  banner,
-                  fit: BoxFit.cover,
-                  height: double.maxFinite,
-                  width: double.maxFinite,
-                )
-              : ImageNetwork(
-                  banner,
-                  height: double.maxFinite,
-                  width: double.maxFinite,
-                  errorWidget: ColoredBox(
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.error, color: Colors.grey),
+          child:
+              isAsset
+                  ? Image.asset(
+                    banner,
+                    fit: BoxFit.cover,
+                    height: double.maxFinite,
+                    width: double.maxFinite,
+                  )
+                  : ImageNetwork(
+                    banner,
+                    height: double.maxFinite,
+                    width: double.maxFinite,
+                    errorWidget: ColoredBox(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.error, color: Colors.grey),
+                    ),
                   ),
-                ),
         ),
       );
     }
@@ -781,20 +826,20 @@ class _BannersViewState extends State<BannersView> {
                 final isAsset = banner.startsWith('assets/');
                 return isAsset
                     ? Image.asset(
-                        banner,
-                        fit: BoxFit.cover,
-                        height: double.maxFinite,
-                        width: double.maxFinite,
-                      )
+                      banner,
+                      fit: BoxFit.cover,
+                      height: double.maxFinite,
+                      width: double.maxFinite,
+                    )
                     : ImageNetwork(
-                        banner,
-                        height: double.maxFinite,
-                        width: double.maxFinite,
-                        errorWidget: ColoredBox(
-                          color: Colors.grey.shade200,
-                          child: const Icon(Icons.error, color: Colors.grey),
-                        ),
-                      );
+                      banner,
+                      height: double.maxFinite,
+                      width: double.maxFinite,
+                      errorWidget: ColoredBox(
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.error, color: Colors.grey),
+                      ),
+                    );
               },
             ),
           ),

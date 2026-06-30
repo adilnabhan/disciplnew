@@ -22,6 +22,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   bool _isFinishing = false;
   Map<String, dynamic>? _sessionData;
   final Map<int, Timer> _debounceTimers = {};
+  final Set<int> _addingSetLogIds = {};
 
   @override
   void initState() {
@@ -81,6 +82,14 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   }
 
   void _addSet(Map<String, dynamic> log) async {
+    final exerciseLogId = log['id'] as int?;
+    if (exerciseLogId == null) return;
+    if (_addingSetLogIds.contains(exerciseLogId)) return;
+
+    setState(() {
+      _addingSetLogIds.add(exerciseLogId);
+    });
+
     final setLogs = List<Map<String, dynamic>>.from(log['set_logs'] as List? ?? []);
     final lastSet = setLogs.isNotEmpty ? setLogs.last : null;
     
@@ -92,36 +101,41 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         ? (double.tryParse(lastSet['weight_kg']?.toString() ?? '') ?? 0.0)
         : (double.tryParse(log['target_weight']?.toString() ?? '') ?? 0.0);
 
-    final exerciseLogId = log['id'] as int?;
-    if (exerciseLogId == null) return;
+    try {
+      final res = await WorkoutRepository().addSetToExerciseLog(
+        logId: exerciseLogId,
+        reps: defaultReps,
+        weightKg: defaultWeight,
+        isCompleted: false,
+      );
 
-    final res = await WorkoutRepository().addSetToExerciseLog(
-      logId: exerciseLogId,
-      reps: defaultReps,
-      weightKg: defaultWeight,
-      isCompleted: false,
-    );
-
-    res.fold(
-      (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to add set: ${error.msg}')),
-          );
-        }
-      },
-      (newLogData) {
-        if (mounted && _sessionData != null) {
-          setState(() {
-            final logsList = _sessionData!['logs'] as List;
-            final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
-            if (targetLogIndex != -1) {
-              logsList[targetLogIndex] = Map<String, dynamic>.from(newLogData as Map);
-            }
-          });
-        }
-      },
-    );
+      res.fold(
+        (error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to add set: ${error.msg}')),
+            );
+          }
+        },
+        (newLogData) {
+          if (mounted && _sessionData != null) {
+            setState(() {
+              final logsList = _sessionData!['logs'] as List;
+              final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
+              if (targetLogIndex != -1) {
+                logsList[targetLogIndex] = Map<String, dynamic>.from(newLogData as Map);
+              }
+            });
+          }
+        },
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _addingSetLogIds.remove(exerciseLogId);
+        });
+      }
+    }
   }
 
   void _deleteSet(int exerciseLogId, int setLogId) async {
@@ -140,8 +154,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             final logsList = _sessionData!['logs'] as List;
             final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
             if (targetLogIndex != -1) {
-              final targetLog = Map<String, dynamic>.from(logsList[targetLogIndex]);
-              final targetSets = List<Map<String, dynamic>>.from(targetLog['set_logs'] ?? []);
+              final targetLog = Map<String, dynamic>.from(logsList[targetLogIndex] as Map);
+              final targetSets = List<Map<String, dynamic>>.from(targetLog['set_logs'] as Iterable? ?? []);
               targetSets.removeWhere((s) => s['id'] == setLogId);
               for (var i = 0; i < targetSets.length; i++) {
                 targetSets[i]['set_number'] = i + 1;
@@ -158,9 +172,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   Widget _buildOutlineRedButton({
     required String text,
     required VoidCallback onTap,
+    bool isLoading = false,
   }) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: isLoading ? null : onTap,
       child: Container(
         width: double.infinity,
         height: 36,
@@ -170,12 +185,21 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           border: Border.all(color: const Color(0xFFF0B5B7), width: 1.0),
         ),
         child: Center(
-          child: Text(
-            text,
-            style: AppStyles.text14Px.poppins.w600.copyWith(
-              color: AppColors.primary,
-            ),
-          ),
+          child: isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  ),
+                )
+              : Text(
+                  text,
+                  style: AppStyles.text14Px.poppins.w600.copyWith(
+                    color: AppColors.primary,
+                  ),
+                ),
         ),
       ),
     );
@@ -357,16 +381,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final logs = data['logs'] as List? ?? [];
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
-    bool isWithinOneHour = false;
-    if (completedAt != null && completedAt != 'null') {
-      try {
-        final completedTime = DateTime.parse(completedAt).toLocal();
-        final now = DateTime.now();
-        isWithinOneHour = now.difference(completedTime).inMinutes < 60;
-      } catch (_) {}
-    }
-
-    final bool isEditable = status != 'COMPLETED' || isWithinOneHour;
+    final bool isEditable = status != 'COMPLETED';
 
     final duration = _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
@@ -1019,6 +1034,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               child: _buildOutlineRedButton(
                 text: '+ Add Set',
                 onTap: () => _addSet(log),
+                isLoading: _addingSetLogIds.contains(log['id']),
               ),
             ),
           ],
@@ -1030,42 +1046,42 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   }
 
   Widget _buildFinishButton() {
-    return _isFinishing
-        ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
-        : Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Button.filled(
-              size: const Size(double.infinity, 48),
-              title: 'Finish Workout',
-              style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
-              icon: const Icon(Icons.check, color: Colors.white, size: 20),
-              raduis: 12,
-              ontap: () async {
-                setState(() {
-                  _isFinishing = true;
-                });
-                final res = await WorkoutRepository().finishSession(
-                  sessionId: widget.sessionId,
-                  title: widget.fallbackTitle,
-                );
-                res.fold(
-                  (error) {
-                    setState(() {
-                      _isFinishing = false;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to finish workout: ${error.msg}')),
-                    );
-                  },
-                  (_) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Workout finished successfully!')),
-                    );
-                    Navigator.pop(context, true);
-                  },
-                );
-              },
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Button.filled(
+        isLoading: _isFinishing,
+        size: const Size(double.infinity, 48),
+        title: 'Finish Workout',
+        style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
+        icon: const Icon(Icons.check, color: Colors.white, size: 20),
+        raduis: 12,
+        ontap: () async {
+          if (_isFinishing) return;
+          setState(() {
+            _isFinishing = true;
+          });
+          final res = await WorkoutRepository().finishSession(
+            sessionId: widget.sessionId,
+            title: widget.fallbackTitle,
           );
+          res.fold(
+            (error) {
+              setState(() {
+                _isFinishing = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to finish workout: ${error.msg}')),
+              );
+            },
+            (_) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Workout finished successfully!')),
+              );
+              Navigator.pop(context, true);
+            },
+          );
+        },
+      ),
+    );
   }
 }

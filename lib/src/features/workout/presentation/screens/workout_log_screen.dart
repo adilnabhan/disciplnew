@@ -27,6 +27,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   List<Map<String, dynamic>> _selectedDateWorkouts = [];
   List<PresetModel> _myPlans = [];
   ApiException? _activeError;
+  CustomerDetailsModel? _customerDetails;
 
   Future<void> _retryLoading() async {
     await Future.wait([
@@ -88,6 +89,22 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       });
     }
 
+    final customerId = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
+    if (customerId != null && _customerDetails == null) {
+      CustomerDetailsRepository().customerDetails(id: customerId).then((res) {
+        res.fold(
+          (error) => null,
+          (details) {
+            if (mounted) {
+              setState(() {
+                _customerDetails = details;
+              });
+            }
+          },
+        );
+      });
+    }
+
     final String y = _selectedDate.year.toString();
     final String m = _selectedDate.month.toString().padLeft(2, '0');
     final String d = _selectedDate.day.toString().padLeft(2, '0');
@@ -131,6 +148,19 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           }
           enrichedList.add(map);
         }
+        // Sort enrichedList so that trainer-assigned workouts come first (at the top)
+        enrichedList.sort((a, b) {
+          final aTrainer = a['trainer_name']?.toString() ?? '';
+          final bTrainer = b['trainer_name']?.toString() ?? '';
+          final aIsTrainer = aTrainer.isNotEmpty;
+          final bIsTrainer = bTrainer.isNotEmpty;
+          if (aIsTrainer && !bIsTrainer) {
+            return -1; // a comes first
+          } else if (!aIsTrainer && bIsTrainer) {
+            return 1; // b comes first
+          }
+          return 0; // keep relative order
+        });
         if (mounted) {
           setState(() {
             _selectedDateWorkouts = enrichedList;
@@ -570,6 +600,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               duration: durationStr,
               trainerName: workoutItem['trainer_name']?.toString(),
               isMembershipExpired: isExpired,
+              gymLogo: _customerDetails?.assignedFitnessCenter?['logo']?.toString(),
+              isLoadingGymLogo: _customerDetails == null,
+              trainerProfileImage: _customerDetails?.assignedTrainer?['profile_image']?.toString(),
+              verificationStatus: workoutItem['verification_status']?.toString() ?? workoutItem['verification']?.toString(),
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -673,28 +707,26 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const SizedBox(height: 12),
-                              if (_isLoadingDateLog)
-                                const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(top: 40),
-                                    child: CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                )
-                              else if (_activeError != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 20),
-                                  child: _activeError!.maybeWhen(
-                                    network: (e) => ErrorUi.network(onTap: _retryLoading),
-                                    notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
-                                    orElse: () => ErrorUi.server(onTap: _retryLoading),
-                                  ),
-                                )
-                              else
-                                ...logCards,
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: _isLoadingDateLog
+                                    ? _buildShimmerWorkoutLogs(key: const ValueKey('shimmer'))
+                                    : _activeError != null
+                                        ? Padding(
+                                            key: const ValueKey('error'),
+                                            padding: const EdgeInsets.only(top: 20),
+                                            child: _activeError!.maybeWhen(
+                                              network: (e) => ErrorUi.network(onTap: _retryLoading),
+                                              notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
+                                              orElse: () => ErrorUi.server(onTap: _retryLoading),
+                                            ),
+                                          )
+                                        : Column(
+                                            key: const ValueKey('content'),
+                                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                                            children: logCards,
+                                          ),
+                              ),
                             ],
                           ),
                         ),
@@ -707,6 +739,65 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               ),
       floatingActionButton: !isCustomer ? null : _buildStartButton(),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildShimmerWorkoutLogs({Key? key}) {
+    return Column(
+      key: key,
+      children: List.generate(
+        2,
+        (index) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 68,
+                      height: 68,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 140,
+                            height: 18,
+                            color: Colors.white,
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: 80,
+                            height: 14,
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1016,6 +1107,10 @@ class _WorkoutCard extends StatelessWidget {
     this.onTap,
     this.trainerName,
     this.isMembershipExpired = false,
+    this.gymLogo,
+    this.isLoadingGymLogo = false,
+    this.trainerProfileImage,
+    this.verificationStatus,
   });
 
   final int index;
@@ -1027,6 +1122,10 @@ class _WorkoutCard extends StatelessWidget {
   final VoidCallback? onTap;
   final String? trainerName;
   final bool isMembershipExpired;
+  final String? gymLogo;
+  final bool isLoadingGymLogo;
+  final String? trainerProfileImage;
+  final String? verificationStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -1039,6 +1138,8 @@ class _WorkoutCard extends StatelessWidget {
             '${parts.sublist(0, middle).join(' ')}\n${parts.sublist(middle).join(' ')}';
       }
     }
+
+    final bool isMentorGiven = trainerName != null && trainerName!.isNotEmpty;
 
     final Gradient cardGradient =
         isCompleted
@@ -1065,14 +1166,15 @@ class _WorkoutCard extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: Container(
-            height: 140,
+            height: isMentorGiven ? (isCompleted ? 140 : 100) : 140,
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              gradient: cardGradient,
+              color: isMentorGiven ? const Color(0xFFFFD5D5) : null,
+              gradient: isMentorGiven ? null : cardGradient,
               borderRadius: BorderRadius.circular(20),
               image:
-                  hasImage
+                  (hasImage && !isMentorGiven)
                       ? const DecorationImage(
                         image: AssetImage(
                           'assets/images/png/vectors/workout_plan_creation_image.png',
@@ -1089,124 +1191,237 @@ class _WorkoutCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: Stack(
-              children: [
-                // Top left: Title
-                Positioned(
-                  left: 24,
-                  top: 20,
-                  width: 160,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formattedTitle,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF222222),
-                          height: 1.15,
-                        ),
-                      ),
-                      if (trainerName != null && trainerName!.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+            child: isMentorGiven
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
                         Row(
                           children: [
-                            const Icon(
-                              Icons.person_outline_rounded,
-                              size: 12,
-                              color: Color(0xFF666666),
-                            ),
-                            const SizedBox(width: 4),
+                            // Gym Profile Logo
+                            isLoadingGymLogo
+                                ? const KShimmer(
+                                    width: 68,
+                                    height: 68,
+                                    radius: 12,
+                                  )
+                                : Container(
+                                    width: 68,
+                                    height: 68,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: gymLogo != null && gymLogo!.isNotEmpty
+                                          ? Image.network(
+                                              gymLogo!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) => const Center(
+                                                child: Icon(Icons.fitness_center, color: Colors.grey, size: 28),
+                                              ),
+                                            )
+                                          : const Center(
+                                              child: Icon(Icons.fitness_center, color: Colors.grey, size: 28),
+                                            ),
+                                    ),
+                                  ),
+                            const SizedBox(width: 16),
+                            // Middle: Workout title and Trainer Name
                             Expanded(
-                              child: Text(
-                                trainerName!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF555555),
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF222222),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    trainerName!,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF222222),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Right: Chevron Button
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.chevron_right,
+                                size: 24,
+                                color: Color(0xFFFFB0B0),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                // Bottom left: Duration
-                Positioned(
-                  left: 24,
-                  bottom: 20,
-                  width: 135,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.timer_outlined, color: Color(0xFFF0B5B7), size: 14),
-                          const SizedBox(width: 6),
+                        if (isCompleted) ...[
+                          const SizedBox(height: 12),
                           Text(
-                            'Duration',
+                            'Duration: ${duration ?? '--:--'}',
                             style: const TextStyle(
                               fontFamily: 'Poppins',
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF94A3B8),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF222222),
                             ),
                           ),
                         ],
+                      ],
+                    ),
+                  )
+                : Stack(
+                    children: [
+                      // Top left: Title
+                      Positioned(
+                        left: 24,
+                        top: 20,
+                        width: 160,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              formattedTitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF222222),
+                                height: 1.15,
+                              ),
+                            ),
+                            if (trainerName != null && trainerName!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person_outline_rounded,
+                                    size: 12,
+                                    color: Color(0xFF666666),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      trainerName!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF555555),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        duration ?? '--:--',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF4A4A4A),
+
+                      // Bottom left: Duration
+                      Positioned(
+                        left: 24,
+                        bottom: 20,
+                        width: 135,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.timer_outlined,
+                                  color: Color(0xFFF0B5B7),
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  'Duration',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              duration ?? '--:--',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF4A4A4A),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Bottom right: Circular white/red button
+                      Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF4F5F7),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.chevron_right,
+                            size: 24,
+                            color: Color(0xFF020202),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-                // Bottom right: Circular white button
-                Positioned(
-                  right: 16,
-                  bottom: 16,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF4F5F7),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.chevron_right,
-                      size: 24,
-                      color: Color(0xFF020202),
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
 

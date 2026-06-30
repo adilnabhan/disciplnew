@@ -50,6 +50,7 @@ dependencies:
   flutter_rating_bar: ^4.0.1
   table_calendar: ^3.0.9
   date_picker_timeline: ^1.2.7
+  visibility_detector: ^0.4.0+2
 
   #* SMS Auto Fill
   smart_auth: ^3.2.0

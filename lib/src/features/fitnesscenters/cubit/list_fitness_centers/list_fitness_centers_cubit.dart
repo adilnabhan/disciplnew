@@ -11,9 +11,11 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
 
   Future<void> fetch() async {
     if (isClosed) return;
-    emit(
-      state.copyWith(listFitnessCenters: (data: none(), isPagination: false)),
-    );
+    if (state.listFitnessCenters.data.isNone()) {
+      emit(
+        state.copyWith(listFitnessCenters: (data: none(), isPagination: false)),
+      );
+    }
 
     // Load categories first
     await fetchCategories();
@@ -47,14 +49,25 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
     if (isPagination && (fitnessCenters?.next?.isEmpty ?? true)) {
       return;
     }
-    emit(
-      state.copyWith(
-        listFitnessCenters: (
-          data: isPagination ? state.listFitnessCenters.data : none(),
-          isPagination: isPagination,
+    if (!isPagination && state.listFitnessCenters.data.isNone()) {
+      emit(
+        state.copyWith(
+          listFitnessCenters: (
+            data: none(),
+            isPagination: isPagination,
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      emit(
+        state.copyWith(
+          listFitnessCenters: (
+            data: state.listFitnessCenters.data,
+            isPagination: isPagination,
+          ),
+        ),
+      );
+    }
     final params = <String, dynamic>{
       'search': searchQuery ?? state.searchQuery,
       'category_id': state.selectedCategory?.id,
@@ -114,7 +127,9 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
 
   Future<void> fetchCategories() async {
     if (isClosed) return;
-    emit(state.copyWith(categories: none()));
+    if (state.categories.isNone()) {
+      emit(state.copyWith(categories: none()));
+    }
     final response = await FitnesscenterRepository().fitnesscenterCategories();
     if (isClosed) return;
     emit(state.copyWith(categories: some(response)));

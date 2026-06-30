@@ -18,13 +18,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final DashboardCubit _cubit;
   late final List<String> _icons;
   late final List<String> _labels;
-  late final PageController _pageController;
 
   @override
   void initState() {
-    final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
-
-    _pageController = PageController(initialPage: widget.navIndex ?? 0);
     _cubit = DashboardCubit(navIndex: widget.navIndex);
     _icons = [
       'assets/images/svg/icons/new_home_notselected.svg',
@@ -87,27 +83,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _cubit.close();
-    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isCustomer;
-    if (Feggy.read<AppCubit>()?.state.currentUser == null) {
-      isCustomer = false;
-    } else {
-      isCustomer = true;
-    }
     return BlocProvider.value(
       value: _cubit,
-      child: BlocConsumer<DashboardCubit, DashboardState>(
-        listenWhen: (p, c) => p.navIndex != c.navIndex,
-        listener: (context, state) {
-          if (_pageController.hasClients) {
-            _pageController.jumpToPage(state.navIndex);
-          }
-        },
+      child: BlocBuilder<DashboardCubit, DashboardState>(
+        buildWhen: (p, c) => p.navIndex != c.navIndex,
         builder: (context, state) {
           return Scaffold(
             appBar: state.navIndex == 0
@@ -143,12 +127,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   )
                 : null,
-            body: PageView(
-              controller: _pageController,
-              onPageChanged:
-                  (index) => context
-                      .read<DashboardCubit>()
-                      .changeNav(index: index),
+            body: LazyIndexedStack(
+              index: state.navIndex,
               children: const [
                 HomeScreen(),
                 WorkoutLogScreen(),
@@ -223,6 +203,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
+    );
+  }
+}
+
+class LazyIndexedStack extends StatefulWidget {
+  const LazyIndexedStack({
+    super.key,
+    required this.index,
+    required this.children,
+    this.alignment = AlignmentDirectional.topStart,
+    this.textDirection,
+    this.sizing = StackFit.loose,
+  });
+
+  final int index;
+  final List<Widget> children;
+  final AlignmentGeometry alignment;
+  final TextDirection? textDirection;
+  final StackFit sizing;
+
+  @override
+  State<LazyIndexedStack> createState() => _LazyIndexedStackState();
+}
+
+class _LazyIndexedStackState extends State<LazyIndexedStack> {
+  late List<bool> _activated;
+
+  @override
+  void initState() {
+    super.initState();
+    _activated = List<bool>.generate(widget.children.length, (i) => i == widget.index);
+  }
+
+  @override
+  void didUpdateWidget(covariant LazyIndexedStack oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_activated.length != widget.children.length) {
+      _activated = List<bool>.generate(widget.children.length, (i) => i < _activated.length ? _activated[i] : false);
+    }
+    if (!_activated[widget.index]) {
+      setState(() {
+        _activated[widget.index] = true;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IndexedStack(
+      index: widget.index,
+      alignment: widget.alignment,
+      textDirection: widget.textDirection,
+      sizing: widget.sizing,
+      children: List<Widget>.generate(widget.children.length, (i) {
+        return _activated[i] ? widget.children[i] : const SizedBox.shrink();
+      }),
     );
   }
 }

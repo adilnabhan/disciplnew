@@ -1,18 +1,28 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:dio/dio.dart';
 
-@immutable
 final class CustomerDetailsRepository {
   ///* This constructor body for creating singleton widget
   factory CustomerDetailsRepository() {
-    _instance ??= const CustomerDetailsRepository._internal();
+    _instance ??= CustomerDetailsRepository._internal();
     return _instance!;
   }
 
   //* This named constructor for create object for this class
-  const CustomerDetailsRepository._internal();
+  CustomerDetailsRepository._internal();
 
   //* This variable for store this class object globally
   static CustomerDetailsRepository? _instance;
+
+  // Caching fields
+  CustomerDetailsModel? _cachedCustomerDetails;
+  DateTime? _lastDetailsFetchTime;
+
+  /// Invalidate/clear the customer details cache
+  void invalidateCache() {
+    _cachedCustomerDetails = null;
+    _lastDetailsFetchTime = null;
+  }
 
   /// @api {GET https://discipl-backend.onrender.com/api/v1/customer/manage/7} https://discipl-backend.onrender.com/api/v1/customer/manage/7
   /// @apiName customer_details
@@ -22,10 +32,20 @@ final class CustomerDetailsRepository {
 
   Future<Either<ApiException, CustomerDetailsModel>> customerDetails({
     required int id,
+    bool forceRefresh = false,
   }) async {
-    print('calling--$id}');
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _cachedCustomerDetails != null &&
+        _lastDetailsFetchTime != null &&
+        now.difference(_lastDetailsFetchTime!).inMinutes < 5) {
+      print('CustomerDetailsRepository: returning cached details');
+      return right(_cachedCustomerDetails!);
+    }
+
+    print('CustomerDetailsRepository: calling API for id -- $id');
     try {
-      return await Feggy.async(
+      final response = await Feggy.async<Response<dynamic>, Either<ApiException, CustomerDetailsModel>>(
         call: Dio().get<dynamic>(
           ApiUris.customerDetails(id),
           options: Options(headers: {'X-Platform': platformSource}).token,
@@ -34,13 +54,24 @@ final class CustomerDetailsRepository {
           if (res.statusCode == 200) {
             if (res.data != null && res.data is Map) {
               return right(
-                CustomerDetailsModel.fromJson(res.data as Map<String, dynamic>),
+                CustomerDetailsModel.fromJson(
+                  res.data as Map<String, dynamic>,
+                ),
               );
             }
           }
           return left(const ApiException.unknown());
         },
       );
+
+      response.fold(
+        (_) => null,
+        (details) {
+          _cachedCustomerDetails = details;
+          _lastDetailsFetchTime = DateTime.now();
+        },
+      );
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -120,7 +151,7 @@ final class CustomerDetailsRepository {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         if (response.data != null && response.data is Map) {
-          return customerDetails(id: id);
+          return customerDetails(id: id, forceRefresh: true);
         }
       }
 
@@ -190,7 +221,7 @@ final class CustomerDetailsRepository {
         onSuccess: (res) {
           if (res.statusCode == 200 || res.statusCode == 201) {
             if (res.data != null && res.data is Map) {
-              return customerDetails(id: id);
+              return customerDetails(id: id, forceRefresh: true);
             }
           }
           return left(const ApiException.unknown());
