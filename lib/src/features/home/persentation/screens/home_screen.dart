@@ -8,6 +8,8 @@ import 'package:customer_mobile_app/src/features/profile/presentation/screens/pa
 import 'package:url_launcher/url_launcher.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/home_cubit.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/home_model.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/widgets/health_dashboard_widgets.dart';
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -186,7 +188,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Reduced gap before calendar/card
             const SizedBox(height: 8),
-  
+   
+            if (!isGuest)
+              const HealthDashboardSection(),
+
             if (isGuest)
               _membershipExpireCard(context)
             else

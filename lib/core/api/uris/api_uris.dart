@@ -84,6 +84,23 @@ final class ApiUris {
   static final restDay = '${_v1}customer/sessions/rest-day/';
   static final presets = '${_v1}customer/presets/';
   static String presetDetail(int id) => '${_v1}customer/presets/$id/';
+  static final workoutCalendar = '${_v1}customer/workout-calendar/';
+
+  // New Customer Features API URIs
+  static final calorieSummary = '${_v1}customer/calorie-summary/';
+  static final foodList = '${_v1}customer/food/';
+  static final foodLog = '${_v1}customer/food-log/';
+  static final waterLog = '${_v1}customer/water-log/';
+  static final weightHistory = '${_v1}customer/weight-history/';
+  static final measurements = '${_v1}customer/measurements/';
+  static final progressPhotos = '${_v1}customer/progress-photos/';
+  static final communityFeed = '${_v1}customer/community/feed/';
+  static final communityPosts = '${_v1}customer/community/posts/';
+  static final achievements = '${_v1}customer/achievements/';
+  static final dailyReport = '${_v1}customer/reports/daily/';
+  static final weeklyReport = '${_v1}customer/reports/weekly/';
+  static final monthlyReport = '${_v1}customer/reports/monthly/';
+  static final exportReport = '${_v1}customer/reports/export/';
 
   static final loginAsGuest = '${_v1}user/login/guest/';
 }

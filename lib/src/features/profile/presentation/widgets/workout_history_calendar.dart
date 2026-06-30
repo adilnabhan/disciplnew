@@ -232,6 +232,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           });
         },
         (data) {
+          debugPrint("CALENDAR DATA RECEIVED: $data");
           final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
           setState(() {
             for (final dayItem in days) {
@@ -250,17 +251,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 }
                 
                 CalendarDayState state;
-                if (!hasWorkout && !isRestDay) {
-                  state = CalendarDayState.future;
+                if (isRestDay) {
+                  state = CalendarDayState.rest;
                 } else if (isCompleted) {
                   state = CalendarDayState.completed;
-                } else if (isRestDay) {
-                  state = CalendarDayState.rest;
                 } else if (dateOnly.isBefore(startDateOnly)) {
                   state = CalendarDayState.future;
-                } else if (dateOnly.isAfter(todayOnly)) {
+                } else if (dateOnly.isAfter(todayOnly) || dateOnly.isAtSameMomentAs(todayOnly)) {
                   state = CalendarDayState.future;
-                } else if (dateOnly.isAtSameMomentAs(todayOnly)) {
+                } else if (!hasWorkout) {
                   state = CalendarDayState.future;
                 } else {
                   state = CalendarDayState.missed;
@@ -417,6 +416,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 firstDay: DateTime.utc(2020, 1, 1),
                 lastDay: DateTime.utc(2030, 12, 31),
                 focusedDay: _focusedDay,
+                calendarFormat: CalendarFormat.month,
                 startingDayOfWeek: StartingDayOfWeek.monday,
                 rowHeight: 60,
                 headerVisible: false, // Hidden default header

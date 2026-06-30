@@ -9,6 +9,7 @@ import 'package:customer_mobile_app/src/features/workout/domain/models/preset_mo
 
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
+import 'package:customer_mobile_app/src/features/dashboard/logic/dashboard/dashboard_cubit.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
@@ -27,12 +28,21 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   List<Map<String, dynamic>> _selectedDateWorkouts = [];
   List<PresetModel> _myPlans = [];
   ApiException? _activeError;
+  final Map<DateTime, String> _dayStatuses = {};
+  final Set<String> _loadedMonths = {};
 
   Future<void> _retryLoading() async {
+    if (mounted) {
+      setState(() {
+        _loadedMonths.clear();
+        _dayStatuses.clear();
+      });
+    }
     await Future.wait([
       _loadMyPlans(),
       _loadActiveSessionTitle(),
       _loadWorkoutLogForSelectedDate(),
+      _loadCalendarDataForRange(),
     ]);
   }
 
@@ -77,6 +87,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       _loadMyPlans();
       _loadActiveSessionTitle();
       _loadWorkoutLogForSelectedDate();
+      _loadCalendarDataForRange();
     });
   }
 
@@ -168,6 +179,90 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               }
             }
             _showWorkoutCard = hasExercises;
+          });
+        }
+      },
+    );
+  }
+
+  Future<void> _loadCalendarDataForRange() async {
+    final Set<String> monthsToLoad = {};
+    for (final day in _scrollableDays) {
+      monthsToLoad.add('${day.year}-${day.month}');
+    }
+
+    try {
+      await Future.wait(
+        monthsToLoad.map((monthStr) async {
+          final parts = monthStr.split('-');
+          final year = int.parse(parts[0]);
+          final month = int.parse(parts[1]);
+          await _loadCalendarDataForMonth(year, month);
+        }),
+      );
+    } catch (e) {
+      debugPrint('Error loading calendar data for range: $e');
+    }
+  }
+
+  Future<void> _loadCalendarDataForMonth(int year, int month) async {
+    final monthKey = '$year-$month';
+    if (_loadedMonths.contains(monthKey)) return;
+
+    final response = await WorkoutRepository().getWorkoutCalendarForMonth(
+      year: year,
+      month: month,
+    );
+    response.fold(
+      (error) => null,
+      (data) {
+        final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
+        if (mounted) {
+          setState(() {
+            _loadedMonths.add(monthKey);
+
+            // Get startDate from DashboardCubit if available
+            DateTime? startDate;
+            try {
+              final dashboardCubit = BlocProvider.of<DashboardCubit>(context);
+              final activeMembership = dashboardCubit.state.activeMembershipData.fold(
+                () => null,
+                (either) => either.fold((_) => null, (m) => m),
+              );
+              startDate = activeMembership?.startDate;
+            } catch (_) {}
+
+            final today = DateTime.now();
+            final todayOnly = DateTime(today.year, today.month, today.day);
+            final startDateOnly = startDate != null
+                ? DateTime(startDate.year, startDate.month, startDate.day)
+                : DateTime(todayOnly.year, todayOnly.month, 1);
+
+            for (final dayItem in days) {
+              if (dayItem is Map<String, dynamic>) {
+                final dateStr = dayItem['date'] as String;
+                final date = DateTime.parse(dateStr);
+                final dateOnly = DateTime(date.year, date.month, date.day);
+
+                final bool isCompleted = dayItem['is_completed'] == true;
+                final bool isRestDay = dayItem['is_rest_day'] == true;
+
+                String state = 'future';
+                if (isRestDay) {
+                  state = 'rest';
+                } else if (isCompleted) {
+                  state = 'completed';
+                } else if (dateOnly.isBefore(startDateOnly)) {
+                  state = 'future';
+                } else if (dateOnly.isAfter(todayOnly) || dateOnly.isAtSameMomentAs(todayOnly)) {
+                  state = 'future';
+                } else {
+                  state = 'missed';
+                }
+
+                _dayStatuses[dateOnly] = state;
+              }
+            }
           });
         }
       },
@@ -763,12 +858,15 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         itemBuilder: (context, index) {
           final d = _scrollableDays[index];
           final isFutureDay = d.isAfter(todayMidnight);
+          final dOnly = DateTime(d.year, d.month, d.day);
+          final dayStatus = _dayStatuses[dOnly];
           return SizedBox(
             width: slotWidth,
             child: Center(
               child: _DayTile(
                 date: d,
                 selected: _isSameDay(d, _selectedDate),
+                status: null,
                 onTap: isFutureDay ? null : () => _selectDate(d),
               ),
             ),
@@ -867,10 +965,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
 // ── Day tile ─────────────────────────────────────────────────────────────────
 class _DayTile extends StatelessWidget {
-  const _DayTile({required this.date, required this.selected, this.onTap});
+  const _DayTile({
+    required this.date,
+    required this.selected,
+    this.status,
+    this.onTap,
+  });
 
   final DateTime date;
   final bool selected;
+  final String? status;
   final VoidCallback? onTap;
 
   @override
@@ -880,104 +984,162 @@ class _DayTile extends StatelessWidget {
 
     final isEnabled = onTap != null;
 
+    Color bgColor;
+    Color dayTextColor;
+    Color weekdayTextColor;
+
+    if (selected) {
+      bgColor = AppColors.primary;
+      dayTextColor = Colors.white;
+      weekdayTextColor = Colors.white;
+    } else {
+      if (status == 'completed') {
+        bgColor = const Color(0xFFE8F5E9);
+        dayTextColor = const Color(0xFF2E7D32);
+        weekdayTextColor = const Color(0xFF2E7D32).withOpacity(0.7);
+      } else if (status == 'missed') {
+        bgColor = const Color(0xFFFFEBEE);
+        dayTextColor = const Color(0xFFC62828);
+        weekdayTextColor = const Color(0xFFC62828).withOpacity(0.7);
+      } else if (status == 'rest') {
+        bgColor = const Color(0xFFE8F2FF);
+        dayTextColor = const Color(0xFF1565C0);
+        weekdayTextColor = const Color(0xFF1565C0).withOpacity(0.7);
+      } else {
+        bgColor = const Color(0xFFECECEC);
+        dayTextColor = isEnabled ? AppColors.button : const Color(0xFF888888);
+        weekdayTextColor = isEnabled ? AppColors.button : const Color(0xFF888888);
+      }
+    }
+
+    Widget? statusIcon;
+    if (status == 'completed') {
+      statusIcon = Container(
+        width: 14,
+        height: 14,
+        decoration: const BoxDecoration(
+          color: Colors.green,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check,
+          color: Colors.white,
+          size: 9,
+        ),
+      );
+    } else if (status == 'missed') {
+      statusIcon = Container(
+        width: 14,
+        height: 14,
+        decoration: const BoxDecoration(
+          color: Colors.red,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.close,
+          color: Colors.white,
+          size: 9,
+        ),
+      );
+    } else if (status == 'rest') {
+      statusIcon = Container(
+        width: 14,
+        height: 14,
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E88E5),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.hotel_rounded,
+          color: Colors.white,
+          size: 8,
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: selected ? 65 : 55,
-        height: selected ? 85 : 70,
-        decoration: BoxDecoration(
-          color: selected ? AppColors.primary : const Color(0xFFECECEC),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow:
-              selected
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: selected ? 65 : 55,
+            height: selected ? 85 : 70,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: selected
                   ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.24),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.24),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ]
                   : null,
-        ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding:
-                selected
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: selected
                     ? const EdgeInsets.only(
-                      top: 12,
-                      bottom: 12,
-                      left: 20,
-                      right: 20,
-                    )
+                        top: 12,
+                        bottom: 12,
+                        left: 20,
+                        right: 20,
+                      )
                     : const EdgeInsets.only(
-                      top: 12,
-                      bottom: 12,
-                      left: 16,
-                      right: 16,
+                        top: 12,
+                        bottom: 12,
+                        left: 16,
+                        right: 16,
+                      ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${date.day}',
+                      textAlign: TextAlign.center,
+                      style: AppStyles.text16Px.poppins.w700.copyWith(
+                        height: 1.3,
+                        color: dayTextColor,
+                      ),
                     ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  '${date.day}',
-                  textAlign: TextAlign.center,
-                  style:
-                      selected
-                          ? AppStyles.text16Px.poppins.w700.copyWith(
-                            height: 1.3,
-                            color: Colors.white,
-                          )
-                          : isEnabled
-                          ? AppStyles.text16Px.poppins.w600.copyWith(
-                            height: 1.3,
-                            color: AppColors.button,
-                          )
-                          : AppStyles.text16Px.poppins.w600.copyWith(
-                            height: 1.3,
-                            color: const Color(0xFF888888),
-                          ),
-                ),
-                SizedBox(height: selected ? 12 : 4),
-                Text(
-                  dayName,
-                  textAlign: TextAlign.center,
-                  style:
-                      selected
-                          ? AppStyles.text12Px.poppins.w500.copyWith(
-                            fontSize: 12,
-                            height: 1.3,
-                            color: Colors.white,
-                          )
-                          : isEnabled
-                          ? AppStyles.text12Px.poppins.w400.copyWith(
-                            fontSize: 12,
-                            height: 1.3,
-                            color: AppColors.button,
-                          )
-                          : AppStyles.text12Px.poppins.w400.copyWith(
-                            fontSize: 12,
-                            height: 1.3,
-                            color: const Color(0xFF888888),
-                          ),
-                ),
-                if (selected) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
+                    SizedBox(height: selected ? 12 : 4),
+                    Text(
+                      dayName,
+                      textAlign: TextAlign.center,
+                      style: AppStyles.text12Px.poppins.w500.copyWith(
+                        fontSize: 12,
+                        height: 1.3,
+                        color: weekdayTextColor,
+                      ),
                     ),
-                  ),
-                ],
-              ],
+                    if (selected) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+          if (statusIcon != null)
+            Positioned(
+              top: -3,
+              right: -3,
+              child: statusIcon,
+            ),
+        ],
       ),
     );
   }

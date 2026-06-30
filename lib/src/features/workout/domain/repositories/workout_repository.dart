@@ -472,7 +472,7 @@ final class WorkoutRepository {
     try {
       return await Feggy.async(
         call: _dio.get<dynamic>(
-          'customer/workout-calendar/',
+          ApiUris.workoutCalendar,
           queryParameters: {'year': year, 'month': month},
           options: Options(headers: {'X-Platform': platformSource}),
         ),
