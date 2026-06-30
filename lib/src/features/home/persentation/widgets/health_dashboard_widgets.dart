@@ -655,6 +655,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
   List<dynamic> _posts = [];
   bool _isLoading = true;
   final TextEditingController _postController = TextEditingController();
+  XFile? _selectedImage;
 
   @override
   void initState() {
@@ -676,19 +677,40 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
     }
   }
 
+  Future<void> _pickImage() async {
+    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _selectedImage = pickedFile;
+      });
+    }
+  }
+
   Future<void> _createPost() async {
     final caption = _postController.text.trim();
-    if (caption.isEmpty) return;
+    if (caption.isEmpty && _selectedImage == null) return;
     try {
+      final formData = FormData.fromMap({
+        'post_type': 'custom',
+        'caption': caption,
+      });
+      if (_selectedImage != null) {
+        formData.files.add(
+          MapEntry(
+            'media_file',
+            await MultipartFile.fromFile(_selectedImage!.path, filename: _selectedImage!.name),
+          ),
+        );
+      }
       final response = await DioClient().dio.post<dynamic>(
         ApiUris.communityPosts,
-        data: {
-          'post_type': 'custom',
-          'caption': caption,
-        },
+        data: formData,
       );
       if (response.statusCode == 201) {
         _postController.clear();
+        setState(() {
+          _selectedImage = null;
+        });
         _fetchFeed();
       }
     } catch (e) {
@@ -736,23 +758,63 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.all(16),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _postController,
-                          decoration: InputDecoration(
-                            hintText: "What's on your mind? Share your workout progress...",
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          ),
+                      if (_selectedImage != null) ...[
+                        Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                File(_selectedImage!.path),
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: GestureDetector(
+                                onTap: () => setState(() => _selectedImage = null),
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 8),
+                      ],
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _postController,
+                              decoration: InputDecoration(
+                                hintText: "What's on your mind? Share your workout progress...",
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(20)),
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.grey),
+                            onPressed: _pickImage,
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.send, color: AppColors.primary),
+                            onPressed: _createPost,
+                          )
+                        ],
                       ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: AppColors.primary),
-                        onPressed: _createPost,
-                      )
                     ],
                   ),
                 ),
@@ -767,8 +829,8 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                         margin: const EdgeInsets.all(12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
+                           padding: const EdgeInsets.all(12),
+                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
@@ -789,6 +851,21 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(post['caption']?.toString() ?? '', style: AppStyles.text14Px.poppins.dark),
+                              if (post['media_url'] != null && post['media_url'].toString().isNotEmpty) ...[
+                                const SizedBox(height: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.network(
+                                    post['media_url'].toString().startsWith('http')
+                                        ? post['media_url'].toString()
+                                        : '${ApiUris.base}${post['media_url']}',
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: 220,
+                                    errorBuilder: (context, error, stackTrace) => const SizedBox(),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 12),
                               Row(
                                 children: [

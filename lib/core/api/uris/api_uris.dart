@@ -10,6 +10,7 @@ final class ApiUris {
       : (_baseUrlEnv.endsWith('/')
           ? _baseUrlEnv.substring(0, _baseUrlEnv.length - 1)
           : _baseUrlEnv);
+  static String get base => _baseUrl;
   static final _v1 = '$_baseUrl/api/v1/';
 
   ///============================= AUTH =============================\\\

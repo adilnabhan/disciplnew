@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
+import 'package:customer_mobile_app/src/features/dashboard/presentation/screen/dashboard_screen.dart';
 
 class OwnWorkoutScreen extends StatefulWidget {
   final bool isNewSession;
@@ -1767,12 +1768,38 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     );
                   }
                 } else {
-                  setState(() {
-                    _isFinishing = true;
-                  });
                   await _cubit.finishSession(title: enteredTitle);
                   if (context.mounted) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pop(context); // Close OwnWorkoutScreen
+                    
+                    // Show a nice dialog offering to go to Social tab to share!
+                    final share = await showDialog<bool>(
+                      context: context,
+                      builder: (dialogCtx) => AlertDialog(
+                        backgroundColor: Colors.white,
+                        title: const Text('Workout Completed!', style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                        content: const Text('Congratulations! Would you like to go to the Social Community Feed to share your achievements with your gym mates?', style: TextStyle(fontFamily: 'Poppins')),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogCtx, false),
+                            child: const Text('Maybe Later', style: TextStyle(fontFamily: 'Poppins', color: Colors.grey)),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogCtx, true),
+                            child: const Text('Share Now', style: TextStyle(fontFamily: 'Poppins', color: AppColors.primary, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (share == true && context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute<void>(
+                          builder: (context) => const DashboardScreen(navIndex: 2),
+                        ),
+                        (route) => false,
+                      );
+                    }
                   }
                 }
               },
