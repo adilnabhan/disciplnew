@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/fitness_centers_listing_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/widgets/health_dashboard_widgets.dart';
 
 ///* This class contains dashbpard screen
 ///*eg : Pages manager , bottom nav ...
@@ -29,6 +30,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _icons = [
       'assets/images/svg/icons/new_home_notselected.svg',
       'assets/images/svg/icons/workout_notseleted.svg',
+      '',
       'assets/images/svg/icons/not selected_explore.svg',
       'assets/images/svg/icons/person.svg',
     ];
@@ -36,6 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _labels = [
       'Home',
       'Workouts',
+      'Social',
       'Explore',
       'Profile',
     ];
@@ -152,6 +155,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: const [
                 HomeScreen(),
                 WorkoutLogScreen(),
+                CommunityFeedScreen(),
                 FitnessCentersListingScreen(),
                 ProfileScreen(),
               ],
@@ -180,20 +184,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (i == 3)
+                          if (i == 4)
                             _buildProfileTabIcon(state.navIndex == i)
+                          else if (i == 2)
+                            Icon(
+                              state.navIndex == i ? Icons.people : Icons.people_outline,
+                              color: state.navIndex == i ? AppColors.primary : AppColors.textGrey,
+                              size: 24,
+                            )
                           else
                             SvgPicture.asset(
                               (i == 0 && state.navIndex == i)
                                   ? 'assets/images/svg/icons/new_home_selected.svg'
                                   : (i == 1 && state.navIndex == i)
                                   ? 'assets/images/svg/icons/workout_selected.svg'
-                                  : (i == 2 && state.navIndex == i)
+                                  : (i == 3 && state.navIndex == i)
                                   ? 'assets/images/svg/icons/selected_explore.svg'
                                   : _icons[i],
                               width: 24,
                               height: 24,
-                              color: (i == 0 && state.navIndex == i) || (i == 2 && state.navIndex == i)
+                              color: (i == 0 && state.navIndex == i) || (i == 3 && state.navIndex == i)
                                   ? null
                                   : state.navIndex == i
                                       ? AppColors.primary

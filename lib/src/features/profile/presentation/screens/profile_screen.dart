@@ -1,4 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/fitness_details_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/widgets/health_dashboard_widgets.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -477,11 +479,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
-        Text(
-          'Health Status',
-          style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.textDark,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Health Status',
+              style: AppStyles.text16Px.poppins.w600.copyWith(
+                color: AppColors.textDark,
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit, color: AppColors.primary, size: 20),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute<dynamic>(
+                    builder: (_) => BlocProvider.value(
+                      value: _cubit,
+                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
+                    ),
+                  ),
+                );
+                _fetch();
+              },
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Container(
@@ -525,6 +547,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        _buildProfileListItem('Health Reports & BMI/BMR Analysis', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute<dynamic>(
+              builder: (_) => const HealthReportsScreen(),
+            ),
+          );
+        }),
+        const SizedBox(height: 16),
 
         if (choicesModel != null) ...[
           const SizedBox(height: 20),

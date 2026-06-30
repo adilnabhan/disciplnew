@@ -189,8 +189,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // Reduced gap before calendar/card
             const SizedBox(height: 8),
    
-            if (!isGuest)
-              const HealthDashboardSection(),
+            // if (!isGuest)
+            //   const HealthDashboardSection(),
 
             if (isGuest)
               _membershipExpireCard(context)

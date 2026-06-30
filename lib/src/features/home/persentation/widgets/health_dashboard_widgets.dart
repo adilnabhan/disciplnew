@@ -185,13 +185,12 @@ class _HealthDashboardSectionState extends State<HealthDashboardSection> {
           ),
           const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildActionItem(context, 'Food Log', Icons.restaurant, Colors.orange, const FoodLoggingScreen()),
               _buildActionItem(context, 'Weight', Icons.scale, Colors.teal, const WeightMeasurementsScreen()),
               _buildActionItem(context, 'Social', Icons.people, Colors.indigo, const CommunityFeedScreen()),
               _buildActionItem(context, 'Badges', Icons.emoji_events, Colors.amber, const AchievementsScreen()),
-              _buildActionItem(context, 'Reports', Icons.analytics, Colors.purple, const HealthReportsScreen()),
             ],
           )
         ],
