@@ -774,53 +774,6 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                if (_todaysWorkout != null)
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xffFFF4F4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xffF0B5B7)),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Today's Workout Logged!",
-                                style: AppStyles.text12Px.poppins.w600.copyWith(color: AppColors.primary),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                _todaysWorkout!['title']?.toString() ?? 'My Workout',
-                                style: AppStyles.text14Px.poppins.w600.dark,
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                "Status: ${_todaysWorkout!['status']?.toString().toUpperCase() ?? 'COMPLETED'}",
-                                style: AppStyles.text12Px.poppins.copyWith(color: Colors.grey.shade700),
-                              ),
-                            ],
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            final wTitle = _todaysWorkout!['title']?.toString() ?? 'My Workout';
-                            _postController.text = "Just completed my workout today: $wTitle! 🏋️‍♂️";
-                          },
-                          icon: const Icon(Icons.share, size: 16, color: AppColors.primary),
-                          label: const Text(
-                            "Share",
-                            style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.all(16),
