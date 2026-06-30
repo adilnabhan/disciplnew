@@ -20,6 +20,7 @@ mixin _$AppState {
   ThemeMode get themeMode => throw _privateConstructorUsedError;
   Locale get locale => throw _privateConstructorUsedError;
   LoginSuccessModel? get currentUser => throw _privateConstructorUsedError;
+  String get themeName => throw _privateConstructorUsedError;
 
   /// Create a copy of AppState
   /// with the given fields replaced by the non-null parameter values.
@@ -37,6 +38,7 @@ abstract class $AppStateCopyWith<$Res> {
     ThemeMode themeMode,
     Locale locale,
     LoginSuccessModel? currentUser,
+    String themeName,
   });
 
   $LoginSuccessModelCopyWith<$Res>? get currentUser;
@@ -60,6 +62,7 @@ class _$AppStateCopyWithImpl<$Res, $Val extends AppState>
     Object? themeMode = null,
     Object? locale = null,
     Object? currentUser = freezed,
+    Object? themeName = null,
   }) {
     return _then(
       _value.copyWith(
@@ -78,6 +81,11 @@ class _$AppStateCopyWithImpl<$Res, $Val extends AppState>
                     ? _value.currentUser
                     : currentUser // ignore: cast_nullable_to_non_nullable
                         as LoginSuccessModel?,
+            themeName:
+                null == themeName
+                    ? _value.themeName
+                    : themeName // ignore: cast_nullable_to_non_nullable
+                        as String,
           )
           as $Val,
     );
@@ -111,6 +119,7 @@ abstract class _$$AppStateImplCopyWith<$Res>
     ThemeMode themeMode,
     Locale locale,
     LoginSuccessModel? currentUser,
+    String themeName,
   });
 
   @override
@@ -134,6 +143,7 @@ class __$$AppStateImplCopyWithImpl<$Res>
     Object? themeMode = null,
     Object? locale = null,
     Object? currentUser = freezed,
+    Object? themeName = null,
   }) {
     return _then(
       _$AppStateImpl(
@@ -152,6 +162,11 @@ class __$$AppStateImplCopyWithImpl<$Res>
                 ? _value.currentUser
                 : currentUser // ignore: cast_nullable_to_non_nullable
                     as LoginSuccessModel?,
+        themeName:
+            null == themeName
+                ? _value.themeName
+                : themeName // ignore: cast_nullable_to_non_nullable
+                    as String,
       ),
     );
   }
@@ -164,6 +179,7 @@ class _$AppStateImpl implements _AppState {
     this.themeMode = ThemeMode.light,
     this.locale = const Locale('en'),
     this.currentUser,
+    this.themeName = 'light',
   });
 
   @override
@@ -174,10 +190,13 @@ class _$AppStateImpl implements _AppState {
   final Locale locale;
   @override
   final LoginSuccessModel? currentUser;
+  @override
+  @JsonKey()
+  final String themeName;
 
   @override
   String toString() {
-    return 'AppState(themeMode: $themeMode, locale: $locale, currentUser: $currentUser)';
+    return 'AppState(themeMode: $themeMode, locale: $locale, currentUser: $currentUser, themeName: $themeName)';
   }
 
   @override
@@ -189,11 +208,14 @@ class _$AppStateImpl implements _AppState {
                 other.themeMode == themeMode) &&
             (identical(other.locale, locale) || other.locale == locale) &&
             (identical(other.currentUser, currentUser) ||
-                other.currentUser == currentUser));
+                other.currentUser == currentUser) &&
+            (identical(other.themeName, themeName) ||
+                other.themeName == themeName));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, themeMode, locale, currentUser);
+  int get hashCode =>
+      Object.hash(runtimeType, themeMode, locale, currentUser, themeName);
 
   /// Create a copy of AppState
   /// with the given fields replaced by the non-null parameter values.
@@ -209,6 +231,7 @@ abstract class _AppState implements AppState {
     final ThemeMode themeMode,
     final Locale locale,
     final LoginSuccessModel? currentUser,
+    final String themeName,
   }) = _$AppStateImpl;
 
   @override
@@ -217,6 +240,8 @@ abstract class _AppState implements AppState {
   Locale get locale;
   @override
   LoginSuccessModel? get currentUser;
+  @override
+  String get themeName;
 
   /// Create a copy of AppState
   /// with the given fields replaced by the non-null parameter values.

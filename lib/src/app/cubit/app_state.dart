@@ -6,6 +6,7 @@ class AppState with _$AppState {
     @Default(ThemeMode.light) ThemeMode themeMode,
     @Default(Locale('en')) Locale locale,
     LoginSuccessModel? currentUser,
+    @Default('light') String themeName,
     // Option<Either<ApiException, ConstantChoicesModel>>? constChoice,
   }) = _AppState;
 }

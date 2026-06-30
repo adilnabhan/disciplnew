@@ -295,6 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                         const SizedBox(height: 16),
                                       ],
+                                      _buildThemeCustomizer(context),
                                       _buildOtherDetailsSection(
                                         customerDetails,
                                         choicesModel,
@@ -311,6 +312,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         );
         },
+      ),
+    );
+  }
+
+  Widget _buildThemeCustomizer(BuildContext context) {
+    final appCubit = Feggy.read<AppCubit>();
+    if (appCubit == null) return const SizedBox.shrink();
+
+    return BlocBuilder<AppCubit, AppState>(
+      bloc: appCubit,
+      builder: (context, appState) {
+        final currentTheme = appState.themeName;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.light,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Appearance',
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: AppColors.textDark,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildThemeButton(
+                      label: 'Light',
+                      colorPreview: Colors.white,
+                      borderColor: Colors.grey.shade300,
+                      isSelected: currentTheme == 'light',
+                      onTap: () => appCubit.changeCustomTheme('light'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildThemeButton(
+                      label: 'Dark',
+                      colorPreview: const Color(0xFF1E1E1E),
+                      borderColor: Colors.transparent,
+                      isSelected: currentTheme == 'dark',
+                      onTap: () => appCubit.changeCustomTheme('dark'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildThemeButton(
+                      label: 'Cream',
+                      colorPreview: const Color(0xFFFDFBF7),
+                      borderColor: const Color(0xFFE6DFD3),
+                      isSelected: currentTheme == 'cream',
+                      onTap: () => appCubit.changeCustomTheme('cream'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildThemeButton({
+    required String label,
+    required Color colorPreview,
+    required Color borderColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: .1)
+              : AppColors.bgcolorgrey,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                color: colorPreview,
+                shape: BoxShape.circle,
+                border: Border.all(color: borderColor, width: 1),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppStyles.text13Px.poppins.w500.copyWith(
+                color: isSelected ? AppColors.primary : AppColors.textDark,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -24,7 +24,7 @@ class LogoutSheet extends StatelessWidget {
             Text('Logout', style: AppStyles.text18Px.poppins.w600.dark),
             IconButton(
               onPressed: context.pop,
-              icon: const Icon(Icons.close, color: AppColors.textGrey),
+              icon: Icon(Icons.close, color: AppColors.textGrey),
             ),
           ],
         ),

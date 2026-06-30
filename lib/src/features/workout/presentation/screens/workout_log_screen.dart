@@ -591,7 +591,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
     debugPrint('DEBUG BUILD: isCustomer: $isCustomer, date: $_selectedDate');
 
-    final List<Widget> logCards = [];
+    final List<Widget> assignedCards = [];
+    final List<Widget> completedCards = [];
 
     int cardIndex = 1;
 
@@ -648,32 +649,64 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final startedAt = workoutItem['started_at']?.toString() ?? workoutItem['created_at']?.toString() ?? workoutItem['start_time']?.toString();
         final completedAt = workoutItem['completed_at']?.toString() ?? workoutItem['updated_at']?.toString() ?? workoutItem['end_time']?.toString();
         
-        String durationStr = _formatDuration(startedAt, completedAt);
-        if (durationStr == '--:--' && workoutItem['duration'] != null) {
-          durationStr = workoutItem['duration'].toString();
-        }
-        final bool isExpired = workoutItem['membership_status']?.toString().toLowerCase() == 'expired';
-        logCards.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _WorkoutCard(
-              index: cardIndex++,
-              title: title,
-              badge: badge,
-              hasImage: true,
-              isCompleted: isCompleted,
-              duration: durationStr,
-              trainerName: workoutItem['trainer_name']?.toString(),
-              isMembershipExpired: isExpired,
-              onTap: () async {
-                final idVal = workoutItem['session_id'] ?? workoutItem['id'];
-                final sessionId =
-                    idVal != null ? int.tryParse(idVal.toString()) : null;
-                debugPrint(
-                  'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
-                );
-                if (sessionId != null) {
-                  if (isCompleted) {
+        final idVal = workoutItem['session_id'] ?? workoutItem['id'];
+        final sessionId = idVal != null ? int.tryParse(idVal.toString()) : null;
+
+        if (!isCompleted) {
+          final int exerciseCount = (exercisesData is List) ? exercisesData.length : 0;
+          final statusStr = workoutItem['status']?.toString() ?? 'pending';
+          assignedCards.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: _AssignedWorkoutCard(
+                title: title,
+                badge: badge,
+                status: statusStr,
+                exerciseCount: exerciseCount,
+                onTap: () async {
+                  if (sessionId != null) {
+                    await Navigator.push<dynamic>(
+                      context,
+                      MaterialPageRoute<dynamic>(
+                        builder:
+                            (context) => OwnWorkoutScreen(
+                              isNewSession: false,
+                              sessionId: sessionId,
+                            ),
+                      ),
+                    );
+                    _loadWorkoutLogForSelectedDate();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Could not find session ID for this workout.'),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+          );
+        } else {
+          String durationStr = _formatDuration(startedAt, completedAt);
+          if (durationStr == '--:--' && workoutItem['duration'] != null) {
+            durationStr = workoutItem['duration'].toString();
+          }
+          final bool isExpired = workoutItem['membership_status']?.toString().toLowerCase() == 'expired';
+          completedCards.add(
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _WorkoutCard(
+                index: cardIndex++,
+                title: title,
+                badge: badge,
+                hasImage: true,
+                isCompleted: isCompleted,
+                duration: durationStr,
+                trainerName: workoutItem['trainer_name']?.toString(),
+                isMembershipExpired: isExpired,
+                onTap: () async {
+                  if (sessionId != null) {
                     final refresh = await Navigator.push<dynamic>(
                       context,
                       MaterialPageRoute<dynamic>(
@@ -688,33 +721,51 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                       _loadWorkoutLogForSelectedDate();
                     }
                   } else {
-                    final refresh = await Navigator.push<dynamic>(
-                      context,
-                      MaterialPageRoute<dynamic>(
-                        builder:
-                            (context) => OwnWorkoutScreen(
-                              isNewSession: false,
-                              sessionId: sessionId,
-                            ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Could not find session ID for this workout log.',
+                        ),
                       ),
                     );
-                    _loadWorkoutLogForSelectedDate();
                   }
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Could not find session ID for this workout log.',
-                      ),
-                    ),
-                  );
-                }
-              },
+                },
+              ),
+            ),
+          );
+        }
+      }
+    }
+
+    final List<Widget> logCards = [];
+    if (assignedCards.isNotEmpty) {
+      logCards.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Assigned Workout',
+            style: AppStyles.text16Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
+      );
+      logCards.addAll(assignedCards);
+      if (completedCards.isNotEmpty) {
+        logCards.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 12),
+            child: Text(
+              'Workout History',
+              style: AppStyles.text16Px.poppins.w600.copyWith(
+                color: AppColors.textDark,
+              ),
             ),
           ),
         );
       }
     }
+    logCards.addAll(completedCards);
 
     if (logCards.isEmpty) {
       logCards.add(const _RestDayCard());
@@ -1475,6 +1526,119 @@ class _GuestWorkoutView extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AssignedWorkoutCard extends StatelessWidget {
+  const _AssignedWorkoutCard({
+    required this.title,
+    required this.badge,
+    required this.status,
+    required this.exerciseCount,
+    required this.onTap,
+  });
+
+  final String title;
+  final String badge;
+  final String status;
+  final int exerciseCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isInProgress = status.toLowerCase() == 'in_progress';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.light,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isInProgress
+                      ? const Color(0xFFFFF3E0)
+                      : AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Text(
+                  isInProgress ? 'IN PROGRESS' : 'ASSIGNED',
+                  style: AppStyles.text12Px.poppins.w600.copyWith(
+                    color: isInProgress ? Colors.orange.shade800 : AppColors.primary,
+                  ),
+                ),
+              ),
+              Text(
+                '$exerciseCount Exercises',
+                style: AppStyles.text12Px.poppins.w500.copyWith(
+                  color: AppColors.textGrey,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            title,
+            style: AppStyles.text18Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+              height: 1.2,
+            ),
+          ),
+          if (badge.isNotEmpty && badge != title) ...[
+            const SizedBox(height: 4),
+            Text(
+              badge,
+              style: AppStyles.text13Px.poppins.w400.copyWith(
+                color: AppColors.textGrey,
+              ),
+            ),
+          ],
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: onTap,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isInProgress
+                      ? Icons.play_circle_fill_rounded
+                      : Icons.play_arrow_rounded,
+                  size: 20,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isInProgress ? 'Resume Workout' : 'Start Workout',
+                  style: AppStyles.text14Px.poppins.w600.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

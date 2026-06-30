@@ -447,6 +447,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     required int equipmentId,
     required String type,
     String? videoUrl,
+    String? customMuscleGroup,
+    String? customEquipment,
     required void Function(bool success, String message) onComplete,
   }) async {
     emit(state.copyWith(isCreatingExercise: true));
@@ -458,6 +460,12 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       'equipment': equipmentId,
       'video_url': videoUrl ?? '',
     };
+    if (customMuscleGroup != null) {
+      body['custom_muscle_group'] = customMuscleGroup;
+    }
+    if (customEquipment != null) {
+      body['custom_equipment'] = customEquipment;
+    }
 
     final result = await WorkoutRepository().createCustomExercise(body: body);
 

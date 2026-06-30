@@ -149,7 +149,7 @@ class _TimeFieldState extends State<TimeField> {
             decoration: (widget.decoration ?? const InputDecoration()).copyWith(
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: [SvgPicture.asset('assets/images/svg/icons/clock.svg', height: 20, width: 20, colorFilter: const ColorFilter.mode(AppColors.dark, BlendMode.srcIn))],
+                children: [SvgPicture.asset('assets/images/svg/icons/clock.svg', height: 20, width: 20, colorFilter: ColorFilter.mode(AppColors.dark, BlendMode.srcIn))],
               ),
             ),
             validator: widget.validator,

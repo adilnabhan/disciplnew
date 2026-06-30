@@ -612,6 +612,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   }) {
     final nameController = TextEditingController();
     final youtubeLinkController = TextEditingController();
+    final customMuscleController = TextEditingController();
+    final customEquipmentController = TextEditingController();
     int? selectedMuscleId;
     String? selectedTypeCode;
     int? selectedEquipmentId;
@@ -814,31 +816,75 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items:
-                                    state.muscleGroups
-                                        .map(
-                                          (m) => DropdownMenuItem(
-                                            value: m.id,
-                                            child: Text(
-                                              m.name,
-                                              style: const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 15,
-                                                height: 1.0,
-                                                letterSpacing: -0.3,
-                                                color: AppColors.button,
-                                              ),
+                                items: [
+                                  ...state.muscleGroups
+                                      .map(
+                                        (m) => DropdownMenuItem(
+                                          value: m.id,
+                                          child: Text(
+                                            m.name,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 15,
+                                              height: 1.0,
+                                              letterSpacing: -0.3,
+                                              color: AppColors.button,
                                             ),
                                           ),
-                                        )
-                                        .toList(),
+                                        ),
+                                      )
+                                      .toList(),
+                                  const DropdownMenuItem<int>(
+                                    value: -999,
+                                    child: Text(
+                                      'Other',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 15,
+                                        height: 1.0,
+                                        letterSpacing: -0.3,
+                                        color: AppColors.button,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 onChanged: (val) {
                                   setDialogState(() {
                                     selectedMuscleId = val;
                                   });
                                 },
                               ),
+                              if (selectedMuscleId == -999) ...[
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: customMuscleController,
+                                  validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter custom muscle group' : null,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 15,
+                                    color: AppColors.button,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter custom muscle group',
+                                    hintStyle: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      color: Color(0xFF888888),
+                                      fontSize: 15,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                                    ),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 20),
 
                               // Type
@@ -978,31 +1024,75 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items:
-                                    state.equipment
-                                        .map(
-                                          (e) => DropdownMenuItem(
-                                            value: e.id,
-                                            child: Text(
-                                              e.name,
-                                              style: const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 15,
-                                                height: 1.0,
-                                                letterSpacing: -0.3,
-                                                color: AppColors.button,
-                                              ),
+                                items: [
+                                  ...state.equipment
+                                      .map(
+                                        (e) => DropdownMenuItem(
+                                          value: e.id,
+                                          child: Text(
+                                            e.name,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 15,
+                                              height: 1.0,
+                                              letterSpacing: -0.3,
+                                              color: AppColors.button,
                                             ),
                                           ),
-                                        )
-                                        .toList(),
+                                        ),
+                                      )
+                                      .toList(),
+                                  const DropdownMenuItem<int>(
+                                    value: -999,
+                                    child: Text(
+                                      'Other',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 15,
+                                        height: 1.0,
+                                        letterSpacing: -0.3,
+                                        color: AppColors.button,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                                 onChanged: (val) {
                                   setDialogState(() {
                                     selectedEquipmentId = val;
                                   });
                                 },
                               ),
+                              if (selectedEquipmentId == -999) ...[
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: customEquipmentController,
+                                  validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter custom equipment' : null,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w400,
+                                    fontSize: 15,
+                                    color: AppColors.button,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter custom equipment name',
+                                    hintStyle: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      color: Color(0xFF888888),
+                                      fontSize: 15,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                                    ),
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 20),
 
                               // Youtube Link
@@ -1116,6 +1206,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                               videoUrl:
                                                   youtubeLinkController.text
                                                       .trim(),
+                                              customMuscleGroup: selectedMuscleId == -999 ? customMuscleController.text.trim() : null,
+                                              customEquipment: selectedEquipmentId == -999 ? customEquipmentController.text.trim() : null,
                                               onComplete: (success, message) {
                                                 if (success) {
                                                   sheetNavigator.pop();

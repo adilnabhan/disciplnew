@@ -172,6 +172,19 @@ class AppCubit extends HydratedCubit<AppState> {
     emit(state.copyWith(themeMode: theme));
   }
 
+  Future<void> changeCustomTheme(String themeName) async {
+    if (themeName == 'dark') {
+      AppColors.currentTheme = AppThemeMode.dark;
+      emit(state.copyWith(themeMode: ThemeMode.dark, themeName: 'dark'));
+    } else if (themeName == 'cream') {
+      AppColors.currentTheme = AppThemeMode.cream;
+      emit(state.copyWith(themeMode: ThemeMode.light, themeName: 'cream'));
+    } else {
+      AppColors.currentTheme = AppThemeMode.light;
+      emit(state.copyWith(themeMode: ThemeMode.light, themeName: 'light'));
+    }
+  }
+
   void changeLocale(Locale locale) {
     emit(state.copyWith(locale: locale));
   }
@@ -241,29 +254,30 @@ class AppCubit extends HydratedCubit<AppState> {
       }
     }
 
+    final themeName = json['theme_name'] as String? ?? (json['theme_mode'] == 'dark' ? 'dark' : 'light');
+    if (themeName == 'dark') {
+      AppColors.currentTheme = AppThemeMode.dark;
+    } else if (themeName == 'cream') {
+      AppColors.currentTheme = AppThemeMode.cream;
+    } else {
+      AppColors.currentTheme = AppThemeMode.light;
+    }
+
     return AppState(
-      themeMode:
-          json['theme_mode'] == 'dark' ? ThemeMode.dark : ThemeMode.light,
-      locale: Locale(json['language_code'] as String),
-      currentUser:
-          json['currentUser'] != null
-              ? LoginSuccessModel.fromJson(
-                json['currentUser'] as Map<String, dynamic>,
-              )
-              : null,
+      themeMode: themeName == 'dark' ? ThemeMode.dark : ThemeMode.light,
+      themeName: themeName,
+      locale: Locale(json['language_code'] as String? ?? 'en'),
+      currentUser: currentUser,
     );
   }
 
   @override
   Map<String, dynamic>? toJson(AppState state) {
     return {
-      
       'theme_mode': state.themeMode.name,
-     
+      'theme_name': state.themeName,
       'language_code': state.locale.languageCode,
-     
       'currentUser': state.currentUser?.toJson(),
-    
     };
   }
 

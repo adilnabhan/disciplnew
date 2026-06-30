@@ -267,7 +267,7 @@ class _SearchCheckboxFieldState<T> extends State<SearchCheckboxField<T>> with Ch
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(100.r)),
                           side: BorderSide.none,
                           backgroundColor: AppColors.primary,
-                          deleteIcon: const Icon(color: AppColors.light, Icons.clear, size: 15),
+                          deleteIcon: Icon(color: AppColors.light, Icons.clear, size: 15),
                           label: Text(item.label, style: AppStyles.text12Px.w400.light.copyWith(fontWeight: FontWeight.w400)),
                           onDeleted: () {
                             _ctrl.value.remove(item);
