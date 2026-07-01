@@ -39,22 +39,23 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   Future<void> _loadMyPlans() async {
     final response = await WorkoutRepository().getPresets();
-    response.fold((error) {
-      debugPrint('Error loading my plans: $error');
-      if (mounted) {
-        setState(() {
-          _activeError = error;
-        });
-      }
-    }, (
-      list,
-    ) {
-      if (mounted) {
-        setState(() {
-          _myPlans = list;
-        });
-      }
-    });
+    response.fold(
+      (error) {
+        debugPrint('Error loading my plans: $error');
+        if (mounted) {
+          setState(() {
+            _activeError = error;
+          });
+        }
+      },
+      (list) {
+        if (mounted) {
+          setState(() {
+            _myPlans = list;
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -92,16 +93,13 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     final customerId = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
     if (customerId != null && _customerDetails == null) {
       CustomerDetailsRepository().customerDetails(id: customerId).then((res) {
-        res.fold(
-          (error) => null,
-          (details) {
-            if (mounted) {
-              setState(() {
-                _customerDetails = details;
-              });
-            }
-          },
-        );
+        res.fold((error) => null, (details) {
+          if (mounted) {
+            setState(() {
+              _customerDetails = details;
+            });
+          }
+        });
       });
     }
 
@@ -133,33 +131,47 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           if (sessionId != null) {
             try {
               final idInt = int.parse(sessionId.toString());
-              final detailsRes = await WorkoutRepository().getSessionDetails(sessionId: idInt);
-              detailsRes.fold(
-                (_) => null,
-                (details) {
-                  if (details['started_at'] != null) map['started_at'] = details['started_at'];
-                  if (details['completed_at'] != null) map['completed_at'] = details['completed_at'];
-                  if (details['duration'] != null) map['duration'] = details['duration'];
-                }
+              final detailsRes = await WorkoutRepository().getSessionDetails(
+                sessionId: idInt,
               );
+              detailsRes.fold((_) => null, (details) {
+                if (details['started_at'] != null)
+                  map['started_at'] = details['started_at'];
+                if (details['completed_at'] != null)
+                  map['completed_at'] = details['completed_at'];
+                if (details['duration'] != null)
+                  map['duration'] = details['duration'];
+              });
             } catch (e) {
               debugPrint('Error fetching session details: $e');
             }
           }
           enrichedList.add(map);
         }
-        // Sort enrichedList so that trainer-assigned workouts come first (at the top)
+        // Sort: trainer-assigned first, within trainer → not-completed before completed
         enrichedList.sort((a, b) {
           final aTrainer = a['trainer_name']?.toString() ?? '';
           final bTrainer = b['trainer_name']?.toString() ?? '';
           final aIsTrainer = aTrainer.isNotEmpty;
           final bIsTrainer = bTrainer.isNotEmpty;
-          if (aIsTrainer && !bIsTrainer) {
-            return -1; // a comes first
-          } else if (!aIsTrainer && bIsTrainer) {
-            return 1; // b comes first
+
+          // Trainer vs non-trainer
+          if (aIsTrainer && !bIsTrainer) return -1;
+          if (!aIsTrainer && bIsTrainer) return 1;
+
+          // Both trainer-assigned: not-completed before completed
+          if (aIsTrainer && bIsTrainer) {
+            final aCompleted =
+                ((a['is_completed'] as bool?) ?? false) ||
+                (a['status']?.toString().toLowerCase() == 'completed');
+            final bCompleted =
+                ((b['is_completed'] as bool?) ?? false) ||
+                (b['status']?.toString().toLowerCase() == 'completed');
+            if (!aCompleted && bCompleted) return -1;
+            if (aCompleted && !bCompleted) return 1;
           }
-          return 0; // keep relative order
+
+          return 0;
         });
         if (mounted) {
           setState(() {
@@ -344,17 +356,27 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           if (s is Map<String, dynamic>) {
             final targetWeight = s['target_weight'] ?? s['targetWeight'];
             final targetReps = s['target_reps'] ?? s['targetReps'];
-            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight ?? '10';
+            final kgVal =
+                s['weight_kg'] ??
+                s['weight'] ??
+                s['kg'] ??
+                targetWeight ??
+                '10';
             final repsVal = s['reps'] ?? targetReps ?? '15';
             final prevRaw = s['previous'];
             final prevWeightRaw = s['previous_weight_kg'];
             String prevStr;
-            if (prevRaw != null && prevRaw.toString().isNotEmpty && prevRaw.toString() != 'no data') {
+            if (prevRaw != null &&
+                prevRaw.toString().isNotEmpty &&
+                prevRaw.toString() != 'no data') {
               prevStr = prevRaw.toString();
             } else if (prevWeightRaw != null) {
               final w = double.tryParse(prevWeightRaw.toString());
               if (w != null) {
-                final wStr = w == w.truncateToDouble() ? w.toInt().toString() : w.toString();
+                final wStr =
+                    w == w.truncateToDouble()
+                        ? w.toInt().toString()
+                        : w.toString();
                 prevStr = '${wStr}kg';
               } else {
                 prevStr = 'no data';
@@ -556,7 +578,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         }
 
         final rawTitle = workoutItem['title']?.toString() ?? '';
-        final hasRawTitle = rawTitle.isNotEmpty && rawTitle != 'My Workout Plan';
+        final hasRawTitle =
+            rawTitle.isNotEmpty && rawTitle != 'My Workout Plan';
 
         final backendPlanName = workoutItem['plan_name']?.toString() ?? '';
         final hasBackendPlanName =
@@ -580,14 +603,22 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final isCompleted =
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
-        final startedAt = workoutItem['started_at']?.toString() ?? workoutItem['created_at']?.toString() ?? workoutItem['start_time']?.toString();
-        final completedAt = workoutItem['completed_at']?.toString() ?? workoutItem['updated_at']?.toString() ?? workoutItem['end_time']?.toString();
-        
+        final startedAt =
+            workoutItem['started_at']?.toString() ??
+            workoutItem['created_at']?.toString() ??
+            workoutItem['start_time']?.toString();
+        final completedAt =
+            workoutItem['completed_at']?.toString() ??
+            workoutItem['updated_at']?.toString() ??
+            workoutItem['end_time']?.toString();
+
         String durationStr = _formatDuration(startedAt, completedAt);
         if (durationStr == '--:--' && workoutItem['duration'] != null) {
           durationStr = workoutItem['duration'].toString();
         }
-        final bool isExpired = workoutItem['membership_status']?.toString().toLowerCase() == 'expired';
+        final bool isExpired =
+            workoutItem['membership_status']?.toString().toLowerCase() ==
+            'expired';
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -600,10 +631,15 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               duration: durationStr,
               trainerName: workoutItem['trainer_name']?.toString(),
               isMembershipExpired: isExpired,
-              gymLogo: _customerDetails?.assignedFitnessCenter?['logo']?.toString(),
+              gymLogo:
+                  _customerDetails?.assignedFitnessCenter?['logo']?.toString(),
               isLoadingGymLogo: _customerDetails == null,
-              trainerProfileImage: _customerDetails?.assignedTrainer?['profile_image']?.toString(),
-              verificationStatus: workoutItem['verification_status']?.toString() ?? workoutItem['verification']?.toString(),
+              trainerProfileImage:
+                  _customerDetails?.assignedTrainer?['profile_image']
+                      ?.toString(),
+              verificationStatus:
+                  workoutItem['verification_status']?.toString() ??
+                  workoutItem['verification']?.toString(),
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -686,7 +722,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                 child: RefreshIndicator(
                   onRefresh: _retryLoading,
                   child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                     clipBehavior: Clip.none,
                     child: Column(
                       children: [
@@ -709,23 +747,38 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                               const SizedBox(height: 12),
                               AnimatedSwitcher(
                                 duration: const Duration(milliseconds: 300),
-                                child: _isLoadingDateLog
-                                    ? _buildShimmerWorkoutLogs(key: const ValueKey('shimmer'))
-                                    : _activeError != null
+                                child:
+                                    _isLoadingDateLog
+                                        ? _buildShimmerWorkoutLogs(
+                                          key: const ValueKey('shimmer'),
+                                        )
+                                        : _activeError != null
                                         ? Padding(
-                                            key: const ValueKey('error'),
-                                            padding: const EdgeInsets.only(top: 20),
-                                            child: _activeError!.maybeWhen(
-                                              network: (e) => ErrorUi.network(onTap: _retryLoading),
-                                              notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
-                                              orElse: () => ErrorUi.server(onTap: _retryLoading),
-                                            ),
-                                          )
-                                        : Column(
-                                            key: const ValueKey('content'),
-                                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                                            children: logCards,
+                                          key: const ValueKey('error'),
+                                          padding: const EdgeInsets.only(
+                                            top: 20,
                                           ),
+                                          child: _activeError!.maybeWhen(
+                                            network:
+                                                (e) => ErrorUi.network(
+                                                  onTap: _retryLoading,
+                                                ),
+                                            notFound:
+                                                (e) => ErrorUi.notFound(
+                                                  onTap: _retryLoading,
+                                                ),
+                                            orElse:
+                                                () => ErrorUi.server(
+                                                  onTap: _retryLoading,
+                                                ),
+                                          ),
+                                        )
+                                        : Column(
+                                          key: const ValueKey('content'),
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: logCards,
+                                        ),
                               ),
                             ],
                           ),
@@ -783,11 +836,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                             color: Colors.white,
                           ),
                           const SizedBox(height: 8),
-                          Container(
-                            width: 80,
-                            height: 14,
-                            color: Colors.white,
-                          ),
+                          Container(width: 80, height: 14, color: Colors.white),
                         ],
                       ),
                     ),
@@ -1170,8 +1219,14 @@ class _WorkoutCard extends StatelessWidget {
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: isMentorGiven ? const Color(0xFFFFD5D5) : null,
-              gradient: isMentorGiven ? null : cardGradient,
+              gradient:
+                  isMentorGiven
+                      ? const LinearGradient(
+                        colors: [Color(0xFFFFD6D6), Color(0xFFFFB4B4)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      )
+                      : cardGradient,
               borderRadius: BorderRadius.circular(20),
               image:
                   (hasImage && !isMentorGiven)
@@ -1191,83 +1246,183 @@ class _WorkoutCard extends StatelessWidget {
                 ),
               ],
             ),
-            child: isMentorGiven
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child:
+                isMentorGiven
+                    ? Stack(
                       children: [
-                        Row(
-                          children: [
-                            // Gym Profile Logo
-                            isLoadingGymLogo
-                                ? const KShimmer(
-                                    width: 68,
-                                    height: 68,
-                                    radius: 12,
-                                  )
-                                : Container(
-                                    width: 68,
-                                    height: 68,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(12),
-                                      child: gymLogo != null && gymLogo!.isNotEmpty
-                                          ? Image.network(
-                                              gymLogo!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => const Center(
-                                                child: Icon(Icons.fitness_center, color: Colors.grey, size: 28),
-                                              ),
-                                            )
-                                          : const Center(
-                                              child: Icon(Icons.fitness_center, color: Colors.grey, size: 28),
-                                            ),
-                                    ),
-                                  ),
-                            const SizedBox(width: 16),
-                            // Middle: Workout title and Trainer Name
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisAlignment: MainAxisAlignment.center,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF222222),
+                                  // Gym Profile Logo
+                                  isLoadingGymLogo
+                                      ? const KShimmer(
+                                        width: 68,
+                                        height: 68,
+                                        radius: 12,
+                                      )
+                                      : Container(
+                                        width: 68,
+                                        height: 68,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child:
+                                              gymLogo != null &&
+                                                      gymLogo!.isNotEmpty
+                                                  ? Image.network(
+                                                    gymLogo!,
+                                                    fit: BoxFit.cover,
+                                                    errorBuilder:
+                                                        (
+                                                          _,
+                                                          __,
+                                                          ___,
+                                                        ) => const Center(
+                                                          child: Icon(
+                                                            Icons
+                                                                .fitness_center,
+                                                            color: Colors.grey,
+                                                            size: 28,
+                                                          ),
+                                                        ),
+                                                  )
+                                                  : const Center(
+                                                    child: Icon(
+                                                      Icons.fitness_center,
+                                                      color: Colors.grey,
+                                                      size: 28,
+                                                    ),
+                                                  ),
+                                        ),
+                                      ),
+                                  const SizedBox(width: 16),
+                                  // Middle: Workout title and Trainer Name
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF222222),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          trainerName!,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF222222),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    trainerName!,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF222222),
+                                  // Right: Start Workout button (only when not completed)
+                                  if (!isCompleted) ...[
+                                    const SizedBox(width: 10),
+                                    InkWell(
+                                      borderRadius: BorderRadius.circular(40),
+                                      onTap: onTap,
+                                      child: Container(
+                                        height: 38,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 6,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            40,
+                                          ),
+                                          border: Border.all(
+                                            color: const Color(0xffC84A4A),
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              width: 26,
+                                              height: 26,
+                                              decoration: const BoxDecoration(
+                                                color: Colors.white,
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.fitness_center_rounded,
+                                                color: Color(0xffC84A4A),
+                                                size: 15,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            const Text(
+                                              'Start workout',
+                                              style: TextStyle(
+                                                color: Color(0xff7A2A2A),
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            // Right: Chevron Button
-                            Container(
+                              if (isCompleted) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Duration: ${duration ?? '--'}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF222222),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        // Bottom-right: Chevron Button (completed only)
+                        if (isCompleted)
+                          Positioned(
+                            right: 16,
+                            bottom: 16,
+                            child: Container(
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: AppColors.primary,
+                                color: const Color(0xFFBF5151),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -1280,148 +1435,135 @@ class _WorkoutCard extends StatelessWidget {
                               child: const Icon(
                                 Icons.chevron_right,
                                 size: 24,
-                                color: Color(0xFFFFB0B0),
+                                color: Colors.white,
                               ),
-                            ),
-                          ],
-                        ),
-                        if (isCompleted) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Duration: ${duration ?? '--:--'}',
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF222222),
                             ),
                           ),
-                        ],
                       ],
-                    ),
-                  )
-                : Stack(
-                    children: [
-                      // Top left: Title
-                      Positioned(
-                        left: 24,
-                        top: 20,
-                        width: 160,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              formattedTitle,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF222222),
-                                height: 1.15,
+                    )
+                    : Stack(
+                      children: [
+                        // Top left: Title
+                        Positioned(
+                          left: 24,
+                          top: 20,
+                          width: 160,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                formattedTitle,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF222222),
+                                  height: 1.15,
+                                ),
                               ),
-                            ),
-                            if (trainerName != null && trainerName!.isNotEmpty) ...[
-                              const SizedBox(height: 4),
+                              if (trainerName != null &&
+                                  trainerName!.isNotEmpty) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.person_outline_rounded,
+                                      size: 12,
+                                      color: Color(0xFF666666),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        trainerName!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF555555),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+
+                        // Bottom left: Duration
+                        Positioned(
+                          left: 24,
+                          bottom: 20,
+                          width: 135,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
                                   const Icon(
-                                    Icons.person_outline_rounded,
-                                    size: 12,
-                                    color: Color(0xFF666666),
+                                    Icons.timer_outlined,
+                                    color: Color(0xFFF0B5B7),
+                                    size: 14,
                                   ),
-                                  const SizedBox(width: 4),
-                                  Expanded(
-                                    child: Text(
-                                      trainerName!,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                        color: Color(0xFF555555),
-                                      ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Duration',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Color(0xFF94A3B8),
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      // Bottom left: Duration
-                      Positioned(
-                        left: 24,
-                        bottom: 20,
-                        width: 135,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.timer_outlined,
-                                  color: Color(0xFFF0B5B7),
-                                  size: 14,
+                              const SizedBox(height: 4),
+                              Text(
+                                duration ?? '--:--',
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF4A4A4A),
                                 ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'Duration',
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF94A3B8),
-                                  ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Bottom right: Circular white/red button
+                        Positioned(
+                          right: 16,
+                          bottom: 16,
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F5F7),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              duration ?? '--:--',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF4A4A4A),
-                              ),
+                            child: const Icon(
+                              Icons.chevron_right,
+                              size: 24,
+                              color: Color(0xFF020202),
                             ),
-                          ],
-                        ),
-                      ),
-                      // Bottom right: Circular white/red button
-                      Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF4F5F7),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.chevron_right,
-                            size: 24,
-                            color: Color(0xFF020202),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
           ),
         ),
 

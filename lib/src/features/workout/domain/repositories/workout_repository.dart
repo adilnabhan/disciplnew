@@ -77,10 +77,7 @@ final class WorkoutRepository {
         ),
         onSuccess: (res) => _handleListResponse(res, MuscleGroupModel.fromJson),
       );
-      response.fold(
-        (_) => null,
-        (list) => _cachedMuscleGroups = list,
-      );
+      response.fold((_) => null, (list) => _cachedMuscleGroups = list);
       return response;
     } on ApiException catch (e) {
       return left(e);
@@ -102,10 +99,7 @@ final class WorkoutRepository {
         ),
         onSuccess: (res) => _handleListResponse(res, EquipmentModel.fromJson),
       );
-      response.fold(
-        (_) => null,
-        (list) => _cachedEquipment = list,
-      );
+      response.fold((_) => null, (list) => _cachedEquipment = list);
       return response;
     } on ApiException catch (e) {
       return left(e);
@@ -129,10 +123,7 @@ final class WorkoutRepository {
         onSuccess:
             (res) => _handleListResponse(res, ExerciseTypeModel.fromJson),
       );
-      response.fold(
-        (_) => null,
-        (list) => _cachedExerciseTypes = list,
-      );
+      response.fold((_) => null, (list) => _cachedExerciseTypes = list);
       return response;
     } on ApiException catch (e) {
       return left(e);
@@ -530,10 +521,8 @@ final class WorkoutRepository {
     }
   }
 
-  Future<Either<ApiException, Map<String, dynamic>>> getWorkoutCalendarForMonth({
-    required int year,
-    required int month,
-  }) async {
+  Future<Either<ApiException, Map<String, dynamic>>>
+  getWorkoutCalendarForMonth({required int year, required int month}) async {
     try {
       return await Feggy.async(
         call: _dio.get<dynamic>(
@@ -542,7 +531,9 @@ final class WorkoutRepository {
           options: Options(headers: {'X-Platform': platformSource}),
         ),
         onSuccess: (res) {
-          if (res.statusCode == 200 && res.data != null && res.data is Map<String, dynamic>) {
+          if (res.statusCode == 200 &&
+              res.data != null &&
+              res.data is Map<String, dynamic>) {
             return right(res.data as Map<String, dynamic>);
           }
           return left(const ApiException.unknown());
@@ -555,7 +546,6 @@ final class WorkoutRepository {
       return left(const ApiException.unknown());
     }
   }
-
 
   Future<Either<ApiException, List<PresetModel>>> getPresets() async {
     try {
