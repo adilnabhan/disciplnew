@@ -61,9 +61,9 @@ class __SubscriptionPlanChooseScreenState
           return PopScope(
             canPop: !(state.payment?.isNone() ?? false),
             child: DecoratedBox(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Color(0xFF2C1212), AppColors.dark],
+                  colors: [const Color(0xFF2C1212), AppColors.dark],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

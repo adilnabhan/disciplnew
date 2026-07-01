@@ -49,7 +49,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Enter First Name',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -81,7 +81,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Enter Last Name',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -118,7 +118,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Enter your email address',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -151,7 +151,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Phone Number',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -187,7 +187,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Select Gender',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -220,7 +220,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Select Date of Birth',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -279,7 +279,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Select  Profession',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),

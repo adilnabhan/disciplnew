@@ -76,7 +76,7 @@ class Button extends StatefulWidget {
     this.size,
     this.outlined,
     this.icon,
-    this.loadingColor = AppColors.light,
+    this.loadingColor,
   });
 
   final String title;
@@ -87,7 +87,7 @@ class Button extends StatefulWidget {
   final bool isDisabled;
   final Size? size;
   final Color color;
-  final Color loadingColor;
+  final Color? loadingColor;
   final BorderSide side;
   final bool? outlined;
   final Widget? icon;
@@ -118,7 +118,7 @@ class _ButtonState extends State<Button> {
                   child: Center(
                     child:
                         widget.isLoading
-                            ? const CupertinoActivityIndicator(
+                            ? CupertinoActivityIndicator(
                               color: AppColors.dark,
                             )
                             : Row(
@@ -160,7 +160,7 @@ class _ButtonState extends State<Button> {
                     child:
                         widget.isLoading
                             ? CupertinoActivityIndicator(
-                              color: widget.loadingColor,
+                              color: widget.loadingColor ?? AppColors.light,
                             )
                             : Row(
                               mainAxisAlignment: MainAxisAlignment.center,

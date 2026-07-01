@@ -163,7 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             extendBody: false,
             bottomNavigationBar: Container(
               height: 80,
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
                 border: Border(
                   top: BorderSide(color: AppColors.borderGrey, width: 0.5),

@@ -111,7 +111,7 @@ class ImagePickerDialog extends StatelessWidget {
           );
         },
         separatorBuilder: (BuildContext context, int index) {
-          return const Divider(
+          return Divider(
             color: AppColors.borderGrey,
             height: 1,
             thickness: 1,

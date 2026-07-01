@@ -50,7 +50,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
         decoration: InputDecoration(
           hintText: 'Select Blood Group',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -89,7 +89,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
               child: Text('CM', style: AppStyles.text14Px.poppins.w400.dark),
             ),
           ),
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),
@@ -128,7 +128,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
               child: Text('KG', style: AppStyles.text14Px.poppins.w400.dark),
             ),
           ),
-          border: const OutlineInputBorder(
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
             borderSide: BorderSide(color: AppColors.borderGrey),
           ),

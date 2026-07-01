@@ -672,14 +672,14 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 children: [
                                   GestureDetector(
                                     onTap: () => Navigator.pop(sheetContext),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.chevron_left,
                                       color: AppColors.button,
                                       size: 28,
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Text(
+                                  Text(
                                     'Create new Workout',
                                     style: TextStyle(
                                       fontFamily: 'Poppins',
@@ -695,7 +695,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
                               // Workout Name
                               RichText(
-                                text: const TextSpan(
+                                text: TextSpan(
                                   text: 'Workout Name',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
@@ -716,7 +716,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 8),
                               TextFormField(
                                 controller: nameController,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 15,
@@ -762,7 +762,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 20),
 
                               // Muscle
-                              const Text(
+                              Text(
                                 'Muscle',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
@@ -823,7 +823,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           value: m.id,
                                           child: Text(
                                             m.name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontFamily: 'Poppins',
                                               fontWeight: FontWeight.w400,
                                               fontSize: 15,
@@ -835,7 +835,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         ),
                                       )
                                       .toList(),
-                                  const DropdownMenuItem<int>(
+                                  DropdownMenuItem<int>(
                                     value: -999,
                                     child: Text(
                                       'Other',
@@ -861,7 +861,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 TextFormField(
                                   controller: customMuscleController,
                                   validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter custom muscle group' : null,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
                                     fontSize: 15,
@@ -888,7 +888,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 20),
 
                               // Type
-                              const Text(
+                              Text(
                                 'Type',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
@@ -949,7 +949,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                             value: t.id,
                                             child: Text(
                                               t.name,
-                                              style: const TextStyle(
+                                              style: TextStyle(
                                                 fontFamily: 'Poppins',
                                                 fontWeight: FontWeight.w400,
                                                 fontSize: 15,
@@ -970,7 +970,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 20),
 
                               // Equipment
-                              const Text(
+                              Text(
                                 'Equipment',
                                 style: TextStyle(
                                   fontFamily: 'Poppins',
@@ -1031,7 +1031,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           value: e.id,
                                           child: Text(
                                             e.name,
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontFamily: 'Poppins',
                                               fontWeight: FontWeight.w400,
                                               fontSize: 15,
@@ -1043,7 +1043,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         ),
                                       )
                                       .toList(),
-                                  const DropdownMenuItem<int>(
+                                  DropdownMenuItem<int>(
                                     value: -999,
                                     child: Text(
                                       'Other',
@@ -1069,7 +1069,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 TextFormField(
                                   controller: customEquipmentController,
                                   validator: (val) => (val == null || val.trim().isEmpty) ? 'Please enter custom equipment' : null,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
                                     fontSize: 15,
@@ -1097,7 +1097,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
                               // Youtube Link
                               Text.rich(
-                                const TextSpan(
+                                TextSpan(
                                   text: 'Youtube Link ',
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
@@ -1122,7 +1122,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 8),
                               TextField(
                                 controller: youtubeLinkController,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontFamily: 'Poppins',
                                   fontWeight: FontWeight.w400,
                                   fontSize: 15,

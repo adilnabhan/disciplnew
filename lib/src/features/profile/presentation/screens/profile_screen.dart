@@ -432,7 +432,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       children: [
         _ProfileListItem(label: label, onTap: onTap),
-        const Divider(
+        Divider(
           height: 1,
           thickness: 1,
           color: AppColors.grey, // Light grey color for the divider
@@ -493,7 +493,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: AppColors.iconBackground,
                         ),
@@ -533,7 +533,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Container(
                         width: 40,
                         height: 40,
-                        decoration: const BoxDecoration(
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: AppColors.iconBackground,
                         ),
