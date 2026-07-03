@@ -87,5 +87,6 @@ final class ApiUris {
   static final presets = '${_v1}customer/presets/';
   static String presetDetail(int id) => '${_v1}customer/presets/$id/';
 
+  static final workoutCalendar = '${_v1}customer/workout-calendar/';
   static final loginAsGuest = '${_v1}user/login/guest/';
 }
