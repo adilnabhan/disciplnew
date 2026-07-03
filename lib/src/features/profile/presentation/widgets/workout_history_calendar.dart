@@ -24,16 +24,16 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   OverlayEntry? _onboardingOverlayEntry;
 
   DateTime _focusedDay = DateTime.now();
-  final Map<DateTime, CalendarDayState> _dayStates = {};
+  final Map<String, CalendarDayState> _dayStates = {};
   bool _isLoading = false;
   int _completedRequestsCount = 0;
   Timer? _loadingTimeoutTimer;
 
   bool _isEditing = false;
-  final Set<DateTime> _selectedRestDays = {};
+  final Set<String> _selectedRestDays = {};
 
-  final Map<DateTime, int> _dayPlanDayIds = {};
-  final Map<DateTime, int> _dayCustomerWorkoutPlanIds = {};
+  final Map<String, int> _dayPlanDayIds = {};
+  final Map<String, int> _dayCustomerWorkoutPlanIds = {};
   int? _fallbackPlanId;
   int? _fallbackPlanDayId;
 
@@ -103,16 +103,17 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         for (int day = 1; day <= daysInMonth; day++) {
           final date = DateTime(year, month, day);
           final dateOnly = DateTime(date.year, date.month, date.day);
-          final oldState = _dayStates[dateOnly] ?? CalendarDayState.future;
+          final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
+          final oldState = _dayStates[dateKey] ?? CalendarDayState.future;
           final isCurrentlyRest = oldState == CalendarDayState.rest;
-          final shouldBeRest = _selectedRestDays.contains(dateOnly);
+          final shouldBeRest = _selectedRestDays.contains(dateKey);
 
           if (isCurrentlyRest != shouldBeRest) {
-            final planDayId = _dayPlanDayIds[dateOnly] ??
+            final planDayId = _dayPlanDayIds[dateKey] ??
                 _firstNonNull(_dayPlanDayIds.values) ??
                 _fallbackPlanDayId;
 
-            final customerWorkoutPlanId = _dayCustomerWorkoutPlanIds[dateOnly] ??
+            final customerWorkoutPlanId = _dayCustomerWorkoutPlanIds[dateKey] ??
                 _firstNonNull(_dayCustomerWorkoutPlanIds.values) ??
                 _fallbackPlanId;
 
@@ -121,7 +122,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
             }
             restDaysToUpdate.add({
               'plan_day_id': planDayId ?? -1,
-              'date': DateFormat('yyyy-MM-dd').format(dateOnly),
+              'date': dateKey,
               'is_rest_day': shouldBeRest,
             });
           }
@@ -208,14 +209,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
       final dateOnly = DateTime(date.year, date.month, date.day);
+      final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
 
       if (dateOnly.isBefore(startDateOnly) ||
           dateOnly.isAfter(todayOnly) ||
           dateOnly.isAtSameMomentAs(todayOnly)) {
-        _dayStates[dateOnly] = CalendarDayState.future;
+        _dayStates[dateKey] = CalendarDayState.future;
       } else {
-        if (_dayStates[dateOnly] != CalendarDayState.rest) {
-          _dayStates[dateOnly] = CalendarDayState.future;
+        if (_dayStates[dateKey] != CalendarDayState.rest) {
+          _dayStates[dateKey] = CalendarDayState.future;
         }
       }
     }
@@ -267,15 +269,16 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 final dateStr = dayItem['date'] as String;
                 final date = DateTime.parse(dateStr);
                 final dateOnly = DateTime(date.year, date.month, date.day);
+                final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
 
                 final bool isCompleted = dayItem['is_completed'] == true;
                 final bool isRestDay = dayItem['is_rest_day'] == true;
                 final int? planDayId = dayItem['plan_day_id'] != null ? int.tryParse(dayItem['plan_day_id'].toString()) : null;
                 final int? customerWorkoutPlanId = dayItem['customer_workout_plan_id'] != null ? int.tryParse(dayItem['customer_workout_plan_id'].toString()) : null;
 
-                if (planDayId != null) _dayPlanDayIds[dateOnly] = planDayId;
+                if (planDayId != null) _dayPlanDayIds[dateKey] = planDayId;
                 if (customerWorkoutPlanId != null) {
-                  _dayCustomerWorkoutPlanIds[dateOnly] = customerWorkoutPlanId;
+                  _dayCustomerWorkoutPlanIds[dateKey] = customerWorkoutPlanId;
                 }
 
                 CalendarDayState state;
@@ -291,7 +294,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                   state = CalendarDayState.missed;
                 }
 
-                _dayStates[dateOnly] = state;
+                _dayStates[dateKey] = state;
               }
             }
             _isLoading = false;
@@ -310,7 +313,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   void _updateDayState(DateTime date, CalendarDayState state, int totalDays) {
     if (!mounted) return;
     setState(() {
-      _dayStates[DateTime(date.year, date.month, date.day)] = state;
+      final dateKey = DateFormat('yyyy-MM-dd').format(date);
+      _dayStates[dateKey] = state;
       _completedRequestsCount++;
       if (_completedRequestsCount >= totalDays) {
         _isLoading = false;
@@ -340,8 +344,9 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
+      final dateKey = DateFormat('yyyy-MM-dd').format(date);
       final state =
-          _dayStates[DateTime(date.year, date.month, date.day)] ?? CalendarDayState.future;
+          _dayStates[dateKey] ?? CalendarDayState.future;
       if (state == CalendarDayState.completed) {
         completedCount++;
       } else if (state == CalendarDayState.missed) {
@@ -639,20 +644,21 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final startDateOnly =
         DateTime(startDate.year, startDate.month, startDate.day);
 
-    final state = _dayStates[dateOnly] ?? CalendarDayState.future;
+    final state = _dayStates[DateFormat('yyyy-MM-dd').format(dateOnly)] ?? CalendarDayState.future;
 
     if (_isEditing &&
         state != CalendarDayState.completed &&
         !dateOnly.isBefore(startDateOnly) &&
         !dateOnly.isBefore(todayOnly)) {
-      final isSelected = _selectedRestDays.contains(dateOnly);
+      final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
+      final isSelected = _selectedRestDays.contains(dateKey);
       return GestureDetector(
         onTap: () {
           setState(() {
             if (isSelected) {
-              _selectedRestDays.remove(dateOnly);
+              _selectedRestDays.remove(dateKey);
             } else {
-              _selectedRestDays.add(dateOnly);
+              _selectedRestDays.add(dateKey);
             }
           });
         },

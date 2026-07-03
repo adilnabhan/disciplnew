@@ -527,11 +527,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
-        Text(
-          'Health Status',
-          style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.textDark,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Health Status',
+              style: AppStyles.text16Px.poppins.w600.copyWith(
+                color: AppColors.textDark,
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => BlocProvider.value(
+                      value: context.read<ProfileCubit>(),
+                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
+                    ),
+                  ),
+                ).then((_) {
+                  context.read<ProfileCubit>().fetchCustomerDetails();
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Edit',
+                      style: AppStyles.text12Px.poppins.w600.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Container(
@@ -1083,10 +1122,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: AppStyles.text12Px.poppins.w500.copyWith(
-                  color: AppColors.textGrey,
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppStyles.text12Px.poppins.w500.copyWith(
+                    color: AppColors.textGrey,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
