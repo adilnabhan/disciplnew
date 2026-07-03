@@ -542,12 +542,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   context,
                   MaterialPageRoute<void>(
                     builder: (_) => BlocProvider.value(
-                      value: context.read<ProfileCubit>(),
+                      value: _cubit,
                       child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
                     ),
                   ),
                 ).then((_) {
-                  context.read<ProfileCubit>().fetchCustomerDetails();
+                  _cubit.fetchCustomerDetails();
                 });
               },
               child: Container(

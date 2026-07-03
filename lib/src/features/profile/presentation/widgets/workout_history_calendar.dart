@@ -403,7 +403,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                           IconButton(
                             icon: Icon(
                               Icons.chevron_left,
-                              size: 24,
+                              size: 20,
                               color: canGoPrev ? AppColors.primary : Colors.grey.shade400,
                             ),
                             onPressed: canGoPrev
@@ -418,29 +418,30 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 DateFormat('yyyy').format(_focusedDay),
                                 style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  fontSize: 11,
                                   color: AppColors.primary.withValues(alpha: .7),
                                 ),
                               ),
                               Text(
                                 DateFormat('MMMM').format(_focusedDay),
-                                style: AppStyles.text16Px.poppins.w600.copyWith(
+                                style: AppStyles.text14Px.poppins.w600.copyWith(
                                   color: AppColors.primary,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 4),
                           IconButton(
                             icon: Icon(
                               Icons.chevron_right,
-                              size: 24,
+                              size: 20,
                               color: canGoNext ? AppColors.primary : Colors.grey.shade400,
                             ),
                             onPressed: canGoNext
@@ -462,7 +463,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: _isEditing
                                 ? const Color(0xFFC60000)
@@ -478,18 +479,18 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                             ],
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 _isEditing ? Icons.save : Icons.edit,
-                                size: 16,
+                                size: 14,
                                 color:
                                     _isEditing ? Colors.white : Colors.black54,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
                               Text(
                                 _isEditing ? 'Save' : 'Edit Rest day',
-                                style: AppStyles.text14Px.poppins.w500
-                                    .copyWith(
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
                                   color: _isEditing
                                       ? Colors.white
                                       : Colors.black87,
