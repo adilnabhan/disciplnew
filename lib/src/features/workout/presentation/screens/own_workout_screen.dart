@@ -1885,7 +1885,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 await _cubit.finishSession(title: enteredTitle);
                                 if (context.mounted) {
                                   Navigator.pop(dialogContext); // close dialog
-                                  Navigator.pop(context); // close screen
+                                  Navigator.pop(context, true); // close screen
                                 }
                               }
                             } catch (e) {

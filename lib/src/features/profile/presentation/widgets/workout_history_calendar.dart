@@ -7,6 +7,7 @@ import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_log_screen.dart';
 
 class WorkoutHistoryCalendar extends StatefulWidget {
   const WorkoutHistoryCalendar({this.startDate, super.key});
@@ -522,6 +523,23 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                       });
                       _prepopulateDefaultStates();
                       _loadMonthData();
+                    },
+                    onDaySelected: (selectedDay, focusedDay) {
+                      if (_isEditing) return;
+
+                      final today = DateTime.now();
+                      final todayMidnight = DateTime(today.year, today.month, today.day);
+                      final selectedMidnight = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+                      if (selectedMidnight.isAfter(todayMidnight)) {
+                        return;
+                      }
+
+                      WorkoutLogScreen.selectedDateOverride = selectedDay;
+                      try {
+                        context.read<DashboardCubit>().changeNav(index: 1);
+                      } catch (e) {
+                        debugPrint('Error navigating to workouts tab: $e');
+                      }
                     },
                     calendarBuilders: CalendarBuilders(
                       dowBuilder: (context, day) {

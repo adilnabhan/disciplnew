@@ -13,6 +13,8 @@ import 'package:customer_mobile_app/src/features/workout/domain/repositories/wor
 class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
 
+  static DateTime? selectedDateOverride;
+
   @override
   State<WorkoutLogScreen> createState() => _WorkoutLogScreenState();
 }
@@ -448,7 +450,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   Widget _buildActiveWorkoutBanner() {
     return GestureDetector(
       onTap: () async {
-        await Navigator.push(
+        final finished = await Navigator.push<dynamic>(
           context,
           MaterialPageRoute<void>(
             builder: (context) => const OwnWorkoutScreen(),
@@ -457,6 +459,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         await _loadMyPlans();
         await _loadActiveSessionTitle();
         await _loadWorkoutLogForSelectedDate();
+        if (finished == true && context.mounted) {
+          context.read<DashboardCubit>().changeNav(index: 0);
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -544,7 +549,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     }
   }
 
+  @override
   Widget build(BuildContext context) {
+    if (WorkoutLogScreen.selectedDateOverride != null) {
+      final date = WorkoutLogScreen.selectedDateOverride!;
+      WorkoutLogScreen.selectedDateOverride = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _selectDate(date);
+      });
+    }
+
     final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
     debugPrint('DEBUG BUILD: isCustomer: $isCustomer, date: $_selectedDate');
 
@@ -660,6 +674,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   );
                   if (refresh == true) {
                     _loadWorkoutLogForSelectedDate();
+                    if (context.mounted) {
+                      context.read<DashboardCubit>().changeNav(index: 0);
+                    }
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -934,7 +951,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             icon: const Icon(Icons.add, color: Colors.white, size: 20),
             raduis: 12,
             ontap: () async {
-              await Navigator.push(
+              final finished = await Navigator.push<dynamic>(
                 context,
                 MaterialPageRoute<void>(
                   builder:
@@ -944,6 +961,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadMyPlans();
               await _loadActiveSessionTitle();
               await _loadWorkoutLogForSelectedDate();
+              if (finished == true && context.mounted) {
+                context.read<DashboardCubit>().changeNav(index: 0);
+              }
             },
           ),
           const SizedBox(height: 12),
@@ -966,7 +986,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             ),
             raduis: 12,
             ontap: () async {
-              await Navigator.push(
+              final finished = await Navigator.push<dynamic>(
                 context,
                 MaterialPageRoute<void>(
                   builder: (context) => const PresetsScreen(),
@@ -975,6 +995,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadMyPlans();
               await _loadActiveSessionTitle();
               await _loadWorkoutLogForSelectedDate();
+              if (finished == true && context.mounted) {
+                context.read<DashboardCubit>().changeNav(index: 0);
+              }
             },
           ),
         ],
