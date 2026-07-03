@@ -353,6 +353,30 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
   }
 
+  Future<void> updateWorkoutLogWeightType(int exerciseIndex, String weightType) async {
+    final updatedExercises = List<Map<String, dynamic>>.from(
+      state.exercises.map((e) => Map<String, dynamic>.from(e)),
+    );
+    final exercise = updatedExercises[exerciseIndex];
+    exercise['weight_type'] = weightType;
+    emit(state.copyWith(exercises: updatedExercises));
+
+    if (isPresetCreation) return;
+
+    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
+    final logId = int.tryParse(logIdStr ?? '');
+    if (logId != null) {
+      final result = await WorkoutRepository().updateWorkoutLogWeightType(
+        logId: logId,
+        weightType: weightType,
+      );
+      result.fold(
+        (error) => print('DEBUG: Error updating workout log weight type: $error'),
+        (success) => print('DEBUG: Successfully updated workout log weight type'),
+      );
+    }
+  }
+
   Future<void> addExercise({
     required int id,
     required String title,
@@ -435,6 +459,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     required int muscleGroupId,
     required int equipmentId,
     required String type,
+    String? trackBy,
     String? videoUrl,
     required void Function(bool success, String message) onComplete,
   }) async {
@@ -446,6 +471,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       'primary_muscle_group': muscleGroupId,
       'equipment': equipmentId,
       'video_url': videoUrl ?? '',
+      'track_by': trackBy ?? 'rep',
     };
 
     final result = await WorkoutRepository().createCustomExercise(body: body);
@@ -465,6 +491,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           'id': (newExercise.id ?? '').toString(),
           'title': newExercise.name ?? '',
           'subtitle': formattedSub,
+          'track_by': newExercise.trackBy ?? 'rep',
         });
 
         emit(
@@ -731,6 +758,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
                 'subtitle':
                     '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}',
                 'video_url': model.videoUrl?.toString() ?? '',
+                'track_by': model.trackBy ?? 'rep',
               };
             }).toList();
         if (!isSearching) {
@@ -772,6 +800,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
                 'subtitle':
                     '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}',
                 'video_url': model.videoUrl?.toString() ?? '',
+                'track_by': model.trackBy ?? 'rep',
               };
             }).toList();
         final isSearching = search != null && search.trim().isNotEmpty;
@@ -854,6 +883,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       String? subtitle;
       int? exerciseId;
       String? videoUrl;
+      String? resolvedTrackBy;
 
       String? rawMuscle;
       String? rawEquip;
@@ -871,6 +901,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             workout['equipment'] as String?;
         rawType = workout['type'] as String?;
         videoUrl = workout['video_url']?.toString();
+        resolvedTrackBy = workout['track_by'] as String?;
       } else if (item['exercise'] is Map<String, dynamic>) {
         final exercise = item['exercise'] as Map<String, dynamic>;
         title = exercise['name'] as String?;
@@ -883,6 +914,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             exercise['equipment'] as String?;
         rawType = exercise['type'] as String?;
         videoUrl = exercise['video_url']?.toString();
+        resolvedTrackBy = exercise['track_by'] as String?;
       } else {
         title =
             item['workout_name']?.toString() ??
@@ -900,6 +932,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             item['equipment_name']?.toString() ?? item['equipment']?.toString();
         rawType = item['type']?.toString();
         videoUrl = item['video_url']?.toString();
+        resolvedTrackBy = item['track_by']?.toString();
       }
 
       if (title == null || title.isEmpty) return;
@@ -926,12 +959,17 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             }
           }
         }
-        if (foundEx != null && foundEx['subtitle'] != null) {
-          final parts = foundEx['subtitle']!.split('/');
-          if (parts.length >= 3) {
-            resolvedMuscle = parts[0].trim();
-            resolvedEquip = parts[1].trim();
-            resolvedType = parts[2].trim();
+        if (foundEx != null) {
+          if (foundEx['subtitle'] != null) {
+            final parts = foundEx['subtitle']!.split('/');
+            if (parts.length >= 3) {
+              resolvedMuscle = parts[0].trim();
+              resolvedEquip = parts[1].trim();
+              resolvedType = parts[2].trim();
+            }
+          }
+          if (resolvedTrackBy == null || resolvedTrackBy.isEmpty) {
+            resolvedTrackBy = foundEx['track_by'];
           }
         }
       }
@@ -953,12 +991,17 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             }
           }
         }
-        if (foundEx != null && foundEx['subtitle'] != null) {
-          final parts = foundEx['subtitle']!.split('/');
-          if (parts.length >= 3) {
-            resolvedMuscle = parts[0].trim();
-            resolvedEquip = parts[1].trim();
-            resolvedType = parts[2].trim();
+        if (foundEx != null) {
+          if (foundEx['subtitle'] != null) {
+            final parts = foundEx['subtitle']!.split('/');
+            if (parts.length >= 3) {
+              resolvedMuscle = parts[0].trim();
+              resolvedEquip = parts[1].trim();
+              resolvedType = parts[2].trim();
+            }
+          }
+          if (resolvedTrackBy == null || resolvedTrackBy.isEmpty) {
+            resolvedTrackBy = foundEx['track_by'];
           }
         }
       }
@@ -1059,6 +1102,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         'title': title,
         'subtitle': subtitle ?? '',
         'video_url': videoUrl ?? '',
+        'track_by': resolvedTrackBy ?? 'rep',
+        'weight_type': item['weight_type']?.toString() ?? 'kg',
         'sets': sets,
       });
     }
@@ -1110,5 +1155,29 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           };
         }).toList();
     emit(state.copyWith(exercises: exercises, sessionTitle: preset.title));
+  }
+
+  void addMuscleGroup(MuscleGroupModel item) {
+    final updated = List<MuscleGroupModel>.from(state.muscleGroups);
+    if (!updated.any((m) => m.id == item.id)) {
+      updated.add(item);
+      emit(state.copyWith(muscleGroups: updated));
+    }
+  }
+
+  void addEquipment(EquipmentModel item) {
+    final updated = List<EquipmentModel>.from(state.equipment);
+    if (!updated.any((e) => e.id == item.id)) {
+      updated.add(item);
+      emit(state.copyWith(equipment: updated));
+    }
+  }
+
+  void addExerciseType(ExerciseTypeModel item) {
+    final updated = List<ExerciseTypeModel>.from(state.exerciseTypes);
+    if (!updated.any((t) => t.id == item.id)) {
+      updated.add(item);
+      emit(state.copyWith(exerciseTypes: updated));
+    }
   }
 }

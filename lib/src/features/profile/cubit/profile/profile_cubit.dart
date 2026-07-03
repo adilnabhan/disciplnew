@@ -146,6 +146,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     required String bloodGroup,
     required String height,
     required String weight,
+    Map<String, dynamic>? extraBody,
   }) async {
     if (state.updateProfileDetails?.isNone() ?? false) {
       return;
@@ -160,7 +161,7 @@ class ProfileCubit extends Cubit<ProfileState> {
       );
       return;
     }
-    final body = <String, dynamic>{
+    final body = extraBody ?? <String, dynamic>{
       'blood_group': bloodGroup,
       'height': height,
       'weight': weight,

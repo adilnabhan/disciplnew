@@ -14,6 +14,7 @@ class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
 
   static DateTime? selectedDateOverride;
+  static int? autoOpenSessionId;
 
   @override
   State<WorkoutLogScreen> createState() => _WorkoutLogScreenState();
@@ -553,9 +554,29 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   Widget build(BuildContext context) {
     if (WorkoutLogScreen.selectedDateOverride != null) {
       final date = WorkoutLogScreen.selectedDateOverride!;
+      final autoSessionId = WorkoutLogScreen.autoOpenSessionId;
       WorkoutLogScreen.selectedDateOverride = null;
+      WorkoutLogScreen.autoOpenSessionId = null;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _selectDate(date);
+        if (autoSessionId != null) {
+          Navigator.push<dynamic>(
+            context,
+            MaterialPageRoute<dynamic>(
+              builder: (context) => WorkoutDetailsScreen(
+                sessionId: autoSessionId,
+                fallbackTitle: 'Workout',
+              ),
+            ),
+          ).then((refresh) {
+            if (refresh == true) {
+              _loadWorkoutLogForSelectedDate();
+              if (context.mounted) {
+                context.read<DashboardCubit>().changeNav(index: 0);
+              }
+            }
+          });
+        }
       });
     }
 

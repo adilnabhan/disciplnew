@@ -35,10 +35,13 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
   final Map<String, int> _dayPlanDayIds = {};
   final Map<String, int> _dayCustomerWorkoutPlanIds = {};
+  final Map<String, int> _dayWorkoutIds = {};
   int? _fallbackPlanId;
   int? _fallbackPlanDayId;
 
   bool _hasLoadedData = false;
+  Timer? _visibilityDebounceTimer;
+  DateTime? _lastVisibilityLoadTime;
 
   T? _firstNonNull<T>(Iterable<T?> values) {
     for (final v in values) {
@@ -175,17 +178,30 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   }
 
   void _onVisibilityChanged(VisibilityInfo info) {
-    if (!_hasLoadedData && info.visibleFraction > 0.05) {
-      if (mounted) {
+    if (info.visibleFraction > 0.05) {
+      // Debounce: skip if loaded less than 3 seconds ago
+      final now = DateTime.now();
+      if (_lastVisibilityLoadTime != null &&
+          now.difference(_lastVisibilityLoadTime!).inSeconds < 3) {
+        return;
+      }
+
+      _visibilityDebounceTimer?.cancel();
+      _visibilityDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        final bool wasLoaded = _hasLoadedData;
+        _lastVisibilityLoadTime = DateTime.now();
         setState(() {
           _hasLoadedData = true;
         });
         _loadFallbackPlanInfo().then((_) {
           _prepopulateDefaultStates();
           _loadMonthData();
-          _checkAndShowOnboardingHint();
+          if (!wasLoaded) {
+            _checkAndShowOnboardingHint();
+          }
         });
-      }
+      });
     }
   }
 
@@ -194,6 +210,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     _onboardingOverlayEntry?.remove();
     _onboardingOverlayEntry = null;
     _loadingTimeoutTimer?.cancel();
+    _visibilityDebounceTimer?.cancel();
     super.dispose();
   }
 
@@ -264,6 +281,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
             _dayStates.clear();
             _dayPlanDayIds.clear();
             _dayCustomerWorkoutPlanIds.clear();
+            _dayWorkoutIds.clear();
 
             for (final dayItem in days) {
               if (dayItem is Map<String, dynamic>) {
@@ -276,10 +294,14 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 final bool isRestDay = dayItem['is_rest_day'] == true;
                 final int? planDayId = dayItem['plan_day_id'] != null ? int.tryParse(dayItem['plan_day_id'].toString()) : null;
                 final int? customerWorkoutPlanId = dayItem['customer_workout_plan_id'] != null ? int.tryParse(dayItem['customer_workout_plan_id'].toString()) : null;
+                final int? workoutId = dayItem['workout_id'] != null ? int.tryParse(dayItem['workout_id'].toString()) : null;
 
                 if (planDayId != null) _dayPlanDayIds[dateKey] = planDayId;
                 if (customerWorkoutPlanId != null) {
                   _dayCustomerWorkoutPlanIds[dateKey] = customerWorkoutPlanId;
+                }
+                if (workoutId != null) {
+                  _dayWorkoutIds[dateKey] = workoutId;
                 }
 
                 CalendarDayState state;
@@ -554,10 +576,18 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                           ),
                         );
                       },
-                      defaultBuilder: (context, day, focusedDay) =>
-                          _buildDayCell(day),
-                      todayBuilder: (context, day, focusedDay) =>
-                          _buildDayCell(day),
+                      defaultBuilder: (context, day, focusedDay) {
+                        return GestureDetector(
+                          onDoubleTap: () => _handleDayDoubleTap(day),
+                          child: _buildDayCell(day),
+                        );
+                      },
+                      todayBuilder: (context, day, focusedDay) {
+                        return GestureDetector(
+                          onDoubleTap: () => _handleDayDoubleTap(day),
+                          child: _buildDayCell(day),
+                        );
+                      },
                       outsideBuilder: (context, day, focusedDay) =>
                           const SizedBox.shrink(),
                     ),
@@ -652,6 +682,24 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         ],
       ),
     );
+  }
+
+  void _handleDayDoubleTap(DateTime day) {
+    if (_isEditing) return;
+
+    final dateKey = DateFormat('yyyy-MM-dd').format(day);
+    final workoutId = _dayWorkoutIds[dateKey];
+
+    WorkoutLogScreen.selectedDateOverride = day;
+    if (workoutId != null) {
+      WorkoutLogScreen.autoOpenSessionId = workoutId;
+    }
+
+    try {
+      context.read<DashboardCubit>().changeNav(index: 1);
+    } catch (e) {
+      debugPrint('Error navigating to workouts tab: $e');
+    }
   }
 
   Widget _buildDayCell(DateTime day) {

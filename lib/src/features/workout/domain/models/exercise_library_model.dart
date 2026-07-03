@@ -6,6 +6,7 @@ class ExerciseLibraryModel {
     required this.muscleGroup,
     required this.equipment,
     required this.videoUrl,
+    this.trackBy,
   });
 
   final int? id;
@@ -14,6 +15,7 @@ class ExerciseLibraryModel {
   final String? muscleGroup;
   final String? equipment;
   final dynamic videoUrl;
+  final String? trackBy;
 
   factory ExerciseLibraryModel.fromJson(Map<String, dynamic> json) {
     return ExerciseLibraryModel(
@@ -23,6 +25,7 @@ class ExerciseLibraryModel {
       muscleGroup: json["primary_muscle_group_name"] as String? ?? json["muscle_group"] as String?,
       equipment: json["equipment_name"] as String? ?? json["equipment"] as String?,
       videoUrl: json["video_url"],
+      trackBy: json["track_by"] as String?,
     );
   }
 
@@ -35,6 +38,7 @@ class ExerciseLibraryModel {
         "equipment": equipment,
         "equipment_name": equipment,
         "video_url": videoUrl,
+        "track_by": trackBy,
       };
 }
 

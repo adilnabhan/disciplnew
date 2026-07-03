@@ -21,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
   late final HomeCubit _homeCubit;
+  int _calendarRefreshCounter = 0;
 
   @override
   void initState() {
@@ -40,6 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchActiveMembership() async {
+    if (mounted) {
+      setState(() {
+        _calendarRefreshCounter++;
+      });
+    }
     await Future.wait([
       _dashboardCubit.fetchActiveMembership(),
       if (Feggy.read<AppCubit>()?.state.currentUser != null)
@@ -223,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     (either) => either.fold((_) => null, (m) => m),
                   );
                   return WorkoutHistoryCalendar(
+                    key: ValueKey(_calendarRefreshCounter),
                     startDate: activeMembership?.startDate,
                   ).pxy(x: 8);
                 },

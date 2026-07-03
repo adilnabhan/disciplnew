@@ -133,6 +133,58 @@ final class WorkoutRepository {
     }
   }
 
+  Future<Either<ApiException, MuscleGroupModel>> createMuscleGroup({
+    required String name,
+  }) async {
+    _cachedMuscleGroups = null;
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.customerMuscleGroups,
+          data: {'name': name},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.data != null) {
+            return right(MuscleGroupModel.fromJson(res.data as Map<String, dynamic>));
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, EquipmentModel>> createEquipment({
+    required String name,
+  }) async {
+    _cachedEquipment = null;
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.customerEquipment,
+          data: {'name': name},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.data != null) {
+            return right(EquipmentModel.fromJson(res.data as Map<String, dynamic>));
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
   Future<Either<ApiException, ExerciseLibraryModel>> createCustomExercise({
     required Map<String, dynamic> body,
   }) async {
@@ -388,6 +440,33 @@ final class WorkoutRepository {
         call: _dio.post<dynamic>(
           ApiUris.addSetToLog(logId),
           data: body,
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) &&
+              res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> updateWorkoutLogWeightType({
+    required int logId,
+    required String weightType,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.patch<dynamic>(
+          ApiUris.updateWorkoutLogSetsBulk(logId),
+          data: {'weight_type': weightType},
           options: Options(headers: {'X-Platform': platformSource}),
         ),
         onSuccess: (res) {

@@ -71,6 +71,8 @@ final class ApiUris {
   static final muscleGroups = '${_v1}trainer/muscle-groups/';
   static final equipment = '${_v1}trainer/equipment/';
   static final exerciseTypes = '${_v1}trainer/exercise-types/';
+  static final customerMuscleGroups = '${_v1}customer/muscle-groups/';
+  static final customerEquipment = '${_v1}customer/equipment/';
   static final activeSession = '${_v1}customer/sessions/active/';
   static final activeSessionExercises =
       '${_v1}customer/sessions/active/exercises/';
@@ -78,6 +80,8 @@ final class ApiUris {
   static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
   static String addSetToLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/sets/';
+  static String updateWorkoutLogSetsBulk(int logId) =>
+      '${_v1}customer/workout-logs/$logId/sets/bulk/';
   static String deleteWorkoutLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/';
   static String updateSetLog(int setLogId) =>
