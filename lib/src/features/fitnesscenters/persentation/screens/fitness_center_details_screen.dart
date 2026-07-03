@@ -714,65 +714,65 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
             style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
           ),
           const SizedBox(height: 16),
-          if (details.socialMedia?.isNotEmpty ?? false)
-            Row(
-              children: details.socialMedia!.map((e) {
-                final platform = (e.platform ?? '').toLowerCase();
-                String assetPath;
-                switch (platform) {
-                  case 'facebook':
-                    assetPath = 'assets/images/svg/icons/facebook.svg';
-                    break;
-                  case 'instagram':
-                    assetPath = 'assets/images/svg/icons/instagram.svg';
-                    break;
-                  case 'whatsapp':
-                    assetPath = 'assets/images/svg/icons/whatsapp.svg';
-                    break;
-                  case 'youtube':
-                    assetPath = 'assets/images/svg/icons/youtube.svg';
-                    break;
-                  default:
-                    assetPath = 'assets/images/svg/icons/website.svg';
-                }
+          // if (details.socialMedia?.isNotEmpty ?? false)
+          //   Row(
+          //     children: details.socialMedia!.map((e) {
+          //       final platform = (e.platform ?? '').toLowerCase();
+          //       String assetPath;
+          //       switch (platform) {
+          //         case 'facebook':
+          //           assetPath = 'assets/images/svg/icons/facebook.svg';
+          //           break;
+          //         case 'instagram':
+          //           assetPath = 'assets/images/svg/icons/instagram.svg';
+          //           break;
+          //         case 'whatsapp':
+          //           assetPath = 'assets/images/svg/icons/whatsapp.svg';
+          //           break;
+          //         case 'youtube':
+          //           assetPath = 'assets/images/svg/icons/youtube.svg';
+          //           break;
+          //         default:
+          //           assetPath = 'assets/images/svg/icons/website.svg';
+          //       }
 
-                final iconColor = AppColors.primary;
-                final bgColor = AppColors.primary.withOpacity(0.05);
+          //       final iconColor = AppColors.primary;
+          //       final bgColor = AppColors.primary.withOpacity(0.05);
 
-                return Padding(
-                  padding: const EdgeInsets.only(right: 12.0),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(99),
-                    onTap: () async {
-                      final url = e.url ?? '';
-                      if (platform == 'whatsapp') {
-                        final phone = url.replaceAll(RegExp('[^0-9+]'), '');
-                        if (phone.isNotEmpty) {
-                          final waUrl = Uri.parse('https://wa.me/$phone');
-                          if (await canLaunchUrl(waUrl)) {
-                            await launchUrl(waUrl);
-                          } else {
-                            await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
-                          }
-                        } else {
-                          await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
-                        }
-                      } else {
-                        final uri = url.startsWith('http://') || url.startsWith('https://') 
-                            ? Uri.parse(url) 
-                            : Uri.parse('https://$url');
-                        if (url.isNotEmpty && await canLaunchUrl(uri)) {
-                          await launchUrl(uri);
-                        } else {
-                          await Dialogs.showSnack(msg: 'Invalid URL');
-                        }
-                      }
-                    },
-                    child: _buildSocialIcon(assetPath, iconColor, bgColor),
-                  ),
-                );
-              }).toList(),
-            ),
+          //       return Padding(
+          //         padding: const EdgeInsets.only(right: 12.0),
+          //         child: InkWell(
+          //           borderRadius: BorderRadius.circular(99),
+          //           onTap: () async {
+          //             final url = e.url ?? '';
+          //             if (platform == 'whatsapp') {
+          //               final phone = url.replaceAll(RegExp('[^0-9+]'), '');
+          //               if (phone.isNotEmpty) {
+          //                 final waUrl = Uri.parse('https://wa.me/$phone');
+          //                 if (await canLaunchUrl(waUrl)) {
+          //                   await launchUrl(waUrl);
+          //                 } else {
+          //                   await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
+          //                 }
+          //               } else {
+          //                 await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
+          //               }
+          //             } else {
+          //               final uri = url.startsWith('http://') || url.startsWith('https://') 
+          //                   ? Uri.parse(url) 
+          //                   : Uri.parse('https://$url');
+          //               if (url.isNotEmpty && await canLaunchUrl(uri)) {
+          //                 await launchUrl(uri);
+          //               } else {
+          //                 await Dialogs.showSnack(msg: 'Invalid URL');
+          //               }
+          //             }
+          //           },
+          //           child: _buildSocialIcon(assetPath, iconColor, bgColor),
+          //         ),
+          //       );
+          //     }).toList(),
+          //   ),
         ],
       ),
     );

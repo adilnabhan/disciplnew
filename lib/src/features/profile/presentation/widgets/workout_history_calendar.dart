@@ -232,12 +232,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     final year = _focusedDay.year;
     final month = _focusedDay.month;
-    final daysInMonth = DateTime(year, month + 1, 0).day;
-
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final startDate = _firstWorkoutDate;
-    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
     _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (mounted && _isLoading) {
@@ -247,85 +241,70 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       }
     });
 
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(year, month, day);
-      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    WorkoutRepository().getWorkoutCalendarForMonth(year: year, month: month).then((result) {
+      if (!mounted) return;
 
-      WorkoutRepository().getWorkoutLogForDate(date: dateStr).then((result) {
-        if (!mounted) return;
+      result.fold(
+        (error) {
+          setState(() {
+            _isLoading = false;
+          });
+        },
+        (data) {
+          final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
+          final today = DateTime.now();
+          final todayOnly = DateTime(today.year, today.month, today.day);
+          final startDate = _firstWorkoutDate;
+          final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
-        result.fold(
-          (error) {
-            // API error: treat as no-data → grey (not red)
-            _updateDayState(date, CalendarDayState.future, daysInMonth);
-          },
-          (logs) {
-            final dateOnly = DateTime(date.year, date.month, date.day);
+          setState(() {
+            _dayStates.clear();
+            _dayPlanDayIds.clear();
+            _dayCustomerWorkoutPlanIds.clear();
 
-            bool isCompleted = false;
-            bool isRestDay = false;
-            int? planDayId;
-            int? customerWorkoutPlanId;
+            for (final dayItem in days) {
+              if (dayItem is Map<String, dynamic>) {
+                final dateStr = dayItem['date'] as String;
+                final date = DateTime.parse(dateStr);
+                final dateOnly = DateTime(date.year, date.month, date.day);
 
-            for (final log in logs) {
-              if (log is Map<String, dynamic>) {
-                if (log['is_completed'] == true ||
-                    log['status']?.toString().toLowerCase() == 'completed') {
-                  isCompleted = true;
+                final bool isCompleted = dayItem['is_completed'] == true;
+                final bool isRestDay = dayItem['is_rest_day'] == true;
+                final int? planDayId = dayItem['plan_day_id'] != null ? int.tryParse(dayItem['plan_day_id'].toString()) : null;
+                final int? customerWorkoutPlanId = dayItem['customer_workout_plan_id'] != null ? int.tryParse(dayItem['customer_workout_plan_id'].toString()) : null;
+
+                if (planDayId != null) _dayPlanDayIds[dateOnly] = planDayId;
+                if (customerWorkoutPlanId != null) {
+                  _dayCustomerWorkoutPlanIds[dateOnly] = customerWorkoutPlanId;
                 }
-                if (log['is_rest_day'] == true ||
-                    log['status']?.toString().toLowerCase() == 'rest_day') {
-                  isRestDay = true;
+
+                CalendarDayState state;
+                if (isCompleted) {
+                  state = CalendarDayState.completed;
+                } else if (isRestDay) {
+                  state = CalendarDayState.rest;
+                } else if (dateOnly.isBefore(startDateOnly) ||
+                    dateOnly.isAfter(todayOnly) ||
+                    dateOnly.isAtSameMomentAs(todayOnly)) {
+                  state = CalendarDayState.future;
+                } else {
+                  state = CalendarDayState.missed;
                 }
-                if (log['plan_day'] != null) {
-                  planDayId = int.tryParse(log['plan_day'].toString());
-                }
-                if (log['plan_day_id'] != null) {
-                  planDayId = int.tryParse(log['plan_day_id'].toString());
-                }
-                if (log['customer_workout_plan'] != null) {
-                  customerWorkoutPlanId =
-                      int.tryParse(log['customer_workout_plan'].toString());
-                }
-                if (log['customer_workout_plan_id'] != null) {
-                  customerWorkoutPlanId =
-                      int.tryParse(log['customer_workout_plan_id'].toString());
-                }
+
+                _dayStates[dateOnly] = state;
               }
             }
-
-            if (planDayId != null) _dayPlanDayIds[dateOnly] = planDayId;
-            if (customerWorkoutPlanId != null) {
-              _dayCustomerWorkoutPlanIds[dateOnly] = customerWorkoutPlanId;
-            }
-
-            CalendarDayState state;
-            if (logs.isEmpty) {
-              // No log for this date → nothing was ever planned → grey
-              state = CalendarDayState.future;
-            } else if (isCompleted) {
-              state = CalendarDayState.completed;
-            } else if (isRestDay) {
-              state = CalendarDayState.rest;
-            } else if (dateOnly.isBefore(startDateOnly) ||
-                dateOnly.isAfter(todayOnly) ||
-                dateOnly.isAtSameMomentAs(todayOnly)) {
-              // Future or pre-start date with logs → grey
-              state = CalendarDayState.future;
-            } else {
-              // Past date WITH actual log entries that aren't completed or rest → missed (red)
-              state = CalendarDayState.missed;
-            }
-
-            _updateDayState(date, state, daysInMonth);
-          },
-        );
-      }).catchError((e) {
-        if (!mounted) return;
-        // Exception: treat as no-data → grey (not red)
-        _updateDayState(date, CalendarDayState.future, daysInMonth);
+            _isLoading = false;
+            _loadingTimeoutTimer?.cancel();
+          });
+        },
+      );
+    }).catchError((e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
       });
-    }
+    });
   }
 
   void _updateDayState(DateTime date, CalendarDayState state, int totalDays) {
@@ -342,6 +321,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    final joinDate = _firstWorkoutDate;
+    final joinMonth = DateTime(joinDate.year, joinDate.month, 1);
+    final currentMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
+    final canGoPrev = currentMonth.isAfter(joinMonth);
+
+    final today = DateTime.now();
+    final todayMonth = DateTime(today.year, today.month, 1);
+    final canGoNext = currentMonth.isBefore(todayMonth);
+
     int completedCount = 0;
     int missedCount = 0;
     int restCount = 0;
@@ -407,18 +395,60 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            DateFormat('yyyy').format(_focusedDay),
-                            style: AppStyles.text18Px.poppins.w600.copyWith(
-                              color: AppColors.primary.withValues(alpha: .7),
+                          IconButton(
+                            icon: Icon(
+                              Icons.chevron_left,
+                              size: 24,
+                              color: canGoPrev ? AppColors.primary : Colors.grey.shade400,
                             ),
+                            onPressed: canGoPrev
+                                ? () {
+                                    setState(() {
+                                      _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
+                                    });
+                                    _prepopulateDefaultStates();
+                                    _loadMonthData();
+                                  }
+                                : null,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            DateFormat('MMMM').format(_focusedDay),
-                            style: AppStyles.text18Px.poppins.w600.copyWith(
-                              color: AppColors.primary,
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormat('yyyy').format(_focusedDay),
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  color: AppColors.primary.withValues(alpha: .7),
+                                ),
+                              ),
+                              Text(
+                                DateFormat('MMMM').format(_focusedDay),
+                                style: AppStyles.text16Px.poppins.w600.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: Icon(
+                              Icons.chevron_right,
+                              size: 24,
+                              color: canGoNext ? AppColors.primary : Colors.grey.shade400,
                             ),
+                            onPressed: canGoNext
+                                ? () {
+                                    setState(() {
+                                      _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
+                                    });
+                                    _prepopulateDefaultStates();
+                                    _loadMonthData();
+                                  }
+                                : null,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
