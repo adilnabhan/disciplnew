@@ -1,0 +1,41 @@
+version: '3'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    ports:
+      - "8444:8000"
+    environment:
+      # Move sensitive variables to .env
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD}
+    depends_on:
+      - db
+    env_file:
+      - .env
+    networks:
+      - discipl_network
+  db:
+    image: postgis/postgis:14-3.1
+    environment:
+      # Move sensitive variables to .env
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5544:5432"
+    env_file:
+      - .env
+    networks:
+      - discipl_network
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+
+networks:
+  discipl_network:
+    name: discipl_network  # Unique network name
+    driver: bridge

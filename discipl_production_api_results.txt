@@ -1,0 +1,76 @@
+Production API Verification - https://discipl-backend.onrender.com
+==================================================
+
+PASSED: 68
+  [PASS] Health Check -> 200
+  [PASS] Send OTP (missing fields) -> 400
+  [PASS] Send OTP (valid number) -> 400
+  [PASS] OTP Login Verify (bad data) -> 400
+  [PASS] OTP Reg Verify (bad data) -> 400
+  [PASS] Onboarding (bad data) -> 400
+  [PASS] Login (bad creds) -> 400
+  [PASS] Guest Login -> 200
+  [PASS] Create Superuser -> 201
+  [PASS] Customer Homepage -> 200
+  [PASS] Constant Choices -> 200
+  [PASS] Nearest Fitness Centers -> 200
+  [PASS] Nearest FC with Coordinates -> 200
+  [PASS] Nearest FC with Radius 5km -> 200
+  [PASS] Injuries (no auth) -> 401
+  [PASS] Medical Conditions (no auth) -> 401
+  [PASS] Payment History (no auth) -> 401
+  [PASS] Membership Orgs (no auth) -> 401
+  [PASS] Workout Log (no auth) -> 401
+  [PASS] Customer Create (no auth) -> 401
+  [PASS] Membership Req Create (no auth) -> 401
+  [PASS] Membership Req List (no auth) -> 401
+  [PASS] Categories (public) -> 200
+  [PASS] Amenities (auth required) -> 401
+  [PASS] Org Home (no auth) -> 401
+  [PASS] Customer List (no auth) -> 401
+  [PASS] Trainers List (no auth) -> 401
+  [PASS] Org Create (no auth) -> 401
+  [PASS] Org List (no auth) -> 401
+  [PASS] Membership Plans (no auth) -> 401
+  [PASS] Bank Details (no auth) -> 401
+  [PASS] Expiring Memberships (no auth) -> 401
+  [PASS] Gym Membership Reqs (no auth) -> 401
+  [PASS] Trainer Reqs (no auth) -> 401
+  [PASS] Coupon Validate (no auth) -> 401
+  [PASS] Customer Renewals (no auth) -> 401
+  [PASS] Customer Payments (no auth) -> 401
+  [PASS] Gym List (public) -> 200
+  [PASS] Gym Create (public) -> 400
+  [PASS] Trainer Experience (no auth) -> 401
+  [PASS] Muscle Groups (no auth) -> 401
+  [PASS] Equipment (no auth) -> 401
+  [PASS] Exercise Types (no auth) -> 401
+  [PASS] Exercises (no auth) -> 401
+  [PASS] Workout Groups (no auth) -> 401
+  [PASS] Workout Plans (no auth) -> 401
+  [PASS] Trainer Customers (no auth) -> 401
+  [PASS] Trainer Dashboard (no auth) -> 401
+  [PASS] Subscription Plans (no auth) -> 401
+  [PASS] Link Request (no auth) -> 401
+  [PASS] Trainer List (no auth) -> 401
+  [PASS] Specializations (no auth) -> 401
+  [PASS] Languages (no auth) -> 401
+  [PASS] Trainer Plans (no auth) -> 401
+  [PASS] Device Token Reg (no auth) -> 401
+  [PASS] Device Token Del (no auth) -> 401
+  [PASS] Discipl Plans (no auth) -> 401
+  [PASS] Create Order (no auth) -> 401
+  [PASS] Trainer Order (no auth) -> 401
+  [PASS] Payment Status (no auth) -> 401
+  [PASS] Customer Order (no auth) -> 401
+  [PASS] Mentor Trainers (no auth) -> 401
+  [PASS] Guest Login for Token -> 200
+  [PASS] Homepage (authed) -> 200
+  [PASS] Choices (authed) -> 200
+  [PASS] Nearest FC (authed) -> 200
+  [PASS] Categories (authed) -> 200
+  [PASS] Gym List (authed) -> 200
+
+FAILED: 0
+
+TOTAL: 68 | PASS: 68 | FAIL: 0 | Rate: 100%

@@ -1,0 +1,36 @@
+Authenticated API Results
+========================================
+
+PASSED: 28
+  [PASS] Customer Homepage -> 200
+  [PASS] Choices API -> 200
+  [PASS] Nearest Fitness Centers -> 200
+  [PASS] Nearest Fitness Centers with coords -> 200
+  [PASS] Get Injuries -> 200
+  [PASS] Get Medical Conditions -> 200
+  [PASS] Payment History -> 403
+  [PASS] Membership Org List -> 403
+  [PASS] Membership Request List -> 403
+  [PASS] Payment Detail History -> 404
+  [PASS] Get Categories -> 200
+  [PASS] Get Amenities -> 200
+  [PASS] Organization Home (no org_id) -> 400
+  [PASS] Organization List -> 404
+  [PASS] Membership Plans List -> 200
+  [PASS] Gym List (public) -> 200
+  [PASS] Muscle Groups List -> 200
+  [PASS] Equipment List -> 200
+  [PASS] Exercise Types List -> 200
+  [PASS] Exercises List -> 200
+  [PASS] Workout Groups List -> 200
+  [PASS] Workout Plans List -> 200
+  [PASS] Trainer Customers List -> 200
+  [PASS] Trainer Dashboard -> 200
+  [PASS] Trainer Subscription Plans -> 200
+  [PASS] Device Token Register -> 201
+  [PASS] Device Token Delete -> 200
+  [PASS] Discipl Subscription Plans -> 200
+
+FAILED: 0
+
+TOTAL: 28 | PASS: 28 | FAIL: 0

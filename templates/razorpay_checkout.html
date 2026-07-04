@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Razorpay Checkout</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+    <h3>Processing Payment...</h3>
+    <script>
+        var options = {
+            "key": "{{ razorpay_key }}",  // ✅ Razorpay Test Key
+            "amount": "{{ amount }}",     // 💡 Must be in paise (e.g. 1000 = ₹10)
+            "currency": "INR",
+            "name": "Your Company",
+            "description": "Test Transaction",
+            "order_id": "{{ order_id }}", // ✅ Razorpay Order ID
+            "handler": function (response) {
+                // ✅ Send this to your backend to verify the payment
+                fetch("/api/payment/verify/", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": "Bearer " + localStorage.getItem("access_token")
+                    },
+                    body: JSON.stringify({
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_signature: response.razorpay_signature
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    alert("Payment successful! 🎉");
+                    window.location.href = "/success/";
+                })
+                .catch(err => {
+                    alert("Payment verification failed.");
+                });
+            },
+            "prefill": {
+                "name": "{{ user.get_full_name|default:'' }}",
+                "email": "{{ user.email|default:'' }}"
+            },
+            "theme": {
+                "color": "#3399cc"
+            }
+        };
+        var rzp1 = new Razorpay(options);
+        rzp1.open();
+    </script>
+</body>
+</html>
