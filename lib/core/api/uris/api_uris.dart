@@ -38,6 +38,7 @@ final class ApiUris {
   static String activeMembership(int id) =>
       '${_v1}customer/manage/$id/active-membership/';
   static final allMemberships = '${_v1}customer/membership-org/';
+  static final createMembershipRequest = '${_v1}customer/membership-request/create/';
 
   ///============================= Subscription =============================\\\
   static final initiateRazorpayOrder =

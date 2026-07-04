@@ -638,6 +638,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final isCompleted =
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
+        final isVerified = (workoutItem['is_verified'] as bool?) ?? false;
         final startedAt =
             workoutItem['started_at']?.toString() ??
             workoutItem['created_at']?.toString() ??
@@ -663,6 +664,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               badge: badge,
               hasImage: true,
               isCompleted: isCompleted,
+              isVerified: isVerified,
               duration: durationStr,
               trainerName: workoutItem['trainer_name']?.toString(),
               isMembershipExpired: isExpired,
@@ -1196,6 +1198,7 @@ class _WorkoutCard extends StatelessWidget {
     required this.badge,
     required this.hasImage,
     required this.isCompleted,
+    this.isVerified = false,
     this.duration,
     this.onTap,
     this.trainerName,
@@ -1211,6 +1214,7 @@ class _WorkoutCard extends StatelessWidget {
   final String? badge;
   final bool hasImage;
   final bool isCompleted;
+  final bool isVerified;
   final String? duration;
   final VoidCallback? onTap;
   final String? trainerName;
@@ -1613,7 +1617,11 @@ class _WorkoutCard extends StatelessWidget {
 
         // CompletedBadge overlay at top right of the card
         if (isCompleted)
-          const Positioned(top: -7.0, right: -5.35, child: CompletedBadge()),
+          Positioned(
+            top: -7.0,
+            right: -5.35,
+            child: CompletedBadge(isVerified: isVerified),
+          ),
         if (isMembershipExpired)
           Positioned(
             top: -7.0,

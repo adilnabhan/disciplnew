@@ -832,6 +832,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     final nameController = TextEditingController();
     final youtubeLinkController = TextEditingController();
     int? selectedMuscleId;
+    List<int> selectedSecondaryMuscleIds = [];
     String? selectedTypeCode;
     int? selectedEquipmentId;
     String selectedTrackBy = 'rep';
@@ -1087,6 +1088,54 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     selectedMuscleId = val;
                                   });
                                 },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Secondary Muscle Groups
+                              const Text(
+                                'Secondary Muscle Groups (Optional)',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.button,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: state.muscleGroups
+                                    .where((m) => m.id != selectedMuscleId)
+                                    .map((m) {
+                                      final isSelected = selectedSecondaryMuscleIds.contains(m.id);
+                                      return ChoiceChip(
+                                        label: Text(
+                                          m.name,
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 13,
+                                            color: isSelected ? Colors.white : AppColors.button,
+                                          ),
+                                        ),
+                                        selected: isSelected,
+                                        selectedColor: AppColors.primary,
+                                        backgroundColor: Colors.grey[100],
+                                        onSelected: (selected) {
+                                          setDialogState(() {
+                                            if (selected) {
+                                              selectedSecondaryMuscleIds.add(m.id);
+                                            } else {
+                                              selectedSecondaryMuscleIds.remove(m.id);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    })
+                                    .toList(),
                               ),
                               const SizedBox(height: 20),
 
@@ -1476,6 +1525,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                               equipmentId: selectedEquipmentId!,
                                               type: selectedTypeCode!,
                                               trackBy: selectedTrackBy,
+                                              secondaryMuscleGroupIds: selectedSecondaryMuscleIds,
                                               videoUrl:
                                                   youtubeLinkController.text
                                                       .trim(),

@@ -9,6 +9,7 @@ class CompletedBadge extends StatelessWidget {
     this.coreSize = 13.0,
     this.iconColor = const Color(0xFF019C37),
     this.coreColor = Colors.white,
+    this.isVerified = false,
   });
 
   final double width;
@@ -16,9 +17,45 @@ class CompletedBadge extends StatelessWidget {
   final double coreSize;
   final Color iconColor;
   final Color coreColor;
+  final bool isVerified;
 
   @override
   Widget build(BuildContext context) {
+    if (isVerified) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: coreSize,
+              height: coreSize,
+              decoration: BoxDecoration(
+                color: coreColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            Positioned.fill(
+              child: FittedBox(
+                fit: BoxFit.fill,
+                child: const Icon(
+                  Icons.verified,
+                  color: Color(0xFF1D9BF0),
+                ),
+              ),
+            ),
+            Positioned(
+              child: Icon(
+                Icons.done_all,
+                color: Colors.white,
+                size: coreSize - 1,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return SizedBox(
       width: width,
       height: height,
