@@ -8,6 +8,7 @@ import 'package:customer_mobile_app/src/features/workout/domain/repositories/wor
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_log_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/completed_badge.dart';
 
 class WorkoutHistoryCalendar extends StatefulWidget {
   const WorkoutHistoryCalendar({this.startDate, super.key});
@@ -18,7 +19,7 @@ class WorkoutHistoryCalendar extends StatefulWidget {
   State<WorkoutHistoryCalendar> createState() => _WorkoutHistoryCalendarState();
 }
 
-enum CalendarDayState { completed, missed, rest, future }
+enum CalendarDayState { completed, verified, missed, rest, future }
 
 class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   final GlobalKey _calendarCardKey = GlobalKey();
@@ -291,6 +292,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
 
                 final bool isCompleted = dayItem['is_completed'] == true;
+                final bool isVerified = dayItem['is_verified'] == true;
                 final bool isRestDay = dayItem['is_rest_day'] == true;
                 final int? planDayId = dayItem['plan_day_id'] != null ? int.tryParse(dayItem['plan_day_id'].toString()) : null;
                 final int? customerWorkoutPlanId = dayItem['customer_workout_plan_id'] != null ? int.tryParse(dayItem['customer_workout_plan_id'].toString()) : null;
@@ -306,7 +308,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
                 CalendarDayState state;
                 if (isCompleted) {
-                  state = CalendarDayState.completed;
+                  state = isVerified ? CalendarDayState.verified : CalendarDayState.completed;
                 } else if (isRestDay) {
                   state = CalendarDayState.rest;
                 } else if (dateOnly.isBefore(startDateOnly) ||
@@ -370,7 +372,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       final dateKey = DateFormat('yyyy-MM-dd').format(date);
       final state =
           _dayStates[dateKey] ?? CalendarDayState.future;
-      if (state == CalendarDayState.completed) {
+      if (state == CalendarDayState.completed || state == CalendarDayState.verified) {
         completedCount++;
       } else if (state == CalendarDayState.missed) {
         missedCount++;
@@ -715,6 +717,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     if (_isEditing &&
         state != CalendarDayState.completed &&
+        state != CalendarDayState.verified &&
         !dateOnly.isBefore(startDateOnly) &&
         !dateOnly.isBefore(todayOnly)) {
       final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
@@ -750,6 +753,20 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
               color: isSelected ? Colors.white : Colors.grey.shade400,
             ),
           ),
+        ),
+      );
+    }
+
+    if (state == CalendarDayState.verified) {
+      return _dayState(
+        day: day,
+        bgColor: const Color(0xFFE3F2FD),
+        borderColor: Colors.transparent,
+        topIcon: const CompletedBadge(
+          isVerified: true,
+          width: 17,
+          height: 17,
+          coreSize: 8,
         ),
       );
     }
