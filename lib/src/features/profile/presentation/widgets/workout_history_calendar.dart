@@ -776,18 +776,12 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         day: day,
         bgColor: const Color(0xFFE8F5E9),
         borderColor: Colors.transparent,
-        topIcon: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.5),
-          ),
-          child: ClipOval(
-            child: SvgPicture.asset(
-              'assets/images/svg/icons/green_success.svg',
-              width: 17,
-              height: 17,
-            ),
-          ),
+        topIcon: const CompletedBadge(
+          isVerified: true,
+          iconColor: Color(0xFF019C37),
+          width: 17,
+          height: 17,
+          coreSize: 8,
         ),
       );
     }

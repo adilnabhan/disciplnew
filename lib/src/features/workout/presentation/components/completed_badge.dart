@@ -21,6 +21,10 @@ class CompletedBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveColor = (isVerified && iconColor == const Color(0xFF019C37))
+        ? const Color(0xFF1D9BF0)
+        : iconColor;
+
     if (isVerified) {
       return SizedBox(
         width: width,
@@ -39,9 +43,9 @@ class CompletedBadge extends StatelessWidget {
             Positioned.fill(
               child: FittedBox(
                 fit: BoxFit.fill,
-                child: const Icon(
+                child: Icon(
                   Icons.verified,
-                  color: Color(0xFF1D9BF0),
+                  color: effectiveColor,
                 ),
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/core/network/dio_client.dart';
 
 part 'subscription_cubit.freezed.dart';
 part 'subscription_state.dart';
