@@ -366,6 +366,13 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final year = _focusedDay.year;
     final month = _focusedDay.month;
     final daysInMonth = DateTime(year, month + 1, 0).day;
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+
+    // Count up to today for the current month, full month for past months
+    final lastCountDate = (year == today.year && month == today.month)
+        ? today.day
+        : daysInMonth;
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
@@ -381,8 +388,9 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       }
     }
 
-    final totalScheduled = completedCount + missedCount;
-    final double percent = totalScheduled > 0 ? (completedCount / totalScheduled) : 0.0;
+    // Total non-rest days up to today (or full month for past months)
+    final totalNonRestDays = lastCountDate - restCount;
+    final double percent = totalNonRestDays > 0 ? (completedCount / totalNonRestDays).clamp(0.0, 1.0) : 0.0;
     final int percentInt = (percent * 100).round();
 
     return VisibilityDetector(
