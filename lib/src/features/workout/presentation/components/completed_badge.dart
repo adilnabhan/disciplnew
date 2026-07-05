@@ -10,6 +10,7 @@ class CompletedBadge extends StatelessWidget {
     this.iconColor = const Color(0xFF019C37),
     this.coreColor = Colors.white,
     this.isVerified = false,
+    this.showDoubleTick = false,
   });
 
   final double width;
@@ -18,14 +19,47 @@ class CompletedBadge extends StatelessWidget {
   final Color iconColor;
   final Color coreColor;
   final bool isVerified;
+  final bool showDoubleTick;
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColor = (isVerified && iconColor == const Color(0xFF019C37))
-        ? const Color(0xFF1D9BF0)
-        : iconColor;
-
     if (isVerified) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: coreSize,
+              height: coreSize,
+              decoration: BoxDecoration(
+                color: coreColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            Positioned.fill(
+              child: FittedBox(
+                fit: BoxFit.fill,
+                child: const Icon(
+                  Icons.verified,
+                  color: Color(0xFF1D9BF0),
+                ),
+              ),
+            ),
+            Positioned(
+              child: Icon(
+                Icons.done_all,
+                color: Colors.white,
+                size: coreSize - 1,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (showDoubleTick) {
       return SizedBox(
         width: width,
         height: height,
@@ -45,7 +79,7 @@ class CompletedBadge extends StatelessWidget {
                 fit: BoxFit.fill,
                 child: Icon(
                   Icons.verified,
-                  color: effectiveColor,
+                  color: iconColor,
                 ),
               ),
             ),
@@ -60,6 +94,7 @@ class CompletedBadge extends StatelessWidget {
         ),
       );
     }
+
     return SizedBox(
       width: width,
       height: height,

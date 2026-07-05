@@ -777,7 +777,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         bgColor: const Color(0xFFE8F5E9),
         borderColor: Colors.transparent,
         topIcon: const CompletedBadge(
-          isVerified: true,
+          isVerified: false,
+          showDoubleTick: true,
           iconColor: Color(0xFF019C37),
           width: 17,
           height: 17,
