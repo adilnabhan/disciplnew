@@ -366,8 +366,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final year = _focusedDay.year;
     final month = _focusedDay.month;
     final daysInMonth = DateTime(year, month + 1, 0).day;
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
 
     // Count up to today for the current month, full month for past months
     final lastCountDate = (year == today.year && month == today.month)
