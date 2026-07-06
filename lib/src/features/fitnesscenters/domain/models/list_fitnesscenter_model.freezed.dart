@@ -316,6 +316,8 @@ mixin _$SingleFItnessCenterModel {
   List<Category>? get category => throw _privateConstructorUsedError;
   @JsonKey(name: 'location')
   Location? get location => throw _privateConstructorUsedError;
+  @JsonKey(name: 'google_maps_url')
+  String? get googleMapsUrl => throw _privateConstructorUsedError;
   @JsonKey(name: 'mentor_name')
   String? get mentorName => throw _privateConstructorUsedError;
   @JsonKey(name: 'review_count')
@@ -362,6 +364,7 @@ abstract class $SingleFItnessCenterModelCopyWith<$Res> {
     @JsonKey(name: 'categories') List<Category>? categories,
     @JsonKey(name: 'category') List<Category>? category,
     @JsonKey(name: 'location') Location? location,
+    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
     @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') double? averageRating,
@@ -405,6 +408,7 @@ class _$SingleFItnessCenterModelCopyWithImpl<
     Object? categories = freezed,
     Object? category = freezed,
     Object? location = freezed,
+    Object? googleMapsUrl = freezed,
     Object? mentorName = freezed,
     Object? reviewCount = freezed,
     Object? averageRating = freezed,
@@ -480,6 +484,11 @@ class _$SingleFItnessCenterModelCopyWithImpl<
                     ? _value.location
                     : location // ignore: cast_nullable_to_non_nullable
                         as Location?,
+            googleMapsUrl:
+                freezed == googleMapsUrl
+                    ? _value.googleMapsUrl
+                    : googleMapsUrl // ignore: cast_nullable_to_non_nullable
+                        as String?,
             mentorName:
                 freezed == mentorName
                     ? _value.mentorName
@@ -558,6 +567,7 @@ abstract class _$$SingleFItnessCenterModelImplCopyWith<$Res>
     @JsonKey(name: 'categories') List<Category>? categories,
     @JsonKey(name: 'category') List<Category>? category,
     @JsonKey(name: 'location') Location? location,
+    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
     @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') double? averageRating,
@@ -602,6 +612,7 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
     Object? categories = freezed,
     Object? category = freezed,
     Object? location = freezed,
+    Object? googleMapsUrl = freezed,
     Object? mentorName = freezed,
     Object? reviewCount = freezed,
     Object? averageRating = freezed,
@@ -677,6 +688,11 @@ class __$$SingleFItnessCenterModelImplCopyWithImpl<$Res>
                 ? _value.location
                 : location // ignore: cast_nullable_to_non_nullable
                     as Location?,
+        googleMapsUrl:
+            freezed == googleMapsUrl
+                ? _value.googleMapsUrl
+                : googleMapsUrl // ignore: cast_nullable_to_non_nullable
+                    as String?,
         mentorName:
             freezed == mentorName
                 ? _value.mentorName
@@ -734,6 +750,7 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
     @JsonKey(name: 'categories') final List<Category>? categories,
     @JsonKey(name: 'category') final List<Category>? category,
     @JsonKey(name: 'location') this.location,
+    @JsonKey(name: 'google_maps_url') this.googleMapsUrl,
     @JsonKey(name: 'mentor_name') this.mentorName,
     @JsonKey(name: 'review_count') this.reviewCount,
     @JsonKey(name: 'average_rating') this.averageRating,
@@ -804,6 +821,9 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
   @JsonKey(name: 'location')
   final Location? location;
   @override
+  @JsonKey(name: 'google_maps_url')
+  final String? googleMapsUrl;
+  @override
   @JsonKey(name: 'mentor_name')
   final String? mentorName;
   @override
@@ -827,7 +847,7 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
 
   @override
   String toString() {
-    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, category: $category, location: $location, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt, distanceKm: $distanceKm, latitude: $latitude, longitude: $longitude)';
+    return 'SingleFItnessCenterModel(id: $id, name: $name, description: $description, email: $email, phoneNumber: $phoneNumber, logo: $logo, slug: $slug, active: $active, isPublic: $isPublic, registrationStatus: $registrationStatus, categories: $categories, category: $category, location: $location, googleMapsUrl: $googleMapsUrl, mentorName: $mentorName, reviewCount: $reviewCount, averageRating: $averageRating, createdAt: $createdAt, distanceKm: $distanceKm, latitude: $latitude, longitude: $longitude)';
   }
 
   @override
@@ -856,6 +876,8 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
             const DeepCollectionEquality().equals(other._category, _category) &&
             (identical(other.location, location) ||
                 other.location == location) &&
+            (identical(other.googleMapsUrl, googleMapsUrl) ||
+                other.googleMapsUrl == googleMapsUrl) &&
             (identical(other.mentorName, mentorName) ||
                 other.mentorName == mentorName) &&
             (identical(other.reviewCount, reviewCount) ||
@@ -887,6 +909,7 @@ class _$SingleFItnessCenterModelImpl extends _SingleFItnessCenterModel {
     const DeepCollectionEquality().hash(_categories),
     const DeepCollectionEquality().hash(_category),
     location,
+    googleMapsUrl,
     mentorName,
     reviewCount,
     averageRating,
@@ -927,6 +950,7 @@ abstract class _SingleFItnessCenterModel extends SingleFItnessCenterModel {
     @JsonKey(name: 'categories') final List<Category>? categories,
     @JsonKey(name: 'category') final List<Category>? category,
     @JsonKey(name: 'location') final Location? location,
+    @JsonKey(name: 'google_maps_url') final String? googleMapsUrl,
     @JsonKey(name: 'mentor_name') final String? mentorName,
     @JsonKey(name: 'review_count') final int? reviewCount,
     @JsonKey(name: 'average_rating') final double? averageRating,
@@ -979,6 +1003,9 @@ abstract class _SingleFItnessCenterModel extends SingleFItnessCenterModel {
   @override
   @JsonKey(name: 'location')
   Location? get location;
+  @override
+  @JsonKey(name: 'google_maps_url')
+  String? get googleMapsUrl;
   @override
   @JsonKey(name: 'mentor_name')
   String? get mentorName;

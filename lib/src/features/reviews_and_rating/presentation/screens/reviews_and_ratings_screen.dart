@@ -62,55 +62,59 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
       return const Center(child: Text('No reviews found!'));
     }
     final isPagination = _cubit.state.fitnessCenterReviews.isPagination;
-    return ListView(
+    final reviewsList = reviews.results?.reviews ?? [];
+
+    return ListView.separated(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
-      children: [
-        Row(
-          children: [
-            Text('${reviews.results?.avgRating ?? 4.5}', style: AppStyles.text32Px.poppins.w600.dark),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: List.generate(5, (index) {
-                    final avgRating = reviews.results?.avgRating ?? 4.5;
-                    return Icon(
-                      index < avgRating.floor()
-                          ? Icons.star
-                          : index == avgRating.floor() && avgRating % 1 >= 0.5
-                          ? Icons.star_half
-                          : Icons.star_border,
-                      color: Colors.amber,
-                      size: 20,
-                    );
-                  }),
-                ),
-                const SizedBox(height: 4),
-                Text('${reviews.results?.reviewCount ?? 0} Reviews', style: AppStyles.text12Px.poppins.w400.textGrey),
-              ],
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        ListView.separated(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemBuilder: (context, index) {
-            if (index == (reviews.results?.reviews?.length ?? 0)) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-            return _buildReviewItem(reviews.results?.reviews?[index]);
-          },
-          separatorBuilder: (context, index) => const SizedBox(height: 16),
-          itemCount: (reviews.results?.reviews?.length ?? 0) + (isPagination ? 1 : 0),
-        ),
-      ],
+      itemCount: 1 + reviewsList.length + (isPagination ? 1 : 0),
+      separatorBuilder: (context, index) {
+        if (index == 0) return const SizedBox(height: 24);
+        return const SizedBox(height: 16);
+      },
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Row(
+            children: [
+              Text('${reviews.results?.avgRating ?? 4.5}', style: AppStyles.text32Px.poppins.w600.dark),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: List.generate(5, (index) {
+                      final avgRating = reviews.results?.avgRating ?? 4.5;
+                      return Icon(
+                        index < avgRating.floor()
+                            ? Icons.star
+                            : index == avgRating.floor() && avgRating % 1 >= 0.5
+                            ? Icons.star_half
+                            : Icons.star_border,
+                        color: Colors.amber,
+                        size: 20,
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 4),
+                  Text('${reviews.results?.reviewCount ?? 0} Reviews', style: AppStyles.text12Px.poppins.w400.textGrey),
+                ],
+              ),
+            ],
+          );
+        }
+
+        final reviewIndex = index - 1;
+        if (reviewIndex < reviewsList.length) {
+          return _buildReviewItem(reviewsList[reviewIndex]);
+        }
+
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
     );
   }
 

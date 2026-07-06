@@ -1033,6 +1033,8 @@ mixin _$Location {
   dynamic get latitude => throw _privateConstructorUsedError;
   @JsonKey(name: 'longitude')
   dynamic get longitude => throw _privateConstructorUsedError;
+  @JsonKey(name: 'google_maps_url')
+  String? get googleMapsUrl => throw _privateConstructorUsedError;
 
   /// Serializes this Location to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -1057,6 +1059,7 @@ abstract class $LocationCopyWith<$Res> {
     @JsonKey(name: 'pin_code') String? pinCode,
     @JsonKey(name: 'latitude') dynamic latitude,
     @JsonKey(name: 'longitude') dynamic longitude,
+    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
   });
 }
 
@@ -1082,6 +1085,7 @@ class _$LocationCopyWithImpl<$Res, $Val extends Location>
     Object? pinCode = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
+    Object? googleMapsUrl = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -1120,6 +1124,11 @@ class _$LocationCopyWithImpl<$Res, $Val extends Location>
                     ? _value.longitude
                     : longitude // ignore: cast_nullable_to_non_nullable
                         as dynamic,
+            googleMapsUrl:
+                freezed == googleMapsUrl
+                    ? _value.googleMapsUrl
+                    : googleMapsUrl // ignore: cast_nullable_to_non_nullable
+                        as String?,
           )
           as $Val,
     );
@@ -1143,6 +1152,7 @@ abstract class _$$LocationImplCopyWith<$Res>
     @JsonKey(name: 'pin_code') String? pinCode,
     @JsonKey(name: 'latitude') dynamic latitude,
     @JsonKey(name: 'longitude') dynamic longitude,
+    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
   });
 }
 
@@ -1167,6 +1177,7 @@ class __$$LocationImplCopyWithImpl<$Res>
     Object? pinCode = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
+    Object? googleMapsUrl = freezed,
   }) {
     return _then(
       _$LocationImpl(
@@ -1205,6 +1216,11 @@ class __$$LocationImplCopyWithImpl<$Res>
                 ? _value.longitude
                 : longitude // ignore: cast_nullable_to_non_nullable
                     as dynamic,
+        googleMapsUrl:
+            freezed == googleMapsUrl
+                ? _value.googleMapsUrl
+                : googleMapsUrl // ignore: cast_nullable_to_non_nullable
+                    as String?,
       ),
     );
   }
@@ -1221,6 +1237,7 @@ class _$LocationImpl implements _Location {
     @JsonKey(name: 'pin_code') this.pinCode,
     @JsonKey(name: 'latitude') this.latitude,
     @JsonKey(name: 'longitude') this.longitude,
+    @JsonKey(name: 'google_maps_url') this.googleMapsUrl,
   });
 
   factory _$LocationImpl.fromJson(Map<String, dynamic> json) =>
@@ -1247,10 +1264,13 @@ class _$LocationImpl implements _Location {
   @override
   @JsonKey(name: 'longitude')
   final dynamic longitude;
+  @override
+  @JsonKey(name: 'google_maps_url')
+  final String? googleMapsUrl;
 
   @override
   String toString() {
-    return 'Location(buildingName: $buildingName, street: $street, city: $city, state: $state, pinCode: $pinCode, latitude: $latitude, longitude: $longitude)';
+    return 'Location(buildingName: $buildingName, street: $street, city: $city, state: $state, pinCode: $pinCode, latitude: $latitude, longitude: $longitude, googleMapsUrl: $googleMapsUrl)';
   }
 
   @override
@@ -1265,7 +1285,9 @@ class _$LocationImpl implements _Location {
             (identical(other.state, state) || other.state == state) &&
             (identical(other.pinCode, pinCode) || other.pinCode == pinCode) &&
             const DeepCollectionEquality().equals(other.latitude, latitude) &&
-            const DeepCollectionEquality().equals(other.longitude, longitude));
+            const DeepCollectionEquality().equals(other.longitude, longitude) &&
+            (identical(other.googleMapsUrl, googleMapsUrl) ||
+                other.googleMapsUrl == googleMapsUrl));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1279,6 +1301,7 @@ class _$LocationImpl implements _Location {
     pinCode,
     const DeepCollectionEquality().hash(latitude),
     const DeepCollectionEquality().hash(longitude),
+    googleMapsUrl,
   );
 
   /// Create a copy of Location
@@ -1304,6 +1327,7 @@ abstract class _Location implements Location {
     @JsonKey(name: 'pin_code') final String? pinCode,
     @JsonKey(name: 'latitude') final dynamic latitude,
     @JsonKey(name: 'longitude') final dynamic longitude,
+    @JsonKey(name: 'google_maps_url') final String? googleMapsUrl,
   }) = _$LocationImpl;
 
   factory _Location.fromJson(Map<String, dynamic> json) =
@@ -1330,6 +1354,9 @@ abstract class _Location implements Location {
   @override
   @JsonKey(name: 'longitude')
   dynamic get longitude;
+  @override
+  @JsonKey(name: 'google_maps_url')
+  String? get googleMapsUrl;
 
   /// Create a copy of Location
   /// with the given fields replaced by the non-null parameter values.

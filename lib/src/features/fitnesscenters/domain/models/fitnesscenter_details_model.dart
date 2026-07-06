@@ -18,8 +18,9 @@ class FitnesscenterDetailsModel with _$FitnesscenterDetailsModel {
     @JsonKey(name: 'take_free_trial') bool? takeFreeTrial,
     @JsonKey(name: 'is_on_free_trial') bool? isOnFreeTrial,
     @JsonKey(name: 'location') Location? location,
+    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
     @JsonKey(name: 'working_days') List<WorkingDay>? workingDays,
-    @JsonKey(name: 'time_slots') List<dynamic>? timeSlots,
+    @JsonKey(name: 'time_slots') List<GymTimeSlot>? timeSlots,
     @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
     @JsonKey(name: 'amenities') List<Amenity>? amenities,
     @JsonKey(name: 'categories') List<Amenity>? categories,
@@ -32,6 +33,7 @@ class FitnesscenterDetailsModel with _$FitnesscenterDetailsModel {
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') dynamic averageRating,
     @JsonKey(name: 'is_slot_available') bool? isSlotAvailable,
+    @JsonKey(name: 'trainers') List<GymTrainer>? trainers,
   }) = _FitnesscenterDetailsModel;
 
   factory FitnesscenterDetailsModel.fromJson(Map<String, dynamic> json) => _$FitnesscenterDetailsModelFromJson(json);
@@ -85,7 +87,71 @@ class WorkingDay with _$WorkingDay {
     @JsonKey(name: 'morning_closing_time') String? morningClosingTime,
     @JsonKey(name: 'evening_opening_time') String? eveningOpeningTime,
     @JsonKey(name: 'evening_closing_time') String? eveningClosingTime,
+    @JsonKey(name: 'ladies_opening_time') String? ladiesOpeningTime,
+    @JsonKey(name: 'ladies_closing_time') String? ladiesClosingTime,
   }) = _WorkingDay;
 
   factory WorkingDay.fromJson(Map<String, dynamic> json) => _$WorkingDayFromJson(json);
 }
+
+@freezed
+class GymTimeSlot with _$GymTimeSlot {
+  const factory GymTimeSlot({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'name') String? name,
+    @JsonKey(name: 'start_time') String? startTime,
+    @JsonKey(name: 'end_time') String? endTime,
+    @JsonKey(name: 'is_active') bool? isActive,
+    @JsonKey(name: 'is_currently_active') bool? isCurrentlyActive,
+  }) = _GymTimeSlot;
+
+  factory GymTimeSlot.fromJson(Map<String, dynamic> json) => _$GymTimeSlotFromJson(json);
+}
+
+@freezed
+class GymTrainer with _$GymTrainer {
+  const factory GymTrainer({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'full_name') String? fullName,
+    @JsonKey(name: 'user_type') String? userType,
+    @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'profile_image') String? profileImage,
+    @JsonKey(name: 'experience_years') int? experienceYears,
+    @JsonKey(name: 'average_rating') dynamic averageRating,
+    @JsonKey(name: 'review_count') int? reviewCount,
+    @JsonKey(name: 'specializations') List<String>? specializations,
+    @JsonKey(name: 'clients_count') int? clientsCount,
+    @JsonKey(name: 'verified_workouts_count') int? verifiedWorkoutsCount,
+    @JsonKey(name: 'transformations') List<GymTransformation>? transformations,
+    @JsonKey(name: 'certifications') List<Certification>? certifications,
+    @JsonKey(name: 'email') String? email,
+    @JsonKey(name: 'mobile') String? mobile,
+    @JsonKey(name: 'gender') String? gender,
+  }) = _GymTrainer;
+
+  factory GymTrainer.fromJson(Map<String, dynamic> json) => _$GymTrainerFromJson(json);
+}
+
+@freezed
+class GymTransformation with _$GymTransformation {
+  const factory GymTransformation({
+    @JsonKey(name: 'description') String? description,
+    @JsonKey(name: 'before_image') String? beforeImage,
+    @JsonKey(name: 'after_image') String? afterImage,
+  }) = _GymTransformation;
+
+  factory GymTransformation.fromJson(Map<String, dynamic> json) => _$GymTransformationFromJson(json);
+}
+
+@freezed
+class Certification with _$Certification {
+  const factory Certification({
+    @JsonKey(name: 'name') String? name,
+    @JsonKey(name: 'issued_by') String? issuedBy,
+    @JsonKey(name: 'issued_date') String? issuedDate,
+    @JsonKey(name: 'file_url') String? fileUrl,
+  }) = _Certification;
+
+  factory Certification.fromJson(Map<String, dynamic> json) => _$CertificationFromJson(json);
+}
+

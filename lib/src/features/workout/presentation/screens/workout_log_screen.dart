@@ -8,6 +8,7 @@ import 'package:customer_mobile_app/src/features/workout/domain/models/workout_m
 import 'package:customer_mobile_app/src/features/workout/domain/models/preset_model.dart';
 
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_preview_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
@@ -130,6 +131,18 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final enrichedList = <Map<String, dynamic>>[];
         for (final item in list) {
           final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
+          
+          final isCompleted =
+              ((map['is_completed'] as bool?) ?? false) ||
+              (map['status']?.toString().toLowerCase() == 'completed');
+          final trainerName = map['trainer_name']?.toString() ?? '';
+          final isMentorGiven = trainerName.isNotEmpty;
+          
+          // Skip user's own/preset workouts that are not completed (drafts / in-progress)
+          if (!isMentorGiven && !isCompleted) {
+            continue;
+          }
+
           final sessionId = map['session_id'] ?? map['id'];
           if (sessionId != null) {
             try {
@@ -201,18 +214,13 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       (data) {
         if (mounted) {
           setState(() {
-            bool hasExercises = false;
+            bool hasActiveSession = false;
             if (data is Map<String, dynamic>) {
-              final exercisesData =
-                  data['logs'] ??
-                  data['exercises'] ??
-                  data['session_exercises'] ??
-                  data['results'];
-              if (exercisesData is List && exercisesData.isNotEmpty) {
-                hasExercises = true;
+              if (data['id'] != null) {
+                hasActiveSession = true;
               }
             }
-            _showWorkoutCard = hasExercises;
+            _showWorkoutCard = hasActiveSession;
           });
         }
       },
@@ -563,10 +571,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           Navigator.push<dynamic>(
             context,
             MaterialPageRoute<dynamic>(
-              builder: (context) => WorkoutDetailsScreen(
-                sessionId: autoSessionId,
-                fallbackTitle: 'Workout',
-              ),
+              builder:
+                  (context) => WorkoutDetailsScreen(
+                    sessionId: autoSessionId,
+                    fallbackTitle: 'Workout',
+                  ),
             ),
           ).then((refresh) {
             if (refresh == true) {
@@ -685,14 +694,24 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
                 );
                 if (sessionId != null) {
+                  final isMentor = workoutItem['trainer_name']?.toString().isNotEmpty ?? false;
                   final refresh = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<dynamic>(
-                      builder:
-                          (context) => WorkoutDetailsScreen(
+                      builder: (context) {
+                        if (isMentor && !isCompleted) {
+                          return WorkoutPreviewScreen(
                             sessionId: sessionId,
                             fallbackTitle: title,
-                          ),
+                            trainerName: workoutItem['trainer_name']?.toString(),
+                          );
+                        } else {
+                          return WorkoutDetailsScreen(
+                            sessionId: sessionId,
+                            fallbackTitle: title,
+                          );
+                        }
+                      },
                     ),
                   );
                   if (refresh == true) {
@@ -776,9 +795,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                           const SizedBox(height: 21),
                         ],
                         _buildMonthNav(),
-                        const SizedBox(height: 34),
+                        const SizedBox(height: 20),
                         _buildWeekStrip(),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
@@ -960,6 +979,39 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   // ── Bottom CTA ────────────────────────────────────────────────────────────
   Widget _buildStartButton() {
+    if (_showWorkoutCard) {
+      return Padding(
+        padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+        child: Container(
+          width: double.infinity,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF4F4),
+            border: Border.all(color: const Color(0xFFF0B5B7), width: 1.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Finish the draft workout',
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
       child: Column(
@@ -1263,14 +1315,14 @@ class _WorkoutCard extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: Container(
-            height: isMentorGiven ? (isCompleted ? 140 : 100) : 140,
+            height: isCompleted ? 140 : 100,
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient:
                   isMentorGiven
                       ? const LinearGradient(
-                        colors: [Color(0xFFFFD6D6), Color(0xFFFFB4B4)],
+                        colors: [Color(0xffFFD5D5), Color(0xffFFD5D5)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       )
@@ -1299,12 +1351,17 @@ class _WorkoutCard extends StatelessWidget {
                     ? Stack(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
+                          padding: const EdgeInsets.only(
+                            left: 16,
+                            right: 68,
+                            top: 16,
+                            bottom: 16,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: isCompleted
+                                ? MainAxisAlignment.start
+                                : MainAxisAlignment.center,
                             children: [
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1379,98 +1436,91 @@ class _WorkoutCard extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(height: 6),
-                                        Text(
-                                          trainerName!,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF222222),
-                                          ),
+                                        Row(
+                                          children: [
+                                            if (trainerProfileImage != null &&
+                                                trainerProfileImage!.isNotEmpty) ...[
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: Image.network(
+                                                  trainerProfileImage!,
+                                                  width: 20,
+                                                  height: 20,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder:
+                                                      (_, __, ___) =>
+                                                          const Icon(
+                                                    Icons.account_circle,
+                                                    size: 20,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                            ],
+                                            Expanded(
+                                              child: Text(
+                                                trainerName!,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Poppins',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF222222),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                  // Right: Start Workout button (only when not completed)
-                                  if (!isCompleted) ...[
-                                    const SizedBox(width: 10),
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(40),
-                                      onTap: onTap,
-                                      child: Container(
-                                        height: 38,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            40,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(0xffC84A4A),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 26,
-                                              height: 26,
-                                              decoration: const BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.fitness_center_rounded,
-                                                color: Color(0xffC84A4A),
-                                                size: 15,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Text(
-                                              'Start workout',
-                                              style: TextStyle(
-                                                color: Color(0xff7A2A2A),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ],
                               ),
                               if (isCompleted) ...[
                                 const SizedBox(height: 12),
-                                Text(
-                                  'Duration: ${duration ?? '--'}',
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF222222),
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Duration: ${duration ?? '--'}',
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF222222),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isVerified ? '• Verified' : '• Pending',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            isVerified
+                                                ? const Color(0xFF019C37)
+                                                : const Color(0xFFA9AF00),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ],
                           ),
                         ),
-                        // Bottom-right: Chevron Button (completed only)
-                        if (isCompleted)
-                          Positioned(
-                            right: 16,
-                            bottom: 16,
+                        // Right: Chevron Button (always show, vertically centered)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
                             child: Container(
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFBF5151),
+                                color: const Color(0xFFC84A4A),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -1487,6 +1537,7 @@ class _WorkoutCard extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ),
                       ],
                     )
                     : Stack(
@@ -1620,7 +1671,23 @@ class _WorkoutCard extends StatelessWidget {
           Positioned(
             top: -7.0,
             right: -5.35,
-            child: CompletedBadge(isVerified: isVerified),
+            child: (trainerName == null || trainerName!.isEmpty)
+                ? SvgPicture.asset(
+                    'assets/images/svg/icons/user_completed_tick.svg',
+                    width: 28,
+                    height: 27,
+                  )
+                : isVerified
+                    ? SvgPicture.asset(
+                        'assets/images/svg/icons/trainer_verified_tick.svg',
+                        width: 28,
+                        height: 27,
+                      )
+                    : SvgPicture.asset(
+                        'assets/images/svg/icons/not_verified_tick.svg',
+                        width: 28,
+                        height: 27,
+                      ),
           ),
         if (isMembershipExpired)
           Positioned(

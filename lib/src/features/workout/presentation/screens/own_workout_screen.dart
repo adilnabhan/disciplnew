@@ -2467,6 +2467,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     child: DropdownButton<String>(
                       value: exercise['weight_type']?.toString() ?? 'kg',
                       isDense: true,
+                      isExpanded: true,
                       alignment: Alignment.center,
                       style: const TextStyle(
                         fontFamily: 'Poppins',

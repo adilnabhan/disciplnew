@@ -6,11 +6,13 @@ class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
     required this.sessionId,
     required this.fallbackTitle,
+    this.startTimer = false,
     super.key,
   });
 
   final int sessionId;
   final String fallbackTitle;
+  final bool startTimer;
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -23,6 +25,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   Map<String, dynamic>? _sessionData;
   final Map<int, Timer> _debounceTimers = {};
   final Set<int> _addingSetLogIds = {};
+  Timer? _detailsTimer;
+  int _elapsedSeconds = 0;
 
   @override
   void initState() {
@@ -33,10 +37,60 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   void dispose() {
+    _detailsTimer?.cancel();
     for (final timer in _debounceTimers.values) {
       timer.cancel();
     }
     super.dispose();
+  }
+
+  void _startTimer() {
+    if (_detailsTimer != null) return;
+    _detailsTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _syncTimer(Map<String, dynamic> data) {
+    if (_detailsTimer != null) return;
+    final startedAtStr = data['started_at']?.toString();
+    if (startedAtStr != null) {
+      final start = DateTime.tryParse(startedAtStr);
+      if (start != null) {
+        final now = DateTime.now();
+        final startLocal = start.isUtc ? start.toLocal() : start;
+        final diff = now.difference(startLocal);
+        final elapsed = diff.inSeconds;
+        if (elapsed >= 0) {
+          setState(() {
+            _elapsedSeconds = elapsed;
+          });
+          _startTimer();
+          return;
+        }
+      }
+    }
+    _startTimer();
+  }
+
+  String _formatTimer(int totalSeconds) {
+    final int hours = totalSeconds ~/ 3600;
+    final int minutes = (totalSeconds % 3600) ~/ 60;
+    final int seconds = totalSeconds % 60;
+
+    final String minutesStr = minutes.toString().padLeft(2, '0');
+    final String secondsStr = seconds.toString().padLeft(2, '0');
+
+    if (hours > 0) {
+      final String hoursStr = hours.toString().padLeft(2, '0');
+      return '$hoursStr:$minutesStr:$secondsStr';
+    } else {
+      return '$minutesStr:$secondsStr';
+    }
   }
 
   void _loadDetails() {
@@ -328,6 +382,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           }
 
           if (_sessionData != null) {
+            if (widget.startTimer) {
+              _syncTimer(_sessionData!);
+            }
             return _buildContent(_sessionData!);
           }
 
@@ -335,6 +392,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             (error) => _buildErrorState('Error loading details: ${error.msg}'),
             (data) {
               _sessionData = data;
+              if (widget.startTimer) {
+                _syncTimer(data);
+              }
               return _buildContent(data);
             },
           );
@@ -409,7 +469,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       } catch (_) {}
     }
 
-    final duration = _formatDuration(startedAt, completedAt);
+    final duration = widget.startTimer ? _formatTimer(_elapsedSeconds) : _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
 
     return ListView(
@@ -562,17 +622,22 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     required String label,
     required String value,
   }) {
+    final isTimerActive = label == 'Duration' && widget.startTimer;
     return Column(
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: const Color(0xFFF0B5B7), size: 16),
+            Icon(
+              icon,
+              color: isTimerActive ? AppColors.primary : const Color(0xFFF0B5B7),
+              size: 16,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: AppStyles.text12Px.poppins.w500.copyWith(
-                color: const Color(0xFF94A3B8),
+                color: isTimerActive ? AppColors.primary : const Color(0xFF94A3B8),
               ),
             ),
           ],
@@ -581,7 +646,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         Text(
           value,
           style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.dark.withValues(alpha: 0.7),
+            color: isTimerActive ? AppColors.primary : AppColors.dark.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -817,6 +882,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                             child: DropdownButton<String>(
                               value: log['weight_type']?.toString() ?? 'kg',
                               isDense: true,
+                              isExpanded: true,
                               style: AppStyles.text12Px.poppins.w500.copyWith(
                                 color: const Color(0xFF212121),
                               ),

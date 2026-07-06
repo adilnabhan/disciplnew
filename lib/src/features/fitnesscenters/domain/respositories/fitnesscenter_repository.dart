@@ -18,6 +18,14 @@ final class FitnesscenterRepository {
   // Caching variables
   FitnesscenterCategoriesModel? _cachedCategories;
   final Map<int, List<FitnesscenterMembershipPlansModel>> _cachedMembershipPlans = {};
+  final Map<int, FitnesscenterDetailsModel> _cachedDetails = {};
+  final Map<int, FitnessCenterReviewsModel> _cachedReviews = {};
+
+  FitnesscenterDetailsModel? getCachedDetails(int id) => _cachedDetails[id];
+  void cacheDetails(int id, FitnesscenterDetailsModel details) => _cachedDetails[id] = details;
+
+  FitnessCenterReviewsModel? getCachedReviews(int id) => _cachedReviews[id];
+  void cacheReviews(int id, FitnessCenterReviewsModel reviews) => _cachedReviews[id] = reviews;
 
   final Dio _dio = DioClient().dio;
 
