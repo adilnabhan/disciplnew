@@ -5,8 +5,10 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
-import 'package:visibility_detector/visibility_detector.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_log_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/completed_badge.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class WorkoutHistoryCalendar extends StatefulWidget {
   const WorkoutHistoryCalendar({this.startDate, super.key});
@@ -17,27 +19,31 @@ class WorkoutHistoryCalendar extends StatefulWidget {
   State<WorkoutHistoryCalendar> createState() => _WorkoutHistoryCalendarState();
 }
 
-enum CalendarDayState { completed, missed, rest, future }
+enum CalendarDayState { completed, verified, missed, rest, future }
 
 class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   final GlobalKey _calendarCardKey = GlobalKey();
   OverlayEntry? _onboardingOverlayEntry;
 
   DateTime _focusedDay = DateTime.now();
-  final Map<DateTime, CalendarDayState> _dayStates = {};
+  final Map<String, CalendarDayState> _dayStates = {};
   bool _isLoading = false;
   int _completedRequestsCount = 0;
   Timer? _loadingTimeoutTimer;
 
   bool _isEditing = false;
-  final Set<DateTime> _selectedRestDays = {};
+  final Set<String> _selectedRestDays = {};
 
-  final Map<DateTime, int> _dayPlanDayIds = {};
-  final Map<DateTime, int> _dayCustomerWorkoutPlanIds = {};
+  final Map<String, int> _dayPlanDayIds = {};
+  final Map<String, int> _dayCustomerWorkoutPlanIds = {};
+  final Map<String, int> _dayWorkoutIds = {};
   int? _fallbackPlanId;
   int? _fallbackPlanDayId;
 
   bool _hasLoadedData = false;
+
+  // Subscription to repository invalidation events
+  StreamSubscription<String>? _calendarInvalidationSub;
 
   T? _firstNonNull<T>(Iterable<T?> values) {
     for (final v in values) {
@@ -103,16 +109,17 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         for (int day = 1; day <= daysInMonth; day++) {
           final date = DateTime(year, month, day);
           final dateOnly = DateTime(date.year, date.month, date.day);
-          final oldState = _dayStates[dateOnly] ?? CalendarDayState.future;
+          final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
+          final oldState = _dayStates[dateKey] ?? CalendarDayState.future;
           final isCurrentlyRest = oldState == CalendarDayState.rest;
-          final shouldBeRest = _selectedRestDays.contains(dateOnly);
+          final shouldBeRest = _selectedRestDays.contains(dateKey);
 
           if (isCurrentlyRest != shouldBeRest) {
-            final planDayId = _dayPlanDayIds[dateOnly] ??
+            final planDayId = _dayPlanDayIds[dateKey] ??
                 _firstNonNull(_dayPlanDayIds.values) ??
                 _fallbackPlanDayId;
 
-            final customerWorkoutPlanId = _dayCustomerWorkoutPlanIds[dateOnly] ??
+            final customerWorkoutPlanId = _dayCustomerWorkoutPlanIds[dateKey] ??
                 _firstNonNull(_dayCustomerWorkoutPlanIds.values) ??
                 _fallbackPlanId;
 
@@ -121,7 +128,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
             }
             restDaysToUpdate.add({
               'plan_day_id': planDayId ?? -1,
-              'date': DateFormat('yyyy-MM-dd').format(dateOnly),
+              'date': dateKey,
               'is_rest_day': shouldBeRest,
             });
           }
@@ -154,7 +161,11 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
               },
               (data) {
                 debugPrint('Successfully updated rest days in bulk: $data');
-                _loadMonthData();
+                // Invalidate cache so the refreshed month reflects new rest days
+                WorkoutRepository().invalidateCalendarMonth(
+                  _focusedDay.year, _focusedDay.month,
+                );
+                _loadMonthData(forceRefresh: true);
               },
             );
           });
@@ -169,26 +180,52 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   @override
   void initState() {
     super.initState();
-    // Data loading is deferred to VisibilityDetector
+    // Load data once on first mount
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _hasLoadedData = true;
+      _loadFallbackPlanInfo().then((_) {
+        _prepopulateDefaultStates();
+        _loadMonthData();
+        _checkAndShowOnboardingHint();
+      });
+    });
+
+    // Listen for external invalidation events (e.g. finish workout).
+    // When the currently displayed month is invalidated, reload immediately.
+    _calendarInvalidationSub = WorkoutRepository()
+        .calendarInvalidationStream
+        .listen((invalidatedKey) {
+      if (!mounted) return;
+      final currentKey =
+          '${_focusedDay.year}-${_focusedDay.month.toString().padLeft(2, '0')}';
+      if (invalidatedKey == currentKey) {
+        debugPrint('[Calendar] Received invalidation for $invalidatedKey – reloading');
+        _loadMonthData(forceRefresh: true);
+      }
+    });
   }
 
-  void _onVisibilityChanged(VisibilityInfo info) {
-    if (!_hasLoadedData && info.visibleFraction > 0.05) {
-      if (mounted) {
-        setState(() {
-          _hasLoadedData = true;
-        });
-        _loadFallbackPlanInfo().then((_) {
-          _prepopulateDefaultStates();
-          _loadMonthData();
-          _checkAndShowOnboardingHint();
-        });
-      }
-    }
+  /// Called externally (e.g. after finishing a workout) to invalidate the
+  /// current month and reload fresh data.
+  void invalidateAndReload() {
+    if (!mounted) return;
+    WorkoutRepository().invalidateCalendarMonth(
+      _focusedDay.year, _focusedDay.month,
+    );
+    _loadMonthData(forceRefresh: true);
+  }
+
+  Future<void> _onPullToRefresh() async {
+    WorkoutRepository().invalidateCalendarMonth(
+      _focusedDay.year, _focusedDay.month,
+    );
+    await _loadMonthData(forceRefresh: true);
   }
 
   @override
   void dispose() {
+    _calendarInvalidationSub?.cancel();
     _onboardingOverlayEntry?.remove();
     _onboardingOverlayEntry = null;
     _loadingTimeoutTimer?.cancel();
@@ -208,20 +245,21 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
       final dateOnly = DateTime(date.year, date.month, date.day);
+      final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
 
       if (dateOnly.isBefore(startDateOnly) ||
           dateOnly.isAfter(todayOnly) ||
           dateOnly.isAtSameMomentAs(todayOnly)) {
-        _dayStates[dateOnly] = CalendarDayState.future;
+        _dayStates[dateKey] = CalendarDayState.future;
       } else {
-        if (_dayStates[dateOnly] != CalendarDayState.rest) {
-          _dayStates[dateOnly] = CalendarDayState.future;
+        if (_dayStates[dateKey] != CalendarDayState.rest) {
+          _dayStates[dateKey] = CalendarDayState.future;
         }
       }
     }
   }
 
-  Future<void> _loadMonthData() async {
+  Future<void> _loadMonthData({bool forceRefresh = false}) async {
     if (!mounted) return;
 
     _loadingTimeoutTimer?.cancel();
@@ -232,12 +270,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     final year = _focusedDay.year;
     final month = _focusedDay.month;
-    final daysInMonth = DateTime(year, month + 1, 0).day;
-
-    final today = DateTime.now();
-    final todayOnly = DateTime(today.year, today.month, today.day);
-    final startDate = _firstWorkoutDate;
-    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
     _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
       if (mounted && _isLoading) {
@@ -247,91 +279,86 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       }
     });
 
-    for (int day = 1; day <= daysInMonth; day++) {
-      final date = DateTime(year, month, day);
-      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    WorkoutRepository()
+        .getWorkoutCalendarForMonth(year: year, month: month, forceRefresh: forceRefresh)
+        .then((result) {
+      if (!mounted) return;
 
-      WorkoutRepository().getWorkoutLogForDate(date: dateStr).then((result) {
-        if (!mounted) return;
+      result.fold(
+        (error) {
+          setState(() {
+            _isLoading = false;
+          });
+        },
+        (data) {
+          final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
+          final today = DateTime.now();
+          final todayOnly = DateTime(today.year, today.month, today.day);
+          final startDate = _firstWorkoutDate;
+          final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
-        result.fold(
-          (error) {
-            // API error: treat as no-data → grey (not red)
-            _updateDayState(date, CalendarDayState.future, daysInMonth);
-          },
-          (logs) {
-            final dateOnly = DateTime(date.year, date.month, date.day);
+          setState(() {
+            _dayStates.clear();
+            _dayPlanDayIds.clear();
+            _dayCustomerWorkoutPlanIds.clear();
+            _dayWorkoutIds.clear();
 
-            bool isCompleted = false;
-            bool isRestDay = false;
-            int? planDayId;
-            int? customerWorkoutPlanId;
+            for (final dayItem in days) {
+              if (dayItem is Map<String, dynamic>) {
+                final dateStr = dayItem['date'] as String;
+                final date = DateTime.parse(dateStr);
+                final dateOnly = DateTime(date.year, date.month, date.day);
+                final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
 
-            for (final log in logs) {
-              if (log is Map<String, dynamic>) {
-                if (log['is_completed'] == true ||
-                    log['status']?.toString().toLowerCase() == 'completed') {
-                  isCompleted = true;
+                final bool isCompleted = dayItem['is_completed'] == true;
+                final bool isVerified = dayItem['is_verified'] == true;
+                final bool isRestDay = dayItem['is_rest_day'] == true;
+                final int? planDayId = dayItem['plan_day_id'] != null ? int.tryParse(dayItem['plan_day_id'].toString()) : null;
+                final int? customerWorkoutPlanId = dayItem['customer_workout_plan_id'] != null ? int.tryParse(dayItem['customer_workout_plan_id'].toString()) : null;
+                final int? workoutId = dayItem['workout_id'] != null ? int.tryParse(dayItem['workout_id'].toString()) : null;
+
+                if (planDayId != null) _dayPlanDayIds[dateKey] = planDayId;
+                if (customerWorkoutPlanId != null) {
+                  _dayCustomerWorkoutPlanIds[dateKey] = customerWorkoutPlanId;
                 }
-                if (log['is_rest_day'] == true ||
-                    log['status']?.toString().toLowerCase() == 'rest_day') {
-                  isRestDay = true;
+                if (workoutId != null) {
+                  _dayWorkoutIds[dateKey] = workoutId;
                 }
-                if (log['plan_day'] != null) {
-                  planDayId = int.tryParse(log['plan_day'].toString());
+
+                CalendarDayState state;
+                if (isCompleted) {
+                  state = isVerified ? CalendarDayState.verified : CalendarDayState.completed;
+                } else if (isRestDay) {
+                  state = CalendarDayState.rest;
+                } else if (dateOnly.isBefore(startDateOnly) ||
+                    dateOnly.isAfter(todayOnly) ||
+                    dateOnly.isAtSameMomentAs(todayOnly)) {
+                  state = CalendarDayState.future;
+                } else {
+                  state = CalendarDayState.missed;
                 }
-                if (log['plan_day_id'] != null) {
-                  planDayId = int.tryParse(log['plan_day_id'].toString());
-                }
-                if (log['customer_workout_plan'] != null) {
-                  customerWorkoutPlanId =
-                      int.tryParse(log['customer_workout_plan'].toString());
-                }
-                if (log['customer_workout_plan_id'] != null) {
-                  customerWorkoutPlanId =
-                      int.tryParse(log['customer_workout_plan_id'].toString());
-                }
+
+                _dayStates[dateKey] = state;
               }
             }
-
-            if (planDayId != null) _dayPlanDayIds[dateOnly] = planDayId;
-            if (customerWorkoutPlanId != null) {
-              _dayCustomerWorkoutPlanIds[dateOnly] = customerWorkoutPlanId;
-            }
-
-            CalendarDayState state;
-            if (logs.isEmpty) {
-              // No log for this date → nothing was ever planned → grey
-              state = CalendarDayState.future;
-            } else if (isCompleted) {
-              state = CalendarDayState.completed;
-            } else if (isRestDay) {
-              state = CalendarDayState.rest;
-            } else if (dateOnly.isBefore(startDateOnly) ||
-                dateOnly.isAfter(todayOnly) ||
-                dateOnly.isAtSameMomentAs(todayOnly)) {
-              // Future or pre-start date with logs → grey
-              state = CalendarDayState.future;
-            } else {
-              // Past date WITH actual log entries that aren't completed or rest → missed (red)
-              state = CalendarDayState.missed;
-            }
-
-            _updateDayState(date, state, daysInMonth);
-          },
-        );
-      }).catchError((e) {
-        if (!mounted) return;
-        // Exception: treat as no-data → grey (not red)
-        _updateDayState(date, CalendarDayState.future, daysInMonth);
+            _isLoading = false;
+            _loadingTimeoutTimer?.cancel();
+          });
+        },
+      );
+    }).catchError((e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
       });
-    }
+    });
   }
 
   void _updateDayState(DateTime date, CalendarDayState state, int totalDays) {
     if (!mounted) return;
     setState(() {
-      _dayStates[DateTime(date.year, date.month, date.day)] = state;
+      final dateKey = DateFormat('yyyy-MM-dd').format(date);
+      _dayStates[dateKey] = state;
       _completedRequestsCount++;
       if (_completedRequestsCount >= totalDays) {
         _isLoading = false;
@@ -342,6 +369,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    final joinDate = _firstWorkoutDate;
+    final joinMonth = DateTime(joinDate.year, joinDate.month, 1);
+    final currentMonth = DateTime(_focusedDay.year, _focusedDay.month, 1);
+    final canGoPrev = currentMonth.isAfter(joinMonth);
+
+    final today = DateTime.now();
+    final todayMonth = DateTime(today.year, today.month, 1);
+    final canGoNext = currentMonth.isBefore(todayMonth);
+
     int completedCount = 0;
     int missedCount = 0;
     int restCount = 0;
@@ -350,11 +386,17 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final month = _focusedDay.month;
     final daysInMonth = DateTime(year, month + 1, 0).day;
 
+    // Count up to today for the current month, full month for past months
+    final lastCountDate = (year == today.year && month == today.month)
+        ? today.day
+        : daysInMonth;
+
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
+      final dateKey = DateFormat('yyyy-MM-dd').format(date);
       final state =
-          _dayStates[DateTime(date.year, date.month, date.day)] ?? CalendarDayState.future;
-      if (state == CalendarDayState.completed) {
+          _dayStates[dateKey] ?? CalendarDayState.future;
+      if (state == CalendarDayState.completed || state == CalendarDayState.verified) {
         completedCount++;
       } else if (state == CalendarDayState.missed) {
         missedCount++;
@@ -363,13 +405,16 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       }
     }
 
-    final totalScheduled = completedCount + missedCount;
-    final double percent = totalScheduled > 0 ? (completedCount / totalScheduled) : 0.0;
+    // Total non-rest days up to today (or full month for past months)
+    final totalNonRestDays = lastCountDate - restCount;
+    final double percent = totalNonRestDays > 0 ? (completedCount / totalNonRestDays).clamp(0.0, 1.0) : 0.0;
     final int percentInt = (percent * 100).round();
 
-    return VisibilityDetector(
-      key: const Key('workout_history_calendar_visibility'),
-      onVisibilityChanged: _onVisibilityChanged,
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _onPullToRefresh,
+      child: SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10.0),
         child: Column(
@@ -407,18 +452,61 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            DateFormat('yyyy').format(_focusedDay),
-                            style: AppStyles.text18Px.poppins.w600.copyWith(
-                              color: AppColors.primary.withValues(alpha: .7),
+                          IconButton(
+                            icon: Icon(
+                              Icons.chevron_left,
+                              size: 20,
+                              color: canGoPrev ? AppColors.primary : Colors.grey.shade400,
                             ),
+                            onPressed: canGoPrev
+                                ? () {
+                                    setState(() {
+                                      _focusedDay = DateTime(_focusedDay.year, _focusedDay.month - 1, 1);
+                                    });
+                                    _prepopulateDefaultStates();
+                                    _loadMonthData();
+                                  }
+                                : null,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
-                          const SizedBox(width: 6),
-                          Text(
-                            DateFormat('MMMM').format(_focusedDay),
-                            style: AppStyles.text18Px.poppins.w600.copyWith(
-                              color: AppColors.primary,
+                          const SizedBox(width: 4),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                DateFormat('yyyy').format(_focusedDay),
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  fontSize: 11,
+                                  color: AppColors.primary.withValues(alpha: .7),
+                                ),
+                              ),
+                              Text(
+                                DateFormat('MMMM').format(_focusedDay),
+                                style: AppStyles.text14Px.poppins.w600.copyWith(
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: Icon(
+                              Icons.chevron_right,
+                              size: 20,
+                              color: canGoNext ? AppColors.primary : Colors.grey.shade400,
                             ),
+                            onPressed: canGoNext
+                                ? () {
+                                    setState(() {
+                                      _focusedDay = DateTime(_focusedDay.year, _focusedDay.month + 1, 1);
+                                    });
+                                    _prepopulateDefaultStates();
+                                    _loadMonthData();
+                                  }
+                                : null,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
                           ),
                         ],
                       ),
@@ -427,7 +515,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 8),
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
                             color: _isEditing
                                 ? const Color(0xFFC60000)
@@ -443,18 +531,18 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                             ],
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
                                 _isEditing ? Icons.save : Icons.edit,
-                                size: 16,
+                                size: 14,
                                 color:
                                     _isEditing ? Colors.white : Colors.black54,
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
                               Text(
                                 _isEditing ? 'Save' : 'Edit Rest day',
-                                style: AppStyles.text14Px.poppins.w500
-                                    .copyWith(
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
                                   color: _isEditing
                                       ? Colors.white
                                       : Colors.black87,
@@ -487,6 +575,23 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                       _prepopulateDefaultStates();
                       _loadMonthData();
                     },
+                    onDaySelected: (selectedDay, focusedDay) {
+                      if (_isEditing) return;
+
+                      final today = DateTime.now();
+                      final todayMidnight = DateTime(today.year, today.month, today.day);
+                      final selectedMidnight = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
+                      if (selectedMidnight.isAfter(todayMidnight)) {
+                        return;
+                      }
+
+                      WorkoutLogScreen.selectedDateOverride = selectedDay;
+                      try {
+                        context.read<DashboardCubit>().changeNav(index: 1);
+                      } catch (e) {
+                        debugPrint('Error navigating to workouts tab: $e');
+                      }
+                    },
                     calendarBuilders: CalendarBuilders(
                       dowBuilder: (context, day) {
                         final text =
@@ -500,10 +605,21 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                           ),
                         );
                       },
-                      defaultBuilder: (context, day, focusedDay) =>
-                          _buildDayCell(day),
-                      todayBuilder: (context, day, focusedDay) =>
-                          _buildDayCell(day),
+                      defaultBuilder: (context, day, focusedDay) {
+                        return GestureDetector(
+                          onDoubleTap: () => _handleDayDoubleTap(day),
+                          child: _buildDayCell(day),
+                        );
+                      },
+                      todayBuilder: (context, day, focusedDay) {
+                        if (day.month != _focusedDay.month) {
+                          return const SizedBox.shrink();
+                        }
+                        return GestureDetector(
+                          onDoubleTap: () => _handleDayDoubleTap(day),
+                          child: _buildDayCell(day),
+                        );
+                      },
                       outsideBuilder: (context, day, focusedDay) =>
                           const SizedBox.shrink(),
                     ),
@@ -527,6 +643,60 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                         textAlign: TextAlign.center,
                       ),
                     ),
+
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        _buildLegendItem(
+                          label: 'Verified',
+                          color: const Color(0xFFE8F5E9),
+                          icon: SvgPicture.asset(
+                            'assets/images/svg/icons/trainer_verified_tick.svg',
+                            width: 10,
+                            height: 10,
+                          ),
+                        ),
+                        _buildLegendItem(
+                          label: 'Completed',
+                          color: const Color(0xFFFFFDE7),
+                          icon: SvgPicture.asset(
+                            'assets/images/svg/icons/not_verified_tick.svg',
+                            width: 10,
+                            height: 10,
+                          ),
+                        ),
+                        _buildLegendItem(
+                          label: 'Rest',
+                          color: const Color.fromRGBO(239, 243, 255, 1),
+                          icon: Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color.fromRGBO(95, 122, 197, 1),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        _buildLegendItem(
+                          label: 'Missed',
+                          color: const Color(0xFFFFEBEE),
+                          icon: Container(
+                            padding: const EdgeInsets.all(1.0),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFF5252),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close_rounded, color: Colors.white, size: 7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                   // Divider
                   Padding(
@@ -578,7 +748,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           ],
         ),
       ),
-    );
+      ), // SingleChildScrollView
+    ); // RefreshIndicator
   }
 
   Widget _summaryItem(
@@ -600,6 +771,54 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     );
   }
 
+  Widget _buildLegendItem({
+    required String label,
+    required Color color,
+    required Widget icon,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          alignment: Alignment.center,
+          child: icon,
+        ),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: AppStyles.text12Px.poppins.w500.copyWith(
+            fontSize: 10,
+            color: const Color(0xFF666666),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _handleDayDoubleTap(DateTime day) {
+    if (_isEditing) return;
+
+    final dateKey = DateFormat('yyyy-MM-dd').format(day);
+    final workoutId = _dayWorkoutIds[dateKey];
+
+    WorkoutLogScreen.selectedDateOverride = day;
+    if (workoutId != null) {
+      WorkoutLogScreen.autoOpenSessionId = workoutId;
+    }
+
+    try {
+      context.read<DashboardCubit>().changeNav(index: 1);
+    } catch (e) {
+      debugPrint('Error navigating to workouts tab: $e');
+    }
+  }
+
   Widget _buildDayCell(DateTime day) {
     final now = DateTime.now();
     final dateOnly = DateTime(day.year, day.month, day.day);
@@ -609,20 +828,22 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final startDateOnly =
         DateTime(startDate.year, startDate.month, startDate.day);
 
-    final state = _dayStates[dateOnly] ?? CalendarDayState.future;
+    final state = _dayStates[DateFormat('yyyy-MM-dd').format(dateOnly)] ?? CalendarDayState.future;
 
     if (_isEditing &&
         state != CalendarDayState.completed &&
+        state != CalendarDayState.verified &&
         !dateOnly.isBefore(startDateOnly) &&
         !dateOnly.isBefore(todayOnly)) {
-      final isSelected = _selectedRestDays.contains(dateOnly);
+      final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
+      final isSelected = _selectedRestDays.contains(dateKey);
       return GestureDetector(
         onTap: () {
           setState(() {
             if (isSelected) {
-              _selectedRestDays.remove(dateOnly);
+              _selectedRestDays.remove(dateKey);
             } else {
-              _selectedRestDays.add(dateOnly);
+              _selectedRestDays.add(dateKey);
             }
           });
         },
@@ -651,23 +872,30 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       );
     }
 
-    if (state == CalendarDayState.completed) {
+    final isToday = (dateOnly == todayOnly);
+
+    if (state == CalendarDayState.verified) {
       return _dayState(
         day: day,
         bgColor: const Color(0xFFE8F5E9),
-        borderColor: Colors.transparent,
-        topIcon: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.5),
-          ),
-          child: ClipOval(
-            child: SvgPicture.asset(
-              'assets/images/svg/icons/green_success.svg',
-              width: 17,
-              height: 17,
-            ),
-          ),
+        borderColor: isToday ? const Color(0xFF019C37) : Colors.transparent,
+        topIcon: SvgPicture.asset(
+          'assets/images/svg/icons/trainer_verified_tick.svg',
+          width: 17,
+          height: 17,
+        ),
+      );
+    }
+
+    if (state == CalendarDayState.completed) {
+      return _dayState(
+        day: day,
+        bgColor: const Color(0xFFFFFDE7),
+        borderColor: isToday ? const Color(0xFFA9AF00) : Colors.transparent,
+        topIcon: SvgPicture.asset(
+          'assets/images/svg/icons/not_verified_tick.svg',
+          width: 17,
+          height: 17,
         ),
       );
     }
@@ -675,7 +903,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       return _dayState(
         day: day,
         bgColor: const Color(0xFFFFEBEE),
-        borderColor: Colors.transparent,
+        borderColor: isToday ? const Color(0xFFFF5252) : Colors.transparent,
         topIcon: Container(
           padding: const EdgeInsets.all(2),
           decoration: BoxDecoration(
@@ -704,6 +932,12 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
             ? const Color.fromRGBO(239, 243, 255, 1)
             : const Color(0xFFF5F5F5),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isToday
+              ? (isRest ? const Color(0xFF1D9BF0) : Colors.transparent)
+              : Colors.transparent,
+          width: 1.5,
+        ),
       ),
       alignment: Alignment.center,
       child: Text(
@@ -957,8 +1191,20 @@ class _OnboardingOverlayContentState extends State<OnboardingOverlayContent> wit
     final screenHeight = MediaQuery.of(context).size.height;
     final tooltipWidth = screenWidth * 0.85;
     
+    // Limit cutout bottom so it does not cover or bleed into the bottom navigation bar
+    final double maxBottom = screenHeight - 80 - MediaQuery.of(context).padding.bottom;
+    Rect adjustedCutout = widget.cutoutRect;
+    if (adjustedCutout.bottom > maxBottom) {
+      adjustedCutout = Rect.fromLTWH(
+        adjustedCutout.left,
+        adjustedCutout.top,
+        adjustedCutout.width,
+        (maxBottom - adjustedCutout.top).clamp(0.0, adjustedCutout.height),
+      );
+    }
+    
     // Bottom offset from screen height
-    final bottomOffset = screenHeight - widget.cutoutRect.top + 8;
+    final bottomOffset = screenHeight - adjustedCutout.top + 8;
 
     return Stack(
       children: [
@@ -970,15 +1216,17 @@ class _OnboardingOverlayContentState extends State<OnboardingOverlayContent> wit
         ),
 
         // 2. Semi-transparent black background with blur, excluding the calendar card visually
-        IgnorePointer(
-          child: ClipPath(
-            clipper: InvertedRectClipper(rect: widget.cutoutRect),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
-                child: Container(
-                  color: Colors.black.withOpacity(0.55),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: ClipPath(
+              clipper: InvertedRectClipper(rect: adjustedCutout),
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.55),
+                  ),
                 ),
               ),
             ),

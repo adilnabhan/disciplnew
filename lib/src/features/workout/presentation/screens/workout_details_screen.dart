@@ -6,11 +6,13 @@ class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
     required this.sessionId,
     required this.fallbackTitle,
+    this.startTimer = false,
     super.key,
   });
 
   final int sessionId;
   final String fallbackTitle;
+  final bool startTimer;
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -23,6 +25,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   Map<String, dynamic>? _sessionData;
   final Map<int, Timer> _debounceTimers = {};
   final Set<int> _addingSetLogIds = {};
+  Timer? _detailsTimer;
+  int _elapsedSeconds = 0;
 
   @override
   void initState() {
@@ -33,10 +37,60 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   void dispose() {
+    _detailsTimer?.cancel();
     for (final timer in _debounceTimers.values) {
       timer.cancel();
     }
     super.dispose();
+  }
+
+  void _startTimer() {
+    if (_detailsTimer != null) return;
+    _detailsTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _elapsedSeconds++;
+        });
+      }
+    });
+  }
+
+  void _syncTimer(Map<String, dynamic> data) {
+    if (_detailsTimer != null) return;
+    final startedAtStr = data['started_at']?.toString();
+    if (startedAtStr != null) {
+      final start = DateTime.tryParse(startedAtStr);
+      if (start != null) {
+        final now = DateTime.now();
+        final startLocal = start.isUtc ? start.toLocal() : start;
+        final diff = now.difference(startLocal);
+        final elapsed = diff.inSeconds;
+        if (elapsed >= 0) {
+          setState(() {
+            _elapsedSeconds = elapsed;
+          });
+          _startTimer();
+          return;
+        }
+      }
+    }
+    _startTimer();
+  }
+
+  String _formatTimer(int totalSeconds) {
+    final int hours = totalSeconds ~/ 3600;
+    final int minutes = (totalSeconds % 3600) ~/ 60;
+    final int seconds = totalSeconds % 60;
+
+    final String minutesStr = minutes.toString().padLeft(2, '0');
+    final String secondsStr = seconds.toString().padLeft(2, '0');
+
+    if (hours > 0) {
+      final String hoursStr = hours.toString().padLeft(2, '0');
+      return '$hoursStr:$minutesStr:$secondsStr';
+    } else {
+      return '$minutesStr:$secondsStr';
+    }
   }
 
   void _loadDetails() {
@@ -328,6 +382,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           }
 
           if (_sessionData != null) {
+            if (widget.startTimer) {
+              _syncTimer(_sessionData!);
+            }
             return _buildContent(_sessionData!);
           }
 
@@ -335,6 +392,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             (error) => _buildErrorState('Error loading details: ${error.msg}'),
             (data) {
               _sessionData = data;
+              if (widget.startTimer) {
+                _syncTimer(data);
+              }
               return _buildContent(data);
             },
           );
@@ -398,9 +458,18 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final logs = data['logs'] as List? ?? [];
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
-    final bool isEditable = status != 'COMPLETED';
+    bool isEditable = status != 'COMPLETED';
+    if (!isEditable && completedAt != null) {
+      try {
+        final completedTime = DateTime.parse(completedAt).toLocal();
+        final difference = DateTime.now().difference(completedTime);
+        if (difference.inMinutes.abs() < 60) {
+          isEditable = true;
+        }
+      } catch (_) {}
+    }
 
-    final duration = _formatDuration(startedAt, completedAt);
+    final duration = widget.startTimer ? _formatTimer(_elapsedSeconds) : _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
 
     return ListView(
@@ -553,17 +622,22 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     required String label,
     required String value,
   }) {
+    final isTimerActive = label == 'Duration' && widget.startTimer;
     return Column(
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: const Color(0xFFF0B5B7), size: 16),
+            Icon(
+              icon,
+              color: isTimerActive ? AppColors.primary : const Color(0xFFF0B5B7),
+              size: 16,
+            ),
             const SizedBox(width: 6),
             Text(
               label,
               style: AppStyles.text12Px.poppins.w500.copyWith(
-                color: const Color(0xFF94A3B8),
+                color: isTimerActive ? AppColors.primary : const Color(0xFF94A3B8),
               ),
             ),
           ],
@@ -572,7 +646,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         Text(
           value,
           style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.dark.withValues(alpha: 0.7),
+            color: isTimerActive ? AppColors.primary : AppColors.dark.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -585,8 +659,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     bool isEditable,
   ) {
     final workoutName = log['workout_name']?.toString() ?? 'Exercise';
-    final planExerciseId =
-        log['plan_exercise'] ?? log['workout_id'] ?? log['id'];
+    final workoutId =
+        log['workout_id'] ?? log['plan_exercise'] ?? log['id'];
     final muscle = log['muscle']?.toString() ?? '';
     final equipment = log['equipment']?.toString() ?? '';
     final videoUrl = log['effective_video_url']?.toString() ?? '';
@@ -601,9 +675,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
     // Resolve type
     String? type;
-    if (planExerciseId != null) {
+    if (workoutId != null) {
       final match = _exercises.firstWhere(
-        (e) => e.id?.toString() == planExerciseId.toString(),
+        (e) => e.id?.toString() == workoutId.toString(),
         orElse:
             () => ExerciseLibraryModel(
               id: -1,
@@ -642,10 +716,38 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     if (type != null && type.isNotEmpty) tags.add(type);
     final subtitle = tags.join(' / ');
 
-    final String repsHeader =
-        setLogs.isNotEmpty && setLogs.any((s) => s['input_type'] == 'seconds')
-            ? 'Secs'
-            : 'Reps';
+    String? trackBy = log['track_by']?.toString();
+    if (trackBy == null || trackBy.isEmpty) {
+      if (workoutId != null) {
+        final match = _exercises.firstWhere(
+          (e) => e.id?.toString() == workoutId.toString(),
+          orElse: () => ExerciseLibraryModel(id: -1, name: '', type: '', muscleGroup: '', equipment: '', videoUrl: null),
+        );
+        if (match.id != -1) {
+          trackBy = match.trackBy;
+        }
+      }
+    }
+    if (trackBy == null || trackBy.isEmpty) {
+      final match = _exercises.firstWhere(
+        (e) => e.name?.toLowerCase().trim() == workoutName.toLowerCase().trim(),
+        orElse: () => ExerciseLibraryModel(id: -1, name: '', type: '', muscleGroup: '', equipment: '', videoUrl: null),
+      );
+      if (match.id != -1) {
+        trackBy = match.trackBy;
+      }
+    }
+
+    final isTimeBased = trackBy?.toLowerCase() == 'time' ||
+        subtitle.toLowerCase().contains('cardio') ||
+        subtitle.toLowerCase().contains('flexibility') ||
+        subtitle.toLowerCase().contains('hiit') ||
+        setLogs.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
+    final isDistanceBased = trackBy?.toLowerCase() == 'distance';
+
+    final String repsHeader = isTimeBased
+        ? 'Secs'
+        : (isDistanceBased ? 'Km' : 'Reps');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -774,13 +876,46 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   ),
                 Expanded(
                   flex: 3,
-                  child: Text(
-                    !isEditable ? 'Weight' : 'Weight (kg)',
-                    textAlign: !isEditable ? TextAlign.left : TextAlign.center,
-                    style: AppStyles.text12Px.poppins.w500.copyWith(
-                      color: const Color(0xFF212121),
-                    ),
-                  ),
+                  child: isEditable
+                      ? Center(
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: log['weight_type']?.toString() ?? 'kg',
+                              isDense: true,
+                              isExpanded: true,
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: const Color(0xFF212121),
+                              ),
+                              icon: const Icon(Icons.arrow_drop_down, size: 14),
+                              items: const [
+                                DropdownMenuItem(value: 'kg', child: Text('kg')),
+                                DropdownMenuItem(value: 'BW', child: Text('BW')),
+                                DropdownMenuItem(value: 'kg+BW', child: Text('kg+BW')),
+                              ],
+                              onChanged: (val) {
+                                if (val != null) {
+                                  final logId = int.tryParse(log['id']?.toString() ?? '');
+                                  if (logId != null) {
+                                    setState(() {
+                                      log['weight_type'] = val;
+                                    });
+                                    WorkoutRepository().updateWorkoutLogWeightType(
+                                      logId: logId,
+                                      weightType: val,
+                                    );
+                                  }
+                                }
+                              },
+                            ),
+                          ),
+                        )
+                      : Text(
+                          'Weight (${log['weight_type']?.toString() ?? 'kg'})',
+                          textAlign: TextAlign.left,
+                          style: AppStyles.text12Px.poppins.w500.copyWith(
+                            color: const Color(0xFF212121),
+                          ),
+                        ),
                 ),
                 Expanded(
                   flex: 3,

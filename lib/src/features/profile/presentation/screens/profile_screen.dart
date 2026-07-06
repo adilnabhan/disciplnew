@@ -360,6 +360,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       healthIssues = 'YES';
     }
 
+    // BMI and BMR Calculation
+    double? bmi;
+    double? bmr;
+    String bmiCategory = '';
+    
+    final heightVal = double.tryParse(customerDetails.height ?? '');
+    final weightVal = double.tryParse(customerDetails.weight ?? '');
+    
+    if (heightVal != null && weightVal != null && heightVal > 0) {
+      final heightInMeters = heightVal / 100;
+      bmi = weightVal / (heightInMeters * heightInMeters);
+      
+      if (bmi < 18.5) {
+        bmiCategory = ' (Underweight)';
+      } else if (bmi < 25.0) {
+        bmiCategory = ' (Normal)';
+      } else if (bmi < 30.0) {
+        bmiCategory = ' (Overweight)';
+      } else {
+        bmiCategory = ' (Obese)';
+      }
+
+      // BMR Calculation (Revised Harris-Benedict Equation)
+      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
+      if (age > 0) {
+        if (gender.startsWith('f')) {
+          bmr = 447.593 + (9.247 * weightVal) + (3.098 * heightVal) - (4.330 * age);
+        } else {
+          bmr = 88.362 + (13.397 * weightVal) + (4.799 * heightVal) - (5.677 * age);
+        }
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -494,11 +527,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 12),
         ],
         const SizedBox(height: 12),
-        Text(
-          'Health Status',
-          style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.textDark,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Health Status',
+              style: AppStyles.text16Px.poppins.w600.copyWith(
+                color: AppColors.textDark,
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => BlocProvider.value(
+                      value: _cubit,
+                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
+                    ),
+                  ),
+                ).then((_) {
+                  _cubit.fetchCustomerDetails();
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit, size: 14, color: AppColors.primary),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Edit',
+                      style: AppStyles.text12Px.poppins.w600.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 10),
         Container(
@@ -519,9 +591,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildDetailRow('Age', age > 0 ? '$age' : 'N/A'),
               const SizedBox(height: 14),
-              _buildDetailRow('Height', customerDetails.height ?? 'N/A'),
+              _buildDetailRow('Height', customerDetails.height != null ? '${customerDetails.height} cm' : 'N/A'),
               const SizedBox(height: 14),
-              _buildDetailRow('Weight', customerDetails.weight ?? 'N/A'),
+              _buildDetailRow('Weight', customerDetails.weight != null ? '${customerDetails.weight} kg' : 'N/A'),
+              const SizedBox(height: 14),
+              _buildDetailRow('BMI', bmi != null ? '${bmi.toStringAsFixed(1)}$bmiCategory' : 'N/A'),
+              const SizedBox(height: 14),
+              _buildDetailRow('BMR', bmr != null ? '${bmr.toStringAsFixed(0)} kcal' : 'N/A'),
               const SizedBox(height: 14),
               _buildDetailRow(
                 'Blood Group',
@@ -1046,10 +1122,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               Icon(icon, size: 14, color: color),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: AppStyles.text12Px.poppins.w500.copyWith(
-                  color: AppColors.textGrey,
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppStyles.text12Px.poppins.w500.copyWith(
+                    color: AppColors.textGrey,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

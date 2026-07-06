@@ -1,6 +1,8 @@
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/auth/account_creation/presentation/screens/create_options_screen.dart';
+import 'package:customer_mobile_app/src/features/auth/account_creation/presentation/screens/create_account_screen.dart';
+import 'package:customer_mobile_app/src/features/auth/login/domain/models/sent_otp_model.dart';
 
 class AppView extends StatefulWidget {
   const AppView({super.key});
@@ -82,6 +84,12 @@ class _AppViewState extends State<AppView> {
 
     if (state.currentUser == null) {
       return const CreateOptionsScreen();
+    }
+    if (state.currentUser?.isProfileCompleted == false) {
+      return CreateAccountScreen(
+        sentOtpEntity: SentOtpEntity(mobileNumber: state.currentUser?.mobileNumber),
+        loginSuccessModel: state.currentUser,
+      );
     }
     return const DashboardScreen();
   }

@@ -709,6 +709,121 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     );
   }
 
+  InputDecoration _dropdownDecoration() {
+    return InputDecoration(
+      filled: false,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 12,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(
+          color: Color(0xFFDDDDDD),
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(
+          color: Color(0xFFDDDDDD),
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(
+          color: Colors.red,
+        ),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(
+          color: Colors.red,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLabelWithAddNew(String label, bool hasSelected, String? selectedName) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
+            height: 1.0,
+            letterSpacing: -0.3,
+            color: AppColors.button,
+          ),
+        ),
+        if (hasSelected && selectedName != null)
+          Text(
+            selectedName,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w400,
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showAddNewDialog({
+    required BuildContext context,
+    required String title,
+    required String hintText,
+    required void Function(String name) onSave,
+  }) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              fontSize: 16,
+            ),
+          ),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: hintText,
+              hintStyle: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w400,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  Navigator.pop(ctx);
+                  onSave(name);
+                }
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _showCreateCustomExerciseBottomSheet(
     BuildContext context,
     StateSetter setSheetState, {
@@ -717,8 +832,10 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     final nameController = TextEditingController();
     final youtubeLinkController = TextEditingController();
     int? selectedMuscleId;
+    List<int> selectedSecondaryMuscleIds = [];
     String? selectedTypeCode;
     int? selectedEquipmentId;
+    String selectedTrackBy = 'rep';
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -864,16 +981,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 20),
 
                               // Muscle
-                              const Text(
+                              _buildLabelWithAddNew(
                                 'Muscle',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                  height: 1.0,
-                                  letterSpacing: -0.3,
-                                  color: AppColors.button,
-                                ),
+                                selectedMuscleId != null,
+                                selectedMuscleId != null
+                                    ? state.muscleGroups
+                                        .firstWhere(
+                                          (m) => m.id == selectedMuscleId,
+                                          orElse: () => MuscleGroupModel(id: 0, name: 'Custom'),
+                                        )
+                                        .name
+                                    : null,
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
@@ -884,25 +1002,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   }
                                   return null;
                                 },
-                                decoration: InputDecoration(
-                                  filled: false,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFDDDDDD),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFDDDDDD),
-                                    ),
-                                  ),
-                                ),
+                                decoration: _dropdownDecoration(),
                                 hint: const Text(
                                   'Select the muscle',
                                   style: TextStyle(
@@ -918,30 +1018,124 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items:
-                                    state.muscleGroups
-                                        .map(
-                                          (m) => DropdownMenuItem(
-                                            value: m.id,
-                                            child: Text(
-                                              m.name,
-                                              style: const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 15,
-                                                height: 1.0,
-                                                letterSpacing: -0.3,
-                                                color: AppColors.button,
-                                              ),
+                                items: [
+                                  ...state.muscleGroups
+                                      .map(
+                                        (m) => DropdownMenuItem(
+                                          value: m.id,
+                                          child: Text(
+                                            m.name,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 15,
+                                              height: 1.0,
+                                              letterSpacing: -0.3,
+                                              color: AppColors.button,
                                             ),
                                           ),
-                                        )
-                                        .toList(),
+                                        ),
+                                      )
+                                      .toList(),
+                                  DropdownMenuItem(
+                                    value: -1,
+                                    child: Row(
+                                      children: const [
+                                        Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Add New Muscle',
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 15,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 onChanged: (val) {
+                                  if (val == -1) {
+                                    _showAddNewDialog(
+                                      context: sheetContext,
+                                      title: 'Add New Muscle',
+                                      hintText: 'Enter muscle name',
+                                      onSave: (name) async {
+                                        final result = await WorkoutRepository().createMuscleGroup(name: name);
+                                        result.fold(
+                                          (error) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Failed to create: ${error.msg}')),
+                                            );
+                                          },
+                                          (newMuscle) {
+                                            _cubit.loadLookups();
+                                            setDialogState(() {
+                                              selectedMuscleId = newMuscle.id;
+                                            });
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('"${newMuscle.name}" added!')),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    );
+                                    return;
+                                  }
                                   setDialogState(() {
                                     selectedMuscleId = val;
                                   });
                                 },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Secondary Muscle Groups
+                              const Text(
+                                'Secondary Muscle Groups (Optional)',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.button,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 4,
+                                children: state.muscleGroups
+                                    .where((m) => m.id != selectedMuscleId)
+                                    .map((m) {
+                                      final isSelected = selectedSecondaryMuscleIds.contains(m.id);
+                                      return ChoiceChip(
+                                        label: Text(
+                                          m.name,
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w400,
+                                            fontSize: 13,
+                                            color: isSelected ? Colors.white : AppColors.button,
+                                          ),
+                                        ),
+                                        selected: isSelected,
+                                        selectedColor: AppColors.primary,
+                                        backgroundColor: Colors.grey[100],
+                                        onSelected: (selected) {
+                                          setDialogState(() {
+                                            if (selected) {
+                                              selectedSecondaryMuscleIds.add(m.id);
+                                            } else {
+                                              selectedSecondaryMuscleIds.remove(m.id);
+                                            }
+                                          });
+                                        },
+                                      );
+                                    })
+                                    .toList(),
                               ),
                               const SizedBox(height: 20),
 
@@ -966,25 +1160,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   }
                                   return null;
                                 },
-                                decoration: InputDecoration(
-                                  filled: false,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFDDDDDD),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFDDDDDD),
-                                    ),
-                                  ),
-                                ),
+                                decoration: _dropdownDecoration(),
                                 hint: const Text(
                                   'Select the type of exercise',
                                   style: TextStyle(
@@ -1000,26 +1176,65 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items:
-                                    state.exerciseTypes
-                                        .map(
-                                          (t) => DropdownMenuItem(
-                                            value: t.id,
-                                            child: Text(
-                                              t.name,
-                                              style: const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 15,
-                                                height: 1.0,
-                                                letterSpacing: -0.3,
-                                                color: AppColors.button,
-                                              ),
+                                items: [
+                                  ...state.exerciseTypes
+                                      .map(
+                                        (t) => DropdownMenuItem(
+                                          value: t.id,
+                                          child: Text(
+                                            t.name,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 15,
+                                              height: 1.0,
+                                              letterSpacing: -0.3,
+                                              color: AppColors.button,
                                             ),
                                           ),
-                                        )
-                                        .toList(),
+                                        ),
+                                      )
+                                      .toList(),
+                                  DropdownMenuItem(
+                                    value: '__add_new__',
+                                    child: Row(
+                                      children: const [
+                                        Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Add New Type',
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 15,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 onChanged: (val) {
+                                  if (val == '__add_new__') {
+                                    _showAddNewDialog(
+                                      context: sheetContext,
+                                      title: 'Add New Type',
+                                      hintText: 'Enter exercise type name',
+                                      onSave: (name) {
+                                        setDialogState(() {
+                                          final newType = ExerciseTypeModel(id: name.toLowerCase().replaceAll(' ', '_'), name: name);
+                                          if (!state.exerciseTypes.any((t) => t.id == newType.id)) {
+                                            state.exerciseTypes.add(newType);
+                                          }
+                                          selectedTypeCode = newType.id;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('"$name" type added!')),
+                                        );
+                                      },
+                                    );
+                                    return;
+                                  }
                                   setDialogState(() {
                                     selectedTypeCode = val;
                                   });
@@ -1048,25 +1263,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   }
                                   return null;
                                 },
-                                decoration: InputDecoration(
-                                  filled: false,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFDDDDDD),
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(
-                                      color: Color(0xFFDDDDDD),
-                                    ),
-                                  ),
-                                ),
+                                decoration: _dropdownDecoration(),
                                 hint: const Text(
                                   'Select the equipment used',
                                   style: TextStyle(
@@ -1082,29 +1279,139 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items:
-                                    state.equipment
-                                        .map(
-                                          (e) => DropdownMenuItem(
-                                            value: e.id,
-                                            child: Text(
-                                              e.name,
-                                              style: const TextStyle(
-                                                fontFamily: 'Poppins',
-                                                fontWeight: FontWeight.w400,
-                                                fontSize: 15,
-                                                height: 1.0,
-                                                letterSpacing: -0.3,
-                                                color: AppColors.button,
-                                              ),
+                                items: [
+                                  ...state.equipment
+                                      .map(
+                                        (e) => DropdownMenuItem(
+                                          value: e.id,
+                                          child: Text(
+                                            e.name,
+                                            style: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w400,
+                                              fontSize: 15,
+                                              height: 1.0,
+                                              letterSpacing: -0.3,
+                                              color: AppColors.button,
                                             ),
                                           ),
-                                        )
-                                        .toList(),
+                                        ),
+                                      )
+                                      .toList(),
+                                  DropdownMenuItem(
+                                    value: -1,
+                                    child: Row(
+                                      children: const [
+                                        Icon(Icons.add_circle_outline, size: 18, color: AppColors.primary),
+                                        SizedBox(width: 8),
+                                        Text(
+                                          'Add New Equipment',
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 15,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                                 onChanged: (val) {
+                                  if (val == -1) {
+                                    _showAddNewDialog(
+                                      context: sheetContext,
+                                      title: 'Add New Equipment',
+                                      hintText: 'Enter equipment name',
+                                      onSave: (name) async {
+                                        final result = await WorkoutRepository().createEquipment(name: name);
+                                        result.fold(
+                                          (error) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Failed to create: ${error.msg}')),
+                                            );
+                                          },
+                                          (newEquip) {
+                                            _cubit.loadLookups();
+                                            setDialogState(() {
+                                              selectedEquipmentId = newEquip.id;
+                                            });
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('"${newEquip.name}" added!')),
+                                            );
+                                          },
+                                        );
+                                      },
+                                    );
+                                    return;
+                                  }
                                   setDialogState(() {
                                     selectedEquipmentId = val;
                                   });
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Track by
+                              const Text(
+                                'Track by',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.button,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              DropdownButtonFormField<String>(
+                                value: selectedTrackBy,
+                                decoration: _dropdownDecoration(),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'rep',
+                                    child: Text(
+                                      'Reps',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 15,
+                                        color: AppColors.button,
+                                      ),
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'time',
+                                    child: Text(
+                                      'Time',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 15,
+                                        color: AppColors.button,
+                                      ),
+                                    ),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'distance',
+                                    child: Text(
+                                      'Distance',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontWeight: FontWeight.w400,
+                                        fontSize: 15,
+                                        color: AppColors.button,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setDialogState(() {
+                                      selectedTrackBy = val;
+                                    });
+                                  }
                                 },
                               ),
                               const SizedBox(height: 20),
@@ -1217,6 +1524,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                               muscleGroupId: selectedMuscleId!,
                                               equipmentId: selectedEquipmentId!,
                                               type: selectedTypeCode!,
+                                              trackBy: selectedTrackBy,
+                                              secondaryMuscleGroupIds: selectedSecondaryMuscleIds,
                                               videoUrl:
                                                   youtubeLinkController.text
                                                       .trim(),
@@ -1885,7 +2194,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 await _cubit.finishSession(title: enteredTitle);
                                 if (context.mounted) {
                                   Navigator.pop(dialogContext); // close dialog
-                                  Navigator.pop(context); // close screen
+                                  Navigator.pop(context, true); // close screen
                                 }
                               }
                             } catch (e) {
@@ -1929,11 +2238,16 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   Widget _buildExerciseCard(Map<String, dynamic> exercise, int exerciseIndex) {
     final sets = exercise['sets'] as List<Map<String, dynamic>>;
     final subtitle = (exercise['subtitle']?.toString() ?? '').toLowerCase();
-    final isTimeBased = subtitle.contains('cardio') ||
+    final trackBy = (exercise['track_by']?.toString() ?? 'rep').toLowerCase();
+    final isTimeBased = trackBy == 'time' ||
+        subtitle.contains('cardio') ||
         subtitle.contains('flexibility') ||
         subtitle.contains('hiit') ||
         sets.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
-    final repsHeader = isTimeBased ? 'Sec' : 'Rep';
+    final isDistanceBased = trackBy == 'distance';
+    final repsHeader = isTimeBased
+        ? 'Sec'
+        : (isDistanceBased ? 'Km' : 'Rep');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -2147,17 +2461,31 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ),
                   ),
                 ),
-                const Expanded(
+                Expanded(
                   flex: 2,
-                  child: Text(
-                    'kg',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF212121),
-                      height: 1.0,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: exercise['weight_type']?.toString() ?? 'kg',
+                      isDense: true,
+                      isExpanded: true,
+                      alignment: Alignment.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF212121),
+                      ),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      items: const [
+                        DropdownMenuItem(value: 'kg', child: Center(child: Text('kg'))),
+                        DropdownMenuItem(value: 'BW', child: Center(child: Text('BW'))),
+                        DropdownMenuItem(value: 'kg+BW', child: Center(child: Text('kg+BW'))),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          _cubit.updateWorkoutLogWeightType(exerciseIndex, val);
+                        }
+                      },
                     ),
                   ),
                 ),
@@ -2254,16 +2582,13 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         flex: 2,
                         child: Align(
                           alignment: Alignment.center,
-                          child: SizedBox(
+                              child: SizedBox(
                             width: 48,
                             child: TextFormField(
                               key: ValueKey('${exerciseIndex}_${setIndex}_kg'),
                               initialValue: set['kg'] as String?,
                               focusNode: focusNode,
-                              autofocus: (
-                                    (sets.length > 1 && setIndex == sets.length - 1) ||
-                                    (sets.length == 1 && setIndex == 0 && exerciseIndex == _cubit.state.exercises.length - 1)
-                                  ) && (set['kg'] as String? ?? '').isEmpty,
+                              autofocus: false,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                     decimal: true,

@@ -111,6 +111,7 @@ _$LocationImpl _$$LocationImplFromJson(Map<String, dynamic> json) =>
       pinCode: json['pin_code'] as String?,
       latitude: json['latitude'],
       longitude: json['longitude'],
+      googleMapsUrl: json['google_maps_url'] as String?,
     );
 
 Map<String, dynamic> _$$LocationImplToJson(_$LocationImpl instance) =>
@@ -122,6 +123,7 @@ Map<String, dynamic> _$$LocationImplToJson(_$LocationImpl instance) =>
       'pin_code': instance.pinCode,
       'latitude': instance.latitude,
       'longitude': instance.longitude,
+      'google_maps_url': instance.googleMapsUrl,
     };
 
 _$ReviewImpl _$$ReviewImplFromJson(Map<String, dynamic> json) => _$ReviewImpl(

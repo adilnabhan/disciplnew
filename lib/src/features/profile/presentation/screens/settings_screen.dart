@@ -1,6 +1,7 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/profile_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/profile_details_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/fitness_details_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/contact_support_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/faq_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -278,6 +279,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     context.push(BlocProvider.value(
                                       value: _cubit,
                                       child: ProfileDetailsScreen(customerDetailsModel: customerDetails),
+                                    ));
+                                  },
+                                ),
+                                _buildMenuItem(
+                                  icon: 'assets/images/svg/icons/manage_profile_icon.svg',
+                                  title: 'Manage Health Details',
+                                  onTap: () {
+                                    context.push(BlocProvider.value(
+                                      value: _cubit,
+                                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
                                     ));
                                   },
                                 ),

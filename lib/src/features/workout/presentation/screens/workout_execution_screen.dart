@@ -200,11 +200,16 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
   Widget _buildExerciseCard(Map<String, dynamic> exercise, int exerciseIndex) {
     final sets = exercise['sets'] as List<Map<String, dynamic>>;
     final subtitle = (exercise['subtitle']?.toString() ?? '').toLowerCase();
-    final isTimeBased = subtitle.contains('cardio') ||
+    final trackBy = (exercise['track_by']?.toString() ?? 'rep').toLowerCase();
+    final isTimeBased = trackBy == 'time' ||
+        subtitle.contains('cardio') ||
         subtitle.contains('flexibility') ||
         subtitle.contains('hiit') ||
         sets.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
-    final repsHeader = isTimeBased ? 'Sec' : 'Rep';
+    final isDistanceBased = trackBy == 'distance';
+    final repsHeader = isTimeBased
+        ? 'Sec'
+        : (isDistanceBased ? 'Km' : 'Rep');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),

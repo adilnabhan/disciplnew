@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/core/network/dio_client.dart';
 
 part 'subscription_cubit.freezed.dart';
 part 'subscription_state.dart';
@@ -196,6 +197,27 @@ class SubscriptionCubit extends Cubit<SubscriptionState> {
   void _handleExternalWallet(ExternalWalletResponse response) {
     /// Do something when an external wallet is selected
     // emit(state.copyWith(payment: some(left(response))));
+  }
+
+  Future<bool> createOfflineMembershipRequest() async {
+    emit(state.copyWith(isPaymentLoading: true));
+    try {
+      final response = await DioClient().dio.post<dynamic>(
+        ApiUris.createMembershipRequest,
+        data: {
+          'organization': orgId,
+          'membership_plan': state.selectedSubscriptionModel!.id,
+          'payment_mode': 'offline',
+          'notes': 'Requested offline cash payment',
+        },
+      );
+      emit(state.copyWith(isPaymentLoading: false));
+      return response.statusCode == 201 || response.statusCode == 200;
+    } catch (e) {
+      emit(state.copyWith(isPaymentLoading: false));
+      debugPrint(e.toString());
+      return false;
+    }
   }
 
   @override

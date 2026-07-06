@@ -38,6 +38,7 @@ final class ApiUris {
   static String activeMembership(int id) =>
       '${_v1}customer/manage/$id/active-membership/';
   static final allMemberships = '${_v1}customer/membership-org/';
+  static final createMembershipRequest = '${_v1}customer/membership-request/create/';
 
   ///============================= Subscription =============================\\\
   static final initiateRazorpayOrder =
@@ -71,6 +72,8 @@ final class ApiUris {
   static final muscleGroups = '${_v1}trainer/muscle-groups/';
   static final equipment = '${_v1}trainer/equipment/';
   static final exerciseTypes = '${_v1}trainer/exercise-types/';
+  static final customerMuscleGroups = '${_v1}customer/muscle-groups/';
+  static final customerEquipment = '${_v1}customer/equipment/';
   static final activeSession = '${_v1}customer/sessions/active/';
   static final activeSessionExercises =
       '${_v1}customer/sessions/active/exercises/';
@@ -78,6 +81,8 @@ final class ApiUris {
   static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
   static String addSetToLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/sets/';
+  static String updateWorkoutLogSetsBulk(int logId) =>
+      '${_v1}customer/workout-logs/$logId/sets/bulk/';
   static String deleteWorkoutLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/';
   static String updateSetLog(int setLogId) =>
@@ -87,5 +92,6 @@ final class ApiUris {
   static final presets = '${_v1}customer/presets/';
   static String presetDetail(int id) => '${_v1}customer/presets/$id/';
 
+  static final workoutCalendar = '${_v1}customer/workout-calendar/';
   static final loginAsGuest = '${_v1}user/login/guest/';
 }

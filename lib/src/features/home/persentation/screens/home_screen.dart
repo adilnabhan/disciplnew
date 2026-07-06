@@ -21,6 +21,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
   late final HomeCubit _homeCubit;
+  int _calendarRefreshCounter = 0;
 
   @override
   void initState() {
@@ -40,6 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchActiveMembership() async {
+    if (mounted) {
+      setState(() {
+        _calendarRefreshCounter++;
+      });
+    }
     await Future.wait([
       _dashboardCubit.fetchActiveMembership(),
       if (Feggy.read<AppCubit>()?.state.currentUser != null)
@@ -176,42 +182,41 @@ class _HomeScreenState extends State<HomeScreen> {
             ).pxy(x: 16),
 
             // Trainer Card under Banners View
-            if (!isGuest)
-              BlocBuilder<HomeCubit, HomeState>(
-                bloc: _homeCubit,
-                builder: (context, homeState) {
-                  return homeState.homeData.fold(
-                    () => const SizedBox.shrink(),
-                    (either) => either.fold((_) => const SizedBox.shrink(), (
-                      homeModel,
-                    ) {
-                      final trainer = homeModel.assignedTrainer;
-                      if (trainer == null) return const SizedBox.shrink();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 20),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Assigned Trainer',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(
-                                color: const Color(0xFF222222),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          _buildTrainerCard(trainer).pxy(x: 16),
-                        ],
-                      );
-                    }),
-                  );
-                },
-              ),
+            // if (!isGuest)
+            //   BlocBuilder<HomeCubit, HomeState>(
+            //     bloc: _homeCubit,
+            //     builder: (context, homeState) {
+            //       return homeState.homeData.fold(
+            //         () => const SizedBox.shrink(),
+            //         (either) => either.fold((_) => const SizedBox.shrink(), (
+            //           homeModel,
+            //         ) {
+            //           final trainer = homeModel.assignedTrainer;
+            //           if (trainer == null) return const SizedBox.shrink();
+            //           return Column(
+            //             crossAxisAlignment: CrossAxisAlignment.start,
+            //             children: [
+            //               const SizedBox(height: 20),
+            //               Padding(
+            //                 padding: const EdgeInsets.symmetric(horizontal: 16),
+            //                 child: Text(
+            //                   'Assigned Trainer',
+            //                   style: AppStyles.text14Px.poppins.w600.copyWith(
+            //                     color: const Color(0xFF222222),
+            //                   ),
+            //                 ),
+            //               ),
+            //               const SizedBox(height: 10),
+            //               _buildTrainerCard(trainer).pxy(x: 16),
+            //             ],
+            //           );
+            //         }),
+            //       );
+            //     },
+            //   ),
 
-            // Reduced gap before calendar/card
-            const SizedBox(height: 8),
-
+            // // Reduced gap before calendar/card
+            // const SizedBox(height: 8),
             if (isGuest)
               _membershipExpireCard(context)
             else
@@ -223,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     (either) => either.fold((_) => null, (m) => m),
                   );
                   return WorkoutHistoryCalendar(
+                    key: ValueKey(_calendarRefreshCounter),
                     startDate: activeMembership?.startDate,
                   ).pxy(x: 8);
                 },
@@ -656,7 +662,7 @@ Widget _buildDidYouKnowSection() {
           //     color: const Color(0xff666666),
           //   ),
           // ),
-          const SizedBox(height: 120),
+          const SizedBox(height: 20),
         ],
       ).pxy(x: 20),
     ),

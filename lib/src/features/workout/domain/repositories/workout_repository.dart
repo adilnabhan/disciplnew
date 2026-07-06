@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/models.dart';
@@ -18,6 +19,33 @@ final class WorkoutRepository {
   List<EquipmentModel>? _cachedEquipment;
   List<ExerciseTypeModel>? _cachedExerciseTypes;
   final Map<String, List<ExerciseLibraryModel>> _cachedExerciseLibraries = {};
+
+  // Calendar month cache – key format: "yyyy-MM" (e.g. "2026-07")
+  final Map<String, Map<String, dynamic>> _monthCache = {};
+
+  // Broadcast stream that emits a month key ("yyyy-MM") whenever that month
+  // is invalidated. Calendar widgets subscribe to this to refresh themselves.
+  final StreamController<String> _calendarInvalidationController =
+      StreamController<String>.broadcast();
+
+  /// Stream of month-key strings (e.g. "2026-07") that were just invalidated.
+  /// Calendar widgets listen to this to trigger an immediate UI refresh.
+  Stream<String> get calendarInvalidationStream =>
+      _calendarInvalidationController.stream;
+
+  /// Removes a single month from the calendar cache and notifies any
+  /// listening calendar widgets to refresh immediately.
+  void invalidateCalendarMonth(int year, int month) {
+    final key = '$year-${month.toString().padLeft(2, '0')}';
+    _monthCache.remove(key);
+    if (!_calendarInvalidationController.isClosed) {
+      _calendarInvalidationController.add(key);
+    }
+    debugPrint('[CalendarCache] Invalidated month: $key');
+  }
+
+  /// Clears the entire calendar cache (e.g. on logout).
+  void clearCalendarCache() => _monthCache.clear();
 
   final Dio _dio = DioClient().dio;
 
@@ -125,6 +153,58 @@ final class WorkoutRepository {
       );
       response.fold((_) => null, (list) => _cachedExerciseTypes = list);
       return response;
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, MuscleGroupModel>> createMuscleGroup({
+    required String name,
+  }) async {
+    _cachedMuscleGroups = null;
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.customerMuscleGroups,
+          data: {'name': name},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.data != null) {
+            return right(MuscleGroupModel.fromJson(res.data as Map<String, dynamic>));
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, EquipmentModel>> createEquipment({
+    required String name,
+  }) async {
+    _cachedEquipment = null;
+    try {
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          ApiUris.customerEquipment,
+          data: {'name': name},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.data != null) {
+            return right(EquipmentModel.fromJson(res.data as Map<String, dynamic>));
+          }
+          return left(const ApiException.unknown());
+        },
+      );
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -406,6 +486,33 @@ final class WorkoutRepository {
     }
   }
 
+  Future<Either<ApiException, dynamic>> updateWorkoutLogWeightType({
+    required int logId,
+    required String weightType,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.patch<dynamic>(
+          ApiUris.updateWorkoutLogSetsBulk(logId),
+          data: {'weight_type': weightType},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) &&
+              res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
   Future<Either<ApiException, dynamic>> updateSetLog({
     required int setLogId,
     int? reps,
@@ -522,11 +629,23 @@ final class WorkoutRepository {
   }
 
   Future<Either<ApiException, Map<String, dynamic>>>
-  getWorkoutCalendarForMonth({required int year, required int month}) async {
+  getWorkoutCalendarForMonth({
+    required int year,
+    required int month,
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = '$year-${month.toString().padLeft(2, '0')}';
+
+    // Return cached data if available and not forced to refresh
+    if (!forceRefresh && _monthCache.containsKey(cacheKey)) {
+      debugPrint('[CalendarCache] Cache hit for month: $cacheKey');
+      return right(_monthCache[cacheKey]!);
+    }
+
     try {
-      return await Feggy.async(
+      final result = await Feggy.async(
         call: _dio.get<dynamic>(
-          'customer/workout-calendar/',
+          ApiUris.workoutCalendar,
           queryParameters: {'year': year, 'month': month},
           options: Options(headers: {'X-Platform': platformSource}),
         ),
@@ -534,11 +653,26 @@ final class WorkoutRepository {
           if (res.statusCode == 200 &&
               res.data != null &&
               res.data is Map<String, dynamic>) {
-            return right(res.data as Map<String, dynamic>);
+            return right<ApiException, Map<String, dynamic>>(
+              res.data as Map<String, dynamic>,
+            );
           }
-          return left(const ApiException.unknown());
+          return left<ApiException, Map<String, dynamic>>(
+            const ApiException.unknown(),
+          );
+        },
+      ) as Either<ApiException, Map<String, dynamic>>;
+
+      // Store successful response in cache
+      result.fold(
+        (_) => null,
+        (data) {
+          _monthCache[cacheKey] = data as Map<String, dynamic>;
+          debugPrint('[CalendarCache] Cached month: $cacheKey');
         },
       );
+
+      return result;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
