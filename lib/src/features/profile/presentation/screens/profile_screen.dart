@@ -626,7 +626,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Navigator.push(
               context,
               MaterialPageRoute<bool>(
-                builder: (_) => const HealthReportScreen(),
+                builder: (_) => BlocProvider.value(
+                  value: _cubit,
+                  child: const HealthReportScreen(),
+                ),
               ),
             ).then((shouldEditMeasurements) {
               if (shouldEditMeasurements == true) {
