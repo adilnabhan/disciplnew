@@ -67,6 +67,13 @@ _$CustomerDetailsModelImpl _$$CustomerDetailsModelImplFromJson(
       json['assigned_fitness_center'] as Map<String, dynamic>?,
   assignedTrainer: json['assigned_trainer'] as Map<String, dynamic>?,
   trainerNotes: json['trainer_notes'] as String?,
+  activityLevel: json['activity_level'] as String?,
+  fitnessGoal: json['fitness_goal'] as String?,
+  waistCircumference: json['waist_circumference'],
+  hipCircumference: json['hip_circumference'],
+  neckCircumference: json['neck_circumference'],
+  tdee: json['tdee'],
+  whr: json['whr'],
 );
 
 Map<String, dynamic> _$$CustomerDetailsModelImplToJson(
@@ -113,6 +120,13 @@ Map<String, dynamic> _$$CustomerDetailsModelImplToJson(
   'assigned_fitness_center': instance.assignedFitnessCenter,
   'assigned_trainer': instance.assignedTrainer,
   'trainer_notes': instance.trainerNotes,
+  'activity_level': instance.activityLevel,
+  'fitness_goal': instance.fitnessGoal,
+  'waist_circumference': instance.waistCircumference,
+  'hip_circumference': instance.hipCircumference,
+  'neck_circumference': instance.neckCircumference,
+  'tdee': instance.tdee,
+  'whr': instance.whr,
 };
 
 _$MembershipImpl _$$MembershipImplFromJson(Map<String, dynamic> json) =>

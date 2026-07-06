@@ -235,4 +235,28 @@ final class CustomerDetailsRepository {
     }
   }
 
+  Future<Either<ApiException, Map<String, dynamic>>> getHealthReport() async {
+    try {
+      return await Feggy.async(
+        call: Dio().get<dynamic>(
+          ApiUris.healthReport,
+          options: Options(headers: {'X-Platform': platformSource}).token,
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200) {
+            if (res.data != null && res.data is Map) {
+              return right(res.data as Map<String, dynamic>);
+            }
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
 }

@@ -1,4 +1,5 @@
 export 'fitness_details_screen.dart';
+export 'health_report_screen.dart';
 export 'my_reviews_screen.dart';
 export 'profile_details_screen.dart';
 export 'Life_style_edit_screen.dart';

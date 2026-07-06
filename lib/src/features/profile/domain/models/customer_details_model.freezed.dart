@@ -105,6 +105,20 @@ mixin _$CustomerDetailsModel {
       throw _privateConstructorUsedError;
   @JsonKey(name: 'trainer_notes')
   String? get trainerNotes => throw _privateConstructorUsedError;
+  @JsonKey(name: 'activity_level')
+  String? get activityLevel => throw _privateConstructorUsedError;
+  @JsonKey(name: 'fitness_goal')
+  String? get fitnessGoal => throw _privateConstructorUsedError;
+  @JsonKey(name: 'waist_circumference')
+  dynamic get waistCircumference => throw _privateConstructorUsedError;
+  @JsonKey(name: 'hip_circumference')
+  dynamic get hipCircumference => throw _privateConstructorUsedError;
+  @JsonKey(name: 'neck_circumference')
+  dynamic get neckCircumference => throw _privateConstructorUsedError;
+  @JsonKey(name: 'tdee')
+  dynamic get tdee => throw _privateConstructorUsedError;
+  @JsonKey(name: 'whr')
+  dynamic get whr => throw _privateConstructorUsedError;
 
   /// Serializes this CustomerDetailsModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -166,6 +180,13 @@ abstract class $CustomerDetailsModelCopyWith<$Res> {
     Map<String, dynamic>? assignedFitnessCenter,
     @JsonKey(name: 'assigned_trainer') Map<String, dynamic>? assignedTrainer,
     @JsonKey(name: 'trainer_notes') String? trainerNotes,
+    @JsonKey(name: 'activity_level') String? activityLevel,
+    @JsonKey(name: 'fitness_goal') String? fitnessGoal,
+    @JsonKey(name: 'waist_circumference') dynamic waistCircumference,
+    @JsonKey(name: 'hip_circumference') dynamic hipCircumference,
+    @JsonKey(name: 'neck_circumference') dynamic neckCircumference,
+    @JsonKey(name: 'tdee') dynamic tdee,
+    @JsonKey(name: 'whr') dynamic whr,
   });
 }
 
@@ -228,6 +249,13 @@ class _$CustomerDetailsModelCopyWithImpl<
     Object? assignedFitnessCenter = freezed,
     Object? assignedTrainer = freezed,
     Object? trainerNotes = freezed,
+    Object? activityLevel = freezed,
+    Object? fitnessGoal = freezed,
+    Object? waistCircumference = freezed,
+    Object? hipCircumference = freezed,
+    Object? neckCircumference = freezed,
+    Object? tdee = freezed,
+    Object? whr = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -436,6 +464,41 @@ class _$CustomerDetailsModelCopyWithImpl<
                     ? _value.trainerNotes
                     : trainerNotes // ignore: cast_nullable_to_non_nullable
                         as String?,
+            activityLevel:
+                freezed == activityLevel
+                    ? _value.activityLevel
+                    : activityLevel // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            fitnessGoal:
+                freezed == fitnessGoal
+                    ? _value.fitnessGoal
+                    : fitnessGoal // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            waistCircumference:
+                freezed == waistCircumference
+                    ? _value.waistCircumference
+                    : waistCircumference // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            hipCircumference:
+                freezed == hipCircumference
+                    ? _value.hipCircumference
+                    : hipCircumference // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            neckCircumference:
+                freezed == neckCircumference
+                    ? _value.neckCircumference
+                    : neckCircumference // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            tdee:
+                freezed == tdee
+                    ? _value.tdee
+                    : tdee // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            whr:
+                freezed == whr
+                    ? _value.whr
+                    : whr // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
           )
           as $Val,
     );
@@ -494,6 +557,13 @@ abstract class _$$CustomerDetailsModelImplCopyWith<$Res>
     Map<String, dynamic>? assignedFitnessCenter,
     @JsonKey(name: 'assigned_trainer') Map<String, dynamic>? assignedTrainer,
     @JsonKey(name: 'trainer_notes') String? trainerNotes,
+    @JsonKey(name: 'activity_level') String? activityLevel,
+    @JsonKey(name: 'fitness_goal') String? fitnessGoal,
+    @JsonKey(name: 'waist_circumference') dynamic waistCircumference,
+    @JsonKey(name: 'hip_circumference') dynamic hipCircumference,
+    @JsonKey(name: 'neck_circumference') dynamic neckCircumference,
+    @JsonKey(name: 'tdee') dynamic tdee,
+    @JsonKey(name: 'whr') dynamic whr,
   });
 }
 
@@ -552,6 +622,13 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
     Object? assignedFitnessCenter = freezed,
     Object? assignedTrainer = freezed,
     Object? trainerNotes = freezed,
+    Object? activityLevel = freezed,
+    Object? fitnessGoal = freezed,
+    Object? waistCircumference = freezed,
+    Object? hipCircumference = freezed,
+    Object? neckCircumference = freezed,
+    Object? tdee = freezed,
+    Object? whr = freezed,
   }) {
     return _then(
       _$CustomerDetailsModelImpl(
@@ -760,6 +837,41 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
                 ? _value.trainerNotes
                 : trainerNotes // ignore: cast_nullable_to_non_nullable
                     as String?,
+        activityLevel:
+            freezed == activityLevel
+                ? _value.activityLevel
+                : activityLevel // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        fitnessGoal:
+            freezed == fitnessGoal
+                ? _value.fitnessGoal
+                : fitnessGoal // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        waistCircumference:
+            freezed == waistCircumference
+                ? _value.waistCircumference
+                : waistCircumference // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        hipCircumference:
+            freezed == hipCircumference
+                ? _value.hipCircumference
+                : hipCircumference // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        neckCircumference:
+            freezed == neckCircumference
+                ? _value.neckCircumference
+                : neckCircumference // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        tdee:
+            freezed == tdee
+                ? _value.tdee
+                : tdee // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        whr:
+            freezed == whr
+                ? _value.whr
+                : whr // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
       ),
     );
   }
@@ -812,6 +924,13 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     @JsonKey(name: 'assigned_trainer')
     final Map<String, dynamic>? assignedTrainer,
     @JsonKey(name: 'trainer_notes') this.trainerNotes,
+    @JsonKey(name: 'activity_level') this.activityLevel,
+    @JsonKey(name: 'fitness_goal') this.fitnessGoal,
+    @JsonKey(name: 'waist_circumference') this.waistCircumference,
+    @JsonKey(name: 'hip_circumference') this.hipCircumference,
+    @JsonKey(name: 'neck_circumference') this.neckCircumference,
+    @JsonKey(name: 'tdee') this.tdee,
+    @JsonKey(name: 'whr') this.whr,
   }) : _memberships = memberships,
        _injuries = injuries,
        _medicalConditions = medicalConditions,
@@ -1005,10 +1124,31 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
   @override
   @JsonKey(name: 'trainer_notes')
   final String? trainerNotes;
+  @override
+  @JsonKey(name: 'activity_level')
+  final String? activityLevel;
+  @override
+  @JsonKey(name: 'fitness_goal')
+  final String? fitnessGoal;
+  @override
+  @JsonKey(name: 'waist_circumference')
+  final dynamic waistCircumference;
+  @override
+  @JsonKey(name: 'hip_circumference')
+  final dynamic hipCircumference;
+  @override
+  @JsonKey(name: 'neck_circumference')
+  final dynamic neckCircumference;
+  @override
+  @JsonKey(name: 'tdee')
+  final dynamic tdee;
+  @override
+  @JsonKey(name: 'whr')
+  final dynamic whr;
 
   @override
   String toString() {
-    return 'CustomerDetailsModel(id: $id, emergencyContactName: $emergencyContactName, emergencyContactNumber: $emergencyContactNumber, height: $height, weight: $weight, profilePicture: $profilePicture, profession: $profession, isActiveMember: $isActiveMember, memberships: $memberships, fullName: $fullName, created: $created, modified: $modified, mobileNumber: $mobileNumber, firstName: $firstName, lastName: $lastName, email: $email, isHealthy: $isHealthy, dateOfBirth: $dateOfBirth, gender: $gender, bloodGroup: $bloodGroup, jobSatisfaction: $jobSatisfaction, activeScale: $activeScale, averageWorkingHours: $averageWorkingHours, averageSleepingHours: $averageSleepingHours, fitnessLevel: $fitnessLevel, stressLevel: $stressLevel, weightGoal: $weightGoal, targetWeight: $targetWeight, sleepGoal: $sleepGoal, bmi: $bmi, bmr: $bmr, bfPercentage: $bfPercentage, injuries: $injuries, medicalConditions: $medicalConditions, healthConditions: $healthConditions, targetGoal: $targetGoal, healthConditionsOther: $healthConditionsOther, targetGoalOther: $targetGoalOther, assignedFitnessCenter: $assignedFitnessCenter, assignedTrainer: $assignedTrainer, trainerNotes: $trainerNotes)';
+    return 'CustomerDetailsModel(id: $id, emergencyContactName: $emergencyContactName, emergencyContactNumber: $emergencyContactNumber, height: $height, weight: $weight, profilePicture: $profilePicture, profession: $profession, isActiveMember: $isActiveMember, memberships: $memberships, fullName: $fullName, created: $created, modified: $modified, mobileNumber: $mobileNumber, firstName: $firstName, lastName: $lastName, email: $email, isHealthy: $isHealthy, dateOfBirth: $dateOfBirth, gender: $gender, bloodGroup: $bloodGroup, jobSatisfaction: $jobSatisfaction, activeScale: $activeScale, averageWorkingHours: $averageWorkingHours, averageSleepingHours: $averageSleepingHours, fitnessLevel: $fitnessLevel, stressLevel: $stressLevel, weightGoal: $weightGoal, targetWeight: $targetWeight, sleepGoal: $sleepGoal, bmi: $bmi, bmr: $bmr, bfPercentage: $bfPercentage, injuries: $injuries, medicalConditions: $medicalConditions, healthConditions: $healthConditions, targetGoal: $targetGoal, healthConditionsOther: $healthConditionsOther, targetGoalOther: $targetGoalOther, assignedFitnessCenter: $assignedFitnessCenter, assignedTrainer: $assignedTrainer, trainerNotes: $trainerNotes, activityLevel: $activityLevel, fitnessGoal: $fitnessGoal, waistCircumference: $waistCircumference, hipCircumference: $hipCircumference, neckCircumference: $neckCircumference, tdee: $tdee, whr: $whr)';
   }
 
   @override
@@ -1113,7 +1253,25 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
               _assignedTrainer,
             ) &&
             (identical(other.trainerNotes, trainerNotes) ||
-                other.trainerNotes == trainerNotes));
+                other.trainerNotes == trainerNotes) &&
+            (identical(other.activityLevel, activityLevel) ||
+                other.activityLevel == activityLevel) &&
+            (identical(other.fitnessGoal, fitnessGoal) ||
+                other.fitnessGoal == fitnessGoal) &&
+            const DeepCollectionEquality().equals(
+              other.waistCircumference,
+              waistCircumference,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other.hipCircumference,
+              hipCircumference,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other.neckCircumference,
+              neckCircumference,
+            ) &&
+            const DeepCollectionEquality().equals(other.tdee, tdee) &&
+            const DeepCollectionEquality().equals(other.whr, whr));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1161,6 +1319,13 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     const DeepCollectionEquality().hash(_assignedFitnessCenter),
     const DeepCollectionEquality().hash(_assignedTrainer),
     trainerNotes,
+    activityLevel,
+    fitnessGoal,
+    const DeepCollectionEquality().hash(waistCircumference),
+    const DeepCollectionEquality().hash(hipCircumference),
+    const DeepCollectionEquality().hash(neckCircumference),
+    const DeepCollectionEquality().hash(tdee),
+    const DeepCollectionEquality().hash(whr),
   ]);
 
   /// Create a copy of CustomerDetailsModel
@@ -1228,6 +1393,13 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
     @JsonKey(name: 'assigned_trainer')
     final Map<String, dynamic>? assignedTrainer,
     @JsonKey(name: 'trainer_notes') final String? trainerNotes,
+    @JsonKey(name: 'activity_level') final String? activityLevel,
+    @JsonKey(name: 'fitness_goal') final String? fitnessGoal,
+    @JsonKey(name: 'waist_circumference') final dynamic waistCircumference,
+    @JsonKey(name: 'hip_circumference') final dynamic hipCircumference,
+    @JsonKey(name: 'neck_circumference') final dynamic neckCircumference,
+    @JsonKey(name: 'tdee') final dynamic tdee,
+    @JsonKey(name: 'whr') final dynamic whr,
   }) = _$CustomerDetailsModelImpl;
 
   factory _CustomerDetailsModel.fromJson(Map<String, dynamic> json) =
@@ -1356,6 +1528,27 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
   @override
   @JsonKey(name: 'trainer_notes')
   String? get trainerNotes;
+  @override
+  @JsonKey(name: 'activity_level')
+  String? get activityLevel;
+  @override
+  @JsonKey(name: 'fitness_goal')
+  String? get fitnessGoal;
+  @override
+  @JsonKey(name: 'waist_circumference')
+  dynamic get waistCircumference;
+  @override
+  @JsonKey(name: 'hip_circumference')
+  dynamic get hipCircumference;
+  @override
+  @JsonKey(name: 'neck_circumference')
+  dynamic get neckCircumference;
+  @override
+  @JsonKey(name: 'tdee')
+  dynamic get tdee;
+  @override
+  @JsonKey(name: 'whr')
+  dynamic get whr;
 
   /// Create a copy of CustomerDetailsModel
   /// with the given fields replaced by the non-null parameter values.

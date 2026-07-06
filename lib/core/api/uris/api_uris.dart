@@ -26,6 +26,7 @@ final class ApiUris {
   ///============================= Customer =============================\\\
   static String customerDetails(int id) => '${_v1}customer/manage/$id/';
   static final updateCustomerProfile = '${_v1}customer/manage/profile/health/';
+  static String get healthReport => '${_v1}customer/bmi-bmr/';
 
   ///============================= Home =============================\\\
   static final home = '${_v1}customer/customer-homepage/';
