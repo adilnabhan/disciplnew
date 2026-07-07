@@ -65,7 +65,9 @@ jobs:
       - name: Build Flutter iOS
         run:  flutter build ios  --release  --no-codesign --target=lib/main_production.dart  --dart-define=baseUrl=https://discipl-backend.onrender.com
       - name: Archive App
-        run:  xcodebuild archive  -workspace ios/Runner.xcworkspace  -scheme Runner  -configuration Release -archivePath build/Runner.xcarchive DEVELOPMENT_TEAM=QQR83V5DYN CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER="customerapp2026"
+        run:  xcodebuild archive -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release -archivePath build/Runner.xcarchive CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" DEVELOPMENT_TEAM=QQR83V5DYN PRODUCT_BUNDLE_IDENTIFIER=com.discipl.customer PROVISIONING_PROFILE_SPECIFIER="customerapp2026"
+      - name: Verify Archive
+        run: echo "Checking archive..." ls -R build
       - name: Export IPA
         run:  xcodebuild -exportArchive -archivePath build/Runner.xcarchive -exportPath build/ipa -exportOptionsPlist ios/ExportOptions.plist
       - name: Upload IPA        
