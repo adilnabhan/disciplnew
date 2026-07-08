@@ -108,11 +108,11 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           text: widget.customerDetailsModel.height,
         ),
         focusNode: FocusNode(),
-        keyboardType: TextInputType.number,
-        maxLength: 3,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        maxLength: 5,
         inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(3),
+          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
+          LengthLimitingTextInputFormatter(5),
         ],
         validator: (value) {
           if (value?.isEmpty ?? true) {
@@ -147,11 +147,11 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           text: widget.customerDetailsModel.weight,
         ),
         focusNode: FocusNode(),
-        keyboardType: TextInputType.number,
-        maxLength: 3,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        maxLength: 5,
         inputFormatters: [
-          FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(3),
+          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
+          LengthLimitingTextInputFormatter(5),
         ],
         validator: (value) {
           if (value?.isEmpty ?? true) {

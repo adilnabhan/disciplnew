@@ -18,6 +18,11 @@ class _HealthReportScreenState extends State<HealthReportScreen> {
   void initState() {
     super.initState();
     _fetchReport();
+    // Pre-fetch customer details so Edit button works immediately
+    final profileCubit = context.read<ProfileCubit>();
+    if (profileCubit.state.customerDetails.isNone()) {
+      profileCubit.fetchCustomerDetails();
+    }
   }
 
   Future<void> _fetchReport() async {
@@ -670,11 +675,21 @@ class _HealthReportScreenState extends State<HealthReportScreen> {
     );
   }
 
-  void _navigateToEdit() {
+  void _navigateToEdit() async {
     final profileCubit = context.read<ProfileCubit>();
+    
+    // Auto-fetch customer details if not loaded yet
+    if (profileCubit.state.customerDetails.isNone()) {
+      // Show loading while fetching
+      Dialogs.showSnack(msg: 'Loading profile data...');
+      await profileCubit.fetchCustomerDetails();
+    }
+    
+    if (!mounted) return;
+    
     profileCubit.state.customerDetails.fold(
       () {
-        Dialogs.showSnack(msg: 'Unable to load profile data');
+        Dialogs.showSnack(msg: 'Unable to load profile data. Please try again.');
       },
       (either) {
         either.fold(
