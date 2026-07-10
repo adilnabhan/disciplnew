@@ -409,22 +409,35 @@ final class WorkoutRepository {
     try {
       final baseUrl = ApiUris.activeSession.split('/sessions/')[0];
       final url = '$baseUrl/sessions/$sessionId/finish/';
-      return await Feggy.async(
-        call: _dio.post<dynamic>(
-          url,
-          data: {'title': title},
-          options: Options(headers: {'X-Platform': platformSource}),
-        ),
-        onSuccess: (res) {
-          if ((res.statusCode == 200 || res.statusCode == 201) &&
-              res.data != null) {
-            return right(res.data);
-          }
-          return left(const ApiException.unknown());
-        },
+      final res = await _dio.post<dynamic>(
+        url,
+        data: {'title': title},
+        options: Options(headers: {'X-Platform': platformSource}),
       );
-    } on ApiException catch (e) {
-      return left(e);
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null) {
+        return right(res.data);
+      }
+      return left(const ApiException.unknown());
+    } on DioException catch (e) {
+      debugPrint('finishSession DioException: $e');
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final errorMsg = data['error'] ?? data['detail'] ?? data['message'];
+          if (errorMsg != null) {
+            return left(ApiException.unknown(msg: errorMsg.toString()));
+          }
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          if (val is List && val.isNotEmpty) {
+            return left(ApiException.unknown(msg: val[0].toString()));
+          } else {
+            return left(ApiException.unknown(msg: val.toString()));
+          }
+        }
+      }
+      return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
     } catch (e) {
       debugPrint(e.toString());
       return left(const ApiException.unknown());
@@ -525,22 +538,35 @@ final class WorkoutRepository {
       if (weightKg != null) body['weight_kg'] = weightKg;
       if (isCompleted != null) body['is_completed'] = isCompleted;
 
-      return await Feggy.async(
-        call: _dio.patch<dynamic>(
-          ApiUris.updateSetLog(setLogId),
-          data: body,
-          options: Options(headers: {'X-Platform': platformSource}),
-        ),
-        onSuccess: (res) {
-          if ((res.statusCode == 200 || res.statusCode == 201) &&
-              res.data != null) {
-            return right(res.data);
-          }
-          return left(const ApiException.unknown());
-        },
+      final res = await _dio.patch<dynamic>(
+        ApiUris.updateSetLog(setLogId),
+        data: body,
+        options: Options(headers: {'X-Platform': platformSource}),
       );
-    } on ApiException catch (e) {
-      return left(e);
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null) {
+        return right(res.data);
+      }
+      return left(const ApiException.unknown());
+    } on DioException catch (e) {
+      debugPrint('updateSetLog DioException: $e');
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final errorMsg = data['error'] ?? data['detail'] ?? data['message'];
+          if (errorMsg != null) {
+            return left(ApiException.unknown(msg: errorMsg.toString()));
+          }
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          if (val is List && val.isNotEmpty) {
+            return left(ApiException.unknown(msg: val[0].toString()));
+          } else {
+            return left(ApiException.unknown(msg: val.toString()));
+          }
+        }
+      }
+      return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
     } catch (e) {
       debugPrint(e.toString());
       return left(const ApiException.unknown());

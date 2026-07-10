@@ -30,16 +30,18 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
   void _loadDetails() {
     setState(() {
       _sessionData = null;
-      _detailsFuture = WorkoutRepository().getSessionDetails(sessionId: widget.sessionId).then((res) {
-        res.fold((_) => null, (data) {
-          if (mounted) {
-            setState(() {
-              _sessionData = data;
+      _detailsFuture = WorkoutRepository()
+          .getSessionDetails(sessionId: widget.sessionId)
+          .then((res) {
+            res.fold((_) => null, (data) {
+              if (mounted) {
+                setState(() {
+                  _sessionData = data;
+                });
+              }
             });
-          }
-        });
-        return res;
-      });
+            return res;
+          });
     });
   }
 
@@ -83,7 +85,8 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
       body: FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
         future: _detailsFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting && _sessionData == null) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _sessionData == null) {
             return const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
@@ -144,7 +147,10 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
               child: Text(
                 'Retry',
@@ -162,7 +168,8 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
   Widget _buildContent(Map<String, dynamic> data) {
     final title = data['title']?.toString() ?? widget.fallbackTitle;
     final logs = data['logs'] as List? ?? [];
-    final trainer = widget.trainerName ?? data['trainer_name']?.toString() ?? 'Trainer';
+    final trainer =
+        widget.trainerName ?? data['trainer_name']?.toString() ?? 'Trainer';
 
     return Column(
       children: [
@@ -176,7 +183,10 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xffF0B5B7), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xffF0B5B7),
+                    width: 1.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.05),
@@ -257,7 +267,8 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
               else
                 ...List.generate(logs.length, (index) {
                   final log = logs[index] as Map<String, dynamic>;
-                  final workoutName = log['workout_name']?.toString() ?? 'Exercise';
+                  final workoutName =
+                      log['workout_name']?.toString() ?? 'Exercise';
                   final muscle = log['muscle']?.toString() ?? '';
 
                   return Container(
@@ -267,7 +278,10 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -301,9 +315,8 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                                 const SizedBox(height: 4),
                                 Text(
                                   muscle,
-                                  style: AppStyles.text12Px.poppins.w500.copyWith(
-                                    color: const Color(0xFF888888),
-                                  ),
+                                  style: AppStyles.text12Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF888888)),
                                 ),
                               ],
                             ],
@@ -333,21 +346,30 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
             child: Button.filled(
               size: const Size(double.infinity, 48),
               title: 'Start Workout',
-              style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
-              icon: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 24),
+              style: AppStyles.text16Px.poppins.w600.copyWith(
+                color: Colors.white,
+              ),
+              icon: const Icon(
+                Icons.play_arrow_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
               raduis: 12,
               ontap: () async {
-                final refresh = await Navigator.pushReplacement<dynamic, dynamic>(
-                  context,
-                  MaterialPageRoute<dynamic>(
-                    builder: (context) => WorkoutDetailsScreen(
-                      sessionId: widget.sessionId,
-                      fallbackTitle: title,
-                      startTimer: true,
-                    ),
-                  ),
-                );
-                if (mounted) {
+                final refresh =
+                    await Navigator.push<dynamic>(
+                      context,
+                      MaterialPageRoute<dynamic>(
+                        builder:
+                            (context) => WorkoutDetailsScreen(
+                              sessionId: widget.sessionId,
+                              fallbackTitle: title,
+                              startTimer: true,
+                              trainerName: widget.trainerName,
+                            ),
+                      ),
+                    );
+                if (mounted && refresh == true) {
                   Navigator.pop(context, refresh);
                 }
               },

@@ -52,6 +52,7 @@ class TrainerDetailsScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 12),
             // Header Section
             Container(
               color: Colors.white,

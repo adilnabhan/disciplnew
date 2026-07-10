@@ -283,16 +283,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   },
                                 ),
                                 _buildMenuItem(
-                                  icon: 'assets/images/svg/icons/manage_profile_icon.svg',
-                                  title: 'Manage Health Details',
-                                  onTap: () {
-                                    context.push(BlocProvider.value(
-                                      value: _cubit,
-                                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
-                                    ));
-                                  },
-                                ),
-                                _buildMenuItem(
                                   icon: 'assets/images/svg/icons/phone_icon.svg',
                                   title: 'Change Phone number',
                                   onTap: () => _showComingSoon('Change Phone number'),

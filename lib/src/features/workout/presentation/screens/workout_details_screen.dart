@@ -1,18 +1,23 @@
 import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
     required this.sessionId,
     required this.fallbackTitle,
     this.startTimer = false,
+    this.trainerName,
+    this.isVerified,
     super.key,
   });
 
   final int sessionId;
   final String fallbackTitle;
   final bool startTimer;
+  final String? trainerName;
+  final bool? isVerified;
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -25,6 +30,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   Map<String, dynamic>? _sessionData;
   final Map<int, Timer> _debounceTimers = {};
   final Set<int> _addingSetLogIds = {};
+  final Set<int> _completingSetIds = {};
   Timer? _detailsTimer;
   int _elapsedSeconds = 0;
 
@@ -458,8 +464,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final logs = data['logs'] as List? ?? [];
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
+    final bool isVerified = widget.isVerified ?? (data['is_verified'] as bool?) ?? false;
+
     bool isEditable = status != 'COMPLETED';
-    if (!isEditable && completedAt != null) {
+    if (!isEditable && completedAt != null && !isVerified) {
       try {
         final completedTime = DateTime.parse(completedAt).toLocal();
         final difference = DateTime.now().difference(completedTime);
@@ -472,9 +480,57 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final duration = widget.startTimer ? _formatTimer(_elapsedSeconds) : _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
 
+    final trainerName = widget.trainerName ?? data['trainer_name']?.toString();
+    final isMentor = trainerName != null && trainerName.trim().isNotEmpty;
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        if (status == 'COMPLETED' && !isVerified) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF9E6),
+              border: Border.all(color: const Color(0xFFFFE0B2), width: 1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFFE65100),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isMentor ? 'Trainer Assigned Workout' : 'Completed Workout',
+                        style: AppStyles.text12Px.poppins.w600.copyWith(
+                          color: const Color(0xFFE65100),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isEditable
+                            ? 'This workout is completed but can still be edited for up to 1 hour after completion.'
+                            : 'This workout is completed and can no longer be edited (editable up to 1 hour after completion).',
+                        style: AppStyles.text12Px.poppins.w400.copyWith(
+                          color: const Color(0xFFE65100),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         // Premium Summary Header Card
         Container(
           width: double.infinity,
@@ -880,7 +936,13 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                       ? Center(
                           child: DropdownButtonHideUnderline(
                             child: DropdownButton<String>(
-                              value: log['weight_type']?.toString() ?? 'kg',
+                              value: () {
+                                final val = log['weight_type']?.toString();
+                                if (val == null) return 'kg';
+                                if (val.toLowerCase() == 'bw') return 'BW';
+                                if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
+                                return val;
+                              }(),
                               isDense: true,
                               isExpanded: true,
                               style: AppStyles.text12Px.poppins.w500.copyWith(
@@ -910,7 +972,13 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           ),
                         )
                       : Text(
-                          'Weight (${log['weight_type']?.toString() ?? 'kg'})',
+                          'Weight (${() {
+                            final val = log['weight_type']?.toString();
+                            if (val == null) return 'kg';
+                            if (val.toLowerCase() == 'bw') return 'BW';
+                            if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
+                            return val;
+                          }()})',
                           textAlign: TextAlign.left,
                           style: AppStyles.text12Px.poppins.w500.copyWith(
                             color: const Color(0xFF212121),
@@ -986,7 +1054,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           Expanded(
                             flex: 3,
                             child: Text(
-                              '$weight kg',
+                              (log['weight_type']?.toString().toUpperCase() == 'BW') ? 'BW' : '$weight kg',
                               style: AppStyles.text14Px.poppins.w400.copyWith(
                                 color: const Color(0xFF212121),
                               ),
@@ -1106,61 +1174,80 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                             flex: 3,
                             child: Align(
                               alignment: Alignment.center,
-                              child: SizedBox(
-                                width: 65,
-                                child: TextFormField(
-                                  key: ValueKey('weight_${set['id']}'),
-                                  initialValue:
-                                      set['weight_kg'] != null &&
-                                              set['weight_kg'].toString() !=
-                                                  'null'
-                                          ? set['weight_kg'].toString()
-                                          : '',
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
+                              child: (log['weight_type']?.toString().toUpperCase() == 'BW')
+                                  ? Container(
+                                      width: 65,
+                                      height: 34,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F3F9),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
-                                  textAlign: TextAlign.center,
-                                  style: AppStyles.text14Px.poppins.w400
-                                      .copyWith(color: const Color(0xFF212121)),
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 4,
+                                      child: const Text(
+                                        'BW',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF666666),
+                                        ),
+                                      ),
+                                    )
+                                  : SizedBox(
+                                      width: 65,
+                                      child: TextFormField(
+                                        key: ValueKey('weight_${set['id']}'),
+                                        initialValue:
+                                            set['weight_kg'] != null &&
+                                                    set['weight_kg'].toString() !=
+                                                        'null'
+                                                ? set['weight_kg'].toString()
+                                                : '',
+                                        keyboardType:
+                                            const TextInputType.numberWithOptions(
+                                              decimal: true,
+                                            ),
+                                        textAlign: TextAlign.center,
+                                        style: AppStyles.text14Px.poppins.w400
+                                            .copyWith(color: const Color(0xFF212121)),
+                                        decoration: InputDecoration(
+                                          isDense: true,
+                                          contentPadding: const EdgeInsets.symmetric(
+                                            vertical: 8,
+                                            horizontal: 4,
+                                          ),
+                                          filled: true,
+                                          fillColor: const Color(0xFFF1F3F9),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(8),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          hintText:
+                                              set['target_weight'] != null
+                                                  ? '${set['target_weight']}'
+                                                  : '-',
+                                          hintStyle: const TextStyle(
+                                            color: Color(0xFF94A3B8),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        onChanged: (val) {
+                                          final double? parsedWeight =
+                                              double.tryParse(val);
+                                          set['weight_kg'] = parsedWeight;
+                                          _debounceUpdateSet(
+                                            set['id'] as int,
+                                            reps:
+                                                set['reps'] != null
+                                                    ? int.tryParse(
+                                                      set['reps'].toString(),
+                                                    )
+                                                    : null,
+                                            weightKg: parsedWeight,
+                                          );
+                                        },
+                                      ),
                                     ),
-                                    filled: true,
-                                    fillColor: const Color(0xFFF1F3F9),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    hintText:
-                                        set['target_weight'] != null
-                                            ? '${set['target_weight']}'
-                                            : '-',
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFF94A3B8),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  onChanged: (val) {
-                                    final double? parsedWeight =
-                                        double.tryParse(val);
-                                    set['weight_kg'] = parsedWeight;
-                                    _debounceUpdateSet(
-                                      set['id'] as int,
-                                      reps:
-                                          set['reps'] != null
-                                              ? int.tryParse(
-                                                set['reps'].toString(),
-                                              )
-                                              : null,
-                                      weightKg: parsedWeight,
-                                    );
-                                  },
-                                ),
-                              ),
                             ),
                           ),
                           // Reps input field
@@ -1203,7 +1290,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                     ),
                                   ),
                                   onChanged: (val) {
-                                    final int? parsedReps = int.tryParse(val);
+                                    final int? parsedReps = double.tryParse(val)?.round();
                                     set['reps'] = parsedReps;
                                     _debounceUpdateSet(
                                       set['id'] as int,
@@ -1229,7 +1316,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 onTap: () async {
                                   final setLogId = set['id'] as int?;
                                   if (setLogId != null) {
+                                    if (_completingSetIds.contains(setLogId)) return;
                                     setState(() {
+                                      _completingSetIds.add(setLogId);
                                       set['is_completed'] = !isCompleted;
                                     });
                                     final res = await WorkoutRepository()
@@ -1251,6 +1340,11 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                         ),
                                       );
                                     }, (_) => null);
+                                    if (mounted) {
+                                      setState(() {
+                                        _completingSetIds.remove(setLogId);
+                                      });
+                                    }
                                   }
                                 },
                                 child: Icon(
@@ -1324,11 +1418,39 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                 ),
               );
             },
-            (_) {
+            (data) {
+              final dateStr = _sessionData?['session_date']?.toString() ??
+                  _sessionData?['started_at']?.toString();
+              if (dateStr != null) {
+                try {
+                  final date = DateTime.parse(dateStr);
+                  WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
+                } catch (_) {
+                  final now = DateTime.now();
+                  WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
+                }
+              } else {
+                final now = DateTime.now();
+                WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
+              }
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Workout finished successfully!')),
               );
-              Navigator.pop(context, true);
+              final Map<String, dynamic> sessionMap = data is Map<String, dynamic>
+                  ? Map<String, dynamic>.from(data)
+                  : <String, dynamic>{};
+              sessionMap['id'] ??= widget.sessionId;
+              sessionMap['session_id'] ??= widget.sessionId;
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute<bool>(
+                  builder: (context) => WorkoutAchievementScreen(
+                    sessionData: sessionMap,
+                    fallbackTitle: widget.fallbackTitle,
+                  ),
+                ),
+              );
             },
           );
         },

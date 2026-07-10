@@ -42,289 +42,427 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (context, appState) {
           final bool isCustomer =
               Feggy.read<AppCubit>()?.state.currentUser != null;
-        return BlocProvider.value(
-          value: _cubit,
-          child: Scaffold(
-            backgroundColor: AppColors.bgcolorgrey,
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              centerTitle: false,
-              title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
-              actions: [
-                GestureDetector(
-                  onTap: () {
-                    context.push(const SettingsScreen());
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/svg/icons/settings _icon.svg',
-                    width: 22,
-                    height: 22,
-                  ),
-                ).pOnly(right: 20),
-              ],
-            ),
-            body:
-                !isCustomer
-                    ? _GuestProfileView(
-                      onLoginTap: () {
-                        context.push(const SentOtpScreen());
-                      },
-                    )
-                    : BlocBuilder<ProfileCubit, ProfileState>(
-                      builder: (context, state) {
-                        ConstantChoicesModel? choicesModel;
-                        state.constChoice?.fold(
-                          () {},
-                          (either) => either.fold(
-                            (l) => null, // ApiException
-                            (r) => choicesModel = r, // Success model
-                          ),
-                        );
-                        return state.customerDetails.fold(
-                          () =>
-                              const Center(child: CircularProgressIndicator()),
-                          (either) {
-                            return either.fold(
-                              (error) =>
-                                  error
-                                      .maybeWhen(
-                                        network:
-                                            (e) =>
-                                                ErrorUi.network(onTap: _fetch),
-                                        notFound:
-                                            (e) =>
-                                                ErrorUi.notFound(onTap: _fetch),
-                                        orElse:
-                                            () => ErrorUi.server(onTap: _fetch),
-                                      )
-                                      .center,
-                              (customerDetails) {
-                                return RefreshIndicator(
-                                  onRefresh: _fetch,
-                                  child: ListView(
-                                    padding: const EdgeInsets.all(16),
-                                    children: [
-                                      Container(
-                                        width: 320,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.light,
-                                          borderRadius: BorderRadius.circular(
-                                            16,
+          return BlocProvider.value(
+            value: _cubit,
+            child: Scaffold(
+              backgroundColor: AppColors.bgcolorgrey,
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                centerTitle: false,
+                title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
+                actions: [
+                  GestureDetector(
+                    onTap: () {
+                      context.push(const SettingsScreen());
+                    },
+                    child: SvgPicture.asset(
+                      'assets/images/svg/icons/settings _icon.svg',
+                      width: 22,
+                      height: 22,
+                    ),
+                  ).pOnly(right: 20),
+                ],
+              ),
+              body:
+                  !isCustomer
+                      ? _GuestProfileView(
+                        onLoginTap: () {
+                          context.push(const SentOtpScreen());
+                        },
+                      )
+                      : BlocBuilder<ProfileCubit, ProfileState>(
+                        builder: (context, state) {
+                          ConstantChoicesModel? choicesModel;
+                          state.constChoice?.fold(
+                            () {},
+                            (either) => either.fold(
+                              (l) => null, // ApiException
+                              (r) => choicesModel = r, // Success model
+                            ),
+                          );
+                          return state.customerDetails.fold(
+                            () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            (either) {
+                              return either.fold(
+                                (error) =>
+                                    error
+                                        .maybeWhen(
+                                          network:
+                                              (e) => ErrorUi.network(
+                                                onTap: _fetch,
+                                              ),
+                                          notFound:
+                                              (e) => ErrorUi.notFound(
+                                                onTap: _fetch,
+                                              ),
+                                          orElse:
+                                              () =>
+                                                  ErrorUi.server(onTap: _fetch),
+                                        )
+                                        .center,
+                                (customerDetails) {
+                                  return RefreshIndicator(
+                                    onRefresh: _fetch,
+                                    child: ListView(
+                                      padding: const EdgeInsets.all(16),
+                                      children: [
+                                        Container(
+                                          width: 320,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 8,
                                           ),
-                                        ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            InkWell(
-                                              onTap:
-                                                  () => context.push(
-                                                    BlocProvider.value(
-                                                      value: _cubit,
-                                                      child:
-                                                          ProfileDetailsScreen(
-                                                            customerDetailsModel:
-                                                                customerDetails,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.light,
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          child: Stack(
+                                            children: [
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                children: [
+                                                  InkWell(
+                                                    onTap: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute<void>(
+                                                          builder: (_) => BlocProvider.value(
+                                                            value: _cubit,
+                                                            child: ProfileDetailsScreen(
+                                                              customerDetailsModel:
+                                                                  customerDetails,
+                                                            ),
                                                           ),
+                                                        ),
+                                                      ).then((_) {
+                                                        _fetch();
+                                                      });
+                                                    },
+                                                    child: AbsorbPointer(
+                                                      child: ProfileImage(
+                                                        isEdit: false,
+                                                        onChanged: (image) {},
+                                                        radius: 110,
+                                                        url:
+                                                            '${customerDetails.profilePicture}',
+                                                      ),
                                                     ),
                                                   ),
-                                              child: AbsorbPointer(
-                                                child: ProfileImage(
-                                                  isEdit: false,
-                                                  onChanged: (image) {},
-                                                  radius: 110,
-                                                  url:
-                                                      '${customerDetails.profilePicture}',
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 20),
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.all(8),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      customerDetails
-                                                              .firstName ??
-                                                          '',
-                                                      style:
-                                                          AppStyles
-                                                              .text16Px
-                                                              .poppins
-                                                              .w600,
-                                                    ),
-                                                    SizedBox(height: 8),
-                                                    if (customerDetails
-                                                            .mobileNumber !=
-                                                        null)
-                                                      Text(
-                                                        customerDetails
-                                                            .mobileNumber!,
-                                                        style: AppStyles
-                                                            .text14Px
-                                                            .poppins
-                                                            .w600
-                                                            .copyWith(
-                                                              color:
-                                                                  AppColors
-                                                                      .textGrey,
-                                                            ),
-                                                      ),
-                                                    Text(
-                                                      customerDetails.email ??
-                                                          '',
-                                                      style: AppStyles
-                                                          .text14Px
-                                                          .poppins
-                                                          .w600
-                                                          .copyWith(
-                                                            color:
-                                                                AppColors
-                                                                    .textGrey,
+                                                  const SizedBox(width: 20),
+                                                  Expanded(
+                                                    child: Padding(
+                                                      padding: const EdgeInsets.all(8),
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            customerDetails.fullName ??
+                                                                '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'.trim(),
+                                                            style:
+                                                                AppStyles
+                                                                    .text16Px
+                                                                    .poppins
+                                                                    .w600,
                                                           ),
-                                                    ),
-                                                    const SizedBox(height: 14),
-                                                    Row(
-                                                      children: [
-                                                        if (customerDetails
-                                                                .gender !=
-                                                            null)
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      12,
-                                                                  vertical: 4,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              color:
-                                                                  AppColors
-                                                                      .iconBackground,
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    16,
-                                                                  ),
-                                                            ),
-                                                            child: Text(
+                                                          const SizedBox(height: 8),
+                                                          if (customerDetails
+                                                                  .mobileNumber !=
+                                                              null)
+                                                            Text(
                                                               customerDetails
-                                                                  .gender!,
+                                                                  .mobileNumber!,
                                                               style: AppStyles
-                                                                  .text13Px
+                                                                  .text14Px
                                                                   .poppins
-                                                                  .w500
+                                                                  .w600
                                                                   .copyWith(
                                                                     color:
                                                                         AppColors
-                                                                            .textDark,
+                                                                            .textGrey,
                                                                   ),
                                                             ),
+                                                          Text(
+                                                            customerDetails.email ??
+                                                                '-',
+                                                            style: AppStyles
+                                                                .text14Px
+                                                                .poppins
+                                                                .w600
+                                                                .copyWith(
+                                                                  color:
+                                                                      AppColors
+                                                                          .textGrey,
+                                                                ),
                                                           ),
-                                                      ],
+                                                          const SizedBox(
+                                                            height: 14,
+                                                          ),
+                                                          Row(
+                                                            children: [
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal: 10,
+                                                                      vertical: 4,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(0xFFEBFBEE),
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        16,
+                                                                      ),
+                                                                ),
+                                                                child: Row(
+                                                                  mainAxisSize: MainAxisSize.min,
+                                                                  children: [
+                                                                    const Icon(
+                                                                      Icons.circle,
+                                                                      size: 8,
+                                                                      color: Color(0xFF40C057),
+                                                                    ),
+                                                                    const SizedBox(width: 6),
+                                                                    Text(
+                                                                      'Active',
+                                                                      style: AppStyles
+                                                                          .text13Px
+                                                                          .poppins
+                                                                          .w600
+                                                                          .copyWith(
+                                                                            color: const Color(0xFF2B8A3E),
+                                                                          ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                              if (customerDetails
+                                                                      .gender !=
+                                                                  null &&
+                                                                  customerDetails
+                                                                      .gender!
+                                                                      .isNotEmpty) ...[
+                                                                const SizedBox(width: 8),
+                                                                Container(
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal: 12,
+                                                                        vertical: 4,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        AppColors
+                                                                            .iconBackground,
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          16,
+                                                                        ),
+                                                                  ),
+                                                                  child: Text(
+                                                                    '${customerDetails.gender![0].toUpperCase()}${customerDetails.gender!.substring(1).toLowerCase()}',
+                                                                    style: AppStyles
+                                                                        .text13Px
+                                                                        .poppins
+                                                                        .w500
+                                                                        .copyWith(
+                                                                          color:
+                                                                              AppColors
+                                                                                  .textDark,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                              if (customerDetails
+                                                                      .bloodGroup !=
+                                                                  null &&
+                                                                  customerDetails
+                                                                      .bloodGroup!
+                                                                      .isNotEmpty) ...[
+                                                                const SizedBox(width: 8),
+                                                                Container(
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal: 12,
+                                                                        vertical: 4,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        AppColors
+                                                                            .iconBackground,
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          16,
+                                                                        ),
+                                                                  ),
+                                                                  child: Text(
+                                                                    customerDetails
+                                                                        .bloodGroup!,
+                                                                    style: AppStyles
+                                                                        .text13Px
+                                                                        .poppins
+                                                                        .w500
+                                                                        .copyWith(
+                                                                          color:
+                                                                              AppColors
+                                                                                  .textDark,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ],
-                                                ),
+                                                  ),
+                                                ],
                                               ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      if (customerDetails.targetGoal != null &&
-                                          customerDetails
-                                              .targetGoal!
-                                              .isNotEmpty) ...[
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          children:
-                                              customerDetails.targetGoal!
-                                                  .map(
-                                                    (goal) => Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 12,
-                                                            vertical: 6,
+                                              Positioned(
+                                                top: 8,
+                                                right: 8,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute<void>(
+                                                        builder: (_) => BlocProvider.value(
+                                                          value: _cubit,
+                                                          child: ProfileDetailsScreen(
+                                                            customerDetailsModel: customerDetails,
                                                           ),
-                                                      decoration: BoxDecoration(
-                                                        color: AppColors
-                                                            .lightPrimary
-                                                            .withValues(
-                                                              alpha: .2,
-                                                            ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        border: Border.all(
-                                                          color:
-                                                              AppColors
-                                                                  .lightPrimary,
                                                         ),
                                                       ),
-                                                      child: Text(
-                                                        goal
-                                                            .split('_')
-                                                            .map(
-                                                              (e) =>
-                                                                  e.isNotEmpty
-                                                                      ? '${e[0].toUpperCase()}${e.substring(1).toLowerCase()}'
-                                                                      : '',
-                                                            )
-                                                            .join(' '),
-                                                        style: AppStyles
-                                                            .text12Px
-                                                            .poppins
-                                                            .w500
-                                                            .copyWith(
-                                                              color:
-                                                                  AppColors
-                                                                      .primary,
-                                                            ),
-                                                      ),
+                                                    ).then((_) {
+                                                      _fetch();
+                                                    });
+                                                  },
+                                                  child: Container(
+                                                    width: 30,
+                                                    height: 30,
+                                                    decoration: const BoxDecoration(
+                                                      color: Color(0xFFF1F3F5),
+                                                      shape: BoxShape.circle,
                                                     ),
-                                                  )
-                                                  .toList(),
+                                                    child: const Icon(
+                                                      Icons.edit,
+                                                      size: 14,
+                                                      color: Color(0xFF495057),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                         const SizedBox(height: 16),
-                                      ],
-                                      () {
-                                        Membership? activeMembership;
-                                        if (customerDetails.memberships != null &&
-                                            customerDetails.memberships!.isNotEmpty) {
-                                          for (final m in customerDetails.memberships!) {
-                                            if (m.isActive == true ||
-                                                m.status?.toLowerCase() == 'active') {
-                                              activeMembership = m;
-                                              break;
+                                        if (customerDetails.targetGoal !=
+                                                null &&
+                                            customerDetails
+                                                .targetGoal!
+                                                .isNotEmpty) ...[
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children:
+                                                customerDetails.targetGoal!
+                                                    .map(
+                                                      (goal) => Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 6,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors
+                                                              .lightPrimary
+                                                              .withValues(
+                                                                alpha: .2,
+                                                              ),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                16,
+                                                              ),
+                                                          border: Border.all(
+                                                            color:
+                                                                AppColors
+                                                                    .lightPrimary,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          goal
+                                                              .split('_')
+                                                              .map(
+                                                                (e) =>
+                                                                    e.isNotEmpty
+                                                                        ? '${e[0].toUpperCase()}${e.substring(1).toLowerCase()}'
+                                                                        : '',
+                                                              )
+                                                              .join(' '),
+                                                          style: AppStyles
+                                                              .text12Px
+                                                              .poppins
+                                                              .w500
+                                                              .copyWith(
+                                                                color:
+                                                                    AppColors
+                                                                        .primary,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
+                                        _buildFitnessAnalyticsCard(
+                                          customerDetails,
+                                        ),
+                                        () {
+                                          Membership? activeMembership;
+                                          if (customerDetails.memberships !=
+                                                  null &&
+                                              customerDetails
+                                                  .memberships!
+                                                  .isNotEmpty) {
+                                            for (final m
+                                                in customerDetails
+                                                    .memberships!) {
+                                              if (m.isActive == true ||
+                                                  m.status?.toLowerCase() ==
+                                                      'active') {
+                                                activeMembership = m;
+                                                break;
+                                              }
                                             }
+                                            activeMembership ??=
+                                                customerDetails
+                                                    .memberships!
+                                                    .first;
                                           }
-                                          activeMembership ??=
-                                              customerDetails.memberships!.first;
-                                        }
-                                        return _buildMembershipCard(activeMembership);
-                                      }(),
-                                      _buildOtherDetailsSection(
-                                        customerDetails,
-                                        choicesModel,
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
-                    ),
-          ),
-        );
+                                          return _buildMembershipCard(
+                                            activeMembership,
+                                          );
+                                        }(),
+                                        _buildOtherDetailsSection(
+                                          customerDetails,
+                                          choicesModel,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+            ),
+          );
         },
       ),
     );
@@ -360,44 +498,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       healthIssues = 'YES';
     }
 
-    // BMI and BMR Calculation
-    double? bmi;
-    double? bmr;
-    String bmiCategory = '';
-    
-    final heightVal = double.tryParse(customerDetails.height ?? '');
-    final weightVal = double.tryParse(customerDetails.weight ?? '');
-    
-    if (heightVal != null && weightVal != null && heightVal > 0) {
-      final heightInMeters = heightVal / 100;
-      bmi = weightVal / (heightInMeters * heightInMeters);
-      
-      if (bmi < 18.5) {
-        bmiCategory = ' (Underweight)';
-      } else if (bmi < 25.0) {
-        bmiCategory = ' (Normal)';
-      } else if (bmi < 30.0) {
-        bmiCategory = ' (Overweight)';
-      } else {
-        bmiCategory = ' (Obese)';
-      }
-
-      // BMR Calculation (Revised Harris-Benedict Equation)
-      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
-      if (age > 0) {
-        if (gender.startsWith('f')) {
-          bmr = 447.593 + (9.247 * weightVal) + (3.098 * heightVal) - (4.330 * age);
-        } else {
-          bmr = 88.362 + (13.397 * weightVal) + (4.799 * heightVal) - (5.677 * age);
-        }
-      }
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Assigned Gym & Trainer section ──
-        if (customerDetails.assignedFitnessCenter != null || customerDetails.assignedTrainer != null) ...[
+        if (customerDetails.assignedFitnessCenter != null ||
+            customerDetails.assignedTrainer != null) ...[
           const SizedBox(height: 12),
           Text(
             'Assigned Gym ',
@@ -433,13 +539,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.iconBackground,
                         ),
                         child: ClipOval(
-                          child: customerDetails.assignedFitnessCenter!['logo'] != null
-                              ? Image.network(
-                                  customerDetails.assignedFitnessCenter!['logo'] as String,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: AppColors.primary),
-                                )
-                              : const Icon(Icons.fitness_center, color: AppColors.primary),
+                          child:
+                              customerDetails.assignedFitnessCenter!['logo'] !=
+                                      null
+                                  ? Image.network(
+                                    customerDetails
+                                            .assignedFitnessCenter!['logo']
+                                        as String,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (_, __, ___) => const Icon(
+                                          Icons.fitness_center,
+                                          color: AppColors.primary,
+                                        ),
+                                  )
+                                  : const Icon(
+                                    Icons.fitness_center,
+                                    color: AppColors.primary,
+                                  ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -449,18 +566,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Text(
                               'Fitness Center',
-                              style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: AppColors.textGrey,
+                              ),
                             ),
                             Text(
-                              customerDetails.assignedFitnessCenter!['name'] as String? ?? 'N/A',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
+                              customerDetails.assignedFitnessCenter!['name']
+                                      as String? ??
+                                  '-',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(
+                                color: AppColors.textDark,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  if (customerDetails.assignedTrainer != null) const Divider(height: 24, thickness: 0.5),
+                  if (customerDetails.assignedTrainer != null)
+                    const Divider(height: 24, thickness: 0.5),
                 ],
                 if (customerDetails.assignedTrainer != null) ...[
                   Row(
@@ -473,13 +597,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.iconBackground,
                         ),
                         child: ClipOval(
-                          child: customerDetails.assignedTrainer!['profile_image'] != null
-                              ? Image.network(
-                                  customerDetails.assignedTrainer!['profile_image'] as String,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.person, color: AppColors.primary),
-                                )
-                              : const Icon(Icons.person, color: AppColors.primary),
+                          child:
+                              customerDetails
+                                          .assignedTrainer!['profile_image'] !=
+                                      null
+                                  ? Image.network(
+                                    customerDetails
+                                            .assignedTrainer!['profile_image']
+                                        as String,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (_, __, ___) => const Icon(
+                                          Icons.person,
+                                          color: AppColors.primary,
+                                        ),
+                                  )
+                                  : const Icon(
+                                    Icons.person,
+                                    color: AppColors.primary,
+                                  ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -489,11 +625,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Text(
                               'Personal Trainer',
-                              style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: AppColors.textGrey,
+                              ),
                             ),
                             Text(
-                              customerDetails.assignedTrainer!['name'] as String? ?? 'N/A',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
+                              customerDetails.assignedTrainer!['name']
+                                      as String? ??
+                                  '-',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(
+                                color: AppColors.textDark,
+                              ),
                             ),
                           ],
                         ),
@@ -501,14 +643,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ],
-                if (customerDetails.trainerNotes != null && customerDetails.trainerNotes!.isNotEmpty) ...[
+                if (customerDetails.trainerNotes != null &&
+                    customerDetails.trainerNotes!.isNotEmpty) ...[
                   const Divider(height: 24, thickness: 0.5),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Trainer's Feedback & Notes",
-                        style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                        style: AppStyles.text12Px.poppins.w500.copyWith(
+                          color: AppColors.textGrey,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -541,17 +686,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => BlocProvider.value(
-                      value: _cubit,
-                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
-                    ),
+                    builder:
+                        (_) => BlocProvider.value(
+                          value: _cubit,
+                          child: FitnessDetailsScreen(
+                            customerDetailsModel: customerDetails,
+                          ),
+                        ),
                   ),
                 ).then((_) {
                   _cubit.fetchCustomerDetails();
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(20),
@@ -589,20 +740,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow('Age', age > 0 ? '$age' : 'N/A'),
+              _buildDetailRow('Age', age > 0 ? '$age' : '-'),
               const SizedBox(height: 14),
-              _buildDetailRow('Height', customerDetails.height != null ? '${customerDetails.height} cm' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('Weight', customerDetails.weight != null ? '${customerDetails.weight} kg' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('BMI', bmi != null ? '${bmi.toStringAsFixed(1)}$bmiCategory' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('BMR', bmr != null ? '${bmr.toStringAsFixed(0)} kcal' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow(
-                'Blood Group',
-                customerDetails.bloodGroup ?? 'N/A',
-              ),
+              _buildDetailRow('Blood Group', customerDetails.bloodGroup ?? '-'),
               const SizedBox(height: 14),
               _buildDetailRow('Health Issues', healthIssues),
               const SizedBox(height: 14),
@@ -650,7 +790,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   choicesModel.data.professions
                       .firstWhere(
                         (e) => e.value == customerDetails.profession,
-                        orElse: () => const Profession(label: 'N/A', value: ''),
+                        orElse: () => const Profession(label: '-', value: ''),
                       )
                       .label,
                 ),
@@ -749,6 +889,209 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  String _formatDoubleString(String? val) {
+    if (val == null || val.isEmpty) return '';
+    final d = double.tryParse(val);
+    if (d == null) return val;
+    if (d == d.toInt().toDouble()) {
+      return '${d.toInt()}';
+    }
+    return d.toStringAsFixed(1);
+  }
+
+  String _formatDynamicValue(dynamic val) {
+    if (val == null) return '';
+    if (val is num) {
+      if (val == val.toInt().toDouble()) {
+        return '${val.toInt()}';
+      }
+      return val.toStringAsFixed(1);
+    }
+    final d = double.tryParse(val.toString());
+    if (d == null) return val.toString();
+    if (d == d.toInt().toDouble()) {
+      return '${d.toInt()}';
+    }
+    return d.toStringAsFixed(1);
+  }
+
+  Widget _buildFitnessAnalyticsCard(CustomerDetailsModel customerDetails) {
+    int age = 0;
+    if (customerDetails.dateOfBirth != null) {
+      age = DateTime.now().year - customerDetails.dateOfBirth!.year;
+    }
+
+    double? bmi;
+    double? bmr;
+    String bmiCategory = '';
+
+    final heightVal = double.tryParse(customerDetails.height ?? '');
+    final weightVal = double.tryParse(customerDetails.weight ?? '');
+
+    if (heightVal != null && weightVal != null && heightVal > 0) {
+      final heightInMeters = heightVal / 100;
+      bmi = weightVal / (heightInMeters * heightInMeters);
+
+      if (bmi < 18.5) {
+        bmiCategory = ' (Underweight)';
+      } else if (bmi < 25.0) {
+        bmiCategory = ' (Normal)';
+      } else if (bmi < 30.0) {
+        bmiCategory = ' (Overweight)';
+      } else {
+        bmiCategory = ' (Obese)';
+      }
+
+      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
+      if (age > 0) {
+        if (gender.startsWith('f')) {
+          bmr =
+              447.593 +
+              (9.247 * weightVal) +
+              (3.098 * heightVal) -
+              (4.330 * age);
+        } else {
+          bmr =
+              88.362 +
+              (13.397 * weightVal) +
+              (4.799 * heightVal) -
+              (5.677 * age);
+        }
+      }
+    }
+
+    final formattedHeight = _formatDoubleString(customerDetails.height);
+    final formattedWeight = _formatDoubleString(customerDetails.weight);
+    final formattedBf = _formatDynamicValue(customerDetails.bfPercentage);
+
+    final heightStr = formattedHeight.isNotEmpty ? '$formattedHeight cm' : '-';
+    final weightStr = formattedWeight.isNotEmpty ? '$formattedWeight kg' : '-';
+    final bfStr = formattedBf.isNotEmpty ? '$formattedBf%' : '-';
+    final bmiStr = bmi != null ? '${bmi.toStringAsFixed(1)}$bmiCategory' : '-';
+    final bmrStr = bmr != null ? '${bmr.toStringAsFixed(0)} kcal' : '-';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          'Fitness Analytics',
+          style: AppStyles.text16Px.poppins.w600.copyWith(
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 10),
+        InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder:
+                    (_) => BlocProvider.value(
+                      value: _cubit,
+                      child: FitnessDetailsScreen(
+                        customerDetailsModel: customerDetails,
+                        editBodyMetricsOnly: true,
+                      ),
+                    ),
+              ),
+            ).then((_) {
+              _cubit.fetchCustomerDetails();
+            });
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Body Metrix',
+                        style: AppStyles.text15Px.poppins.w600.copyWith(
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildMetricItem('Height', heightStr),
+                                const SizedBox(height: 6),
+                                _buildMetricItem('Weight', weightStr),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildMetricItem('BMI', bmiStr),
+                                const SizedBox(height: 6),
+                                _buildMetricItem('BMR', bmrStr),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.grey.shade100,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricItem(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        text: '$label : ',
+        style: AppStyles.text13Px.poppins.w600.copyWith(
+          color: AppColors.textGrey,
+        ),
+        children: [
+          TextSpan(
+            text: value,
+            style: AppStyles.text13Px.poppins.w500.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMembershipCard(Membership? membership) {
     if (membership == null) {
       return Column(
@@ -817,7 +1160,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isActive = membership.isActive ?? false;
     final bool isPending = statusStr.toLowerCase() == 'pending';
     final localEndDate = membership.endDate?.toLocal();
-    final bool isExpired = !isPending && (statusStr.toLowerCase() == 'expired' || (localEndDate != null && localEndDate.difference(DateTime.now()).inDays < 0));
+    final bool isExpired =
+        !isPending &&
+        (statusStr.toLowerCase() == 'expired' ||
+            (localEndDate != null &&
+                localEndDate.difference(DateTime.now()).inDays < 0));
     final bool actualIsActive = isActive && !isExpired && !isPending;
 
     // Remaining days calculation
@@ -1029,7 +1376,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? DateFormat(
                                       'dd MMM yyyy',
                                     ).format(membership.startDate!.toLocal())
-                                    : 'N/A',
+                                    : '-',
                             color: Colors.blue,
                           ),
                         ),
@@ -1043,7 +1390,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? DateFormat(
                                       'dd MMM yyyy',
                                     ).format(membership.endDate!.toLocal())
-                                    : 'N/A',
+                                    : '-',
                             color: Colors.red,
                           ),
                         ),
@@ -1059,7 +1406,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             value:
                                 membership.amount != null
                                     ? '₹${membership.amount}'
-                                    : 'N/A',
+                                    : '-',
                             color: Colors.green,
                           ),
                         ),
@@ -1069,8 +1416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.payment,
                             label: 'Payment Status',
                             value:
-                                (membership.paymentStatus ?? 'N/A')
-                                    .toUpperCase(),
+                                (membership.paymentStatus ?? '-').toUpperCase(),
                             color:
                                 (membership.paymentStatus ?? '')
                                             .toLowerCase() ==

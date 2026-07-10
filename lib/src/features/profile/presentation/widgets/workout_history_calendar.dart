@@ -24,6 +24,8 @@ enum CalendarDayState { completed, verified, missed, rest, future }
 class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   final GlobalKey _calendarCardKey = GlobalKey();
   OverlayEntry? _onboardingOverlayEntry;
+  bool _showLoginHint = false;
+  Timer? _hintTimer;
 
   DateTime _focusedDay = DateTime.now();
   final Map<String, CalendarDayState> _dayStates = {};
@@ -180,6 +182,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   @override
   void initState() {
     super.initState();
+    _checkAndShowLoginHint();
     // Load data once on first mount
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -187,7 +190,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       _loadFallbackPlanInfo().then((_) {
         _prepopulateDefaultStates();
         _loadMonthData();
-        _checkAndShowOnboardingHint();
       });
     });
 
@@ -229,6 +231,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     _onboardingOverlayEntry?.remove();
     _onboardingOverlayEntry = null;
     _loadingTimeoutTimer?.cancel();
+    _hintTimer?.cancel();
     super.dispose();
   }
 
@@ -410,11 +413,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final double percent = totalNonRestDays > 0 ? (completedCount / totalNonRestDays).clamp(0.0, 1.0) : 0.0;
     final int percentInt = (percent * 100).round();
 
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: _onPullToRefresh,
-      child: SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10.0),
         child: Column(
@@ -446,6 +446,37 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
               ),
               child: Column(
                 children: [
+                  if (_showLoginHint)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.15),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            color: AppColors.primary,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Track your completed workouts, planned rest days, and overall progress. Tap "Edit Rest Day" to schedule your recovery days.',
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: AppColors.textDark,
+                                height: 1.3,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   // Custom Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -595,7 +626,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     calendarBuilders: CalendarBuilders(
                       dowBuilder: (context, day) {
                         final text =
-                            DateFormat.E().format(day).substring(0, 3);
+                        DateFormat.E().format(day).substring(0, 3);
                         return Container(
                           alignment: Alignment.topCenter,
                           child: Text(
@@ -621,14 +652,14 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                         );
                       },
                       outsideBuilder: (context, day, focusedDay) =>
-                          const SizedBox.shrink(),
+                      const SizedBox.shrink(),
                     ),
                   ),
 
                   if (_isEditing)
                     Container(
                       margin:
-                          const EdgeInsets.only(top: 16, left: 8, right: 8),
+                      const EdgeInsets.only(top: 16, left: 8, right: 8),
                       padding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
@@ -748,7 +779,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           ],
         ),
       ),
-      ), // SingleChildScrollView
     ); // RefreshIndicator
   }
 
@@ -934,7 +964,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isToday
-              ? (isRest ? const Color(0xFF1D9BF0) : Colors.transparent)
+              ? (isRest ? const Color(0xFF1D9BF0) : Colors.grey)
               : Colors.transparent,
           width: 1.5,
         ),
@@ -982,44 +1012,26 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     );
   }
 
-  Future<void> _checkAndShowOnboardingHint() async {
-    if (!mounted) return;
-    
-    final customerId = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
-    if (customerId == null) return;
+  Future<void> _checkAndShowOnboardingHint() async {}
 
+  Future<void> _checkAndShowLoginHint() async {
     final prefs = await SharedPreferences.getInstance();
-    final key = 'has_seen_workout_journey_hint_$customerId';
-    final hasSeen = prefs.getBool(key) ?? false;
-    if (hasSeen) return;
-
-    // Immediately mark as seen
-    await prefs.setBool(key, true);
-
-    // Schedule frame callback to measure layout
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final renderBox = _calendarCardKey.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox == null) return;
-
-      final size = renderBox.size;
-      final position = renderBox.localToGlobal(Offset.zero);
-      final cutoutRect = Rect.fromLTWH(position.dx, position.dy, size.width, size.height);
-
-      final overlayState = Overlay.of(context);
-      _onboardingOverlayEntry = OverlayEntry(
-        builder: (context) {
-          return OnboardingOverlayContent(
-            cutoutRect: cutoutRect,
-            onDismiss: () {
-              _onboardingOverlayEntry?.remove();
-              _onboardingOverlayEntry = null;
-            },
-          );
-        },
-      );
-      overlayState.insert(_onboardingOverlayEntry!);
-    });
+    final hasSeen = prefs.getBool('has_seen_calendar_login_hint') ?? false;
+    if (!hasSeen) {
+      if (mounted) {
+        setState(() {
+          _showLoginHint = true;
+        });
+      }
+      await prefs.setBool('has_seen_calendar_login_hint', true);
+      _hintTimer = Timer(const Duration(seconds: 10), () {
+        if (mounted) {
+          setState(() {
+            _showLoginHint = false;
+          });
+        }
+      });
+    }
   }
 }
 
