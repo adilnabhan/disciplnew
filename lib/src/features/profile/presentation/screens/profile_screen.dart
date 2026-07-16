@@ -1,7 +1,7 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:intl/intl.dart';
 import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
-import 'pages/fitness_details_screen.dart';
+import 'pages/pages.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -415,14 +415,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             customerDetails
                                                 .targetGoal!
                                                 .isNotEmpty) ...[
-                                          Text(
-                                             'Target Goals',
-                                             style: AppStyles.text16Px.poppins.w600.copyWith(
-                                               color: AppColors.textDark,
-                                             ),
-                                           ),
-                                           const SizedBox(height: 10),
-                                           Wrap(
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Target Goal',
+                                                style: AppStyles
+                                                    .text16Px
+                                                    .poppins
+                                                    .w600
+                                                    .copyWith(
+                                                      color: AppColors.textDark,
+                                                    ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute<void>(
+                                                      builder:
+                                                          (
+                                                            _,
+                                                          ) => BlocProvider.value(
+                                                            value: _cubit,
+                                                            child: EditTargetGoals(
+                                                              customerDetailsModel:
+                                                                  customerDetails,
+                                                              choicesModel:
+                                                                  choicesModel,
+                                                            ),
+                                                          ),
+                                                    ),
+                                                  ).then((_) {
+                                                    _cubit
+                                                        .fetchCustomerDetails();
+                                                  });
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.primary
+                                                        .withOpacity(0.08),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.edit,
+                                                        size: 14,
+                                                        color:
+                                                            AppColors.primary,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'Edit',
+                                                        style: AppStyles
+                                                            .text12Px
+                                                            .poppins
+                                                            .w600
+                                                            .copyWith(
+                                                              color:
+                                                                  AppColors
+                                                                      .primary,
+                                                            ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Wrap(
                                             spacing: 8,
                                             runSpacing: 8,
                                             children:
@@ -451,15 +523,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           ),
                                                         ),
                                                         child: Text(
-                                                          goal
-                                                              .split('_')
-                                                              .map(
-                                                                (e) =>
-                                                                    e.isNotEmpty
-                                                                        ? '${e[0].toUpperCase()}${e.substring(1).toLowerCase()}'
-                                                                        : '',
-                                                              )
-                                                              .join(' '),
+                                                          (goal.toLowerCase() ==
+                                                                      "other" &&
+                                                                  customerDetails
+                                                                          .targetGoalOther !=
+                                                                      null &&
+                                                                  customerDetails
+                                                                      .targetGoalOther!
+                                                                      .isNotEmpty)
+                                                              ? customerDetails
+                                                                  .targetGoalOther!
+                                                              : goal
+                                                                  .split("_")
+                                                                  .map(
+                                                                    (e) =>
+                                                                        e.isNotEmpty
+                                                                            ? "${e[0].toUpperCase()}${e.substring(1).toLowerCase()}"
+                                                                            : "",
+                                                                  )
+                                                                  .join(" "),
                                                           style: AppStyles
                                                               .text12Px
                                                               .poppins
