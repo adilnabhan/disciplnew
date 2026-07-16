@@ -998,6 +998,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
+                                menuMaxHeight: 300,
                                 value: selectedMuscleId,
                                 validator: (val) {
                                   if (val == null) {
@@ -1109,6 +1110,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
+                                menuMaxHeight: 300,
                                 key: ValueKey('sec_muscle_dropdown_${selectedSecondaryMuscleIds.length}'),
                                 value: null,
                                 decoration: _dropdownDecoration(),
@@ -1209,6 +1211,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
+                                menuMaxHeight: 300,
                                 value: selectedTypeCode,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
@@ -1310,6 +1313,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
+                                menuMaxHeight: 300,
                                 value: selectedEquipmentId,
                                 validator: (val) {
                                   if (val == null) {
@@ -1421,6 +1425,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
+                                menuMaxHeight: 300,
                                 value: selectedTrackBy,
                                 decoration: _dropdownDecoration(),
                                 items: const [
