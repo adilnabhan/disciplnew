@@ -48,7 +48,6 @@ class Question extends StatelessWidget {
   }) : answer = SizedBox(
          width: width ?? 200,
          child: DropdownButtonFormField(
-           menuMaxHeight: 300,
            isExpanded: true,
            autovalidateMode: AutovalidateMode.onUserInteraction,
            validator: validator,
