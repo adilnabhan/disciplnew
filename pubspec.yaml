@@ -35,6 +35,7 @@ dependencies:
   percent_indicator: ^4.2.3
   flutter_animate: ^4.5.0
   carousel_slider: ^5.0.0
+  lottie: ^3.1.0
   flutter_rating: ^2.0.2
   another_stepper: ^1.2.2
   easy_stepper: ^0.8.5+1
@@ -134,6 +135,7 @@ dependencies:
   #* Payment
   razorpay_flutter: ^1.4.0
   pretty_dio_logger: ^1.4.0
+  syncfusion_flutter_pdfviewer: ^29.2.11
 
 dependency_overrides:
   web: any
@@ -165,6 +167,7 @@ flutter:
     - .env
     - assets/images/svg/icons/
     - assets/images/svg/vectors/
+    - assets/images/svg/vectors/celebrations.json
     - assets/images/png/icons/
     - assets/images/png/vectors/
     - assets/images/carousel_images/

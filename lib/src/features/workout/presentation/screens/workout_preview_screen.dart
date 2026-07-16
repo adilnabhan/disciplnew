@@ -6,12 +6,14 @@ class WorkoutPreviewScreen extends StatefulWidget {
     required this.sessionId,
     required this.fallbackTitle,
     this.trainerName,
+    this.onRefresh,
     super.key,
   });
 
   final int sessionId;
   final String fallbackTitle;
   final String? trainerName;
+  final VoidCallback? onRefresh;
 
   @override
   State<WorkoutPreviewScreen> createState() => _WorkoutPreviewScreenState();
@@ -215,7 +217,7 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Assigned by: $trainer',
+                          trainer,
                           style: AppStyles.text14Px.poppins.w500.copyWith(
                             color: const Color(0xFF666666),
                           ),
@@ -355,23 +357,19 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                 size: 24,
               ),
               raduis: 12,
-              ontap: () async {
-                final refresh =
-                    await Navigator.push<dynamic>(
-                      context,
-                      MaterialPageRoute<dynamic>(
-                        builder:
-                            (context) => WorkoutDetailsScreen(
-                              sessionId: widget.sessionId,
-                              fallbackTitle: title,
-                              startTimer: true,
-                              trainerName: widget.trainerName,
-                            ),
-                      ),
-                    );
-                if (mounted && refresh == true) {
-                  Navigator.pop(context, refresh);
-                }
+              ontap: () {
+                Navigator.pushReplacement<dynamic, dynamic>(
+                  context,
+                  MaterialPageRoute<dynamic>(
+                    builder: (context) => WorkoutDetailsScreen(
+                      sessionId: widget.sessionId,
+                      fallbackTitle: title,
+                      startTimer: true,
+                      trainerName: widget.trainerName,
+                      onRefresh: widget.onRefresh,
+                    ),
+                  ),
+                );
               },
             ),
           ),

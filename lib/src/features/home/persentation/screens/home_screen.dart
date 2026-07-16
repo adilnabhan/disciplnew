@@ -223,13 +223,8 @@ class _HomeScreenState extends State<HomeScreen> {
               BlocBuilder<DashboardCubit, DashboardState>(
                 bloc: _dashboardCubit,
                 builder: (context, state) {
-                  final activeMembership = state.activeMembershipData.fold(
-                    () => null,
-                    (either) => either.fold((_) => null, (m) => m),
-                  );
                   return WorkoutHistoryCalendar(
                     key: ValueKey(_calendarRefreshCounter),
-                    startDate: activeMembership?.startDate,
                   ).pxy(x: 8);
                 },
               ),

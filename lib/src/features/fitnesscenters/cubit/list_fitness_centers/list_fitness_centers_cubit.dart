@@ -11,6 +11,26 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
 
   Future<void> fetch() async {
     if (isClosed) return;
+
+    final repo = FitnesscenterRepository();
+    final cachedCats = repo.cachedCategories;
+    final cachedGyms = repo.cachedListFitnesscenter;
+
+    if (cachedCats != null && cachedGyms != null) {
+      emit(
+        state.copyWith(
+          categories: some(right(cachedCats)),
+          listFitnessCenters: (data: some(right(cachedGyms)), isPagination: false),
+          latitude: 11.2588,
+          longitude: 75.7804,
+          showLocationBanner: false,
+        ),
+      );
+      // Fetch fresh data in the background
+      _fetchFreshData();
+      return;
+    }
+
     if (state.listFitnessCenters.data.isNone()) {
       emit(
         state.copyWith(listFitnessCenters: (data: none(), isPagination: false)),
@@ -35,6 +55,46 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
       ),
     );
     await fetchListFitnessCenters();
+  }
+
+  Future<void> _fetchFreshData() async {
+    if (isClosed) return;
+    // Fetch categories and gyms in background
+    final responseCategories = await FitnesscenterRepository().fitnesscenterCategories();
+    if (isClosed) return;
+    
+    // Only update state if categories call succeeded
+    responseCategories.fold(
+      (_) => null,
+      (cats) {
+        if (!isClosed) {
+          emit(state.copyWith(categories: some(right(cats))));
+        }
+      },
+    );
+    
+    // Now fetch fresh list of fitness centers in background
+    final params = <String, dynamic>{
+      'search': state.searchQuery,
+      'category_id': state.selectedCategory?.id,
+    }..removeWhere(
+      (key, value) => value == null || (value is String && value.isEmpty),
+    );
+
+    var responseGyms = await FitnesscenterRepository().listFitnesscenter(
+      queryParameters: params,
+      allGyms: ignoreLocation,
+    );
+
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        listFitnessCenters: (
+          data: some(responseGyms),
+          isPagination: false,
+        ),
+      ),
+    );
   }
 
   Future<void> fetchListFitnessCenters({

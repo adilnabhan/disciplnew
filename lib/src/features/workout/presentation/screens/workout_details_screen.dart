@@ -10,6 +10,7 @@ class WorkoutDetailsScreen extends StatefulWidget {
     this.startTimer = false,
     this.trainerName,
     this.isVerified,
+    this.onRefresh,
     super.key,
   });
 
@@ -18,6 +19,7 @@ class WorkoutDetailsScreen extends StatefulWidget {
   final bool startTimer;
   final String? trainerName;
   final bool? isVerified;
+  final VoidCallback? onRefresh;
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -486,7 +488,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        if (status == 'COMPLETED' && !isVerified) ...[
+        if (status == 'COMPLETED' && !isVerified && isEditable) ...[
           Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -516,9 +518,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        isEditable
-                            ? 'This workout is completed but can still be edited for up to 1 hour after completion.'
-                            : 'This workout is completed and can no longer be edited (editable up to 1 hour after completion).',
+                        'This workout has been successfully completed. Editing is available for 1 hour after completion.',
                         style: AppStyles.text12Px.poppins.w400.copyWith(
                           color: const Color(0xFFE65100),
                         ),
@@ -1442,6 +1442,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   : <String, dynamic>{};
               sessionMap['id'] ??= widget.sessionId;
               sessionMap['session_id'] ??= widget.sessionId;
+              widget.onRefresh?.call();
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute<bool>(

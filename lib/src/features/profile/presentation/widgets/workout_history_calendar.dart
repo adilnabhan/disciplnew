@@ -11,15 +11,13 @@ import 'package:customer_mobile_app/src/features/workout/presentation/components
 import 'package:flutter_svg/flutter_svg.dart';
 
 class WorkoutHistoryCalendar extends StatefulWidget {
-  const WorkoutHistoryCalendar({this.startDate, super.key});
-
-  final DateTime? startDate;
+  const WorkoutHistoryCalendar({super.key});
 
   @override
   State<WorkoutHistoryCalendar> createState() => _WorkoutHistoryCalendarState();
 }
 
-enum CalendarDayState { completed, verified, missed, rest, future }
+enum CalendarDayState { completed, verified, missed, rest, future, inactive }
 
 class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   final GlobalKey _calendarCardKey = GlobalKey();
@@ -54,8 +52,10 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     return null;
   }
 
+  DateTime? _calendarStartDate;
+
   DateTime get _firstWorkoutDate {
-    return widget.startDate ?? DateTime.now().subtract(const Duration(days: 30));
+    return _calendarStartDate ?? DateTime.now();
   }
 
   Future<void> _loadFallbackPlanInfo() async {
@@ -250,8 +250,9 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       final dateOnly = DateTime(date.year, date.month, date.day);
       final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
 
-      if (dateOnly.isBefore(startDateOnly) ||
-          dateOnly.isAfter(todayOnly) ||
+      if (dateOnly.isBefore(startDateOnly)) {
+        _dayStates[dateKey] = CalendarDayState.inactive;
+      } else if (dateOnly.isAfter(todayOnly) ||
           dateOnly.isAtSameMomentAs(todayOnly)) {
         _dayStates[dateKey] = CalendarDayState.future;
       } else {
@@ -294,6 +295,11 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           });
         },
         (data) {
+          final String? apiStartDateStr = data['calendar_start_date'] as String?;
+          if (apiStartDateStr != null) {
+            _calendarStartDate = DateTime.tryParse(apiStartDateStr);
+          }
+
           final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
           final today = DateTime.now();
           final todayOnly = DateTime(today.year, today.month, today.day);
@@ -329,14 +335,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 }
 
                 CalendarDayState state;
-                if (isCompleted) {
+                if (dateOnly.isBefore(startDateOnly)) {
+                  state = CalendarDayState.inactive;
+                } else if (dateOnly.isAfter(todayOnly) ||
+                    dateOnly.isAtSameMomentAs(todayOnly)) {
+                  state = CalendarDayState.future;
+                } else if (isCompleted) {
                   state = isVerified ? CalendarDayState.verified : CalendarDayState.completed;
                 } else if (isRestDay) {
                   state = CalendarDayState.rest;
-                } else if (dateOnly.isBefore(startDateOnly) ||
-                    dateOnly.isAfter(todayOnly) ||
-                    dateOnly.isAtSameMomentAs(todayOnly)) {
-                  state = CalendarDayState.future;
                 } else {
                   state = CalendarDayState.missed;
                 }
@@ -384,10 +391,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     int completedCount = 0;
     int missedCount = 0;
     int restCount = 0;
+    int eligibleDaysCount = 0;
+    int restDaysCountInPeriod = 0;
 
     final year = _focusedDay.year;
     final month = _focusedDay.month;
     final daysInMonth = DateTime(year, month + 1, 0).day;
+
+    final startDate = _firstWorkoutDate;
+    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
 
     // Count up to today for the current month, full month for past months
     final lastCountDate = (year == today.year && month == today.month)
@@ -396,9 +408,11 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
-      final dateKey = DateFormat('yyyy-MM-dd').format(date);
+      final dateOnly = DateTime(date.year, date.month, date.day);
+      final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
       final state =
           _dayStates[dateKey] ?? CalendarDayState.future;
+
       if (state == CalendarDayState.completed || state == CalendarDayState.verified) {
         completedCount++;
       } else if (state == CalendarDayState.missed) {
@@ -406,11 +420,17 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       } else if (state == CalendarDayState.rest) {
         restCount++;
       }
+
+      if (day <= lastCountDate && !dateOnly.isBefore(startDateOnly)) {
+        eligibleDaysCount++;
+        if (state == CalendarDayState.rest) {
+          restDaysCountInPeriod++;
+        }
+      }
     }
 
-    // Total non-rest days up to today (or full month for past months)
-    final totalNonRestDays = lastCountDate - restCount;
-    final double percent = totalNonRestDays > 0 ? (completedCount / totalNonRestDays).clamp(0.0, 1.0) : 0.0;
+    final totalTrackableDays = eligibleDaysCount - restDaysCountInPeriod;
+    final double percent = totalTrackableDays > 0 ? (completedCount / totalTrackableDays).clamp(0.0, 1.0) : 0.0;
     final int percentInt = (percent * 100).round();
 
     return SingleChildScrollView(
@@ -613,6 +633,12 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                       final todayMidnight = DateTime(today.year, today.month, today.day);
                       final selectedMidnight = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
                       if (selectedMidnight.isAfter(todayMidnight)) {
+                        return;
+                      }
+
+                      final startDate = _firstWorkoutDate;
+                      final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
+                      if (selectedMidnight.isBefore(startDateOnly)) {
                         return;
                       }
 
@@ -834,6 +860,13 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
   void _handleDayDoubleTap(DateTime day) {
     if (_isEditing) return;
 
+    final dateOnly = DateTime(day.year, day.month, day.day);
+    final startDate = _firstWorkoutDate;
+    final startDateOnly = DateTime(startDate.year, startDate.month, startDate.day);
+    if (dateOnly.isBefore(startDateOnly)) {
+      return;
+    }
+
     final dateKey = DateFormat('yyyy-MM-dd').format(day);
     final workoutId = _dayWorkoutIds[dateKey];
 
@@ -948,7 +981,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     final isRest = state == CalendarDayState.rest;
     // Dates from startDate onwards (including today & future) → black text
     // Dates strictly before startDate (user never had the app) → grey text
-    final isBeforeStart = dateOnly.isBefore(startDateOnly);
+    final isBeforeStart = state == CalendarDayState.inactive;
     final dayTextColor = isRest
         ? const Color.fromRGBO(95, 122, 197, 1)
         : isBeforeStart

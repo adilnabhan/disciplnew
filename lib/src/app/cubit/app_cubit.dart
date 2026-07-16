@@ -125,6 +125,7 @@ class AppCubit extends HydratedCubit<AppState> {
   // ---------------- USER ----------------
 
   void addUser(LoginSuccessModel user) {
+    print('DEBUG LOG: Login success. User ID: ${user.customer?.id}, Access Token: ${user.access}');
     LocalStorageService().saveUser(user);
     emit(state.copyWith(currentUser: user));
   }
@@ -140,6 +141,7 @@ class AppCubit extends HydratedCubit<AppState> {
   }
 
   void removeUser() {
+    print('DEBUG LOG: removeUser() called.');
     LocalStorageService().clearUser();
     emit(state.copyWith(currentUser: null));
   }
@@ -241,16 +243,15 @@ class AppCubit extends HydratedCubit<AppState> {
       }
     }
 
+    if (currentUser != null) {
+      print('DEBUG LOG: Tokens restored on app startup. Access: ${currentUser.access}, Refresh: ${currentUser.refresh}');
+    }
+
     return AppState(
       themeMode:
           json['theme_mode'] == 'dark' ? ThemeMode.dark : ThemeMode.light,
       locale: Locale(json['language_code'] as String),
-      currentUser:
-          json['currentUser'] != null
-              ? LoginSuccessModel.fromJson(
-                json['currentUser'] as Map<String, dynamic>,
-              )
-              : null,
+      currentUser: currentUser,
     );
   }
 
@@ -324,6 +325,8 @@ class AppCubit extends HydratedCubit<AppState> {
             emit(state.copyWith(currentUser: null));
             return;
           }
+
+          print('DEBUG LOG: Token refresh success. Access Token: $access');
 
           // ✅ Update tokens
           print('✅ AppCubit: Updating user with new tokens.');

@@ -1,5 +1,7 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:intl/intl.dart';
+import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
+import 'pages/fitness_details_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -103,6 +105,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         )
                                         .center,
                                 (customerDetails) {
+                                  debugPrint(
+                                    "DEBUG: assignedTrainer = ${customerDetails.assignedTrainer}",
+                                  );
+                                  debugPrint(
+                                    "DEBUG: assignedFitnessCenter = ${customerDetails.assignedFitnessCenter}",
+                                  );
+                                  debugPrint(
+                                    "DEBUG: trainerNotes = ${customerDetails.trainerNotes}",
+                                  );
                                   return RefreshIndicator(
                                     onRefresh: _fetch,
                                     child: ListView(
@@ -131,13 +142,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                       Navigator.push(
                                                         context,
                                                         MaterialPageRoute<void>(
-                                                          builder: (_) => BlocProvider.value(
-                                                            value: _cubit,
-                                                            child: ProfileDetailsScreen(
-                                                              customerDetailsModel:
-                                                                  customerDetails,
-                                                            ),
-                                                          ),
+                                                          builder:
+                                                              (
+                                                                _,
+                                                              ) => BlocProvider.value(
+                                                                value: _cubit,
+                                                                child: ProfileDetailsScreen(
+                                                                  customerDetailsModel:
+                                                                      customerDetails,
+                                                                ),
+                                                              ),
                                                         ),
                                                       ).then((_) {
                                                         _fetch();
@@ -156,22 +170,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   const SizedBox(width: 20),
                                                   Expanded(
                                                     child: Padding(
-                                                      padding: const EdgeInsets.all(8),
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            8,
+                                                          ),
                                                       child: Column(
                                                         crossAxisAlignment:
                                                             CrossAxisAlignment
                                                                 .start,
                                                         children: [
                                                           Text(
-                                                            customerDetails.fullName ??
-                                                                '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'.trim(),
+                                                            customerDetails
+                                                                    .fullName ??
+                                                                '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'
+                                                                    .trim(),
                                                             style:
                                                                 AppStyles
                                                                     .text16Px
                                                                     .poppins
                                                                     .w600,
                                                           ),
-                                                          const SizedBox(height: 8),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
                                                           if (customerDetails
                                                                   .mobileNumber !=
                                                               null)
@@ -189,7 +210,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                                   ),
                                                             ),
                                                           Text(
-                                                            customerDetails.email ??
+                                                            customerDetails
+                                                                    .email ??
                                                                 '-',
                                                             style: AppStyles
                                                                 .text14Px
@@ -204,30 +226,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           const SizedBox(
                                                             height: 14,
                                                           ),
-                                                          Row(
+                                                          Wrap(
+                                                            spacing: 8,
+                                                            runSpacing: 6,
+                                                            crossAxisAlignment:
+                                                                WrapCrossAlignment
+                                                                    .center,
                                                             children: [
                                                               Container(
                                                                 padding:
                                                                     const EdgeInsets.symmetric(
-                                                                      horizontal: 10,
-                                                                      vertical: 4,
+                                                                      horizontal:
+                                                                          10,
+                                                                      vertical:
+                                                                          4,
                                                                     ),
                                                                 decoration: BoxDecoration(
-                                                                  color: const Color(0xFFEBFBEE),
+                                                                  color: const Color(
+                                                                    0xFFEBFBEE,
+                                                                  ),
                                                                   borderRadius:
                                                                       BorderRadius.circular(
                                                                         16,
                                                                       ),
                                                                 ),
                                                                 child: Row(
-                                                                  mainAxisSize: MainAxisSize.min,
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
                                                                   children: [
                                                                     const Icon(
-                                                                      Icons.circle,
+                                                                      Icons
+                                                                          .circle,
                                                                       size: 8,
-                                                                      color: Color(0xFF40C057),
+                                                                      color: Color(
+                                                                        0xFF40C057,
+                                                                      ),
                                                                     ),
-                                                                    const SizedBox(width: 6),
+                                                                    const SizedBox(
+                                                                      width: 6,
+                                                                    ),
                                                                     Text(
                                                                       'Active',
                                                                       style: AppStyles
@@ -235,24 +273,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                                           .poppins
                                                                           .w600
                                                                           .copyWith(
-                                                                            color: const Color(0xFF2B8A3E),
+                                                                            color: const Color(
+                                                                              0xFF2B8A3E,
+                                                                            ),
                                                                           ),
                                                                     ),
                                                                   ],
                                                                 ),
                                                               ),
                                                               if (customerDetails
-                                                                      .gender !=
-                                                                  null &&
+                                                                          .gender !=
+                                                                      null &&
                                                                   customerDetails
                                                                       .gender!
-                                                                      .isNotEmpty) ...[
-                                                                const SizedBox(width: 8),
+                                                                      .isNotEmpty)
                                                                 Container(
                                                                   padding:
                                                                       const EdgeInsets.symmetric(
-                                                                        horizontal: 12,
-                                                                        vertical: 4,
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            4,
                                                                       ),
                                                                   decoration: BoxDecoration(
                                                                     color:
@@ -271,24 +312,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                                         .w500
                                                                         .copyWith(
                                                                           color:
-                                                                              AppColors
-                                                                                  .textDark,
+                                                                              AppColors.textDark,
                                                                         ),
                                                                   ),
                                                                 ),
-                                                              ],
                                                               if (customerDetails
-                                                                      .bloodGroup !=
-                                                                  null &&
+                                                                          .bloodGroup !=
+                                                                      null &&
                                                                   customerDetails
                                                                       .bloodGroup!
-                                                                      .isNotEmpty) ...[
-                                                                const SizedBox(width: 8),
+                                                                      .isNotEmpty &&
+                                                                  customerDetails
+                                                                          .bloodGroup!
+                                                                          .toLowerCase() !=
+                                                                      'unknown')
                                                                 Container(
                                                                   padding:
                                                                       const EdgeInsets.symmetric(
-                                                                        horizontal: 12,
-                                                                        vertical: 4,
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            4,
                                                                       ),
                                                                   decoration: BoxDecoration(
                                                                     color:
@@ -308,12 +352,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                                         .w500
                                                                         .copyWith(
                                                                           color:
-                                                                              AppColors
-                                                                                  .textDark,
+                                                                              AppColors.textDark,
                                                                         ),
                                                                   ),
                                                                 ),
-                                                              ],
                                                             ],
                                                           ),
                                                         ],
@@ -330,12 +372,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                     Navigator.push(
                                                       context,
                                                       MaterialPageRoute<void>(
-                                                        builder: (_) => BlocProvider.value(
-                                                          value: _cubit,
-                                                          child: ProfileDetailsScreen(
-                                                            customerDetailsModel: customerDetails,
-                                                          ),
-                                                        ),
+                                                        builder:
+                                                            (
+                                                              _,
+                                                            ) => BlocProvider.value(
+                                                              value: _cubit,
+                                                              child: ProfileDetailsScreen(
+                                                                customerDetailsModel:
+                                                                    customerDetails,
+                                                              ),
+                                                            ),
                                                       ),
                                                     ).then((_) {
                                                       _fetch();
@@ -344,10 +390,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                   child: Container(
                                                     width: 30,
                                                     height: 30,
-                                                    decoration: const BoxDecoration(
-                                                      color: Color(0xFFF1F3F5),
-                                                      shape: BoxShape.circle,
-                                                    ),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: Color(
+                                                            0xFFF1F3F5,
+                                                          ),
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
                                                     child: const Icon(
                                                       Icons.edit,
                                                       size: 14,
@@ -365,7 +415,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             customerDetails
                                                 .targetGoal!
                                                 .isNotEmpty) ...[
-                                          Wrap(
+                                          Text(
+                                             'Target Goals',
+                                             style: AppStyles.text16Px.poppins.w600.copyWith(
+                                               color: AppColors.textDark,
+                                             ),
+                                           ),
+                                           const SizedBox(height: 10),
+                                           Wrap(
                                             spacing: 8,
                                             runSpacing: 8,
                                             children:
@@ -742,7 +799,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
             children: [
               _buildDetailRow('Age', age > 0 ? '$age' : '-'),
               const SizedBox(height: 14),
-              _buildDetailRow('Blood Group', customerDetails.bloodGroup ?? '-'),
+              _buildDetailRow(
+                'Blood Group',
+                (customerDetails.bloodGroup == null ||
+                        customerDetails.bloodGroup!.toLowerCase() == 'unknown')
+                    ? '-'
+                    : customerDetails.bloodGroup!,
+              ),
               const SizedBox(height: 14),
               _buildDetailRow('Health Issues', healthIssues),
               const SizedBox(height: 14),
@@ -915,6 +978,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return d.toStringAsFixed(1);
   }
 
+  String _formatHeight(String? val) {
+    if (val == null || val.isEmpty) return '-';
+    final d = double.tryParse(val);
+    if (d == null) return val;
+    return '${d.toStringAsFixed(2)} CM';
+  }
+
+  String _formatWeight(String? val) {
+    if (val == null || val.isEmpty) return '-';
+    final d = double.tryParse(val);
+    if (d == null) return val;
+    if (d == d.toInt().toDouble()) {
+      return '${d.toInt()} KG';
+    }
+    return '${d.toStringAsFixed(1)} KG';
+  }
+
+  String formatWithCommas(num value) {
+    final str = value.toStringAsFixed(0);
+    return str.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
   Widget _buildFitnessAnalyticsCard(CustomerDetailsModel customerDetails) {
     int age = 0;
     if (customerDetails.dateOfBirth != null) {
@@ -923,7 +1011,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     double? bmi;
     double? bmr;
-    String bmiCategory = '';
+    String bmiCategory = '-';
+    Color categoryColor = Colors.grey;
 
     final heightVal = double.tryParse(customerDetails.height ?? '');
     final weightVal = double.tryParse(customerDetails.weight ?? '');
@@ -933,13 +1022,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bmi = weightVal / (heightInMeters * heightInMeters);
 
       if (bmi < 18.5) {
-        bmiCategory = ' (Underweight)';
+        bmiCategory = 'Underweight';
+        categoryColor = Colors.orange;
       } else if (bmi < 25.0) {
-        bmiCategory = ' (Normal)';
+        bmiCategory = 'Normal';
+        categoryColor = const Color(0xFF40C057);
       } else if (bmi < 30.0) {
-        bmiCategory = ' (Overweight)';
+        bmiCategory = 'Overweight';
+        categoryColor = Colors.orange.shade700;
       } else {
-        bmiCategory = ' (Obese)';
+        bmiCategory = 'Obese';
+        categoryColor = Colors.red;
       }
 
       final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
@@ -960,113 +1053,349 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     }
 
-    final formattedHeight = _formatDoubleString(customerDetails.height);
-    final formattedWeight = _formatDoubleString(customerDetails.weight);
-    final formattedBf = _formatDynamicValue(customerDetails.bfPercentage);
+    // Fallbacks from model if calculation didn't run but model has it
+    if (bmi == null && customerDetails.bmi != null) {
+      bmi = double.tryParse(customerDetails.bmi.toString());
+      if (bmi != null) {
+        if (bmi < 18.5) {
+          bmiCategory = 'Underweight';
+          categoryColor = Colors.orange;
+        } else if (bmi < 25.0) {
+          bmiCategory = 'Normal';
+          categoryColor = const Color(0xFF40C057);
+        } else if (bmi < 30.0) {
+          bmiCategory = 'Overweight';
+          categoryColor = Colors.orange.shade700;
+        } else {
+          bmiCategory = 'Obese';
+          categoryColor = Colors.red;
+        }
+      }
+    }
+    if (bmr == null && customerDetails.bmr != null) {
+      bmr = double.tryParse(customerDetails.bmr.toString());
+    }
 
-    final heightStr = formattedHeight.isNotEmpty ? '$formattedHeight cm' : '-';
-    final weightStr = formattedWeight.isNotEmpty ? '$formattedWeight kg' : '-';
-    final bfStr = formattedBf.isNotEmpty ? '$formattedBf%' : '-';
-    final bmiStr = bmi != null ? '${bmi.toStringAsFixed(1)}$bmiCategory' : '-';
-    final bmrStr = bmr != null ? '${bmr.toStringAsFixed(0)} kcal' : '-';
+    final bmiStr = bmi != null ? bmi.toStringAsFixed(1) : '-';
+    final bmrStr = bmr != null ? formatWithCommas(bmr) : '-';
+
+    final heightStr = _formatHeight(customerDetails.height);
+    final weightStr = _formatWeight(customerDetails.weight);
+
+    String updatedDateStr = '-';
+    if (customerDetails.modified != null) {
+      updatedDateStr = DateFormat(
+        'dd MMM yyyy',
+      ).format(customerDetails.modified!.toLocal());
+    }
+
+    final void Function() onUpdateTap = () {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder:
+              (_) => BlocProvider.value(
+                value: _cubit,
+                child: FitnessDetailsScreen(
+                  customerDetailsModel: customerDetails,
+                  editBodyMetricsOnly: true,
+                ),
+              ),
+        ),
+      ).then((_) {
+        _cubit.fetchCustomerDetails();
+      });
+    };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 12),
         Text(
-          'Fitness Analytics',
+          'Health Matrix',
           style: AppStyles.text16Px.poppins.w600.copyWith(
             color: AppColors.textDark,
           ),
         ),
         const SizedBox(height: 10),
-        InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder:
-                    (_) => BlocProvider.value(
-                      value: _cubit,
-                      child: FitnessDetailsScreen(
-                        customerDetailsModel: customerDetails,
-                        editBodyMetricsOnly: true,
-                      ),
-                    ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ).then((_) {
-              _cubit.fetchCustomerDetails();
-            });
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Body Metrix',
-                        style: AppStyles.text15Px.poppins.w600.copyWith(
-                          color: AppColors.textDark,
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        // BMI
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'BMI',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF868E96),
+                                ),
+                              ),
+                              Text(
+                                bmiStr,
+                                style: AppStyles.text20Px.poppins.w700.copyWith(
+                                  fontSize: 20,
+                                  color: const Color(0xFF212529),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (bmi != null) ...[
+                                    Icon(
+                                      Icons.circle,
+                                      color: categoryColor,
+                                      size: 7,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    bmiCategory,
+                                    style: AppStyles.text12Px.poppins.w500
+                                        .copyWith(
+                                          color: const Color(0xFF212529),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Middle divider and Heart Badge
+                        Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              top: -25,
+                              bottom: -25,
+                              child: Container(
+                                width: 1.5,
+                                color: const Color(0xFFD9D9D9),
+                              ),
+                            ),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFFD9D9D9),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Center(
+                                child: SvgPicture.asset(
+                                  'assets/images/svg/icons/heart_icon.svg',
+                                  width: 14,
+                                  height: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // BMR
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'BMR',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF868E96),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                bmrStr,
+                                style: AppStyles.text20Px.poppins.w700.copyWith(
+                                  fontSize: 20,
+                                  color: const Color(0xFF212529),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'kcal/day',
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  color: const Color(0xFF868E96),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Inner metrics container
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFE9ECEF),
+                          width: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          // Height
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
                               children: [
-                                _buildMetricItem('Height', heightStr),
-                                const SizedBox(height: 6),
-                                _buildMetricItem('Weight', weightStr),
+                                const Icon(
+                                  Icons.height,
+                                  color: Color(0xFFFA5252),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Height',
+                                  style: AppStyles.text13Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  heightStr,
+                                  style: AppStyles.text13Px.poppins.w600
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
                               ],
                             ),
                           ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          const Divider(
+                            height: 10,
+                            thickness: 1,
+                            color: Color(0xFFF1F3F5),
+                          ),
+                          // Weight
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
                               children: [
-                                _buildMetricItem('BMI', bmiStr),
-                                const SizedBox(height: 6),
-                                _buildMetricItem('BMR', bmrStr),
+                                const Icon(
+                                  Icons.monitor_weight_outlined,
+                                  color: Color(0xFFFA5252),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Weight',
+                                  style: AppStyles.text13Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  weightStr,
+                                  style: AppStyles.text13Px.poppins.w600
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(
+                            height: 10,
+                            thickness: 1,
+                            color: Color(0xFFF1F3F5),
+                          ),
+                          // Last Updated
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.history,
+                                  color: Color(0xFF868E96),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Last Updated',
+                                  style: AppStyles.text13Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: onUpdateTap,
+                                  child: RichText(
+                                    text: TextSpan(
+                                      style: AppStyles.text13Px.poppins.w500
+                                          .copyWith(
+                                            color: const Color(0xFF212529),
+                                          ),
+                                      children: [
+                                        TextSpan(text: '$updatedDateStr '),
+                                        TextSpan(
+                                          text: 'Update',
+                                          style: TextStyle(
+                                            color: AppColors.primary,
+                                            decoration:
+                                                TextDecoration.underline,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: GestureDetector(
+                  onTap: onUpdateTap,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F3F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFF495057),
+                      size: 16,
+                    ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey.shade100,
-                  ),
-                  child: const Icon(
-                    Icons.chevron_right,
-                    color: Colors.grey,
-                    size: 20,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],

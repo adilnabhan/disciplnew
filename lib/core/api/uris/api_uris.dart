@@ -65,6 +65,9 @@ final class ApiUris {
   static String fitnessCenterReviews(int id) =>
       '${_v1}fitnesscenter/organization/$id/reviews/';
 
+  static String trainerReviews(int trainerId) =>
+      '${_v1}trainer/trainers/$trainerId/reviews/';
+
   ///============================= Workout =============================\\\
   static final exercises = '${_v1}customer/exercises/';
   static final exerciseDetail = '${_v1}customer/exercises/detail/';

@@ -75,6 +75,7 @@ class LocalStorageService {
   Future<void> saveUser(LoginSuccessModel user) async {
     try {
       await _box.put(_userKey, jsonEncode(user.toJson()));
+      print('DEBUG LOG: Tokens written to LocalStorageService. Access: ${user.access}, Refresh: ${user.refresh}');
       print('💾 User data saved securely');
     } catch (e) {
       print('❌ Error saving user to Hive: $e');

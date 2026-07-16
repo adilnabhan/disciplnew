@@ -879,7 +879,13 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                           const SizedBox(height: 16),
                           _buildProfileDetailRow('Weight', customer.weight ?? 'N/A'),
                           const SizedBox(height: 16),
-                          _buildProfileDetailRow('Blood Group', customer.bloodGroup ?? 'N/A'),
+                          _buildProfileDetailRow(
+                            'Blood Group',
+                            (customer.bloodGroup == null ||
+                                    customer.bloodGroup!.toLowerCase() == 'unknown')
+                                ? 'N/A'
+                                : customer.bloodGroup!,
+                          ),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow('Health Issues', healthIssues),
                           const SizedBox(height: 16),

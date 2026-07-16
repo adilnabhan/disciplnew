@@ -159,7 +159,10 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           label: 'Blood Group',
           requiredLabel: true,
           controller: TextEditingController(
-            text: widget.customerDetailsModel.bloodGroup,
+            text: (widget.customerDetailsModel.bloodGroup == null ||
+                    widget.customerDetailsModel.bloodGroup!.toLowerCase() == 'unknown')
+                ? ''
+                : widget.customerDetailsModel.bloodGroup,
           ),
           focusNode: FocusNode(),
           items: [
@@ -203,11 +206,21 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
   }
 
   void _pickDateOfBirth() async {
+    final first = DateTime(1900);
+    final last = DateTime.now();
+    DateTime initial = _selectedDateOfBirth ?? DateTime(2000);
+    if (initial.isAfter(last)) {
+      initial = last;
+    }
+    if (initial.isBefore(first)) {
+      initial = first;
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDateOfBirth ?? DateTime(2000),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
     );
     if (picked != null && picked != _selectedDateOfBirth) {
       setState(() {
@@ -578,11 +591,21 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           builder: (context, state) {
             return Container(
               color: widget.editBodyMetricsOnly ? const Color(0xFFF5F5F7) : null,
-              child: Button.filled(
-                title: 'Update',
-                ontap: _onUpdate,
-                isLoading: state.updateProfileDetails?.isNone() ?? false,
-              ).pad(16),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: 24,
+                  ),
+                  child: Button.filled(
+                    title: 'Update',
+                    ontap: _onUpdate,
+                    isLoading: state.updateProfileDetails?.isNone() ?? false,
+                  ),
+                ),
+              ),
             );
           },
         ),

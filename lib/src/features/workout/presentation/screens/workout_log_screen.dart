@@ -133,13 +133,13 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final enrichedList = <Map<String, dynamic>>[];
         for (final item in list) {
           final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
-          
+
           final isCompleted =
               ((map['is_completed'] as bool?) ?? false) ||
               (map['status']?.toString().toLowerCase() == 'completed');
           final trainerName = map['trainer_name']?.toString() ?? '';
           final isMentorGiven = trainerName.isNotEmpty;
-          
+
           // Skip user's own/preset workouts that are not completed (drafts / in-progress)
           if (!isMentorGiven && !isCompleted) {
             continue;
@@ -197,8 +197,12 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               final cmp = bStart.compareTo(aStart);
               if (cmp != 0) return cmp;
             }
-            final aId = int.tryParse((a['session_id'] ?? a['id'] ?? '').toString()) ?? 0;
-            final bId = int.tryParse((b['session_id'] ?? b['id'] ?? '').toString()) ?? 0;
+            final aId =
+                int.tryParse((a['session_id'] ?? a['id'] ?? '').toString()) ??
+                0;
+            final bId =
+                int.tryParse((b['session_id'] ?? b['id'] ?? '').toString()) ??
+                0;
             return bId.compareTo(aId);
           }
 
@@ -286,6 +290,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   void _changeMonth(int delta) {
     final today = DateTime.now();
+
+    if (delta > 0) {
+      setState(() {
+        _selectedDate = today;
+      });
+      _centerSelectedDate();
+      _loadWorkoutLogForSelectedDate();
+      return;
+    }
+
     final targetDate = DateTime(
       _selectedDate.year,
       _selectedDate.month + delta,
@@ -596,6 +610,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   (context) => WorkoutDetailsScreen(
                     sessionId: autoSessionId,
                     fallbackTitle: 'Workout',
+                    onRefresh: _loadWorkoutLogForSelectedDate,
                   ),
             ),
           ).then((refresh) {
@@ -712,7 +727,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
                 );
                 if (sessionId != null) {
-                  final isMentor = workoutItem['trainer_name']?.toString().isNotEmpty ?? false;
+                  final isMentor =
+                      workoutItem['trainer_name']?.toString().isNotEmpty ??
+                      false;
                   final refresh = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<dynamic>(
@@ -721,12 +738,15 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                           return WorkoutPreviewScreen(
                             sessionId: sessionId,
                             fallbackTitle: title,
-                            trainerName: workoutItem['trainer_name']?.toString(),
+                            trainerName:
+                                workoutItem['trainer_name']?.toString(),
+                            onRefresh: _loadWorkoutLogForSelectedDate,
                           );
                         } else {
                           return WorkoutDetailsScreen(
                             sessionId: sessionId,
                             fallbackTitle: title,
+                            onRefresh: _loadWorkoutLogForSelectedDate,
                           );
                         }
                       },
@@ -1075,7 +1095,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     if (data == null) return;
 
     // Parse active draft title
-    final title = data['plan_name']?.toString() ??
+    final title =
+        data['plan_name']?.toString() ??
         data['plan_day_title']?.toString() ??
         data['title']?.toString() ??
         data['name']?.toString() ??
@@ -1104,7 +1125,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     // Parse completion status (exercise logs)
     int completedSets = 0;
     int totalSets = 0;
-    final rawLogs = data['logs'] ?? data['exercises'] ?? data['session_exercises'] ?? data['results'];
+    final rawLogs =
+        data['logs'] ??
+        data['exercises'] ??
+        data['session_exercises'] ??
+        data['results'];
     if (rawLogs is List) {
       for (final log in rawLogs) {
         if (log is Map<String, dynamic>) {
@@ -1133,7 +1158,12 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
           ),
-          contentPadding: const EdgeInsets.only(top: 24, left: 20, right: 20, bottom: 16),
+          contentPadding: const EdgeInsets.only(
+            top: 24,
+            left: 20,
+            right: 20,
+            bottom: 16,
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -1147,10 +1177,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
-                child: const Text(
-                  '🏋️',
-                  style: TextStyle(fontSize: 28),
-                ),
+                child: const Text('🏋️', style: TextStyle(fontSize: 28)),
               ),
               const SizedBox(height: 16),
               // Title
@@ -1172,7 +1199,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Starting a new workout won\'t delete your current draft. You can resume it anytime from Workout Log.',
+                'Starting a new workout will automatically delete your current draft. This action cannot be undone.',
                 textAlign: TextAlign.center,
                 style: AppStyles.text12Px.poppins.w400.copyWith(
                   color: Colors.grey[500],
@@ -1183,7 +1210,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               // Current Draft card
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8F9FA),
                   borderRadius: BorderRadius.circular(16),
@@ -1202,10 +1232,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Text(
-                          '💪',
-                          style: TextStyle(fontSize: 16),
-                        ),
+                        const Text('💪', style: TextStyle(fontSize: 16)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -1244,7 +1271,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   final finished = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<void>(
-                      builder: (context) => const OwnWorkoutScreen(isNewSession: false),
+                      builder:
+                          (context) =>
+                              const OwnWorkoutScreen(isNewSession: false),
                     ),
                   );
                   await _loadMyPlans();
@@ -1281,9 +1310,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   final finished = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<void>(
-                      builder: (context) => isPreset
-                          ? const PresetsScreen()
-                          : const OwnWorkoutScreen(isNewSession: true),
+                      builder:
+                          (context) =>
+                              isPreset
+                                  ? const PresetsScreen()
+                                  : const OwnWorkoutScreen(isNewSession: true),
                     ),
                   );
                   await _loadMyPlans();
@@ -1619,9 +1650,10 @@ class _WorkoutCard extends StatelessWidget {
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: isCompleted
-                                ? MainAxisAlignment.start
-                                : MainAxisAlignment.center,
+                            mainAxisAlignment:
+                                isCompleted
+                                    ? MainAxisAlignment.start
+                                    : MainAxisAlignment.center,
                             children: [
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1683,7 +1715,8 @@ class _WorkoutCard extends StatelessWidget {
                                         Row(
                                           children: [
                                             if (trainerProfileImage != null &&
-                                                trainerProfileImage!.isNotEmpty) ...[
+                                                trainerProfileImage!
+                                                    .isNotEmpty) ...[
                                               ClipRRect(
                                                 borderRadius:
                                                     BorderRadius.circular(10),
@@ -1703,14 +1736,14 @@ class _WorkoutCard extends StatelessWidget {
                                             ],
                                             Expanded(
                                               child: Text(
-                                                trainerName!,
+                                                '$trainerName',
                                                 maxLines: 1,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: const TextStyle(
                                                   fontFamily: 'Poppins',
                                                   fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
                                                   color: Color(0xFF222222),
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                             ),
@@ -1913,23 +1946,24 @@ class _WorkoutCard extends StatelessWidget {
           Positioned(
             top: -7.0,
             right: -5.35,
-            child: (trainerName == null || trainerName!.isEmpty)
-                ? SvgPicture.asset(
-                    'assets/images/svg/icons/user_completed_tick.svg',
-                    width: 28,
-                    height: 27,
-                  )
-                : isVerified
+            child:
+                (trainerName == null || trainerName!.isEmpty)
                     ? SvgPicture.asset(
-                        'assets/images/svg/icons/trainer_verified_tick.svg',
-                        width: 28,
-                        height: 27,
-                      )
+                      'assets/images/svg/icons/user_completed_tick.svg',
+                      width: 28,
+                      height: 27,
+                    )
+                    : isVerified
+                    ? SvgPicture.asset(
+                      'assets/images/svg/icons/trainer_verified_tick.svg',
+                      width: 28,
+                      height: 27,
+                    )
                     : SvgPicture.asset(
-                        'assets/images/svg/icons/not_verified_tick.svg',
-                        width: 28,
-                        height: 27,
-                      ),
+                      'assets/images/svg/icons/not_verified_tick.svg',
+                      width: 28,
+                      height: 27,
+                    ),
           ),
         if (isMembershipExpired)
           Positioned(
