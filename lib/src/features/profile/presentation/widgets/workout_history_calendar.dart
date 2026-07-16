@@ -428,18 +428,10 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     int completedCount = 0;
     int missedCount = 0;
     int restCount = 0;
-    int eligibleDaysCount = 0;
 
     final year = _focusedDay.year;
     final month = _focusedDay.month;
     final daysInMonth = DateTime(year, month + 1, 0).day;
-
-    final startDate = _firstWorkoutDate;
-    final startDateOnly = DateTime(
-      startDate.year,
-      startDate.month,
-      startDate.day,
-    );
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
@@ -455,25 +447,10 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       } else if (state == CalendarDayState.rest) {
         restCount++;
       }
-
-      final isBeforeStart = dateOnly.isBefore(startDateOnly);
-      final isFuture = dateOnly.isAfter(
-        DateTime(today.year, today.month, today.day),
-      );
-      final isRest =
-          _isEditing
-              ? _selectedRestDays.contains(dateKey)
-              : (_isRestDayMap[dateKey] == true);
-
-      if (!isBeforeStart && !isFuture && !isRest) {
-        eligibleDaysCount++;
-      }
     }
 
     final double percent =
-        eligibleDaysCount > 0
-            ? (completedCount / eligibleDaysCount).clamp(0.0, 1.0)
-            : 0.0;
+        daysInMonth > 0 ? (completedCount / daysInMonth).clamp(0.0, 1.0) : 0.0;
     final int percentInt = (percent * 100).round();
 
     return SingleChildScrollView(
