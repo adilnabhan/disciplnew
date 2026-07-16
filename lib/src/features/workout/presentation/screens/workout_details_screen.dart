@@ -467,14 +467,16 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             _syncTimer(_sessionData!);
           }
           final status = _sessionData!['status']?.toString().toUpperCase() ?? 'COMPLETED';
-          return Scaffold(
+          final showBack = !(widget.startTimer && status != 'COMPLETED');
+          final scaffold = Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
             appBar: AppBar(
               backgroundColor: Colors.white,
               elevation: 0,
               centerTitle: false,
-              leadingWidth: 56,
-              leading: Padding(
+              automaticallyImplyLeading: showBack,
+              leadingWidth: showBack ? 56 : 0,
+              leading: showBack ? Padding(
                 padding: const EdgeInsets.only(left: 16),
                 child: Center(
                   child: GestureDetector(
@@ -494,7 +496,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                   ),
                 ),
-              ),
+              ) : null,
               title: Text(
                 'Workout Details',
                 style: AppStyles.text18Px.poppins.w600.copyWith(
@@ -505,6 +507,14 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             body: _buildContent(_sessionData!),
             bottomNavigationBar: status != 'COMPLETED' ? _buildFinishButton() : null,
           );
+
+          if (!showBack) {
+            return PopScope(
+              canPop: false,
+              child: scaffold,
+            );
+          }
+          return scaffold;
         }
 
         return result!.fold(
@@ -551,14 +561,16 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               _syncTimer(data);
             }
             final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
-            return Scaffold(
+            final showBack = !(widget.startTimer && status != 'COMPLETED');
+            final scaffold = Scaffold(
               backgroundColor: const Color(0xFFF8F9FA),
               appBar: AppBar(
                 backgroundColor: Colors.white,
                 elevation: 0,
                 centerTitle: false,
-                leadingWidth: 56,
-                leading: Padding(
+                automaticallyImplyLeading: showBack,
+                leadingWidth: showBack ? 56 : 0,
+                leading: showBack ? Padding(
                   padding: const EdgeInsets.only(left: 16),
                   child: Center(
                     child: GestureDetector(
@@ -578,7 +590,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                       ),
                     ),
                   ),
-                ),
+                ) : null,
                 title: Text(
                   'Workout Details',
                   style: AppStyles.text18Px.poppins.w600.copyWith(
@@ -589,6 +601,14 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               body: _buildContent(data),
               bottomNavigationBar: status != 'COMPLETED' ? _buildFinishButton() : null,
             );
+
+            if (!showBack) {
+              return PopScope(
+                canPop: false,
+                child: scaffold,
+              );
+            }
+            return scaffold;
           },
         );
       },
@@ -1647,6 +1667,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             );
           },
         ),
+
       ),
     );
   }
