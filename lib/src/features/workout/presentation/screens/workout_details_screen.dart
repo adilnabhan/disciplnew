@@ -333,81 +333,265 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEEEEEE),
-                  shape: BoxShape.circle,
+    return FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
+      future: _detailsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            _sessionData == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.chevron_left,
-                  color: Color(0xFF444444),
-                  size: 24,
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
                 ),
               ),
             ),
-          ),
-        ),
-        title: Text(
-          'Workout Details',
-          style: AppStyles.text18Px.poppins.w600.copyWith(
-            color: const Color(0xFF212121),
-          ),
-        ),
-      ),
-      body: FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
-        future: _detailsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              _sessionData == null) {
-            return const Center(
+            body: const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
-            );
-          }
-
-          if (snapshot.hasError && _sessionData == null) {
-            return _buildErrorState('An unexpected error occurred.');
-          }
-
-          final result = snapshot.data;
-          if (result == null && _sessionData == null) {
-            return _buildErrorState('No details found for this session.');
-          }
-
-          if (_sessionData != null) {
-            if (widget.startTimer) {
-              _syncTimer(_sessionData!);
-            }
-            return _buildContent(_sessionData!);
-          }
-
-          return result!.fold(
-            (error) => _buildErrorState('Error loading details: ${error.msg}'),
-            (data) {
-              _sessionData = data;
-              if (widget.startTimer) {
-                _syncTimer(data);
-              }
-              return _buildContent(data);
-            },
+            ),
           );
-        },
-      ),
+        }
+
+        if (snapshot.hasError && _sessionData == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildErrorState('An unexpected error occurred.'),
+          );
+        }
+
+        final result = snapshot.data;
+        if (result == null && _sessionData == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildErrorState('No details found for this session.'),
+          );
+        }
+
+        if (_sessionData != null) {
+          if (widget.startTimer) {
+            _syncTimer(_sessionData!);
+          }
+          final status = _sessionData!['status']?.toString().toUpperCase() ?? 'COMPLETED';
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildContent(_sessionData!),
+            bottomNavigationBar: status != 'COMPLETED' ? _buildFinishButton() : null,
+          );
+        }
+
+        return result!.fold(
+          (error) => Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildErrorState('Error loading details: ${error.msg}'),
+          ),
+          (data) {
+            _sessionData = data;
+            if (widget.startTimer) {
+              _syncTimer(data);
+            }
+            final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
+            return Scaffold(
+              backgroundColor: const Color(0xFFF8F9FA),
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                centerTitle: false,
+                leadingWidth: 56,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEEEEEE),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chevron_left,
+                          color: Color(0xFF444444),
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                title: Text(
+                  'Workout Details',
+                  style: AppStyles.text18Px.poppins.w600.copyWith(
+                    color: const Color(0xFF212121),
+                  ),
+                ),
+              ),
+              body: _buildContent(data),
+              bottomNavigationBar: status != 'COMPLETED' ? _buildFinishButton() : null,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -662,11 +846,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             final log = logs[index] as Map<String, dynamic>;
             return _buildExerciseCard(log, index, isEditable);
           }),
-
-        if (status != 'COMPLETED') ...[
-          const SizedBox(height: 24),
-          _buildFinishButton(),
-        ],
 
         const SizedBox(height: 40),
       ],
@@ -1389,72 +1568,85 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   }
 
   Widget _buildFinishButton() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Button.filled(
-        isLoading: _isFinishing,
-        size: const Size(double.infinity, 48),
-        title: 'Finish Workout',
-        style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
-        icon: const Icon(Icons.check, color: Colors.white, size: 20),
-        raduis: 12,
-        ontap: () async {
-          if (_isFinishing) return;
-          setState(() {
-            _isFinishing = true;
-          });
-          final res = await WorkoutRepository().finishSession(
-            sessionId: widget.sessionId,
-            title: widget.fallbackTitle,
-          );
-          res.fold(
-            (error) {
-              setState(() {
-                _isFinishing = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to finish workout: ${error.msg}'),
-                ),
-              );
-            },
-            (data) {
-              final dateStr = _sessionData?['session_date']?.toString() ??
-                  _sessionData?['started_at']?.toString();
-              if (dateStr != null) {
-                try {
-                  final date = DateTime.parse(dateStr);
-                  WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
-                } catch (_) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
+      child: SafeArea(
+        top: false,
+        child: Button.filled(
+          isLoading: _isFinishing,
+          size: const Size(double.infinity, 48),
+          title: 'Finish Workout',
+          style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
+          icon: const Icon(Icons.check, color: Colors.white, size: 20),
+          raduis: 12,
+          ontap: () async {
+            if (_isFinishing) return;
+            setState(() {
+              _isFinishing = true;
+            });
+            final res = await WorkoutRepository().finishSession(
+              sessionId: widget.sessionId,
+              title: widget.fallbackTitle,
+            );
+            res.fold(
+              (error) {
+                setState(() {
+                  _isFinishing = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to finish workout: ${error.msg}'),
+                  ),
+                );
+              },
+              (data) {
+                final dateStr = _sessionData?['session_date']?.toString() ??
+                    _sessionData?['started_at']?.toString();
+                if (dateStr != null) {
+                  try {
+                    final date = DateTime.parse(dateStr);
+                    WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
+                  } catch (_) {
+                    final now = DateTime.now();
+                    WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
+                  }
+                } else {
                   final now = DateTime.now();
                   WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
                 }
-              } else {
-                final now = DateTime.now();
-                WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
-              }
 
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Workout finished successfully!')),
-              );
-              final Map<String, dynamic> sessionMap = data is Map<String, dynamic>
-                  ? Map<String, dynamic>.from(data)
-                  : <String, dynamic>{};
-              sessionMap['id'] ??= widget.sessionId;
-              sessionMap['session_id'] ??= widget.sessionId;
-              widget.onRefresh?.call();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute<bool>(
-                  builder: (context) => WorkoutAchievementScreen(
-                    sessionData: sessionMap,
-                    fallbackTitle: widget.fallbackTitle,
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Workout finished successfully!')),
+                );
+                final Map<String, dynamic> sessionMap = data is Map<String, dynamic>
+                    ? Map<String, dynamic>.from(data)
+                    : <String, dynamic>{};
+                sessionMap['id'] ??= widget.sessionId;
+                sessionMap['session_id'] ??= widget.sessionId;
+                widget.onRefresh?.call();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute<bool>(
+                    builder: (context) => WorkoutAchievementScreen(
+                      sessionData: sessionMap,
+                      fallbackTitle: widget.fallbackTitle,
+                    ),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
