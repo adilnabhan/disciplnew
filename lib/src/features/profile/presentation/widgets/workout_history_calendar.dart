@@ -331,6 +331,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 _dayCustomerWorkoutPlanIds.clear();
                 _dayWorkoutIds.clear();
 
+                _prepopulateDefaultStates();
+
                 for (final dayItem in days) {
                   if (dayItem is Map<String, dynamic>) {
                     final dateStr = dayItem['date'] as String;
@@ -370,9 +372,6 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     CalendarDayState state;
                     if (dateOnly.isBefore(startDateOnly)) {
                       state = CalendarDayState.inactive;
-                    } else if (dateOnly.isAfter(todayOnly) ||
-                        dateOnly.isAtSameMomentAs(todayOnly)) {
-                      state = CalendarDayState.future;
                     } else if (isCompleted) {
                       state =
                           isVerified
@@ -380,6 +379,9 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                               : CalendarDayState.completed;
                     } else if (isRestDay) {
                       state = CalendarDayState.rest;
+                    } else if (dateOnly.isAfter(todayOnly) ||
+                        dateOnly.isAtSameMomentAs(todayOnly)) {
+                      state = CalendarDayState.future;
                     } else {
                       state = CalendarDayState.missed;
                     }

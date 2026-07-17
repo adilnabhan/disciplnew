@@ -42,8 +42,47 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _cubit,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Reviews and Ratings')),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          Navigator.of(context).pop(true);
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF9F9F9),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leadingWidth: 56,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(true),
+                  child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEEEEEE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Color(0xFF444444),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          centerTitle: true,
+          title: Text(
+            'Reviews and Ratings',
+            style: AppStyles.text18Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
         body: BlocBuilder<ReviewsAndRatingCubit, ReviewsAndRatingState>(
           builder: (context, state) {
             return state.fitnessCenterReviews.data.fold(

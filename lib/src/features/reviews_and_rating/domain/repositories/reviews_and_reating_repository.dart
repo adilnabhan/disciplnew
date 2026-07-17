@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:dio/dio.dart';
 
 @immutable
 final class ReviewsAndReatingRepository {
@@ -13,6 +14,10 @@ final class ReviewsAndReatingRepository {
 
   //* This variable for store this class object globally
   static ReviewsAndReatingRepository? _instance;
+
+  static final Map<String, FitnessCenterReviewsModel> _gymReviewsCache = {};
+  static final Map<String, TrainerReviewsModel> _trainerReviewsAllCache = {};
+  static final Map<int, Map<String, dynamic>?> _trainerMyReviewCache = {};
 
   Options get _options {
     final token = Feggy.read<AppCubit>()?.state.currentUser?.access;
@@ -65,6 +70,7 @@ final class ReviewsAndReatingRepository {
           final model = SingleReviewModel.fromJson(
             response.data as Map<String, dynamic>,
           );
+          _gymReviewsCache.clear();
           return right(model);
         } catch (e) {
           return left(
@@ -146,6 +152,7 @@ final class ReviewsAndReatingRepository {
 
       final statusCode = response.statusCode ?? 0;
       if (statusCode == 200 || statusCode == 201 || statusCode == 204) {
+        _gymReviewsCache.clear();
         return right(null);
       }
 
@@ -260,6 +267,7 @@ final class ReviewsAndReatingRepository {
 
       final statusCode = response.statusCode ?? 0;
       if (statusCode == 200 || statusCode == 204) {
+        _gymReviewsCache.clear();
         return right(null);
       }
 
@@ -308,26 +316,31 @@ final class ReviewsAndReatingRepository {
     required int id,
     required Map<String, dynamic> queryParameters,
   }) async {
+    final cacheKey = '${id}_${queryParameters.toString()}';
+    if (_gymReviewsCache.containsKey(cacheKey)) {
+      return right(_gymReviewsCache[cacheKey]!);
+    }
     try {
-      return await Feggy.async(
+      final res = await Feggy.async<Response<dynamic>, Either<ApiException, FitnessCenterReviewsModel>>(
         call: Dio().get<dynamic>(
           ApiUris.fitnessCenterReviews(id),
           queryParameters: queryParameters,
           options: _options,
         ),
         onSuccess: (res) {
-          if (res.statusCode == 200) {
+          if (res != null && res.statusCode == 200) {
             if (res.data != null && res.data is Map) {
-              return right(
-                FitnessCenterReviewsModel.fromJson(
-                  res.data as Map<String, dynamic>,
-                ),
+              final model = FitnessCenterReviewsModel.fromJson(
+                res.data as Map<String, dynamic>,
               );
+              _gymReviewsCache[cacheKey] = model;
+              return right(model);
             }
           }
           return left(const ApiException.unknown());
         },
       );
+      return res;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -339,6 +352,9 @@ final class ReviewsAndReatingRepository {
   Future<Either<ApiException, Map<String, dynamic>?>> getTrainerReview({
     required int trainerId,
   }) async {
+    if (_trainerMyReviewCache.containsKey(trainerId)) {
+      return right(_trainerMyReviewCache[trainerId]);
+    }
     try {
       final options = _options;
       options.method = 'GET';
@@ -350,11 +366,15 @@ final class ReviewsAndReatingRepository {
       );
 
       if (response.statusCode == 200) {
-        return right(response.data as Map<String, dynamic>?);
+        final data = response.data as Map<String, dynamic>?;
+        _trainerMyReviewCache[trainerId] = data;
+        return right(data);
       }
+      _trainerMyReviewCache[trainerId] = null;
       return right(null);
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) {
+        _trainerMyReviewCache[trainerId] = null;
         return right(null);
       }
       return left(
@@ -400,6 +420,8 @@ final class ReviewsAndReatingRepository {
       final statusCode = response.statusCode ?? 0;
 
       if (statusCode == 200 || statusCode == 201) {
+        _trainerReviewsAllCache.clear();
+        _trainerMyReviewCache.clear();
         return right(null);
       }
 
@@ -462,6 +484,8 @@ final class ReviewsAndReatingRepository {
       final statusCode = response.statusCode ?? 0;
 
       if (statusCode == 200 || statusCode == 201) {
+        _trainerReviewsAllCache.clear();
+        _trainerMyReviewCache.clear();
         return right(null);
       }
 
@@ -514,6 +538,8 @@ final class ReviewsAndReatingRepository {
       final statusCode = response.statusCode ?? 0;
 
       if (statusCode == 200 || statusCode == 204) {
+        _trainerReviewsAllCache.clear();
+        _trainerMyReviewCache.clear();
         return right(null);
       }
 
@@ -544,6 +570,43 @@ final class ReviewsAndReatingRepository {
       return left(
         ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
       );
+    }
+  }
+
+  Future<Either<ApiException, TrainerReviewsModel>> getTrainerReviewsAll({
+    required int trainerId,
+    required Map<String, dynamic> queryParameters,
+  }) async {
+    final cacheKey = '${trainerId}_${queryParameters.toString()}';
+    if (_trainerReviewsAllCache.containsKey(cacheKey)) {
+      return right(_trainerReviewsAllCache[cacheKey]!);
+    }
+    try {
+      final options = _options;
+      options.method = 'GET';
+      options.headers ??= {};
+
+      final response = await Dio().request<dynamic>(
+        ApiUris.allTrainerReviews(trainerId),
+        queryParameters: queryParameters,
+        options: options,
+      );
+
+      if (response.statusCode == 200) {
+        if (response.data != null && response.data is Map) {
+          final model = TrainerReviewsModel.fromJson(
+            response.data as Map<String, dynamic>,
+          );
+          _trainerReviewsAllCache[cacheKey] = model;
+          return right(model);
+        }
+      }
+      return left(const ApiException.unknown());
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
     }
   }
 }

@@ -2273,12 +2273,17 @@ class _FitnessCenterDetailsScreenState
               alignment: Alignment.centerRight,
               child: InkWell(
                 overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-                onTap: () {
-                  context.push(
-                    ReviewsAndRatingsScreen(
-                      fitnessCenterId: widget.fitnessCenterId,
+                onTap: () async {
+                  final needRefresh = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ReviewsAndRatingsScreen(
+                        fitnessCenterId: widget.fitnessCenterId,
+                      ),
                     ),
                   );
+                  if (needRefresh == true) {
+                    _fetchReviews();
+                  }
                 },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

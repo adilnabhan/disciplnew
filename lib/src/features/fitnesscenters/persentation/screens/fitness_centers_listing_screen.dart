@@ -1,4 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FitnessCentersListingScreen extends StatefulWidget {
   const FitnessCentersListingScreen({super.key, this.activeMembership});
@@ -16,6 +18,7 @@ class _FitnessCentersListingScreenState
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   final ValueNotifier<bool> _showClearButton = ValueNotifier<bool>(false);
+  bool _isLocationFlowRunning = false;
 
   @override
   void initState() {
@@ -24,7 +27,11 @@ class _FitnessCentersListingScreenState
       _showClearButton.value = _searchController.text.isNotEmpty;
     });
     _cubit = ListFitnessCentersCubit();
-    _fetch();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _initializeLocationFlow();
+      }
+    });
     _scrollController.addListener(() {
       if (_scrollController.position.pixels ==
           _scrollController.position.maxScrollExtent) {
@@ -42,8 +49,298 @@ class _FitnessCentersListingScreenState
     super.dispose();
   }
 
+  Future<void> _initializeLocationFlow() async {
+    if (_isLocationFlowRunning) return;
+    _isLocationFlowRunning = true;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final bool explanationShown = prefs.getBool('location_explanation_shown') ?? false;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+        await _getLocationAndFetch(prefs);
+      } else if (permission == LocationPermission.deniedForever) {
+        await _cubit.setLocationDeniedAndFetch(permanentlyDenied: true);
+      } else if (!explanationShown) {
+        if (!mounted) return;
+        _showFriendlyLocationDialog(prefs);
+      } else {
+        await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
+      }
+    } finally {
+      _isLocationFlowRunning = false;
+    }
+  }
+
+  Future<void> _getLocationAndFetch(SharedPreferences prefs, {bool force = false}) async {
+    try {
+      final isServiceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!isServiceEnabled) {
+        if (mounted) {
+          Dialogs.showSnack(msg: 'Please enable device location services.');
+        }
+        final cachedLat = prefs.getDouble('cached_latitude');
+        final cachedLon = prefs.getDouble('cached_longitude');
+        if (cachedLat != null && cachedLon != null) {
+          await _cubit.updateLocationAndFetch(latitude: cachedLat, longitude: cachedLon);
+        } else {
+          await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
+        }
+        return;
+      }
+
+      final cachedLat = prefs.getDouble('cached_latitude');
+      final cachedLon = prefs.getDouble('cached_longitude');
+      bool loadedFromCache = false;
+
+      if (cachedLat != null && cachedLon != null) {
+        if (_cubit.state.latitude == null || _cubit.state.longitude == null) {
+          await _cubit.updateLocationAndFetch(latitude: cachedLat, longitude: cachedLon);
+          loadedFromCache = true;
+        }
+      }
+
+      Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
+        ),
+      ).then((position) async {
+        bool locationChangedSignificantly = true;
+        final lastLat = prefs.getDouble('cached_latitude');
+        final lastLon = prefs.getDouble('cached_longitude');
+        if (lastLat != null && lastLon != null) {
+          final distance = Geolocator.distanceBetween(
+            lastLat,
+            lastLon,
+            position.latitude,
+            position.longitude,
+          );
+          if (distance < 300 && loadedFromCache && !force) {
+            locationChangedSignificantly = false;
+          }
+        }
+
+        await prefs.setDouble('cached_latitude', position.latitude);
+        await prefs.setDouble('cached_longitude', position.longitude);
+
+        if (locationChangedSignificantly || !loadedFromCache) {
+          await _cubit.updateLocationAndFetch(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          );
+        }
+      }).catchError((e) async {
+        if (!loadedFromCache) {
+          final permission = await Geolocator.checkPermission();
+          await _cubit.setLocationDeniedAndFetch(
+            permanentlyDenied: permission == LocationPermission.deniedForever,
+          );
+        }
+      });
+    } catch (e) {
+      final cachedLat = prefs.getDouble('cached_latitude');
+      final cachedLon = prefs.getDouble('cached_longitude');
+      if (cachedLat != null && cachedLon != null) {
+        await _cubit.updateLocationAndFetch(latitude: cachedLat, longitude: cachedLon);
+      } else {
+        final permission = await Geolocator.checkPermission();
+        await _cubit.setLocationDeniedAndFetch(
+          permanentlyDenied: permission == LocationPermission.deniedForever,
+        );
+      }
+    }
+  }
+
+  void _showFriendlyLocationDialog(SharedPreferences prefs) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: 10,
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withAlpha(20),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.location_on_rounded,
+                    color: AppColors.primary,
+                    size: 40,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Find gyms near you',
+                  style: AppStyles.text18Px.poppins.w600.copyWith(
+                    color: AppColors.textDark,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Allow location access to discover the nearest fitness centers around you. Your location is only used to show nearby gyms.',
+                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                    color: const Color(0xFF666666),
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFD9D9D9)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await prefs.setBool('location_explanation_shown', true);
+                          await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
+                        },
+                        child: Text(
+                          'Not Now',
+                          style: AppStyles.text14Px.poppins.w500.copyWith(
+                            color: const Color(0xFF666666),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () async {
+                          Navigator.of(context).pop();
+                          await prefs.setBool('location_explanation_shown', true);
+                          final permission = await Geolocator.requestPermission();
+                          if (permission == LocationPermission.always ||
+                              permission == LocationPermission.whileInUse) {
+                            await _getLocationAndFetch(prefs, force: true);
+                          } else if (permission == LocationPermission.deniedForever) {
+                            await _cubit.setLocationDeniedAndFetch(permanentlyDenied: true);
+                          } else {
+                            await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
+                          }
+                        },
+                        child: Text(
+                          'Allow',
+                          style: AppStyles.text14Px.poppins.w600.copyWith(
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildLocationBanner(ListFitnessCentersState state) {
+    final bool isPermanentlyDenied = state.isLocationPermanentlyDenied;
+    return Container(
+      margin: const EdgeInsets.only(left: 20, right: 20, top: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withAlpha(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.primary.withAlpha(30),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          const Text(
+            '📍',
+            style: TextStyle(fontSize: 16),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              isPermanentlyDenied
+                  ? 'Location permission is disabled. Enable it from Settings to discover nearby gyms.'
+                  : 'Enable location to discover gyms near you.',
+              style: AppStyles.text14Px.poppins.w500.copyWith(
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final permission = await Geolocator.checkPermission();
+              
+              if (permission == LocationPermission.deniedForever || isPermanentlyDenied) {
+                await Geolocator.openAppSettings();
+                return;
+              }
+              
+              final newPermission = await Geolocator.requestPermission();
+              if (newPermission == LocationPermission.always ||
+                  newPermission == LocationPermission.whileInUse) {
+                await _getLocationAndFetch(prefs, force: true);
+              } else if (newPermission == LocationPermission.deniedForever) {
+                await _cubit.setLocationDeniedAndFetch(permanentlyDenied: true);
+              } else {
+                Dialogs.showSnack(msg: 'Location permission denied.');
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                isPermanentlyDenied ? 'Settings' : 'Enable',
+                style: AppStyles.text12Px.poppins.w600.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _fetch() async {
-    await _cubit.fetch();
+    final prefs = await SharedPreferences.getInstance();
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+      await _getLocationAndFetch(prefs, force: true);
+    } else {
+      await _cubit.fetch();
+    }
   }
 
   Future<void> _fetchCategories() async {
@@ -56,85 +353,92 @@ class _FitnessCentersListingScreenState
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: Scaffold(
-        backgroundColor: const Color(0xffF7F7F7),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          automaticallyImplyLeading: false,
-          centerTitle: false,
-          titleSpacing: 20,
-          title: Text(
-            'Explore',
-            style: AppStyles.text20Px.poppins.w500.copyWith(
-              height: 1.0,
-              color: AppColors.textDark,
+    return BlocListener<DashboardCubit, DashboardState>(
+      listener: (context, dashboardState) {
+        if (dashboardState.navIndex == 2) {
+          _initializeLocationFlow();
+        }
+      },
+      child: BlocProvider.value(
+        value: _cubit,
+        child: Scaffold(
+          backgroundColor: const Color(0xffF7F7F7),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+            centerTitle: false,
+            titleSpacing: 20,
+            title: Text(
+              'Explore',
+              style: AppStyles.text20Px.poppins.w500.copyWith(
+                height: 1.0,
+                color: AppColors.textDark,
+              ),
             ),
-          ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 20),
-              child: GestureDetector(
-                onTap: () {
-                  context.push(const SettingsScreen());
-                },
-                child: SvgPicture.asset(
-                  'assets/images/svg/icons/settings _icon.svg',
-                  width: 22,
-                  height: 22,
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: GestureDetector(
+                  onTap: () {
+                    context.push(const SettingsScreen());
+                  },
+                  child: SvgPicture.asset(
+                    'assets/images/svg/icons/settings _icon.svg',
+                    width: 22,
+                    height: 22,
+                  ),
+                ),
+              ),
+            ],
+            bottom: PreferredSize(
+              preferredSize: const Size.fromHeight(66),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16),
+                child: BlocBuilder<ListFitnessCentersCubit, ListFitnessCentersState>(
+                  builder: (context, state) {
+                    final hasError = state.categories.fold(() => false, (either) => either.isLeft()) ||
+                        state.listFitnessCenters.data.fold(() => false, (either) => either.isLeft());
+                    final isInitialLoading = !hasError &&
+                        (state.categories.isNone() || state.listFitnessCenters.data.isNone());
+                    return _searchBar(isLoading: isInitialLoading);
+                  },
                 ),
               ),
             ),
-          ],
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(66),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16),
-              child: BlocBuilder<ListFitnessCentersCubit, ListFitnessCentersState>(
-                builder: (context, state) {
-                  final hasError = state.categories.fold(() => false, (either) => either.isLeft()) ||
-                      state.listFitnessCenters.data.fold(() => false, (either) => either.isLeft());
-                  final isInitialLoading = !hasError &&
-                      (state.categories.isNone() || state.listFitnessCenters.data.isNone());
-                  return _searchBar(isLoading: isInitialLoading);
-                },
-              ),
-            ),
           ),
-        ),
-        body: BlocConsumer<ListFitnessCentersCubit, ListFitnessCentersState>(
-          listenWhen: (previous, current) {
-            final wasLoading = previous.listFitnessCenters.data.fold(() => true, (_) => false);
-            final isLoaded = current.listFitnessCenters.data.fold(() => false, (_) => true);
-            return wasLoading && isLoaded;
-          },
-          listener: (context, state) {
-            FocusManager.instance.primaryFocus?.unfocus();
-          },
-          builder: (context, state) {
-            final hasError = state.categories.fold(
-                  () => false,
-                  (either) => either.isLeft(),
-                ) ||
-                state.listFitnessCenters.data.fold(
-                  () => false,
-                  (either) => either.isLeft(),
-                );
-
-            final isInitialLoading = !hasError &&
-                (state.categories.isNone() || state.listFitnessCenters.data.isNone());
-
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 350),
-              child: isInitialLoading
-                  ? _buildExploreShimmer(key: const ValueKey('explore_shimmer'))
-                  : hasError
-                      ? _buildErrorUi(state)
-                      : _buildLoadedContent(state),
-            );
-          },
+          body: BlocConsumer<ListFitnessCentersCubit, ListFitnessCentersState>(
+            listenWhen: (previous, current) {
+              final wasLoading = previous.listFitnessCenters.data.fold(() => true, (_) => false);
+              final isLoaded = current.listFitnessCenters.data.fold(() => false, (_) => true);
+              return wasLoading && isLoaded;
+            },
+            listener: (context, state) {
+              FocusManager.instance.primaryFocus?.unfocus();
+            },
+            builder: (context, state) {
+              final hasError = state.categories.fold(
+                    () => false,
+                    (either) => either.isLeft(),
+                  ) ||
+                  state.listFitnessCenters.data.fold(
+                    () => false,
+                    (either) => either.isLeft(),
+                  );
+  
+              final isInitialLoading = !hasError &&
+                  (state.categories.isNone() || state.listFitnessCenters.data.isNone());
+  
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 350),
+                child: isInitialLoading
+                    ? _buildExploreShimmer(key: const ValueKey('explore_shimmer'))
+                    : hasError
+                        ? _buildErrorUi(state)
+                        : _buildLoadedContent(state),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -153,9 +457,12 @@ class _FitnessCentersListingScreenState
               return Column(
                 key: const ValueKey('explore_loaded'),
                 children: [
+                  if (state.showLocationBanner) _buildLocationBanner(state),
                   const SizedBox(height: 16),
                   _categoriesBuild(categories, state),
                   const SizedBox(height: 16),
+                  if (state.latitude != null && state.longitude != null)
+                    _buildSortingLabel(),
                   Expanded(
                     child: ColoredBox(
                       color: const Color(0xffF7F7F7),
@@ -165,6 +472,39 @@ class _FitnessCentersListingScreenState
                 ],
               );
             },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSortingLabel() {
+    return Padding(
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.grey.shade200, width: 0.8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                '📍',
+                style: TextStyle(fontSize: 12),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Nearest to you',
+                style: AppStyles.text12Px.poppins.w600.copyWith(
+                  color: const Color(0xFF666666),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -385,7 +725,7 @@ class _FitnessCentersListingScreenState
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  'No fitness centers found!',
+                  'No nearby fitness centers found.',
                   style: AppStyles.text16Px.poppins.w500.copyWith(color: const Color(0xFF666666)),
                 ),
                 const SizedBox(height: 16),
@@ -405,7 +745,7 @@ class _FitnessCentersListingScreenState
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'View all fitness centers',
+                        'Browse all gyms',
                         style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.primary),
                       ),
                       const SizedBox(width: 8),

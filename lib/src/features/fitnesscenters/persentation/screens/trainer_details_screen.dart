@@ -1,6 +1,8 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'certificate_viewer_screen.dart';
+import 'package:customer_mobile_app/src/features/reviews_and_rating/domain/models/trainer_reviews_model.dart';
+import 'package:customer_mobile_app/src/features/reviews_and_rating/presentation/screens/trainer_reviews_and_ratings_screen.dart';
 
 class TrainerDetailsScreen extends StatefulWidget {
   const TrainerDetailsScreen({required this.trainer, super.key});
@@ -16,6 +18,8 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
   bool _isLoadingReview = true;
   double _trainerRating = 0.0;
   int _trainerReviewCount = 0;
+  TrainerReviewsModel? _allReviews;
+  bool _isLoadingReviewsAll = true;
 
   @override
   void initState() {
@@ -23,6 +27,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
     _trainerRating = (widget.trainer.averageRating as num?)?.toDouble() ?? 0.0;
     _trainerReviewCount = widget.trainer.reviewCount ?? 0;
     _fetchReview();
+    _fetchReviewsAll();
   }
 
   Future<void> _fetchReview() async {
@@ -46,6 +51,376 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
         _isLoadingReview = false;
       });
     }
+  }
+
+  Future<void> _fetchReviewsAll() async {
+    if (widget.trainer.id == null) return;
+    setState(() {
+      _isLoadingReviewsAll = true;
+    });
+    final res = await ReviewsAndReatingRepository().getTrainerReviewsAll(
+      trainerId: widget.trainer.id!,
+      queryParameters: {'page': 1},
+    );
+    if (mounted) {
+      setState(() {
+        res.fold(
+          (error) {
+            _allReviews = null;
+          },
+          (reviews) {
+            _allReviews = reviews;
+            _trainerReviewCount = reviews.count;
+          },
+        );
+        _isLoadingReviewsAll = false;
+      });
+    }
+  }
+
+  Widget _buildReviewsCard() {
+    final list = _allReviews?.results ?? [];
+    final avgRating = _trainerRating;
+    final reviewCount = _trainerReviewCount;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Rating & Reviews',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                avgRating.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Row(
+                children: List.generate(5, (index) {
+                  final starValue = index + 1;
+                  if (avgRating >= starValue) {
+                    return const Icon(
+                      Icons.star,
+                      color: Colors.orange,
+                      size: 24,
+                    );
+                  } else if (avgRating >= starValue - 0.5) {
+                    return const Icon(
+                      Icons.star_half,
+                      color: Colors.orange,
+                      size: 24,
+                    );
+                  } else {
+                    return const Icon(
+                      Icons.star_border,
+                      color: Colors.orange,
+                      size: 24,
+                    );
+                  }
+                }),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "$reviewCount ${reviewCount == 1 ? 'Review' : 'Reviews'}",
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          if (list.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(
+                child: Text(
+                  'No reviews yet',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ),
+            )
+          else ...[
+            ...list
+                .take(3)
+                .map(
+                  (review) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: _buildReviewItem(review),
+                  ),
+                ),
+          ],
+          const SizedBox(height: 16),
+          if (list.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+                onTap: () async {
+                  final needRefresh = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => TrainerReviewsAndRatingsScreen(
+                        trainer: widget.trainer,
+                      ),
+                    ),
+                  );
+                  if (needRefresh == true) {
+                    _fetchReview();
+                    _fetchReviewsAll();
+                  }
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View all Reviews',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewItem(SingleTrainerReview review) {
+    final rating = review.rating.toDouble();
+    final comment = review.comment;
+    final createdAt = review.createdAt.toLocal().format('dd MMM yyyy');
+    final customerName = review.customerName;
+    final customerImage = review.profilePicture;
+
+    final currentUser = context.read<AppCubit>().state.currentUser;
+    final currentUserName = '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+    final isOwnReview = currentUserName.isNotEmpty &&
+        customerName.trim().toLowerCase() == currentUserName.toLowerCase();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: customerImage != null && customerImage.isNotEmpty
+                      ? ImageNetwork(
+                          customerImage,
+                          height: 32,
+                          width: 32,
+                        )
+                      : Container(
+                          color: Colors.grey[100],
+                          child: const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: Colors.grey,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customerName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.black,
+                      ),
+                    ),
+                    if (createdAt.isNotEmpty)
+                      Text(
+                        createdAt,
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.orange, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: Colors.grey,
+                  size: 20,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: Colors.white,
+                elevation: 4,
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    _showEditTrainerReviewDialog();
+                  } else if (value == 'delete') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Review'),
+                        content: const Text('Are you sure you want to delete your review?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && mounted) {
+                      final res = await ReviewsAndReatingRepository().deleteTrainerReview(
+                        trainerId: widget.trainer.id!,
+                      );
+                      res.fold(
+                        (error) => Dialogs.showSnack(msg: error.msg),
+                        (_) {
+                          Dialogs.showSnack(msg: 'Review deleted successfully');
+                          setState(() {
+                            _myReview = null;
+                            _trainerReviewCount = (_trainerReviewCount - 1).clamp(0, 999999);
+                            _trainerRating = 0.0;
+                          });
+                          _fetchReview();
+                          _fetchReviewsAll();
+                        },
+                      );
+                    }
+                  } else if (value == 'report') {
+                    Dialogs.showSnack(msg: 'Review reported successfully');
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (isOwnReview) ...[
+                    PopupMenuItem(
+                      value: 'edit',
+                      height: 32,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, color: Colors.black87, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Edit Review',
+                            style: AppStyles.text14Px.poppins.w500.copyWith(color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      height: 32,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_outline, color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete Review',
+                            style: AppStyles.text14Px.poppins.w500.copyWith(color: AppColors.error),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else
+                    PopupMenuItem(
+                      value: 'report',
+                      height: 32,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.report_gmailerrorred, color: Colors.black87, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Report Review',
+                            style: AppStyles.text14Px.poppins.w500.copyWith(color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            comment,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showAddTrainerReviewDialog({double initialRating = 0}) async {
@@ -138,6 +513,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                           _trainerReviewCount = _trainerReviewCount + 1;
                         });
                         _fetchReview();
+                        _fetchReviewsAll();
                       },
                     );
                   },
@@ -239,6 +615,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                         Dialogs.showSnack(msg: 'Review updated successfully');
                         Navigator.pop(dialogContext);
                         _fetchReview();
+                        _fetchReviewsAll();
                       },
                     );
                   },
@@ -846,205 +1223,61 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
               const SizedBox(height: 24),
             ],
             // Ratings & Reviews Section
-            _buildSectionTitle('Ratings & Reviews'),
-            if (_isLoadingReview)
+            if (_isLoadingReview || _isLoadingReviewsAll)
               const Center(
                 child: Padding(
                   padding: EdgeInsets.all(20),
                   child: CircularProgressIndicator(),
                 ),
               )
-            else if (_myReview != null) ...[
-              _buildCardContainer(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Your Review',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          icon: const Icon(
-                            Icons.more_vert,
-                            color: Colors.grey,
-                            size: 20,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          color: Colors.white,
-                          elevation: 4,
-                          onSelected: (value) async {
-                            if (value == 'edit') {
-                              _showEditTrainerReviewDialog();
-                            } else if (value == 'delete') {
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
-                                  title: const Text('Delete Review'),
-                                  content: const Text(
-                                    'Are you sure you want to delete your review?',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                      child: const Text('Cancel'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text(
-                                        'Delete',
-                                        style: TextStyle(color: Colors.red),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirm == true && mounted) {
-                                final res =
-                                    await ReviewsAndReatingRepository()
-                                        .deleteTrainerReview(
-                                          trainerId: widget.trainer.id!,
-                                        );
-                                res.fold(
-                                  (error) => Dialogs.showSnack(msg: error.msg),
-                                  (_) {
-                                    Dialogs.showSnack(
-                                      msg: 'Review deleted successfully',
-                                    );
-                                    setState(() {
-                                      _myReview = null;
-                                      _trainerReviewCount = (_trainerReviewCount - 1).clamp(0, 999999);
-                                      _trainerRating = 0.0;
-                                    });
-                                    _fetchReview();
-                                  },
-                                );
-                              }
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'edit',
-                              height: 32,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.edit_outlined,
-                                    color: Colors.black87,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Edit Review',
-                                    style: AppStyles.text14Px.poppins.w500
-                                        .copyWith(color: Colors.black87),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'delete',
-                              height: 32,
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.delete_outline,
-                                    color: AppColors.error,
-                                    size: 18,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Delete Review',
-                                    style: AppStyles.text14Px.poppins.w500
-                                        .copyWith(color: AppColors.error),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    RatingBarIndicator(
-                      rating: (_myReview!['rating'] as num?)?.toDouble() ?? 0.0,
-                      itemBuilder: (context, index) => const Icon(
-                        Icons.star,
-                        color: Colors.amber,
-                      ),
-                      itemCount: 5,
-                      itemSize: 18.0,
-                      direction: Axis.horizontal,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _myReview!['comment']?.toString() ?? '',
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 13,
-                        color: Colors.black87,
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ] else ...[
-              _buildCardContainer(
-                child: Column(
-                  children: [
-                    const Text(
-                      'Rate your experience with this trainer',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    RatingBar.builder(
-                      initialRating: 0,
-                      minRating: 1,
-                      direction: Axis.horizontal,
-                      allowHalfRating: false,
-                      itemCount: 5,
-                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
-                      itemBuilder: (context, _) => const Icon(
-                        Icons.star_border_rounded,
-                        color: Colors.amber,
-                      ),
-                      onRatingUpdate: (rating) {
-                        _showAddTrainerReviewDialog(initialRating: rating);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(
-                      onPressed: () => _showAddTrainerReviewDialog(),
-                      child: Text(
-                        'Write a review',
+            else ...[
+              _buildReviewsCard(),
+              if (_myReview == null) ...[
+                const SizedBox(height: 12),
+                _buildCardContainer(
+                  child: Column(
+                    children: [
+                      const Text(
+                        'Rate your experience with this trainer',
                         style: TextStyle(
                           fontFamily: 'Poppins',
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      RatingBar.builder(
+                        initialRating: 0,
+                        minRating: 1,
+                        direction: Axis.horizontal,
+                        allowHalfRating: false,
+                        itemCount: 5,
+                        itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                        itemBuilder: (context, _) => const Icon(
+                          Icons.star_border_rounded,
+                          color: Colors.amber,
+                        ),
+                        onRatingUpdate: (rating) {
+                          _showAddTrainerReviewDialog(initialRating: rating);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextButton(
+                        onPressed: () => _showAddTrainerReviewDialog(),
+                        child: Text(
+                          'Write a review',
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
             const SizedBox(height: 24),
           ],
