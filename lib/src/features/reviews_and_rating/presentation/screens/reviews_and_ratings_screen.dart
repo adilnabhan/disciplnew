@@ -94,8 +94,9 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildReviewsAndRatings(FitnessCenterReviewsModel reviews) {
     if (reviews.results?.reviews?.isEmpty ?? true) {

@@ -54,7 +54,6 @@ class _FitnessCentersListingScreenState
     _isLocationFlowRunning = true;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final bool explanationShown = prefs.getBool('location_explanation_shown') ?? false;
 
       LocationPermission permission = await Geolocator.checkPermission();
 
@@ -62,11 +61,18 @@ class _FitnessCentersListingScreenState
         await _getLocationAndFetch(prefs);
       } else if (permission == LocationPermission.deniedForever) {
         await _cubit.setLocationDeniedAndFetch(permanentlyDenied: true);
-      } else if (!explanationShown) {
-        if (!mounted) return;
-        _showFriendlyLocationDialog(prefs);
       } else {
-        await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
+        // Directly show the system location permission dialog
+        if (!mounted) return;
+        final newPermission = await Geolocator.requestPermission();
+        if (newPermission == LocationPermission.always ||
+            newPermission == LocationPermission.whileInUse) {
+          await _getLocationAndFetch(prefs, force: true);
+        } else if (newPermission == LocationPermission.deniedForever) {
+          await _cubit.setLocationDeniedAndFetch(permanentlyDenied: true);
+        } else {
+          await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
+        }
       }
     } finally {
       _isLocationFlowRunning = false;
@@ -153,115 +159,6 @@ class _FitnessCentersListingScreenState
     }
   }
 
-  void _showFriendlyLocationDialog(SharedPreferences prefs) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          elevation: 10,
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withAlpha(20),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.location_on_rounded,
-                    color: AppColors.primary,
-                    size: 40,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Find gyms near you',
-                  style: AppStyles.text18Px.poppins.w600.copyWith(
-                    color: AppColors.textDark,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Allow location access to discover the nearest fitness centers around you. Your location is only used to show nearby gyms.',
-                  style: AppStyles.text14Px.poppins.w400.copyWith(
-                    color: const Color(0xFF666666),
-                    height: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFD9D9D9)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await prefs.setBool('location_explanation_shown', true);
-                          await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
-                        },
-                        child: Text(
-                          'Not Now',
-                          style: AppStyles.text14Px.poppins.w500.copyWith(
-                            color: const Color(0xFF666666),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                        ),
-                        onPressed: () async {
-                          Navigator.of(context).pop();
-                          await prefs.setBool('location_explanation_shown', true);
-                          final permission = await Geolocator.requestPermission();
-                          if (permission == LocationPermission.always ||
-                              permission == LocationPermission.whileInUse) {
-                            await _getLocationAndFetch(prefs, force: true);
-                          } else if (permission == LocationPermission.deniedForever) {
-                            await _cubit.setLocationDeniedAndFetch(permanentlyDenied: true);
-                          } else {
-                            await _cubit.setLocationDeniedAndFetch(permanentlyDenied: false);
-                          }
-                        },
-                        child: Text(
-                          'Allow',
-                          style: AppStyles.text14Px.poppins.w600.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildLocationBanner(ListFitnessCentersState state) {
     final bool isPermanentlyDenied = state.isLocationPermanentlyDenied;

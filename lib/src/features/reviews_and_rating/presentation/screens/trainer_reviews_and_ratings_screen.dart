@@ -210,6 +210,7 @@ class _TrainerReviewsAndRatingsScreenState
                     );
                   },
                 ),
+      ),
     );
   }
 

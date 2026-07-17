@@ -19,8 +19,11 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
     if (cachedCats != null && cachedGyms != null) {
       emit(
         state.copyWith(
-          categories: some(right(cachedCats)),
-          listFitnessCenters: (data: some(right(cachedGyms)), isPagination: false),
+          categories: some(right<ApiException, FitnesscenterCategoriesModel>(cachedCats)),
+          listFitnessCenters: (
+            data: some(right<ApiException, ListFitnesscenterModel>(cachedGyms)),
+            isPagination: false,
+          ),
         ),
       );
       // Fetch fresh data in the background
@@ -30,7 +33,12 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
 
     if (state.listFitnessCenters.data.isNone()) {
       emit(
-        state.copyWith(listFitnessCenters: (data: none(), isPagination: false)),
+        state.copyWith(
+          listFitnessCenters: (
+            data: none<Either<ApiException, ListFitnesscenterModel>>(),
+            isPagination: false,
+          ),
+        ),
       );
     }
 
@@ -56,7 +64,10 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
         showLocationBanner: false,
         isLocationPermanentlyDenied: false,
         listFitnessCenters: resetList
-            ? (data: none(), isPagination: false)
+            ? (
+                data: none<Either<ApiException, ListFitnesscenterModel>>(),
+                isPagination: false,
+              )
             : state.listFitnessCenters,
       ),
     );
@@ -80,7 +91,10 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
         showLocationBanner: true,
         isLocationPermanentlyDenied: permanentlyDenied,
         listFitnessCenters: resetList
-            ? (data: none(), isPagination: false)
+            ? (
+                data: none<Either<ApiException, ListFitnesscenterModel>>(),
+                isPagination: false,
+              )
             : state.listFitnessCenters,
       ),
     );
@@ -104,7 +118,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
       (_) => null,
       (cats) {
         if (!isClosed) {
-          emit(state.copyWith(categories: some(right(cats))));
+          emit(state.copyWith(categories: some(right<ApiException, FitnesscenterCategoriesModel>(cats))));
         }
       },
     );
@@ -155,7 +169,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
       emit(
         state.copyWith(
           listFitnessCenters: (
-            data: none(),
+            data: none<Either<ApiException, ListFitnesscenterModel>>(),
             isPagination: isPagination,
           ),
         ),
@@ -213,7 +227,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
           emit(
             state.copyWith(
               listFitnessCenters: (
-                data: some(right(data)),
+                data: some(right<ApiException, ListFitnesscenterModel>(data)),
                 isPagination: false,
               ),
             ),
@@ -236,7 +250,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
   Future<void> fetchCategories() async {
     if (isClosed) return;
     if (state.categories.isNone()) {
-      emit(state.copyWith(categories: none()));
+      emit(state.copyWith(categories: none<Either<ApiException, FitnesscenterCategoriesModel>>()));
     }
     final response = await FitnesscenterRepository().fitnesscenterCategories();
     if (isClosed) return;

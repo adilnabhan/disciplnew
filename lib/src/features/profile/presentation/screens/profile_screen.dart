@@ -2,6 +2,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:intl/intl.dart';
 import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
 import 'pages/pages.dart';
+import 'body_matrix_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -1034,6 +1035,322 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showBodyMetricsBottomSheet(
+    BuildContext context, {
+    required CustomerDetailsModel customerDetails,
+  }) {
+    // Pre-fill with existing values, store only the numeric part
+    final existingHeight = double.tryParse(customerDetails.height ?? '');
+    final existingWeight = double.tryParse(customerDetails.weight ?? '');
+
+    final heightController = TextEditingController(
+      text: existingHeight != null
+          ? (existingHeight == existingHeight.toInt().toDouble()
+              ? '${existingHeight.toInt()}'
+              : existingHeight.toStringAsFixed(1))
+          : '',
+    );
+    final weightController = TextEditingController(
+      text: existingWeight != null
+          ? (existingWeight == existingWeight.toInt().toDouble()
+              ? '${existingWeight.toInt()}'
+              : existingWeight.toStringAsFixed(1))
+          : '',
+    );
+
+    // Unit state
+    String heightUnit = 'cm';
+    String weightUnit = 'kg';
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return BlocProvider.value(
+          value: _cubit,
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle bar
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDEE2E6),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    // Title row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Update Body Metrics',
+                          style: AppStyles.text18Px.poppins.w600.copyWith(
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(sheetContext).pop(),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F3F5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Color(0xFF495057),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Height field
+                    Text(
+                      'Height',
+                      style: AppStyles.text13Px.poppins.w600.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMetricInputField(
+                      controller: heightController,
+                      hint: 'e.g. 170',
+                      selectedUnit: heightUnit,
+                      units: const ['cm', 'ft'],
+                      onUnitChanged: (val) {
+                        setSheetState(() => heightUnit = val);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    // Weight field
+                    Text(
+                      'Weight',
+                      style: AppStyles.text13Px.poppins.w600.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMetricInputField(
+                      controller: weightController,
+                      hint: 'e.g. 65',
+                      selectedUnit: weightUnit,
+                      units: const ['kg', 'lbs'],
+                      onUnitChanged: (val) {
+                        setSheetState(() => weightUnit = val);
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    // Save button
+                    BlocConsumer<ProfileCubit, ProfileState>(
+                      listener: (ctx, state) {
+                        state.updateProfileDetails?.fold(
+                          () => null,
+                          (either) => either.fold(
+                            (error) {
+                              Navigator.of(sheetContext).pop();
+                              Dialogs.showSnack(
+                                msg: 'Failed to update metrics. Try again.',
+                              );
+                            },
+                            (_) {
+                              Navigator.of(sheetContext).pop();
+                              Dialogs.showSnack(
+                                msg: 'Body metrics updated successfully!',
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      builder: (ctx, state) {
+                        final isLoading =
+                            state.updateProfileDetails?.isNone() ?? false;
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 0,
+                            ),
+                            onPressed: isLoading
+                                ? null
+                                : () async {
+                                    final heightText =
+                                        heightController.text.trim();
+                                    final weightText =
+                                        weightController.text.trim();
+                                    if (heightText.isEmpty ||
+                                        weightText.isEmpty) {
+                                      Dialogs.showSnack(
+                                        msg: 'Please enter both height and weight.',
+                                      );
+                                      return;
+                                    }
+                                    double? heightVal =
+                                        double.tryParse(heightText);
+                                    double? weightVal =
+                                        double.tryParse(weightText);
+                                    if (heightVal == null ||
+                                        weightVal == null) {
+                                      Dialogs.showSnack(
+                                        msg: 'Please enter valid numbers.',
+                                      );
+                                      return;
+                                    }
+                                    // Convert to cm if needed
+                                    if (heightUnit == 'ft') {
+                                      heightVal = heightVal * 30.48;
+                                    }
+                                    // Convert to kg if needed
+                                    if (weightUnit == 'lbs') {
+                                      weightVal = weightVal * 0.453592;
+                                    }
+                                    await _cubit.updateHealthProfile(
+                                      bloodGroup:
+                                          customerDetails.bloodGroup ?? '',
+                                      height: heightVal.toStringAsFixed(2),
+                                      weight: weightVal.toStringAsFixed(2),
+                                    );
+                                  },
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'Save Changes',
+                                    style: AppStyles.text16Px.poppins.w600
+                                        .copyWith(color: Colors.white),
+                                  ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Cancel
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(sheetContext).pop(),
+                        child: Text(
+                          'Cancel',
+                          style: AppStyles.text14Px.poppins.w600.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricInputField({
+    required TextEditingController controller,
+    required String hint,
+    required String selectedUnit,
+    required List<String> units,
+    required void Function(String) onUnitChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: AppStyles.text16Px.poppins.w500.copyWith(
+                color: AppColors.textDark,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppStyles.text14Px.poppins.w400.copyWith(
+                  color: const Color(0xFFADB5BD),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 28,
+            color: const Color(0xFFDEE2E6),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedUnit,
+                onChanged: (v) => onUnitChanged(v!),
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: AppColors.textDark,
+                ),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: Color(0xFF868E96),
+                ),
+                items: units
+                    .map(
+                      (u) => DropdownMenuItem(
+                        value: u,
+                        child: Text(u),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+
   String _formatDoubleString(String? val) {
     if (val == null || val.isEmpty) return '';
     final d = double.tryParse(val);
@@ -1171,22 +1488,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ).format(customerDetails.modified!.toLocal());
     }
 
+    // "Update" link → bottom sheet
     final void Function() onUpdateTap = () {
+      _showBodyMetricsBottomSheet(
+        context,
+        customerDetails: customerDetails,
+      );
+    };
+
+    final void Function() onChevronTap = () {
       Navigator.push(
         context,
         MaterialPageRoute<void>(
-          builder:
-              (_) => BlocProvider.value(
-                value: _cubit,
-                child: FitnessDetailsScreen(
-                  customerDetailsModel: customerDetails,
-                  editBodyMetricsOnly: true,
-                ),
-              ),
+          builder: (_) => BlocProvider.value(
+            value: _cubit,
+            child: BodyMatrixScreen(customerDetails: customerDetails),
+          ),
         ),
-      ).then((_) {
-        _cubit.fetchCustomerDetails();
-      });
+      );
     };
 
     return Column(
@@ -1461,7 +1780,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 top: 10,
                 right: 10,
                 child: GestureDetector(
-                  onTap: onUpdateTap,
+                  onTap: onChevronTap,
                   child: Container(
                     width: 30,
                     height: 30,
