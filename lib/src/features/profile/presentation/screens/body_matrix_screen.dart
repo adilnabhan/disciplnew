@@ -1085,6 +1085,16 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
 
   // ── Metrics Card ───────────────────────────────────────────────────────────
   Widget _buildMetricsCard() {
+    final hVal = _currentHeight != null && _currentHeight!.isNotEmpty
+        ? double.tryParse(_currentHeight!)
+        : null;
+    final wVal = _currentWeight != null && _currentWeight!.isNotEmpty
+        ? double.tryParse(_currentWeight!)
+        : null;
+
+    final hStr = hVal != null ? _formatNum(hVal) : '--';
+    final wStr = wVal != null ? _formatNum(wVal) : '--';
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1114,9 +1124,9 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                   icon: Icons.height,
                   iconColor: const Color(0xFFFA5252),
                   label: 'Height',
-                  controller: _heightController,
-                  focusNode: _heightFocusNode,
+                  value: hStr,
                   suffix: 'cm',
+                  onTap: () => _showBodyMetricsBottomSheet(context),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1125,9 +1135,9 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                   icon: Icons.monitor_weight_outlined,
                   iconColor: const Color(0xFFFA5252),
                   label: 'Weight',
-                  controller: _weightController,
-                  focusNode: _weightFocusNode,
+                  value: wStr,
                   suffix: 'kg',
+                  onTap: () => _showBodyMetricsBottomSheet(context),
                 ),
               ),
             ],
@@ -1141,74 +1151,382 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     required IconData icon,
     required Color iconColor,
     required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
+    required String value,
     required String suffix,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE9ECEF), width: 1),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: iconColor, size: 20),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: AppStyles.text10Px.poppins.w500
-                      .copyWith(color: const Color(0xFF868E96)),
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8F9FA),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE9ECEF), width: 1),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor, size: 20),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _saveMetrics(),
-                        onChanged: (val) {
-                          setState(() {
-                            if (label == 'Height') {
-                              _currentHeight = val;
-                            } else {
-                              _currentWeight = val;
-                            }
-                          });
-                        },
-                        style: AppStyles.text14Px.poppins.w700
-                            .copyWith(color: AppColors.textDark),
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
                     Text(
-                      suffix,
-                      style: AppStyles.text12Px.poppins.w500
+                      label,
+                      style: AppStyles.text10Px.poppins.w500
                           .copyWith(color: const Color(0xFF868E96)),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          value,
+                          style: AppStyles.text14Px.poppins.w700
+                              .copyWith(color: AppColors.textDark),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          suffix,
+                          style: AppStyles.text12Px.poppins.w500
+                              .copyWith(color: const Color(0xFF868E96)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showBodyMetricsBottomSheet(BuildContext context) {
+    final existingHeight = double.tryParse(_currentHeight ?? '');
+    final existingWeight = double.tryParse(_currentWeight ?? '');
+
+    final heightController = TextEditingController(
+      text: existingHeight != null
+          ? (existingHeight == existingHeight.toInt().toDouble()
+              ? '${existingHeight.toInt()}'
+              : existingHeight.toStringAsFixed(1))
+          : '',
+    );
+    final weightController = TextEditingController(
+      text: existingWeight != null
+          ? (existingWeight == existingWeight.toInt().toDouble()
+              ? '${existingWeight.toInt()}'
+              : existingWeight.toStringAsFixed(1))
+          : '',
+    );
+
+    String heightUnit = 'cm';
+    String weightUnit = 'kg';
+
+    final profileCubit = BlocProvider.of<ProfileCubit>(context);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return BlocProvider.value(
+          value: profileCubit,
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom,
+                ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDEE2E6),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      // Title row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Update Body Metrics',
+                            style: AppStyles.text18Px.poppins.w600.copyWith(
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(sheetContext).pop(),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF1F3F5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Color(0xFF495057),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Height field
+                      Text(
+                        'Height',
+                        style: AppStyles.text13Px.poppins.w600.copyWith(
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildMetricInputField(
+                        controller: heightController,
+                        hint: 'e.g. 170',
+                        selectedUnit: heightUnit,
+                        units: const ['cm', 'ft'],
+                        onUnitChanged: (val) {
+                          setSheetState(() => heightUnit = val);
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      // Weight field
+                      Text(
+                        'Weight',
+                        style: AppStyles.text13Px.poppins.w600.copyWith(
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildMetricInputField(
+                        controller: weightController,
+                        hint: 'e.g. 65',
+                        selectedUnit: weightUnit,
+                        units: const ['kg', 'lbs'],
+                        onUnitChanged: (val) {
+                          setSheetState(() => weightUnit = val);
+                        },
+                      ),
+                      const SizedBox(height: 32),
+                      // Save button
+                      BlocConsumer<ProfileCubit, ProfileState>(
+                        listener: (ctx, state) {
+                          state.updateProfileDetails?.fold(
+                            () => null,
+                            (either) => either.fold(
+                              (error) {
+                                Navigator.of(sheetContext).pop();
+                                Dialogs.showSnack(
+                                  msg: 'Failed to update metrics. Try again.',
+                                );
+                              },
+                              (_) {
+                                Navigator.of(sheetContext).pop();
+                                Dialogs.showSnack(
+                                  msg: 'Body metrics updated successfully!',
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        builder: (ctx, state) {
+                          final isLoading =
+                              state.updateProfileDetails?.isNone() ?? false;
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                elevation: 0,
+                              ),
+                              onPressed: isLoading
+                                  ? null
+                                  : () async {
+                                      final heightText =
+                                          heightController.text.trim();
+                                      final weightText =
+                                          weightController.text.trim();
+                                      if (heightText.isEmpty ||
+                                          weightText.isEmpty) {
+                                        Dialogs.showSnack(
+                                          msg: 'Please enter both height and weight.',
+                                        );
+                                        return;
+                                      }
+                                      double? heightVal =
+                                          double.tryParse(heightText);
+                                      double? weightVal =
+                                          double.tryParse(weightText);
+                                      if (heightVal == null ||
+                                          weightVal == null) {
+                                        Dialogs.showSnack(
+                                          msg: 'Please enter valid numbers.',
+                                        );
+                                        return;
+                                      }
+                                      // Convert to cm if needed
+                                      if (heightUnit == 'ft') {
+                                        heightVal = heightVal * 30.48;
+                                      }
+                                      // Convert to kg if needed
+                                      if (weightUnit == 'lbs') {
+                                        weightVal = weightVal * 0.453592;
+                                      }
+                                      
+                                      final heightStr = heightVal.toStringAsFixed(2);
+                                      final weightStr = weightVal.toStringAsFixed(2);
+                                      
+                                      await profileCubit.updateHealthProfile(
+                                        bloodGroup: widget.customerDetails.bloodGroup ?? '',
+                                        height: heightStr,
+                                        weight: weightStr,
+                                      );
+
+                                      setState(() {
+                                        _currentHeight = heightStr;
+                                        _currentWeight = weightStr;
+                                        _heightController.text = heightStr;
+                                        _weightController.text = weightStr;
+                                      });
+                                    },
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Save Changes',
+                                      style: AppStyles.text16Px.poppins.w600
+                                          .copyWith(color: Colors.white),
+                                    ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      // Cancel
+                      Center(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(sheetContext).pop(),
+                          child: Text(
+                            'Cancel',
+                            style: AppStyles.text14Px.poppins.w600.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricInputField({
+    required TextEditingController controller,
+    required String hint,
+    required String selectedUnit,
+    required List<String> units,
+    required void Function(String) onUnitChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: AppStyles.text16Px.poppins.w500.copyWith(
+                color: AppColors.textDark,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppStyles.text14Px.poppins.w400.copyWith(
+                  color: const Color(0xFFADB5BD),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
             ),
           ),
+          Container(
+            width: 1,
+            height: 28,
+            color: const Color(0xFFDEE2E6),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedUnit,
+                onChanged: (v) => onUnitChanged(v!),
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: AppColors.textDark,
+                ),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: Color(0xFF868E96),
+                ),
+                items: units
+                    .map(
+                      (u) => DropdownMenuItem(
+                        value: u,
+                        child: Text(u),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
         ],
       ),
     );
