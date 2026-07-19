@@ -1,5 +1,8 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:intl/intl.dart';
+import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
+import 'pages/pages.dart';
+import 'body_matrix_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -42,289 +45,564 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (context, appState) {
           final bool isCustomer =
               Feggy.read<AppCubit>()?.state.currentUser != null;
-        return BlocProvider.value(
-          value: _cubit,
-          child: Scaffold(
-            backgroundColor: AppColors.bgcolorgrey,
-            appBar: AppBar(
-              automaticallyImplyLeading: false,
-              centerTitle: false,
-              title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
-              actions: [
-                GestureDetector(
-                  onTap: () {
-                    context.push(const SettingsScreen());
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/svg/icons/settings _icon.svg',
-                    width: 22,
-                    height: 22,
-                  ),
-                ).pOnly(right: 20),
-              ],
-            ),
-            body:
-                !isCustomer
-                    ? _GuestProfileView(
-                      onLoginTap: () {
-                        context.push(const SentOtpScreen());
-                      },
-                    )
-                    : BlocBuilder<ProfileCubit, ProfileState>(
-                      builder: (context, state) {
-                        ConstantChoicesModel? choicesModel;
-                        state.constChoice?.fold(
-                          () {},
-                          (either) => either.fold(
-                            (l) => null, // ApiException
-                            (r) => choicesModel = r, // Success model
-                          ),
-                        );
-                        return state.customerDetails.fold(
-                          () =>
-                              const Center(child: CircularProgressIndicator()),
-                          (either) {
-                            return either.fold(
-                              (error) =>
-                                  error
-                                      .maybeWhen(
-                                        network:
-                                            (e) =>
-                                                ErrorUi.network(onTap: _fetch),
-                                        notFound:
-                                            (e) =>
-                                                ErrorUi.notFound(onTap: _fetch),
-                                        orElse:
-                                            () => ErrorUi.server(onTap: _fetch),
-                                      )
-                                      .center,
-                              (customerDetails) {
-                                return RefreshIndicator(
-                                  onRefresh: _fetch,
-                                  child: ListView(
-                                    padding: const EdgeInsets.all(16),
-                                    children: [
-                                      Container(
-                                        width: 320,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 14,
-                                          vertical: 8,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.light,
-                                          borderRadius: BorderRadius.circular(
-                                            16,
+          return BlocProvider.value(
+            value: _cubit,
+            child: Scaffold(
+              backgroundColor: AppColors.bgcolorgrey,
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                centerTitle: false,
+                title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
+                actions: [
+                  GestureDetector(
+                    onTap: () {
+                      context.push(const SettingsScreen());
+                    },
+                    child: SvgPicture.asset(
+                      'assets/images/svg/icons/settings _icon.svg',
+                      width: 22,
+                      height: 22,
+                    ),
+                  ).pOnly(right: 20),
+                ],
+              ),
+              body:
+                  !isCustomer
+                      ? _GuestProfileView(
+                        onLoginTap: () {
+                          context.push(const SentOtpScreen());
+                        },
+                      )
+                      : BlocBuilder<ProfileCubit, ProfileState>(
+                        builder: (context, state) {
+                          ConstantChoicesModel? choicesModel;
+                          state.constChoice?.fold(
+                            () {},
+                            (either) => either.fold(
+                              (l) => null, // ApiException
+                              (r) => choicesModel = r, // Success model
+                            ),
+                          );
+                          return state.customerDetails.fold(
+                            () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            (either) {
+                              return either.fold(
+                                (error) =>
+                                    error
+                                        .maybeWhen(
+                                          network:
+                                              (e) => ErrorUi.network(
+                                                onTap: _fetch,
+                                              ),
+                                          notFound:
+                                              (e) => ErrorUi.notFound(
+                                                onTap: _fetch,
+                                              ),
+                                          orElse:
+                                              () =>
+                                                  ErrorUi.server(onTap: _fetch),
+                                        )
+                                        .center,
+                                (customerDetails) {
+                                  debugPrint(
+                                    "DEBUG: assignedTrainer = ${customerDetails.assignedTrainer}",
+                                  );
+                                  debugPrint(
+                                    "DEBUG: assignedFitnessCenter = ${customerDetails.assignedFitnessCenter}",
+                                  );
+                                  debugPrint(
+                                    "DEBUG: trainerNotes = ${customerDetails.trainerNotes}",
+                                  );
+                                  return RefreshIndicator(
+                                    onRefresh: _fetch,
+                                    child: ListView(
+                                      padding: const EdgeInsets.all(16),
+                                      children: [
+                                        Container(
+                                          width: 320,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 8,
                                           ),
-                                        ),
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            InkWell(
-                                              onTap:
-                                                  () => context.push(
-                                                    BlocProvider.value(
-                                                      value: _cubit,
-                                                      child:
-                                                          ProfileDetailsScreen(
-                                                            customerDetailsModel:
-                                                                customerDetails,
-                                                          ),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.light,
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
+                                          ),
+                                          child: Stack(
+                                            children: [
+                                              Row(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                children: [
+                                                  InkWell(
+                                                    onTap: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute<void>(
+                                                          builder:
+                                                              (
+                                                                _,
+                                                              ) => BlocProvider.value(
+                                                                value: _cubit,
+                                                                child: ProfileDetailsScreen(
+                                                                  customerDetailsModel:
+                                                                      customerDetails,
+                                                                ),
+                                                              ),
+                                                        ),
+                                                      ).then((_) {
+                                                        _fetch();
+                                                      });
+                                                    },
+                                                    child: AbsorbPointer(
+                                                      child: ProfileImage(
+                                                        isEdit: false,
+                                                        onChanged: (image) {},
+                                                        radius: 110,
+                                                        url:
+                                                            '${customerDetails.profilePicture}',
+                                                      ),
                                                     ),
                                                   ),
-                                              child: AbsorbPointer(
-                                                child: ProfileImage(
-                                                  isEdit: false,
-                                                  onChanged: (image) {},
-                                                  radius: 110,
-                                                  url:
-                                                      '${customerDetails.profilePicture}',
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 20),
-                                            Expanded(
-                                              child: Padding(
-                                                padding: EdgeInsets.all(8),
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      customerDetails
-                                                              .firstName ??
-                                                          '',
-                                                      style:
-                                                          AppStyles
-                                                              .text16Px
-                                                              .poppins
-                                                              .w600,
-                                                    ),
-                                                    SizedBox(height: 8),
-                                                    if (customerDetails
-                                                            .mobileNumber !=
-                                                        null)
-                                                      Text(
-                                                        customerDetails
-                                                            .mobileNumber!,
-                                                        style: AppStyles
-                                                            .text14Px
-                                                            .poppins
-                                                            .w600
-                                                            .copyWith(
-                                                              color:
-                                                                  AppColors
-                                                                      .textGrey,
-                                                            ),
-                                                      ),
-                                                    Text(
-                                                      customerDetails.email ??
-                                                          '',
-                                                      style: AppStyles
-                                                          .text14Px
-                                                          .poppins
-                                                          .w600
-                                                          .copyWith(
-                                                            color:
-                                                                AppColors
-                                                                    .textGrey,
+                                                  const SizedBox(width: 20),
+                                                  Expanded(
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            8,
                                                           ),
-                                                    ),
-                                                    const SizedBox(height: 14),
-                                                    Row(
-                                                      children: [
-                                                        if (customerDetails
-                                                                .gender !=
-                                                            null)
-                                                          Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      12,
-                                                                  vertical: 4,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              color:
-                                                                  AppColors
-                                                                      .iconBackground,
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    16,
-                                                                  ),
-                                                            ),
-                                                            child: Text(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Text(
+                                                            customerDetails
+                                                                    .fullName ??
+                                                                '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'
+                                                                    .trim(),
+                                                            style:
+                                                                AppStyles
+                                                                    .text16Px
+                                                                    .poppins
+                                                                    .w600,
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 8,
+                                                          ),
+                                                          if (customerDetails
+                                                                  .mobileNumber !=
+                                                              null)
+                                                            Text(
                                                               customerDetails
-                                                                  .gender!,
+                                                                  .mobileNumber!,
                                                               style: AppStyles
-                                                                  .text13Px
+                                                                  .text14Px
                                                                   .poppins
-                                                                  .w500
+                                                                  .w600
                                                                   .copyWith(
                                                                     color:
                                                                         AppColors
-                                                                            .textDark,
+                                                                            .textGrey,
                                                                   ),
                                                             ),
+                                                          Text(
+                                                            customerDetails
+                                                                    .email ??
+                                                                '-',
+                                                            style: AppStyles
+                                                                .text14Px
+                                                                .poppins
+                                                                .w600
+                                                                .copyWith(
+                                                                  color:
+                                                                      AppColors
+                                                                          .textGrey,
+                                                                ),
                                                           ),
-                                                      ],
+                                                          const SizedBox(
+                                                            height: 14,
+                                                          ),
+                                                          Wrap(
+                                                            spacing: 8,
+                                                            runSpacing: 6,
+                                                            crossAxisAlignment:
+                                                                WrapCrossAlignment
+                                                                    .center,
+                                                            children: [
+                                                              Container(
+                                                                padding:
+                                                                    const EdgeInsets.symmetric(
+                                                                      horizontal:
+                                                                          10,
+                                                                      vertical:
+                                                                          4,
+                                                                    ),
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(
+                                                                    0xFFEBFBEE,
+                                                                  ),
+                                                                  borderRadius:
+                                                                      BorderRadius.circular(
+                                                                        16,
+                                                                      ),
+                                                                ),
+                                                                child: Row(
+                                                                  mainAxisSize:
+                                                                      MainAxisSize
+                                                                          .min,
+                                                                  children: [
+                                                                    const Icon(
+                                                                      Icons
+                                                                          .circle,
+                                                                      size: 8,
+                                                                      color: Color(
+                                                                        0xFF40C057,
+                                                                      ),
+                                                                    ),
+                                                                    const SizedBox(
+                                                                      width: 6,
+                                                                    ),
+                                                                    Text(
+                                                                      'Active',
+                                                                      style: AppStyles
+                                                                          .text13Px
+                                                                          .poppins
+                                                                          .w600
+                                                                          .copyWith(
+                                                                            color: const Color(
+                                                                              0xFF2B8A3E,
+                                                                            ),
+                                                                          ),
+                                                                    ),
+                                                                  ],
+                                                                ),
+                                                              ),
+                                                              if (customerDetails
+                                                                          .gender !=
+                                                                      null &&
+                                                                  customerDetails
+                                                                      .gender!
+                                                                      .isNotEmpty)
+                                                                Container(
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            4,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        AppColors
+                                                                            .iconBackground,
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          16,
+                                                                        ),
+                                                                  ),
+                                                                  child: Text(
+                                                                    '${customerDetails.gender![0].toUpperCase()}${customerDetails.gender!.substring(1).toLowerCase()}',
+                                                                    style: AppStyles
+                                                                        .text13Px
+                                                                        .poppins
+                                                                        .w500
+                                                                        .copyWith(
+                                                                          color:
+                                                                              AppColors.textDark,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                              if (customerDetails
+                                                                          .bloodGroup !=
+                                                                      null &&
+                                                                  customerDetails
+                                                                      .bloodGroup!
+                                                                      .isNotEmpty &&
+                                                                  customerDetails
+                                                                          .bloodGroup!
+                                                                          .toLowerCase() !=
+                                                                      'unknown')
+                                                                Container(
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            12,
+                                                                        vertical:
+                                                                            4,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color:
+                                                                        AppColors
+                                                                            .iconBackground,
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          16,
+                                                                        ),
+                                                                  ),
+                                                                  child: Text(
+                                                                    customerDetails
+                                                                        .bloodGroup!,
+                                                                    style: AppStyles
+                                                                        .text13Px
+                                                                        .poppins
+                                                                        .w500
+                                                                        .copyWith(
+                                                                          color:
+                                                                              AppColors.textDark,
+                                                                        ),
+                                                                  ),
+                                                                ),
+                                                            ],
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ],
+                                                  ),
+                                                ],
+                                              ),
+                                              Positioned(
+                                                top: 8,
+                                                right: 8,
+                                                child: GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute<void>(
+                                                        builder:
+                                                            (
+                                                              _,
+                                                            ) => BlocProvider.value(
+                                                              value: _cubit,
+                                                              child: ProfileDetailsScreen(
+                                                                customerDetailsModel:
+                                                                    customerDetails,
+                                                              ),
+                                                            ),
+                                                      ),
+                                                    ).then((_) {
+                                                      _fetch();
+                                                    });
+                                                  },
+                                                  child: Container(
+                                                    width: 30,
+                                                    height: 30,
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                          color: Color(
+                                                            0xFFF1F3F5,
+                                                          ),
+                                                          shape:
+                                                              BoxShape.circle,
+                                                        ),
+                                                    child: const Icon(
+                                                      Icons.edit,
+                                                      size: 14,
+                                                      color: Color(0xFF495057),
+                                                    ),
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 16),
-                                      if (customerDetails.targetGoal != null &&
-                                          customerDetails
-                                              .targetGoal!
-                                              .isNotEmpty) ...[
-                                        Wrap(
-                                          spacing: 8,
-                                          runSpacing: 8,
-                                          children:
-                                              customerDetails.targetGoal!
-                                                  .map(
-                                                    (goal) => Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 12,
-                                                            vertical: 6,
+                                        const SizedBox(height: 16),
+                                        if (customerDetails.targetGoal !=
+                                                null &&
+                                            customerDetails
+                                                .targetGoal!
+                                                .isNotEmpty) ...[
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                'Target Goal',
+                                                style: AppStyles
+                                                    .text16Px
+                                                    .poppins
+                                                    .w600
+                                                    .copyWith(
+                                                      color: AppColors.textDark,
+                                                    ),
+                                              ),
+                                              GestureDetector(
+                                                onTap: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute<void>(
+                                                      builder:
+                                                          (
+                                                            _,
+                                                          ) => BlocProvider.value(
+                                                            value: _cubit,
+                                                            child: EditTargetGoals(
+                                                              customerDetailsModel:
+                                                                  customerDetails,
+                                                              choicesModel:
+                                                                  choicesModel,
+                                                            ),
                                                           ),
-                                                      decoration: BoxDecoration(
-                                                        color: AppColors
-                                                            .lightPrimary
-                                                            .withValues(
-                                                              alpha: .2,
-                                                            ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              16,
-                                                            ),
-                                                        border: Border.all(
-                                                          color:
-                                                              AppColors
-                                                                  .lightPrimary,
-                                                        ),
+                                                    ),
+                                                  ).then((_) {
+                                                    _cubit
+                                                        .fetchCustomerDetails();
+                                                  });
+                                                },
+                                                child: Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 4,
                                                       ),
-                                                      child: Text(
-                                                        goal
-                                                            .split('_')
-                                                            .map(
-                                                              (e) =>
-                                                                  e.isNotEmpty
-                                                                      ? '${e[0].toUpperCase()}${e.substring(1).toLowerCase()}'
-                                                                      : '',
-                                                            )
-                                                            .join(' '),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.primary
+                                                        .withOpacity(0.08),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
+                                                  ),
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.edit,
+                                                        size: 14,
+                                                        color:
+                                                            AppColors.primary,
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        'Edit',
                                                         style: AppStyles
                                                             .text12Px
                                                             .poppins
-                                                            .w500
+                                                            .w600
                                                             .copyWith(
                                                               color:
                                                                   AppColors
                                                                       .primary,
                                                             ),
                                                       ),
-                                                    ),
-                                                  )
-                                                  .toList(),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 10),
+                                          Wrap(
+                                            spacing: 8,
+                                            runSpacing: 8,
+                                            children:
+                                                customerDetails.targetGoal!
+                                                    .map(
+                                                      (goal) => Container(
+                                                        padding:
+                                                            const EdgeInsets.symmetric(
+                                                              horizontal: 12,
+                                                              vertical: 6,
+                                                            ),
+                                                        decoration: BoxDecoration(
+                                                          color: AppColors
+                                                              .lightPrimary
+                                                              .withValues(
+                                                                alpha: .2,
+                                                              ),
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                16,
+                                                              ),
+                                                          border: Border.all(
+                                                            color:
+                                                                AppColors
+                                                                    .lightPrimary,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          (goal.toLowerCase() ==
+                                                                      "other" &&
+                                                                  customerDetails
+                                                                          .targetGoalOther !=
+                                                                      null &&
+                                                                  customerDetails
+                                                                      .targetGoalOther!
+                                                                      .isNotEmpty)
+                                                              ? customerDetails
+                                                                  .targetGoalOther!
+                                                              : goal
+                                                                  .split("_")
+                                                                  .map(
+                                                                    (e) =>
+                                                                        e.isNotEmpty
+                                                                            ? "${e[0].toUpperCase()}${e.substring(1).toLowerCase()}"
+                                                                            : "",
+                                                                  )
+                                                                  .join(" "),
+                                                          style: AppStyles
+                                                              .text12Px
+                                                              .poppins
+                                                              .w500
+                                                              .copyWith(
+                                                                color:
+                                                                    AppColors
+                                                                        .primary,
+                                                              ),
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
+                                        _buildFitnessAnalyticsCard(
+                                          customerDetails,
                                         ),
-                                        const SizedBox(height: 16),
-                                      ],
-                                      () {
-                                        Membership? activeMembership;
-                                        if (customerDetails.memberships != null &&
-                                            customerDetails.memberships!.isNotEmpty) {
-                                          for (final m in customerDetails.memberships!) {
-                                            if (m.isActive == true ||
-                                                m.status?.toLowerCase() == 'active') {
-                                              activeMembership = m;
-                                              break;
+                                        () {
+                                          Membership? activeMembership;
+                                          if (customerDetails.memberships !=
+                                                  null &&
+                                              customerDetails
+                                                  .memberships!
+                                                  .isNotEmpty) {
+                                            for (final m
+                                                in customerDetails
+                                                    .memberships!) {
+                                              if (m.isActive == true ||
+                                                  m.status?.toLowerCase() ==
+                                                      'active') {
+                                                activeMembership = m;
+                                                break;
+                                              }
                                             }
+                                            activeMembership ??=
+                                                customerDetails
+                                                    .memberships!
+                                                    .first;
                                           }
-                                          activeMembership ??=
-                                              customerDetails.memberships!.first;
-                                        }
-                                        return _buildMembershipCard(activeMembership);
-                                      }(),
-                                      _buildOtherDetailsSection(
-                                        customerDetails,
-                                        choicesModel,
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
-                    ),
-          ),
-        );
+                                          return _buildMembershipCard(
+                                            activeMembership,
+                                          );
+                                        }(),
+                                        _buildOtherDetailsSection(
+                                          customerDetails,
+                                          choicesModel,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
+            ),
+          );
         },
       ),
     );
@@ -360,44 +638,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       healthIssues = 'YES';
     }
 
-    // BMI and BMR Calculation
-    double? bmi;
-    double? bmr;
-    String bmiCategory = '';
-    
-    final heightVal = double.tryParse(customerDetails.height ?? '');
-    final weightVal = double.tryParse(customerDetails.weight ?? '');
-    
-    if (heightVal != null && weightVal != null && heightVal > 0) {
-      final heightInMeters = heightVal / 100;
-      bmi = weightVal / (heightInMeters * heightInMeters);
-      
-      if (bmi < 18.5) {
-        bmiCategory = ' (Underweight)';
-      } else if (bmi < 25.0) {
-        bmiCategory = ' (Normal)';
-      } else if (bmi < 30.0) {
-        bmiCategory = ' (Overweight)';
-      } else {
-        bmiCategory = ' (Obese)';
-      }
-
-      // BMR Calculation (Revised Harris-Benedict Equation)
-      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
-      if (age > 0) {
-        if (gender.startsWith('f')) {
-          bmr = 447.593 + (9.247 * weightVal) + (3.098 * heightVal) - (4.330 * age);
-        } else {
-          bmr = 88.362 + (13.397 * weightVal) + (4.799 * heightVal) - (5.677 * age);
-        }
-      }
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // ── Assigned Gym & Trainer section ──
-        if (customerDetails.assignedFitnessCenter != null || customerDetails.assignedTrainer != null) ...[
+        if (customerDetails.assignedFitnessCenter != null ||
+            customerDetails.assignedTrainer != null) ...[
           const SizedBox(height: 12),
           Text(
             'Assigned Gym ',
@@ -433,13 +679,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.iconBackground,
                         ),
                         child: ClipOval(
-                          child: customerDetails.assignedFitnessCenter!['logo'] != null
-                              ? Image.network(
-                                  customerDetails.assignedFitnessCenter!['logo'] as String,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.fitness_center, color: AppColors.primary),
-                                )
-                              : const Icon(Icons.fitness_center, color: AppColors.primary),
+                          child:
+                              customerDetails.assignedFitnessCenter!['logo'] !=
+                                      null
+                                  ? Image.network(
+                                    customerDetails
+                                            .assignedFitnessCenter!['logo']
+                                        as String,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (_, __, ___) => const Icon(
+                                          Icons.fitness_center,
+                                          color: AppColors.primary,
+                                        ),
+                                  )
+                                  : const Icon(
+                                    Icons.fitness_center,
+                                    color: AppColors.primary,
+                                  ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -449,18 +706,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Text(
                               'Fitness Center',
-                              style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: AppColors.textGrey,
+                              ),
                             ),
                             Text(
-                              customerDetails.assignedFitnessCenter!['name'] as String? ?? 'N/A',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
+                              customerDetails.assignedFitnessCenter!['name']
+                                      as String? ??
+                                  '-',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(
+                                color: AppColors.textDark,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     ],
                   ),
-                  if (customerDetails.assignedTrainer != null) const Divider(height: 24, thickness: 0.5),
+                  if (customerDetails.assignedTrainer != null)
+                    const Divider(height: 24, thickness: 0.5),
                 ],
                 if (customerDetails.assignedTrainer != null) ...[
                   Row(
@@ -473,13 +737,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           color: AppColors.iconBackground,
                         ),
                         child: ClipOval(
-                          child: customerDetails.assignedTrainer!['profile_image'] != null
-                              ? Image.network(
-                                  customerDetails.assignedTrainer!['profile_image'] as String,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(Icons.person, color: AppColors.primary),
-                                )
-                              : const Icon(Icons.person, color: AppColors.primary),
+                          child:
+                              customerDetails
+                                          .assignedTrainer!['profile_image'] !=
+                                      null
+                                  ? Image.network(
+                                    customerDetails
+                                            .assignedTrainer!['profile_image']
+                                        as String,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (_, __, ___) => const Icon(
+                                          Icons.person,
+                                          color: AppColors.primary,
+                                        ),
+                                  )
+                                  : const Icon(
+                                    Icons.person,
+                                    color: AppColors.primary,
+                                  ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -489,11 +765,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           children: [
                             Text(
                               'Personal Trainer',
-                              style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: AppColors.textGrey,
+                              ),
                             ),
                             Text(
-                              customerDetails.assignedTrainer!['name'] as String? ?? 'N/A',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.textDark),
+                              customerDetails.assignedTrainer!['name']
+                                      as String? ??
+                                  '-',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(
+                                color: AppColors.textDark,
+                              ),
                             ),
                           ],
                         ),
@@ -501,14 +783,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ],
                   ),
                 ],
-                if (customerDetails.trainerNotes != null && customerDetails.trainerNotes!.isNotEmpty) ...[
+                if (customerDetails.trainerNotes != null &&
+                    customerDetails.trainerNotes!.isNotEmpty) ...[
                   const Divider(height: 24, thickness: 0.5),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         "Trainer's Feedback & Notes",
-                        style: AppStyles.text12Px.poppins.w500.copyWith(color: AppColors.textGrey),
+                        style: AppStyles.text12Px.poppins.w500.copyWith(
+                          color: AppColors.textGrey,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -541,17 +826,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute<void>(
-                    builder: (_) => BlocProvider.value(
-                      value: _cubit,
-                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
-                    ),
+                    builder:
+                        (_) => BlocProvider.value(
+                          value: _cubit,
+                          child: FitnessDetailsScreen(
+                            customerDetailsModel: customerDetails,
+                          ),
+                        ),
                   ),
                 ).then((_) {
                   _cubit.fetchCustomerDetails();
                 });
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(20),
@@ -589,19 +880,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildDetailRow('Age', age > 0 ? '$age' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('Height', customerDetails.height != null ? '${customerDetails.height} cm' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('Weight', customerDetails.weight != null ? '${customerDetails.weight} kg' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('BMI', bmi != null ? '${bmi.toStringAsFixed(1)}$bmiCategory' : 'N/A'),
-              const SizedBox(height: 14),
-              _buildDetailRow('BMR', bmr != null ? '${bmr.toStringAsFixed(0)} kcal' : 'N/A'),
+              _buildDetailRow('Age', age > 0 ? '$age' : '-'),
               const SizedBox(height: 14),
               _buildDetailRow(
                 'Blood Group',
-                customerDetails.bloodGroup ?? 'N/A',
+                (customerDetails.bloodGroup == null ||
+                        customerDetails.bloodGroup!.toLowerCase() == 'unknown')
+                    ? '-'
+                    : customerDetails.bloodGroup!,
               ),
               const SizedBox(height: 14),
               _buildDetailRow('Health Issues', healthIssues),
@@ -650,7 +936,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   choicesModel.data.professions
                       .firstWhere(
                         (e) => e.value == customerDetails.profession,
-                        orElse: () => const Profession(label: 'N/A', value: ''),
+                        orElse: () => const Profession(label: '-', value: ''),
                       )
                       .label,
                 ),
@@ -749,6 +1035,793 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  void _showBodyMetricsBottomSheet(
+    BuildContext context, {
+    required CustomerDetailsModel customerDetails,
+  }) {
+    // Pre-fill with existing values, store only the numeric part
+    final existingHeight = double.tryParse(customerDetails.height ?? '');
+    final existingWeight = double.tryParse(customerDetails.weight ?? '');
+
+    final heightController = TextEditingController(
+      text: existingHeight != null
+          ? (existingHeight == existingHeight.toInt().toDouble()
+              ? '${existingHeight.toInt()}'
+              : existingHeight.toStringAsFixed(1))
+          : '',
+    );
+    final weightController = TextEditingController(
+      text: existingWeight != null
+          ? (existingWeight == existingWeight.toInt().toDouble()
+              ? '${existingWeight.toInt()}'
+              : existingWeight.toStringAsFixed(1))
+          : '',
+    );
+
+    // Unit state
+    String heightUnit = 'cm';
+    String weightUnit = 'kg';
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return BlocProvider.value(
+          value: _cubit,
+          child: StatefulBuilder(
+            builder: (ctx, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Handle bar
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDEE2E6),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    // Title row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Update Body Metrics',
+                          style: AppStyles.text18Px.poppins.w600.copyWith(
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.of(sheetContext).pop(),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F3F5),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              size: 18,
+                              color: Color(0xFF495057),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Height field
+                    Text(
+                      'Height',
+                      style: AppStyles.text13Px.poppins.w600.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMetricInputField(
+                      controller: heightController,
+                      hint: 'e.g. 170',
+                      selectedUnit: heightUnit,
+                      units: const ['cm', 'ft'],
+                      onUnitChanged: (val) {
+                        setSheetState(() => heightUnit = val);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    // Weight field
+                    Text(
+                      'Weight',
+                      style: AppStyles.text13Px.poppins.w600.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildMetricInputField(
+                      controller: weightController,
+                      hint: 'e.g. 65',
+                      selectedUnit: weightUnit,
+                      units: const ['kg', 'lbs'],
+                      onUnitChanged: (val) {
+                        setSheetState(() => weightUnit = val);
+                      },
+                    ),
+                    const SizedBox(height: 32),
+                    // Save button
+                    BlocConsumer<ProfileCubit, ProfileState>(
+                      listener: (ctx, state) {
+                        state.updateProfileDetails?.fold(
+                          () => null,
+                          (either) => either.fold(
+                            (error) {
+                              Navigator.of(sheetContext).pop();
+                              Dialogs.showSnack(
+                                msg: 'Failed to update metrics. Try again.',
+                              );
+                            },
+                            (_) {
+                              Navigator.of(sheetContext).pop();
+                              Dialogs.showSnack(
+                                msg: 'Body metrics updated successfully!',
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      builder: (ctx, state) {
+                        final isLoading =
+                            state.updateProfileDetails?.isNone() ?? false;
+                        return SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 0,
+                            ),
+                            onPressed: isLoading
+                                ? null
+                                : () async {
+                                    final heightText =
+                                        heightController.text.trim();
+                                    final weightText =
+                                        weightController.text.trim();
+                                    if (heightText.isEmpty ||
+                                        weightText.isEmpty) {
+                                      Dialogs.showSnack(
+                                        msg: 'Please enter both height and weight.',
+                                      );
+                                      return;
+                                    }
+                                    double? heightVal =
+                                        double.tryParse(heightText);
+                                    double? weightVal =
+                                        double.tryParse(weightText);
+                                    if (heightVal == null ||
+                                        weightVal == null) {
+                                      Dialogs.showSnack(
+                                        msg: 'Please enter valid numbers.',
+                                      );
+                                      return;
+                                    }
+                                    // Convert to cm if needed
+                                    if (heightUnit == 'ft') {
+                                      heightVal = heightVal * 30.48;
+                                    }
+                                    // Convert to kg if needed
+                                    if (weightUnit == 'lbs') {
+                                      weightVal = weightVal * 0.453592;
+                                    }
+                                    await _cubit.updateHealthProfile(
+                                      bloodGroup:
+                                          customerDetails.bloodGroup ?? '',
+                                      height: heightVal.toStringAsFixed(2),
+                                      weight: weightVal.toStringAsFixed(2),
+                                    );
+                                  },
+                            child: isLoading
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    'Save Changes',
+                                    style: AppStyles.text16Px.poppins.w600
+                                        .copyWith(color: Colors.white),
+                                  ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    // Cancel
+                    Center(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(sheetContext).pop(),
+                        child: Text(
+                          'Cancel',
+                          style: AppStyles.text14Px.poppins.w600.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricInputField({
+    required TextEditingController controller,
+    required String hint,
+    required String selectedUnit,
+    required List<String> units,
+    required void Function(String) onUnitChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: AppStyles.text16Px.poppins.w500.copyWith(
+                color: AppColors.textDark,
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppStyles.text14Px.poppins.w400.copyWith(
+                  color: const Color(0xFFADB5BD),
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 28,
+            color: const Color(0xFFDEE2E6),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: selectedUnit,
+                onChanged: (v) => onUnitChanged(v!),
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: AppColors.textDark,
+                ),
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 18,
+                  color: Color(0xFF868E96),
+                ),
+                items: units
+                    .map(
+                      (u) => DropdownMenuItem(
+                        value: u,
+                        child: Text(u),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+
+  String _formatDoubleString(String? val) {
+    if (val == null || val.isEmpty) return '';
+    final d = double.tryParse(val);
+    if (d == null) return val;
+    if (d == d.toInt().toDouble()) {
+      return '${d.toInt()}';
+    }
+    return d.toStringAsFixed(1);
+  }
+
+  String _formatDynamicValue(dynamic val) {
+    if (val == null) return '';
+    if (val is num) {
+      if (val == val.toInt().toDouble()) {
+        return '${val.toInt()}';
+      }
+      return val.toStringAsFixed(1);
+    }
+    final d = double.tryParse(val.toString());
+    if (d == null) return val.toString();
+    if (d == d.toInt().toDouble()) {
+      return '${d.toInt()}';
+    }
+    return d.toStringAsFixed(1);
+  }
+
+  String _formatHeight(String? val) {
+    if (val == null || val.isEmpty) return '-';
+    final d = double.tryParse(val);
+    if (d == null) return val;
+    return '${d.toStringAsFixed(2)} CM';
+  }
+
+  String _formatWeight(String? val) {
+    if (val == null || val.isEmpty) return '-';
+    final d = double.tryParse(val);
+    if (d == null) return val;
+    if (d == d.toInt().toDouble()) {
+      return '${d.toInt()} KG';
+    }
+    return '${d.toStringAsFixed(1)} KG';
+  }
+
+  String formatWithCommas(num value) {
+    final str = value.toStringAsFixed(0);
+    return str.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    );
+  }
+
+  Widget _buildFitnessAnalyticsCard(CustomerDetailsModel customerDetails) {
+    int age = 0;
+    if (customerDetails.dateOfBirth != null) {
+      age = DateTime.now().year - customerDetails.dateOfBirth!.year;
+    }
+
+    double? bmi;
+    double? bmr;
+    String bmiCategory = '-';
+    Color categoryColor = Colors.grey;
+
+    final heightVal = double.tryParse(customerDetails.height ?? '');
+    final weightVal = double.tryParse(customerDetails.weight ?? '');
+
+    if (heightVal != null && weightVal != null && heightVal > 0) {
+      final heightInMeters = heightVal / 100;
+      bmi = weightVal / (heightInMeters * heightInMeters);
+
+      if (bmi < 18.5) {
+        bmiCategory = 'Underweight';
+        categoryColor = Colors.orange;
+      } else if (bmi < 25.0) {
+        bmiCategory = 'Normal';
+        categoryColor = const Color(0xFF40C057);
+      } else if (bmi < 30.0) {
+        bmiCategory = 'Overweight';
+        categoryColor = Colors.orange.shade700;
+      } else {
+        bmiCategory = 'Obese';
+        categoryColor = Colors.red;
+      }
+
+      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
+      if (age > 0) {
+        if (gender.startsWith('f')) {
+          bmr =
+              447.593 +
+              (9.247 * weightVal) +
+              (3.098 * heightVal) -
+              (4.330 * age);
+        } else {
+          bmr =
+              88.362 +
+              (13.397 * weightVal) +
+              (4.799 * heightVal) -
+              (5.677 * age);
+        }
+      }
+    }
+
+    // Fallbacks from model if calculation didn't run but model has it
+    if (bmi == null && customerDetails.bmi != null) {
+      bmi = double.tryParse(customerDetails.bmi.toString());
+      if (bmi != null) {
+        if (bmi < 18.5) {
+          bmiCategory = 'Underweight';
+          categoryColor = Colors.orange;
+        } else if (bmi < 25.0) {
+          bmiCategory = 'Normal';
+          categoryColor = const Color(0xFF40C057);
+        } else if (bmi < 30.0) {
+          bmiCategory = 'Overweight';
+          categoryColor = Colors.orange.shade700;
+        } else {
+          bmiCategory = 'Obese';
+          categoryColor = Colors.red;
+        }
+      }
+    }
+    if (bmr == null && customerDetails.bmr != null) {
+      bmr = double.tryParse(customerDetails.bmr.toString());
+    }
+
+    final bmiStr = bmi != null ? bmi.toStringAsFixed(1) : '-';
+    final bmrStr = bmr != null ? formatWithCommas(bmr) : '-';
+
+    final heightStr = _formatHeight(customerDetails.height);
+    final weightStr = _formatWeight(customerDetails.weight);
+
+    String updatedDateStr = '-';
+    if (customerDetails.modified != null) {
+      updatedDateStr = DateFormat(
+        'dd MMM yyyy',
+      ).format(customerDetails.modified!.toLocal());
+    }
+
+    // "Update" link → bottom sheet
+    final void Function() onUpdateTap = () {
+      _showBodyMetricsBottomSheet(
+        context,
+        customerDetails: customerDetails,
+      );
+    };
+
+    final void Function() onChevronTap = () {
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => BlocProvider.value(
+            value: _cubit,
+            child: BodyMatrixScreen(customerDetails: customerDetails),
+          ),
+        ),
+      );
+    };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 12),
+        Text(
+          'Health Matrix',
+          style: AppStyles.text16Px.poppins.w600.copyWith(
+            color: AppColors.textDark,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        // BMI
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'BMI',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF868E96),
+                                ),
+                              ),
+                              Text(
+                                bmiStr,
+                                style: AppStyles.text20Px.poppins.w700.copyWith(
+                                  fontSize: 20,
+                                  color: const Color(0xFF212529),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (bmi != null) ...[
+                                    Icon(
+                                      Icons.circle,
+                                      color: categoryColor,
+                                      size: 7,
+                                    ),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    bmiCategory,
+                                    style: AppStyles.text12Px.poppins.w500
+                                        .copyWith(
+                                          color: const Color(0xFF212529),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Middle divider and Heart Badge
+                        Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              top: -25,
+                              bottom: -25,
+                              child: Container(
+                                width: 1.5,
+                                color: const Color(0xFFD9D9D9),
+                              ),
+                            ),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: const Color(0xFFD9D9D9),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Center(
+                                child: SvgPicture.asset(
+                                  'assets/images/svg/icons/heart_icon.svg',
+                                  width: 14,
+                                  height: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // BMR
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'BMR',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF868E96),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                bmrStr,
+                                style: AppStyles.text20Px.poppins.w700.copyWith(
+                                  fontSize: 20,
+                                  color: const Color(0xFF212529),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'kcal/day',
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  color: const Color(0xFF868E96),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Inner metrics container
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFFE9ECEF),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          // Height
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.height,
+                                  color: Color(0xFFFA5252),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Height',
+                                  style: AppStyles.text13Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  heightStr,
+                                  style: AppStyles.text13Px.poppins.w600
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(
+                            height: 10,
+                            thickness: 1,
+                            color: Color(0xFFF1F3F5),
+                          ),
+                          // Weight
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.monitor_weight_outlined,
+                                  color: Color(0xFFFA5252),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Weight',
+                                  style: AppStyles.text13Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  weightStr,
+                                  style: AppStyles.text13Px.poppins.w600
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(
+                            height: 10,
+                            thickness: 1,
+                            color: Color(0xFFF1F3F5),
+                          ),
+                          // Last Updated
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.history,
+                                  color: Color(0xFF868E96),
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Last Updated',
+                                  style: AppStyles.text13Px.poppins.w500
+                                      .copyWith(color: const Color(0xFF212529)),
+                                ),
+                                const Spacer(),
+                                GestureDetector(
+                                  onTap: onUpdateTap,
+                                  child: RichText(
+                                    text: TextSpan(
+                                      style: AppStyles.text13Px.poppins.w500
+                                          .copyWith(
+                                            color: const Color(0xFF212529),
+                                          ),
+                                      children: [
+                                        TextSpan(text: '$updatedDateStr '),
+                                        TextSpan(
+                                          text: 'Update',
+                                          style: TextStyle(
+                                            color: AppColors.primary,
+                                            decoration:
+                                                TextDecoration.underline,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: GestureDetector(
+                  onTap: onChevronTap,
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFF1F3F5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      color: Color(0xFF495057),
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetricItem(String label, String value) {
+    return RichText(
+      text: TextSpan(
+        text: '$label : ',
+        style: AppStyles.text13Px.poppins.w600.copyWith(
+          color: AppColors.textGrey,
+        ),
+        children: [
+          TextSpan(
+            text: value,
+            style: AppStyles.text13Px.poppins.w500.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMembershipCard(Membership? membership) {
     if (membership == null) {
       return Column(
@@ -817,7 +1890,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isActive = membership.isActive ?? false;
     final bool isPending = statusStr.toLowerCase() == 'pending';
     final localEndDate = membership.endDate?.toLocal();
-    final bool isExpired = !isPending && (statusStr.toLowerCase() == 'expired' || (localEndDate != null && localEndDate.difference(DateTime.now()).inDays < 0));
+    final bool isExpired =
+        !isPending &&
+        (statusStr.toLowerCase() == 'expired' ||
+            (localEndDate != null &&
+                localEndDate.difference(DateTime.now()).inDays < 0));
     final bool actualIsActive = isActive && !isExpired && !isPending;
 
     // Remaining days calculation
@@ -1029,7 +2106,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? DateFormat(
                                       'dd MMM yyyy',
                                     ).format(membership.startDate!.toLocal())
-                                    : 'N/A',
+                                    : '-',
                             color: Colors.blue,
                           ),
                         ),
@@ -1043,7 +2120,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ? DateFormat(
                                       'dd MMM yyyy',
                                     ).format(membership.endDate!.toLocal())
-                                    : 'N/A',
+                                    : '-',
                             color: Colors.red,
                           ),
                         ),
@@ -1059,7 +2136,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             value:
                                 membership.amount != null
                                     ? '₹${membership.amount}'
-                                    : 'N/A',
+                                    : '-',
                             color: Colors.green,
                           ),
                         ),
@@ -1069,8 +2146,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.payment,
                             label: 'Payment Status',
                             value:
-                                (membership.paymentStatus ?? 'N/A')
-                                    .toUpperCase(),
+                                (membership.paymentStatus ?? '-').toUpperCase(),
                             color:
                                 (membership.paymentStatus ?? '')
                                             .toLowerCase() ==

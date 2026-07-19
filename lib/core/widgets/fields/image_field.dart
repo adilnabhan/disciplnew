@@ -94,6 +94,7 @@ class ImageField extends StatefulWidget {
 
 class _ImageFieldState extends State<ImageField> {
   late final TextEditingController _ctrl;
+  bool _isPicking = false;
 
   @override
   void initState() {
@@ -120,9 +121,23 @@ class _ImageFieldState extends State<ImageField> {
             _ctrl.clear();
             return;
           }
-          final xFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-          if (xFile?.path != null) {
-            _ctrl.value = TextEditingValue(text: xFile!.path);
+          if (_isPicking) return;
+          setState(() {
+            _isPicking = true;
+          });
+          try {
+            final xFile = await ImagePicker().pickImage(source: ImageSource.gallery);
+            if (xFile?.path != null) {
+              _ctrl.value = TextEditingValue(text: xFile!.path);
+            }
+          } catch (e) {
+            debugPrint('Error picking image: $e');
+          } finally {
+            if (mounted) {
+              setState(() {
+                _isPicking = false;
+              });
+            }
           }
         },
         child: AbsorbPointer(

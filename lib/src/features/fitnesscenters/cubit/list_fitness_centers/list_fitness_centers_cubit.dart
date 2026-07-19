@@ -11,9 +11,34 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
 
   Future<void> fetch() async {
     if (isClosed) return;
+
+    final repo = FitnesscenterRepository();
+    final cachedCats = repo.cachedCategories;
+    final cachedGyms = repo.cachedListFitnesscenter;
+
+    if (cachedCats != null && cachedGyms != null) {
+      emit(
+        state.copyWith(
+          categories: some(right<ApiException, FitnesscenterCategoriesModel>(cachedCats)),
+          listFitnessCenters: (
+            data: some(right<ApiException, ListFitnesscenterModel>(cachedGyms)),
+            isPagination: false,
+          ),
+        ),
+      );
+      // Fetch fresh data in the background
+      _fetchFreshData();
+      return;
+    }
+
     if (state.listFitnessCenters.data.isNone()) {
       emit(
-        state.copyWith(listFitnessCenters: (data: none(), isPagination: false)),
+        state.copyWith(
+          listFitnessCenters: (
+            data: none<Either<ApiException, ListFitnesscenterModel>>(),
+            isPagination: false,
+          ),
+        ),
       );
     }
 
@@ -21,20 +46,111 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
     await fetchCategories();
     if (isClosed) return;
 
-    if (ignoreLocation) {
-      await fetchListFitnessCenters();
-      return;
-    }
+    await fetchListFitnessCenters();
+  }
 
-    // Use default mock location coords (11.2588, 75.7804) defined in the state
+  Future<void> updateLocationAndFetch({
+    required double latitude,
+    required double longitude,
+    bool forceRefresh = false,
+  }) async {
+    if (isClosed) return;
+
+    final resetList = state.listFitnessCenters.data.isNone();
     emit(
       state.copyWith(
-        latitude: 11.2588,
-        longitude: 75.7804,
+        latitude: latitude,
+        longitude: longitude,
         showLocationBanner: false,
+        isLocationPermanentlyDenied: false,
+        listFitnessCenters: resetList
+            ? (
+                data: none<Either<ApiException, ListFitnesscenterModel>>(),
+                isPagination: false,
+              )
+            : state.listFitnessCenters,
       ),
     );
+
+    if (state.categories.isNone()) {
+      await fetchCategories();
+    }
+    if (isClosed) return;
+
     await fetchListFitnessCenters();
+  }
+
+  Future<void> setLocationDeniedAndFetch({bool permanentlyDenied = false}) async {
+    if (isClosed) return;
+
+    final resetList = state.listFitnessCenters.data.isNone();
+    emit(
+      state.copyWith(
+        latitude: null,
+        longitude: null,
+        showLocationBanner: true,
+        isLocationPermanentlyDenied: permanentlyDenied,
+        listFitnessCenters: resetList
+            ? (
+                data: none<Either<ApiException, ListFitnesscenterModel>>(),
+                isPagination: false,
+              )
+            : state.listFitnessCenters,
+      ),
+    );
+
+    if (state.categories.isNone()) {
+      await fetchCategories();
+    }
+    if (isClosed) return;
+
+    await fetchListFitnessCenters();
+  }
+
+  Future<void> _fetchFreshData() async {
+    if (isClosed) return;
+    // Fetch categories and gyms in background
+    final responseCategories = await FitnesscenterRepository().fitnesscenterCategories();
+    if (isClosed) return;
+    
+    // Only update state if categories call succeeded
+    responseCategories.fold(
+      (_) => null,
+      (cats) {
+        if (!isClosed) {
+          emit(state.copyWith(categories: some(right<ApiException, FitnesscenterCategoriesModel>(cats))));
+        }
+      },
+    );
+    
+    // Now fetch fresh list of fitness centers in background
+    final hasLocation = state.latitude != null && state.longitude != null;
+    final params = <String, dynamic>{
+      'search': state.searchQuery,
+      'category_id': state.selectedCategory?.id,
+    };
+    if (hasLocation && !ignoreLocation) {
+      params['lat'] = state.latitude;
+      params['lon'] = state.longitude;
+    }
+    params.removeWhere(
+      (key, value) => value == null || (value is String && value.isEmpty),
+    );
+
+    var responseGyms = await FitnesscenterRepository().listFitnesscenter(
+      queryParameters: params,
+      allGyms: ignoreLocation || !hasLocation,
+    );
+
+    if (isClosed) return;
+    emit(
+      state.copyWith(
+        listFitnessCenters: (
+          data: some(responseGyms),
+          isPagination: false,
+        ),
+      ),
+    );
   }
 
   Future<void> fetchListFitnessCenters({
@@ -53,7 +169,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
       emit(
         state.copyWith(
           listFitnessCenters: (
-            data: none(),
+            data: none<Either<ApiException, ListFitnesscenterModel>>(),
             isPagination: isPagination,
           ),
         ),
@@ -68,17 +184,23 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
         ),
       );
     }
+    final hasLocation = state.latitude != null && state.longitude != null;
     final params = <String, dynamic>{
       'search': searchQuery ?? state.searchQuery,
       'category_id': state.selectedCategory?.id,
-    }..removeWhere(
+    };
+    if (hasLocation && !ignoreLocation) {
+      params['lat'] = state.latitude;
+      params['lon'] = state.longitude;
+    }
+    params.removeWhere(
       (key, value) => value == null || (value is String && value.isEmpty),
     );
 
     var response = await FitnesscenterRepository().listFitnesscenter(
       queryParameters: params,
       nextUrl: isPagination ? fitnessCenters?.next : null,
-      allGyms: ignoreLocation,
+      allGyms: ignoreLocation || !hasLocation,
     );
 
     if (isClosed) return;
@@ -105,7 +227,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
           emit(
             state.copyWith(
               listFitnessCenters: (
-                data: some(right(data)),
+                data: some(right<ApiException, ListFitnesscenterModel>(data)),
                 isPagination: false,
               ),
             ),
@@ -128,7 +250,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
   Future<void> fetchCategories() async {
     if (isClosed) return;
     if (state.categories.isNone()) {
-      emit(state.copyWith(categories: none()));
+      emit(state.copyWith(categories: none<Either<ApiException, FitnesscenterCategoriesModel>>()));
     }
     final response = await FitnesscenterRepository().fitnesscenterCategories();
     if (isClosed) return;

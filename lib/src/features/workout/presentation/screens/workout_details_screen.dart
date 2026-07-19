@@ -1,18 +1,25 @@
 import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
     required this.sessionId,
     required this.fallbackTitle,
     this.startTimer = false,
+    this.trainerName,
+    this.isVerified,
+    this.onRefresh,
     super.key,
   });
 
   final int sessionId;
   final String fallbackTitle;
   final bool startTimer;
+  final String? trainerName;
+  final bool? isVerified;
+  final VoidCallback? onRefresh;
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -25,6 +32,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   Map<String, dynamic>? _sessionData;
   final Map<int, Timer> _debounceTimers = {};
   final Set<int> _addingSetLogIds = {};
+  final Set<int> _completingSetIds = {};
   Timer? _detailsTimer;
   int _elapsedSeconds = 0;
 
@@ -325,81 +333,269 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: false,
-        leadingWidth: 56,
-        leading: Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: Center(
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFEEEEEE),
-                  shape: BoxShape.circle,
+    return FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
+      future: _detailsFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            _sessionData == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.chevron_left,
-                  color: Color(0xFF444444),
-                  size: 24,
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
                 ),
               ),
             ),
-          ),
-        ),
-        title: Text(
-          'Workout Details',
-          style: AppStyles.text18Px.poppins.w600.copyWith(
-            color: const Color(0xFF212121),
-          ),
-        ),
-      ),
-      body: FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
-        future: _detailsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              _sessionData == null) {
-            return const Center(
+            body: const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
-            );
-          }
-
-          if (snapshot.hasError && _sessionData == null) {
-            return _buildErrorState('An unexpected error occurred.');
-          }
-
-          final result = snapshot.data;
-          if (result == null && _sessionData == null) {
-            return _buildErrorState('No details found for this session.');
-          }
-
-          if (_sessionData != null) {
-            if (widget.startTimer) {
-              _syncTimer(_sessionData!);
-            }
-            return _buildContent(_sessionData!);
-          }
-
-          return result!.fold(
-            (error) => _buildErrorState('Error loading details: ${error.msg}'),
-            (data) {
-              _sessionData = data;
-              if (widget.startTimer) {
-                _syncTimer(data);
-              }
-              return _buildContent(data);
-            },
+            ),
           );
-        },
-      ),
+        }
+
+        if (snapshot.hasError && _sessionData == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildErrorState('An unexpected error occurred.'),
+          );
+        }
+
+        final result = snapshot.data;
+        if (result == null && _sessionData == null) {
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildErrorState('No details found for this session.'),
+          );
+        }
+
+        if (_sessionData != null) {
+          if (widget.startTimer) {
+            _syncTimer(_sessionData!);
+          }
+          final status =
+              _sessionData!['status']?.toString().toUpperCase() ?? 'COMPLETED';
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildContent(_sessionData!),
+            bottomNavigationBar:
+                status != 'COMPLETED' ? _buildFinishButton() : null,
+          );
+        }
+
+        return result!.fold(
+          (error) => Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              centerTitle: false,
+              leadingWidth: 56,
+              leading: Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              title: Text(
+                'Workout Details',
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF212121),
+                ),
+              ),
+            ),
+            body: _buildErrorState('Error loading details: ${error.msg}'),
+          ),
+          (data) {
+            _sessionData = data;
+            if (widget.startTimer) {
+              _syncTimer(data);
+            }
+            final status =
+                data['status']?.toString().toUpperCase() ?? 'COMPLETED';
+            return Scaffold(
+              backgroundColor: const Color(0xFFF8F9FA),
+              appBar: AppBar(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                centerTitle: false,
+                leadingWidth: 56,
+                leading: Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Center(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFEEEEEE),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.chevron_left,
+                          color: Color(0xFF444444),
+                          size: 24,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                title: Text(
+                  'Workout Details',
+                  style: AppStyles.text18Px.poppins.w600.copyWith(
+                    color: const Color(0xFF212121),
+                  ),
+                ),
+              ),
+              body: _buildContent(data),
+              bottomNavigationBar:
+                  status != 'COMPLETED' ? _buildFinishButton() : null,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -458,8 +654,11 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final logs = data['logs'] as List? ?? [];
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
+    final bool isVerified =
+        widget.isVerified ?? (data['is_verified'] as bool?) ?? false;
+
     bool isEditable = status != 'COMPLETED';
-    if (!isEditable && completedAt != null) {
+    if (!isEditable && completedAt != null && !isVerified) {
       try {
         final completedTime = DateTime.parse(completedAt).toLocal();
         final difference = DateTime.now().difference(completedTime);
@@ -469,12 +668,63 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       } catch (_) {}
     }
 
-    final duration = widget.startTimer ? _formatTimer(_elapsedSeconds) : _formatDuration(startedAt, completedAt);
+    final duration =
+        widget.startTimer
+            ? _formatTimer(_elapsedSeconds)
+            : _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
+
+    final trainerName = widget.trainerName ?? data['trainer_name']?.toString();
+    final isMentor = trainerName != null && trainerName.trim().isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        if (status == 'COMPLETED' && !isVerified && isEditable) ...[
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF9E6),
+              border: Border.all(color: const Color(0xFFFFE0B2), width: 1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  color: Color(0xFFE65100),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isMentor
+                            ? 'Trainer Assigned Workout'
+                            : 'Completed Workout',
+                        style: AppStyles.text12Px.poppins.w600.copyWith(
+                          color: const Color(0xFFE65100),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'This workout has been successfully completed. Editing is available for 1 hour after completion.',
+                        style: AppStyles.text12Px.poppins.w400.copyWith(
+                          color: const Color(0xFFE65100),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         // Premium Summary Header Card
         Container(
           width: double.infinity,
@@ -607,11 +857,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             return _buildExerciseCard(log, index, isEditable);
           }),
 
-        if (status != 'COMPLETED') ...[
-          const SizedBox(height: 24),
-          _buildFinishButton(),
-        ],
-
         const SizedBox(height: 40),
       ],
     );
@@ -630,14 +875,16 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           children: [
             Icon(
               icon,
-              color: isTimerActive ? AppColors.primary : const Color(0xFFF0B5B7),
+              color:
+                  isTimerActive ? AppColors.primary : const Color(0xFFF0B5B7),
               size: 16,
             ),
             const SizedBox(width: 6),
             Text(
               label,
               style: AppStyles.text12Px.poppins.w500.copyWith(
-                color: isTimerActive ? AppColors.primary : const Color(0xFF94A3B8),
+                color:
+                    isTimerActive ? AppColors.primary : const Color(0xFF94A3B8),
               ),
             ),
           ],
@@ -646,7 +893,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         Text(
           value,
           style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: isTimerActive ? AppColors.primary : AppColors.dark.withValues(alpha: 0.7),
+            color:
+                isTimerActive
+                    ? AppColors.primary
+                    : AppColors.dark.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -659,8 +909,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     bool isEditable,
   ) {
     final workoutName = log['workout_name']?.toString() ?? 'Exercise';
-    final workoutId =
-        log['workout_id'] ?? log['plan_exercise'] ?? log['id'];
+    final workoutId = log['workout_id'] ?? log['plan_exercise'] ?? log['id'];
     final muscle = log['muscle']?.toString() ?? '';
     final equipment = log['equipment']?.toString() ?? '';
     final videoUrl = log['effective_video_url']?.toString() ?? '';
@@ -721,7 +970,15 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       if (workoutId != null) {
         final match = _exercises.firstWhere(
           (e) => e.id?.toString() == workoutId.toString(),
-          orElse: () => ExerciseLibraryModel(id: -1, name: '', type: '', muscleGroup: '', equipment: '', videoUrl: null),
+          orElse:
+              () => ExerciseLibraryModel(
+                id: -1,
+                name: '',
+                type: '',
+                muscleGroup: '',
+                equipment: '',
+                videoUrl: null,
+              ),
         );
         if (match.id != -1) {
           trackBy = match.trackBy;
@@ -731,23 +988,33 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     if (trackBy == null || trackBy.isEmpty) {
       final match = _exercises.firstWhere(
         (e) => e.name?.toLowerCase().trim() == workoutName.toLowerCase().trim(),
-        orElse: () => ExerciseLibraryModel(id: -1, name: '', type: '', muscleGroup: '', equipment: '', videoUrl: null),
+        orElse:
+            () => ExerciseLibraryModel(
+              id: -1,
+              name: '',
+              type: '',
+              muscleGroup: '',
+              equipment: '',
+              videoUrl: null,
+            ),
       );
       if (match.id != -1) {
         trackBy = match.trackBy;
       }
     }
 
-    final isTimeBased = trackBy?.toLowerCase() == 'time' ||
+    final isTimeBased =
+        trackBy?.toLowerCase() == 'time' ||
         subtitle.toLowerCase().contains('cardio') ||
         subtitle.toLowerCase().contains('flexibility') ||
         subtitle.toLowerCase().contains('hiit') ||
-        setLogs.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
+        setLogs.any(
+          (s) => s['input_type']?.toString().toLowerCase() == 'seconds',
+        );
     final isDistanceBased = trackBy?.toLowerCase() == 'distance';
 
-    final String repsHeader = isTimeBased
-        ? 'Secs'
-        : (isDistanceBased ? 'Km' : 'Reps');
+    final String repsHeader =
+        isTimeBased ? 'Secs' : (isDistanceBased ? 'Km' : 'Reps');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -876,46 +1143,75 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   ),
                 Expanded(
                   flex: 3,
-                  child: isEditable
-                      ? Center(
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: log['weight_type']?.toString() ?? 'kg',
-                              isDense: true,
-                              isExpanded: true,
-                              style: AppStyles.text12Px.poppins.w500.copyWith(
-                                color: const Color(0xFF212121),
-                              ),
-                              icon: const Icon(Icons.arrow_drop_down, size: 14),
-                              items: const [
-                                DropdownMenuItem(value: 'kg', child: Text('kg')),
-                                DropdownMenuItem(value: 'BW', child: Text('BW')),
-                                DropdownMenuItem(value: 'kg+BW', child: Text('kg+BW')),
-                              ],
-                              onChanged: (val) {
-                                if (val != null) {
-                                  final logId = int.tryParse(log['id']?.toString() ?? '');
-                                  if (logId != null) {
-                                    setState(() {
-                                      log['weight_type'] = val;
-                                    });
-                                    WorkoutRepository().updateWorkoutLogWeightType(
-                                      logId: logId,
-                                      weightType: val,
+                  child:
+                      isEditable
+                          ? Center(
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: () {
+                                  final val = log['weight_type']?.toString();
+                                  if (val == null) return 'kg';
+                                  if (val.toLowerCase() == 'bw') return 'BW';
+                                  if (val.toLowerCase() == 'kg+bw')
+                                    return 'kg+BW';
+                                  return val;
+                                }(),
+                                isDense: true,
+                                isExpanded: true,
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  color: const Color(0xFF212121),
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 14,
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'kg',
+                                    child: Text('kg'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'BW',
+                                    child: Text('BW'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'kg+BW',
+                                    child: Text('kg+BW'),
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final logId = int.tryParse(
+                                      log['id']?.toString() ?? '',
                                     );
+                                    if (logId != null) {
+                                      setState(() {
+                                        log['weight_type'] = val;
+                                      });
+                                      WorkoutRepository()
+                                          .updateWorkoutLogWeightType(
+                                            logId: logId,
+                                            weightType: val,
+                                          );
+                                    }
                                   }
-                                }
-                              },
+                                },
+                              ),
+                            ),
+                          )
+                          : Text(
+                            'Weight (${() {
+                              final val = log['weight_type']?.toString();
+                              if (val == null) return 'kg';
+                              if (val.toLowerCase() == 'bw') return 'BW';
+                              if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
+                              return val;
+                            }()})',
+                            textAlign: TextAlign.left,
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
+                              color: const Color(0xFF212121),
                             ),
                           ),
-                        )
-                      : Text(
-                          'Weight (${log['weight_type']?.toString() ?? 'kg'})',
-                          textAlign: TextAlign.left,
-                          style: AppStyles.text12Px.poppins.w500.copyWith(
-                            color: const Color(0xFF212121),
-                          ),
-                        ),
                 ),
                 Expanded(
                   flex: 3,
@@ -986,7 +1282,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           Expanded(
                             flex: 3,
                             child: Text(
-                              '$weight kg',
+                              (log['weight_type']?.toString().toUpperCase() ==
+                                      'BW')
+                                  ? 'BW'
+                                  : '$weight kg',
                               style: AppStyles.text14Px.poppins.w400.copyWith(
                                 color: const Color(0xFF212121),
                               ),
@@ -1106,61 +1405,91 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                             flex: 3,
                             child: Align(
                               alignment: Alignment.center,
-                              child: SizedBox(
-                                width: 65,
-                                child: TextFormField(
-                                  key: ValueKey('weight_${set['id']}'),
-                                  initialValue:
-                                      set['weight_kg'] != null &&
-                                              set['weight_kg'].toString() !=
-                                                  'null'
-                                          ? set['weight_kg'].toString()
-                                          : '',
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                        decimal: true,
+                              child:
+                                  (log['weight_type']
+                                              ?.toString()
+                                              .toUpperCase() ==
+                                          'BW')
+                                      ? Container(
+                                        width: 65,
+                                        height: 34,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF1F3F9),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'BW',
+                                          style: TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF666666),
+                                          ),
+                                        ),
+                                      )
+                                      : SizedBox(
+                                        width: 65,
+                                        child: TextFormField(
+                                          key: ValueKey('weight_${set['id']}'),
+                                          initialValue:
+                                              set['weight_kg'] != null &&
+                                                      set['weight_kg']
+                                                              .toString() !=
+                                                          'null'
+                                                  ? set['weight_kg'].toString()
+                                                  : '',
+                                          keyboardType:
+                                              const TextInputType.numberWithOptions(
+                                                decimal: true,
+                                              ),
+                                          textAlign: TextAlign.center,
+                                          style: AppStyles.text14Px.poppins.w400
+                                              .copyWith(
+                                                color: const Color(0xFF212121),
+                                              ),
+                                          decoration: InputDecoration(
+                                            isDense: true,
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                  vertical: 8,
+                                                  horizontal: 4,
+                                                ),
+                                            filled: true,
+                                            fillColor: const Color(0xFFF1F3F9),
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              borderSide: BorderSide.none,
+                                            ),
+                                            hintText:
+                                                set['target_weight'] != null
+                                                    ? '${set['target_weight']}'
+                                                    : '-',
+                                            hintStyle: const TextStyle(
+                                              color: Color(0xFF94A3B8),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          onChanged: (val) {
+                                            final double? parsedWeight =
+                                                double.tryParse(val);
+                                            set['weight_kg'] = parsedWeight;
+                                            _debounceUpdateSet(
+                                              set['id'] as int,
+                                              reps:
+                                                  set['reps'] != null
+                                                      ? int.tryParse(
+                                                        set['reps'].toString(),
+                                                      )
+                                                      : null,
+                                              weightKg: parsedWeight,
+                                            );
+                                          },
+                                        ),
                                       ),
-                                  textAlign: TextAlign.center,
-                                  style: AppStyles.text14Px.poppins.w400
-                                      .copyWith(color: const Color(0xFF212121)),
-                                  decoration: InputDecoration(
-                                    isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 4,
-                                    ),
-                                    filled: true,
-                                    fillColor: const Color(0xFFF1F3F9),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    hintText:
-                                        set['target_weight'] != null
-                                            ? '${set['target_weight']}'
-                                            : '-',
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFF94A3B8),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  onChanged: (val) {
-                                    final double? parsedWeight =
-                                        double.tryParse(val);
-                                    set['weight_kg'] = parsedWeight;
-                                    _debounceUpdateSet(
-                                      set['id'] as int,
-                                      reps:
-                                          set['reps'] != null
-                                              ? int.tryParse(
-                                                set['reps'].toString(),
-                                              )
-                                              : null,
-                                      weightKg: parsedWeight,
-                                    );
-                                  },
-                                ),
-                              ),
                             ),
                           ),
                           // Reps input field
@@ -1203,7 +1532,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                     ),
                                   ),
                                   onChanged: (val) {
-                                    final int? parsedReps = int.tryParse(val);
+                                    final int? parsedReps =
+                                        double.tryParse(val)?.round();
                                     set['reps'] = parsedReps;
                                     _debounceUpdateSet(
                                       set['id'] as int,
@@ -1229,7 +1559,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 onTap: () async {
                                   final setLogId = set['id'] as int?;
                                   if (setLogId != null) {
+                                    if (_completingSetIds.contains(setLogId))
+                                      return;
                                     setState(() {
+                                      _completingSetIds.add(setLogId);
                                       set['is_completed'] = !isCompleted;
                                     });
                                     final res = await WorkoutRepository()
@@ -1251,6 +1584,11 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                         ),
                                       );
                                     }, (_) => null);
+                                    if (mounted) {
+                                      setState(() {
+                                        _completingSetIds.remove(setLogId);
+                                      });
+                                    }
                                   }
                                 },
                                 child: Icon(
@@ -1295,43 +1633,99 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   }
 
   Widget _buildFinishButton() {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Button.filled(
-        isLoading: _isFinishing,
-        size: const Size(double.infinity, 48),
-        title: 'Finish Workout',
-        style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
-        icon: const Icon(Icons.check, color: Colors.white, size: 20),
-        raduis: 12,
-        ontap: () async {
-          if (_isFinishing) return;
-          setState(() {
-            _isFinishing = true;
-          });
-          final res = await WorkoutRepository().finishSession(
-            sessionId: widget.sessionId,
-            title: widget.fallbackTitle,
-          );
-          res.fold(
-            (error) {
-              setState(() {
-                _isFinishing = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to finish workout: ${error.msg}'),
-                ),
-              );
-            },
-            (_) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Workout finished successfully!')),
-              );
-              Navigator.pop(context, true);
-            },
-          );
-        },
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
+      child: SafeArea(
+        top: false,
+        child: Button.filled(
+          isLoading: _isFinishing,
+          size: const Size(double.infinity, 48),
+          title: 'Finish Workout',
+          style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
+          icon: const Icon(Icons.check, color: Colors.white, size: 20),
+          raduis: 12,
+          ontap: () async {
+            if (_isFinishing) return;
+            setState(() {
+              _isFinishing = true;
+            });
+            final res = await WorkoutRepository().finishSession(
+              sessionId: widget.sessionId,
+              title: widget.fallbackTitle,
+            );
+            res.fold(
+              (error) {
+                setState(() {
+                  _isFinishing = false;
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to finish workout: ${error.msg}'),
+                  ),
+                );
+              },
+              (data) {
+                final dateStr =
+                    _sessionData?['session_date']?.toString() ??
+                    _sessionData?['started_at']?.toString();
+                if (dateStr != null) {
+                  try {
+                    final date = DateTime.parse(dateStr);
+                    WorkoutRepository().invalidateCalendarMonth(
+                      date.year,
+                      date.month,
+                    );
+                  } catch (_) {
+                    final now = DateTime.now();
+                    WorkoutRepository().invalidateCalendarMonth(
+                      now.year,
+                      now.month,
+                    );
+                  }
+                } else {
+                  final now = DateTime.now();
+                  WorkoutRepository().invalidateCalendarMonth(
+                    now.year,
+                    now.month,
+                  );
+                }
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Workout finished successfully!'),
+                  ),
+                );
+                final Map<String, dynamic> sessionMap =
+                    data is Map<String, dynamic>
+                        ? Map<String, dynamic>.from(data)
+                        : <String, dynamic>{};
+                sessionMap['id'] ??= widget.sessionId;
+                sessionMap['session_id'] ??= widget.sessionId;
+                widget.onRefresh?.call();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute<bool>(
+                    builder:
+                        (context) => WorkoutAchievementScreen(
+                          sessionData: sessionMap,
+                          fallbackTitle: widget.fallbackTitle,
+                        ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

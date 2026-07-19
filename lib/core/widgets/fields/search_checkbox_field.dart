@@ -216,13 +216,14 @@ class _SearchCheckboxFieldState<T> extends State<SearchCheckboxField<T>> with Ch
                           final isSelected = values.contains(e);
                           return InkWell(
                             onTap: () {
+                              final currentList = List<({String label, T value})>.from(_ctrl.value);
                               if (isSelected) {
-                                _ctrl.value.remove(e);
+                                currentList.remove(e);
                               } else {
-                                _ctrl.value.add(e);
+                                currentList.add(e);
                               }
-                              _ctrl.notifyListeners();
-                              widget.onValueChanged?.call(_ctrl.value);
+                              _ctrl.value = currentList;
+                              widget.onValueChanged?.call(currentList);
                             },
                             child: SizedBox(
                               height: widget.tileHeight,
@@ -270,8 +271,9 @@ class _SearchCheckboxFieldState<T> extends State<SearchCheckboxField<T>> with Ch
                           deleteIcon: const Icon(color: AppColors.light, Icons.clear, size: 15),
                           label: Text(item.label, style: AppStyles.text12Px.w400.light.copyWith(fontWeight: FontWeight.w400)),
                           onDeleted: () {
-                            _ctrl.value.remove(item);
-                            _ctrl.notifyListeners();
+                            final currentList = List<({String label, T value})>.from(_ctrl.value);
+                            currentList.remove(item);
+                            _ctrl.value = currentList;
                           },
                         );
                       }).toList(),

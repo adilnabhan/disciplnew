@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class ReviewsAndRatingsScreen extends StatefulWidget {
   const ReviewsAndRatingsScreen({required this.fitnessCenterId, super.key});
@@ -41,8 +42,47 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _cubit,
-      child: Scaffold(
-        appBar: AppBar(title: const Text('Reviews and Ratings')),
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          Navigator.of(context).pop(true);
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF9F9F9),
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            leadingWidth: 56,
+            leading: Padding(
+              padding: const EdgeInsets.only(left: 16),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(true),
+                  child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEEEEEE),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.chevron_left,
+                    color: Color(0xFF444444),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          centerTitle: true,
+          title: Text(
+            'Reviews and Ratings',
+            style: AppStyles.text18Px.poppins.w600.copyWith(
+              color: AppColors.textDark,
+            ),
+          ),
+        ),
         body: BlocBuilder<ReviewsAndRatingCubit, ReviewsAndRatingState>(
           builder: (context, state) {
             return state.fitnessCenterReviews.data.fold(
@@ -54,8 +94,9 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
           },
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildReviewsAndRatings(FitnessCenterReviewsModel reviews) {
     if (reviews.results?.reviews?.isEmpty ?? true) {
@@ -120,6 +161,12 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
 
   Widget _buildReviewItem(SingleFitnessCenterReviewModel? review) {
     if (review == null) return const SizedBox.shrink();
+
+    final currentUser = context.read<AppCubit>().state.currentUser;
+    final currentUserName = '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+    final isOwnReview = currentUserName.isNotEmpty &&
+        (review.customerName ?? '').trim().toLowerCase() == currentUserName.toLowerCase();
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -133,7 +180,108 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(review.customerName ?? 'N/A', style: AppStyles.text14Px.poppins.w600.dark),
-                  Row(children: [const Icon(Icons.star, color: Colors.amber, size: 16), const SizedBox(width: 4), Text('${review.rating}', style: AppStyles.text12Px.poppins.w500.dark)]),
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text('${review.rating}', style: AppStyles.text12Px.poppins.w500.dark),
+                      const SizedBox(width: 4),
+                      PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(
+                          Icons.more_vert,
+                          color: Colors.grey,
+                          size: 16,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        color: Colors.white,
+                        elevation: 4,
+                        onSelected: (value) async {
+                          if (value == 'edit') {
+                            _showEditReviewDialog(review);
+                          } else if (value == 'delete') {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Delete Review'),
+                                content: const Text('Are you sure you want to delete this review?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm == true && context.mounted) {
+                              final res = await ReviewsAndReatingRepository().deleteReview(id: review.id ?? 0, body: {});
+                              res.fold(
+                                (error) => Dialogs.showSnack(msg: error.msg),
+                                (_) {
+                                  Dialogs.showSnack(msg: 'Review deleted successfully');
+                                  _fetch();
+                                },
+                              );
+                            }
+                          } else if (value == 'report') {
+                            Dialogs.showSnack(msg: 'Review reported successfully');
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          if (isOwnReview) ...[
+                            PopupMenuItem(
+                              value: 'edit',
+                              height: 32,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.edit_outlined, color: Colors.black87, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Edit Review',
+                                    style: AppStyles.text14Px.poppins.w500.copyWith(color: Colors.black87),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              height: 32,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.delete_outline, color: AppColors.error, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Delete Review',
+                                    style: AppStyles.text14Px.poppins.w500.copyWith(color: AppColors.error),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ] else
+                            PopupMenuItem(
+                              value: 'report',
+                              height: 32,
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.report_gmailerrorred, color: Colors.black87, size: 18),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Report Review',
+                                    style: AppStyles.text14Px.poppins.w500.copyWith(color: Colors.black87),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
@@ -144,6 +292,104 @@ class _ReviewsAndRatingsScreenState extends State<ReviewsAndRatingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Future<void> _showEditReviewDialog(SingleFitnessCenterReviewModel review) async {
+    double currentRating = (review.rating as num?)?.toDouble() ?? 0.0;
+    final commentController = TextEditingController(text: review.comment);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('Edit Review'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Rating', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    RatingBar.builder(
+                      initialRating: currentRating,
+                      minRating: 1,
+                      direction: Axis.horizontal,
+                      allowHalfRating: false,
+                      itemCount: 5,
+                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      itemBuilder: (context, _) => const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                      ),
+                      onRatingUpdate: (rating) {
+                        setDialogState(() {
+                          currentRating = rating;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Comment', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Type your review here',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (commentController.text.trim().isEmpty) {
+                      Dialogs.showSnack(msg: 'Please enter your review');
+                      return;
+                    }
+                    final res = await ReviewsAndReatingRepository().updateReview(
+                      id: review.id ?? 0,
+                      body: {
+                        'rating': currentRating.toInt(),
+                        'comment': commentController.text,
+                      },
+                    );
+                    res.fold(
+                      (error) => Dialogs.showSnack(msg: error.msg),
+                      (_) {
+                        Dialogs.showSnack(msg: 'Review updated successfully');
+                        Navigator.pop(dialogContext);
+                        _fetch();
+                      },
+                    );
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

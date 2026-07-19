@@ -30,6 +30,7 @@ mixin _$ListFitnessCentersState {
   double? get latitude => throw _privateConstructorUsedError;
   double? get longitude => throw _privateConstructorUsedError;
   bool get showLocationBanner => throw _privateConstructorUsedError;
+  bool get isLocationPermanentlyDenied => throw _privateConstructorUsedError;
 
   /// Create a copy of ListFitnessCentersState
   /// with the given fields replaced by the non-null parameter values.
@@ -57,6 +58,7 @@ abstract class $ListFitnessCentersStateCopyWith<$Res> {
     double? latitude,
     double? longitude,
     bool showLocationBanner,
+    bool isLocationPermanentlyDenied,
   });
 
   $SingleFitnesscenterCategoryModelCopyWith<$Res>? get selectedCategory;
@@ -87,6 +89,7 @@ class _$ListFitnessCentersStateCopyWithImpl<
     Object? latitude = freezed,
     Object? longitude = freezed,
     Object? showLocationBanner = null,
+    Object? isLocationPermanentlyDenied = null,
   }) {
     return _then(
       _value.copyWith(
@@ -130,6 +133,11 @@ class _$ListFitnessCentersStateCopyWithImpl<
                 null == showLocationBanner
                     ? _value.showLocationBanner
                     : showLocationBanner // ignore: cast_nullable_to_non_nullable
+                        as bool,
+            isLocationPermanentlyDenied:
+                null == isLocationPermanentlyDenied
+                    ? _value.isLocationPermanentlyDenied
+                    : isLocationPermanentlyDenied // ignore: cast_nullable_to_non_nullable
                         as bool,
           )
           as $Val,
@@ -175,6 +183,7 @@ abstract class _$$ListFitnessCentersStateImplCopyWith<$Res>
     double? latitude,
     double? longitude,
     bool showLocationBanner,
+    bool isLocationPermanentlyDenied,
   });
 
   @override
@@ -206,6 +215,7 @@ class __$$ListFitnessCentersStateImplCopyWithImpl<$Res>
     Object? latitude = freezed,
     Object? longitude = freezed,
     Object? showLocationBanner = null,
+    Object? isLocationPermanentlyDenied = null,
   }) {
     return _then(
       _$ListFitnessCentersStateImpl(
@@ -249,6 +259,11 @@ class __$$ListFitnessCentersStateImplCopyWithImpl<$Res>
                 ? _value.showLocationBanner
                 : showLocationBanner // ignore: cast_nullable_to_non_nullable
                     as bool,
+        isLocationPermanentlyDenied:
+            null == isLocationPermanentlyDenied
+                ? _value.isLocationPermanentlyDenied
+                : isLocationPermanentlyDenied // ignore: cast_nullable_to_non_nullable
+                    as bool,
       ),
     );
   }
@@ -262,9 +277,10 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
     this.categories = const None(),
     this.selectedCategory,
     this.searchQuery = '',
-    this.latitude = 11.2588,
-    this.longitude = 75.7804,
+    this.latitude,
+    this.longitude,
     this.showLocationBanner = false,
+    this.isLocationPermanentlyDenied = false,
   });
 
   @override
@@ -283,18 +299,19 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
   @JsonKey()
   final String searchQuery;
   @override
-  @JsonKey()
   final double? latitude;
   @override
-  @JsonKey()
   final double? longitude;
   @override
   @JsonKey()
   final bool showLocationBanner;
+  @override
+  @JsonKey()
+  final bool isLocationPermanentlyDenied;
 
   @override
   String toString() {
-    return 'ListFitnessCentersState(listFitnessCenters: $listFitnessCenters, categories: $categories, selectedCategory: $selectedCategory, searchQuery: $searchQuery, latitude: $latitude, longitude: $longitude, showLocationBanner: $showLocationBanner)';
+    return 'ListFitnessCentersState(listFitnessCenters: $listFitnessCenters, categories: $categories, selectedCategory: $selectedCategory, searchQuery: $searchQuery, latitude: $latitude, longitude: $longitude, showLocationBanner: $showLocationBanner, isLocationPermanentlyDenied: $isLocationPermanentlyDenied)';
   }
 
   @override
@@ -315,7 +332,13 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
             (identical(other.longitude, longitude) ||
                 other.longitude == longitude) &&
             (identical(other.showLocationBanner, showLocationBanner) ||
-                other.showLocationBanner == showLocationBanner));
+                other.showLocationBanner == showLocationBanner) &&
+            (identical(
+                  other.isLocationPermanentlyDenied,
+                  isLocationPermanentlyDenied,
+                ) ||
+                other.isLocationPermanentlyDenied ==
+                    isLocationPermanentlyDenied));
   }
 
   @override
@@ -328,6 +351,7 @@ class _$ListFitnessCentersStateImpl implements _ListFitnessCentersState {
     latitude,
     longitude,
     showLocationBanner,
+    isLocationPermanentlyDenied,
   );
 
   /// Create a copy of ListFitnessCentersState
@@ -354,6 +378,7 @@ abstract class _ListFitnessCentersState implements ListFitnessCentersState {
     final double? latitude,
     final double? longitude,
     final bool showLocationBanner,
+    final bool isLocationPermanentlyDenied,
   }) = _$ListFitnessCentersStateImpl;
 
   @override
@@ -374,6 +399,8 @@ abstract class _ListFitnessCentersState implements ListFitnessCentersState {
   double? get longitude;
   @override
   bool get showLocationBanner;
+  @override
+  bool get isLocationPermanentlyDenied;
 
   /// Create a copy of ListFitnessCentersState
   /// with the given fields replaced by the non-null parameter values.

@@ -21,4 +21,18 @@ class AddReviewCubit extends Cubit<AddReviewState> {
     );
     emit(state.copyWith(addReview: some(response)));
   }
+
+  Future<void> addTrainerReview({
+    required int trainerId,
+    required int rating,
+    required String comment,
+  }) async {
+    emit(state.copyWith(addReview: none()));
+    final response = await ReviewsAndReatingRepository().addTrainerReview(
+      trainerId: trainerId,
+      rating: rating,
+      comment: comment,
+    );
+    emit(state.copyWith(addReview: some(response)));
+  }
 }

@@ -202,11 +202,11 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         textInputAction: TextInputAction.next,
         label: 'Date of Birth',
         // dateTimeShowFormat: DateFormat('dd MMM yyyy'),
-        dateTimeShowFormat: DateFormat('dd/MM/yy'),
+        dateTimeShowFormat: DateFormat('dd/MM/yyyy'),
         endTime: DateTime.now(),
         requiredLabel: true,
         controller: TextEditingController(
-          text: widget.customerDetailsModel.dateOfBirth?.format('dd/MM/yy'),
+          text: widget.customerDetailsModel.dateOfBirth?.format('dd/MM/yyyy'),
         ),
         validator: (value) {
           if (value?.isEmpty ?? true) {

@@ -24,7 +24,7 @@ class SetupCompleteStep extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: size.height / 15),
+              SizedBox(height: size.height / 28),
 
               /// Title
               Text(
@@ -32,7 +32,7 @@ class SetupCompleteStep extends StatelessWidget {
                 style: AppStyles.text36Px.w500.copyWith(color: AppColors.dark),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
               /// Subtitle — UPDATED ✅
               LayoutBuilder(
@@ -59,7 +59,9 @@ class SetupCompleteStep extends StatelessWidget {
                 ontap: () {
                   context.read<AppCubit>().addUser(login!);
                   if (login?.customer?.organizationId == null) {
-                    context.pushAndRemoveUntil(const DashboardScreen(navIndex: 2));
+                    context.pushAndRemoveUntil(
+                      const DashboardScreen(navIndex: 0),
+                    );
                   } else {
                     context.pushAndRemoveUntil(const DashboardScreen());
                   }

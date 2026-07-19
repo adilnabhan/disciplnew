@@ -105,9 +105,10 @@ class _MultiSelectFieldState<T> extends State<MultiSelectField<T>> with ChangeNo
             requiredLabel: widget.requiredLabel,
             onFieldSubmitted: (_) {
               if (widget.selectedMultiValues != null && (widget.controller?.text.trim().isNotEmpty ?? false)) {
-                widget.selectedMultiValues?.value.add(widget.controller?.text ?? '');
+                final currentList = List<String>.from(widget.selectedMultiValues!.value);
+                currentList.add(widget.controller?.text ?? '');
+                widget.selectedMultiValues!.value = currentList;
                 widget.controller?.clear();
-                widget.selectedMultiValues?.notifyListeners();
               }
             },
             decoration: (widget.decoration ?? const InputDecoration()).copyWith(
@@ -117,9 +118,10 @@ class _MultiSelectFieldState<T> extends State<MultiSelectField<T>> with ChangeNo
                   child: IconButton.filled(
                     onPressed: () {
                       if (widget.selectedMultiValues != null && (widget.controller?.text.trim().isNotEmpty ?? false)) {
-                        widget.selectedMultiValues?.value.add(widget.controller?.text ?? '');
+                        final currentList = List<String>.from(widget.selectedMultiValues!.value);
+                        currentList.add(widget.controller?.text ?? '');
+                        widget.selectedMultiValues!.value = currentList;
                         widget.controller?.clear();
-                        widget.selectedMultiValues?.notifyListeners();
                       }
                     },
                     style: IconButton.styleFrom(
@@ -186,8 +188,9 @@ class _MultiSelectFieldState<T> extends State<MultiSelectField<T>> with ChangeNo
                                 Text(item, style: AppStyles.text12Px.w500.dark),
                                 IconButton.filled(
                                   onPressed: () {
-                                    widget.selectedMultiValues?.value.remove(item);
-                                    widget.selectedMultiValues?.notifyListeners();
+                                    final currentList = List<String>.from(widget.selectedMultiValues!.value);
+                                    currentList.remove(item);
+                                    widget.selectedMultiValues!.value = currentList;
                                   },
                                   style: IconButton.styleFrom(
                                     backgroundColor: AppColors.dark,

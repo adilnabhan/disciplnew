@@ -14,7 +14,13 @@ class FitnessCenterTile extends StatelessWidget {
     String locationText = 'Location N/A';
     if (fitnessCenter.location != null) {
       final loc = fitnessCenter.location!;
-      final parts = [loc.street, loc.city];
+      // Street first (fall back to building name), then city/district
+      final streetOrBuilding = (loc.street != null && loc.street!.isNotEmpty)
+          ? loc.street
+          : (loc.buildingName != null && loc.buildingName!.isNotEmpty)
+              ? loc.buildingName
+              : null;
+      final parts = [streetOrBuilding, loc.city];
       final validParts = parts.where((e) => e != null && e.toString().isNotEmpty).toList();
       if (validParts.isNotEmpty) {
         locationText = validParts.join(', ');
