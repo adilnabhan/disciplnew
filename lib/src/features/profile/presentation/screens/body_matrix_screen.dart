@@ -11,9 +11,9 @@ class BodyMatrixScreen extends StatefulWidget {
 }
 
 class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
-  bool _aboutBmiExpanded = false;
-  bool _aboutBmrExpanded = false;
-  bool _aboutBfExpanded = false;
+  bool _aboutBmiExpanded = true;
+  bool _aboutBmrExpanded = true;
+  bool _aboutBfExpanded = true;
 
   late final TextEditingController _heightController;
   late final TextEditingController _weightController;
@@ -84,12 +84,12 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
         );
   }
 
-  double? get _bf {
-    final hasEdited = _currentHeight != widget.customerDetails.height ||
-        _currentWeight != widget.customerDetails.weight;
+  double? _bf(CustomerDetailsModel details) {
+    final hasEdited = _currentHeight != details.height ||
+        _currentWeight != details.weight;
 
     if (!hasEdited) {
-      final raw = widget.customerDetails.bfPercentage;
+      final raw = details.bfPercentage;
       if (raw != null) {
         if (raw is num) return raw.toDouble();
         if (raw is String) {
@@ -100,11 +100,11 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     }
 
     final bmiVal = _bmi;
-    final dob = widget.customerDetails.dateOfBirth;
+    final dob = details.dateOfBirth;
     if (bmiVal == null || dob == null) return 16.4;
 
     final age = DateTime.now().year - dob.year;
-    final gender = widget.customerDetails.gender?.toString().toLowerCase() ?? 'male';
+    final gender = details.gender?.toString().toLowerCase() ?? 'male';
 
     if (gender.startsWith('f')) {
       return (1.20 * bmiVal) + (0.23 * age) - 5.4;
@@ -113,8 +113,8 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     }
   }
 
-  Map<String, dynamic> get _bfInfo {
-    final val = _bf;
+  Map<String, dynamic> _bfInfo(CustomerDetailsModel details) {
+    final val = _bf(details);
     if (val == null) {
       return {
         'value': null,
@@ -324,7 +324,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                 const SizedBox(height: 16),
                 _buildBmrCard(),
                 const SizedBox(height: 16),
-                _buildBodyFatCard(),
+                _buildBodyFatCard(details),
                 const SizedBox(height: 16),
                 _buildMetricsCard(),
                 const SizedBox(height: 24),
@@ -471,6 +471,10 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
             title: 'About BMI',
             body:
                 'BMI is a useful screening tool, but doesn\'t distinguish muscle, bone, or body fat. Use it along with other metrics for a complete picture.',
+            formulaTitle: 'BMI Formula:',
+            formulas: [
+              'BMI = Weight (kg) / [Height (m)]²',
+            ],
             expanded: _aboutBmiExpanded,
             onTap: () => setState(() => _aboutBmiExpanded = !_aboutBmiExpanded),
           ),
@@ -779,6 +783,11 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
             title: 'About BMR',
             body:
                 'BMR is the number of calories your body burns at complete rest to maintain basic functions like breathing and circulation. Use it as your baseline for calorie planning.',
+            formulaTitle: 'Harris-Benedict Formula:',
+            formulas: [
+              'Men: BMR = 88.362 + (13.397 × Weight kg) + (4.799 × Height cm) - (5.677 × Age)',
+              'Women: BMR = 447.593 + (9.247 × Weight kg) + (3.098 × Height cm) - (4.330 × Age)',
+            ],
             expanded: _aboutBmrExpanded,
             onTap: () => setState(() => _aboutBmrExpanded = !_aboutBmrExpanded),
           ),
@@ -808,8 +817,8 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     );
   }
 
-  Widget _buildBodyFatCard() {
-    final info = _bfInfo;
+  Widget _buildBodyFatCard(CustomerDetailsModel details) {
+    final info = _bfInfo(details);
     final double? bfVal = info['value'] as double?;
     final String label = info['label'] as String;
     final String subtext = info['subtext'] as String;
@@ -946,6 +955,11 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
             title: 'About Body Fat Percentage',
             body:
                 'Body fat percentage is the amount of fat in your body compared to your total body weight. It\'s a better indicator of fitness than weight alone.',
+            formulaTitle: 'Deurenberg Formula:',
+            formulas: [
+              'Men: Body Fat % = (1.20 × BMI) + (0.23 × Age) - 16.2',
+              'Women: Body Fat % = (1.20 × BMI) + (0.23 × Age) - 5.4',
+            ],
             expanded: _aboutBfExpanded,
             onTap: () => setState(() => _aboutBfExpanded = !_aboutBfExpanded),
           ),
@@ -1212,6 +1226,9 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
   void _showBodyMetricsBottomSheet(BuildContext context) {
     final existingHeight = double.tryParse(_currentHeight ?? '');
     final existingWeight = double.tryParse(_currentWeight ?? '');
+    final dob = widget.customerDetails.dateOfBirth;
+    final existingAge = dob != null ? (DateTime.now().year - dob.year) : null;
+    final existingGender = widget.customerDetails.gender?.toString() ?? 'Male';
 
     final heightController = TextEditingController(
       text: existingHeight != null
@@ -1227,9 +1244,19 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
               : existingWeight.toStringAsFixed(1))
           : '',
     );
+    final ageController = TextEditingController(
+      text: existingAge != null ? '$existingAge' : '',
+    );
+    final neckController = TextEditingController();
+    final waistController = TextEditingController();
+    final hipController = TextEditingController();
 
     String heightUnit = 'cm';
     String weightUnit = 'kg';
+    String neckUnit = 'cm';
+    String waistUnit = 'cm';
+    String hipUnit = 'cm';
+    String gender = existingGender.toLowerCase().startsWith('f') ? 'Female' : 'Male';
 
     final profileCubit = BlocProvider.of<ProfileCubit>(context);
 
@@ -1297,40 +1324,187 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      // Height field
-                      Text(
-                        'Height',
-                        style: AppStyles.text13Px.poppins.w600.copyWith(
-                          color: AppColors.textDark,
-                        ),
+                      // Row 1: Height & Weight
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Height',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: heightController,
+                                  hint: 'e.g. 170',
+                                  selectedUnit: heightUnit,
+                                  units: const ['cm', 'ft'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => heightUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Weight',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: weightController,
+                                  hint: 'e.g. 65',
+                                  selectedUnit: weightUnit,
+                                  units: const ['kg', 'lbs'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => weightUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      _buildMetricInputField(
-                        controller: heightController,
-                        hint: 'e.g. 170',
-                        selectedUnit: heightUnit,
-                        units: const ['cm', 'ft'],
-                        onUnitChanged: (val) {
-                          setSheetState(() => heightUnit = val);
-                        },
+                      const SizedBox(height: 16),
+                      // Row 2: Age & Gender
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Age',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildSimpleInputField(
+                                  controller: ageController,
+                                  hint: 'e.g. 25',
+                                  keyboardType: TextInputType.number,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Gender',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildGenderDropdown(
+                                  selectedGender: gender,
+                                  onChanged: (val) {
+                                    setSheetState(() => gender = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 20),
-                      // Weight field
-                      Text(
-                        'Weight',
-                        style: AppStyles.text13Px.poppins.w600.copyWith(
-                          color: AppColors.textDark,
-                        ),
+                      const SizedBox(height: 16),
+                      // Row 3: Neck & Waist
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Neck',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: neckController,
+                                  hint: 'e.g. 38',
+                                  selectedUnit: neckUnit,
+                                  units: const ['cm', 'in'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => neckUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Waist',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: waistController,
+                                  hint: 'e.g. 80',
+                                  selectedUnit: waistUnit,
+                                  units: const ['cm', 'in'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => waistUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      _buildMetricInputField(
-                        controller: weightController,
-                        hint: 'e.g. 65',
-                        selectedUnit: weightUnit,
-                        units: const ['kg', 'lbs'],
-                        onUnitChanged: (val) {
-                          setSheetState(() => weightUnit = val);
-                        },
+                      const SizedBox(height: 16),
+                      // Row 4: Hip & Placeholder
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hip',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: hipController,
+                                  hint: 'e.g. 95',
+                                  selectedUnit: hipUnit,
+                                  units: const ['cm', 'in'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => hipUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(child: SizedBox()),
+                        ],
                       ),
                       const SizedBox(height: 32),
                       // Save button
@@ -1375,10 +1549,20 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                                           heightController.text.trim();
                                       final weightText =
                                           weightController.text.trim();
+                                      final ageText =
+                                          ageController.text.trim();
+                                      final neckText =
+                                          neckController.text.trim();
+                                      final waistText =
+                                          waistController.text.trim();
+                                      final hipText =
+                                          hipController.text.trim();
+
                                       if (heightText.isEmpty ||
-                                          weightText.isEmpty) {
+                                          weightText.isEmpty ||
+                                          ageText.isEmpty) {
                                         Dialogs.showSnack(
-                                          msg: 'Please enter both height and weight.',
+                                          msg: 'Please enter height, weight, and age.',
                                         );
                                         return;
                                       }
@@ -1386,8 +1570,11 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                                           double.tryParse(heightText);
                                       double? weightVal =
                                           double.tryParse(weightText);
+                                      int? ageVal =
+                                          int.tryParse(ageText);
                                       if (heightVal == null ||
-                                          weightVal == null) {
+                                          weightVal == null ||
+                                          ageVal == null) {
                                         Dialogs.showSnack(
                                           msg: 'Please enter valid numbers.',
                                         );
@@ -1401,14 +1588,64 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                                       if (weightUnit == 'lbs') {
                                         weightVal = weightVal * 0.453592;
                                       }
-                                      
+
+                                      double? neckVal =
+                                          double.tryParse(neckText);
+                                      double? waistVal =
+                                          double.tryParse(waistText);
+                                      double? hipVal =
+                                          double.tryParse(hipText);
+
+                                      // Calculate body fat percentage
+                                      double bfPercentageVal;
+                                      final bmiVal = weightVal / pow(heightVal / 100, 2);
+                                      if (neckVal != null && waistVal != null && (gender.toLowerCase().startsWith('m') || hipVal != null)) {
+                                        // Convert neck, waist, hip to cm
+                                        double neckCm = neckVal;
+                                        if (neckUnit == 'in') neckCm = neckVal * 2.54;
+                                        double waistCm = waistVal;
+                                        if (waistUnit == 'in') waistCm = waistVal * 2.54;
+                                        
+                                        if (gender.toLowerCase().startsWith('f')) {
+                                          double hipCm = hipVal ?? 0.0;
+                                          if (hipUnit == 'in') hipCm = hipVal! * 2.54;
+                                          
+                                          final val = 1.29579 - 0.35004 * (log(waistCm + hipCm - neckCm) / ln10) + 0.22100 * (log(heightVal) / ln10);
+                                          bfPercentageVal = val > 0 ? (495 / val) - 450 : ((1.20 * bmiVal) + (0.23 * ageVal) - 5.4);
+                                        } else {
+                                          final val = 1.0324 - 0.19077 * (log(waistCm - neckCm) / ln10) + 0.15456 * (log(heightVal) / ln10);
+                                          bfPercentageVal = val > 0 ? (495 / val) - 450 : ((1.20 * bmiVal) + (0.23 * ageVal) - 16.2);
+                                        }
+                                      } else {
+                                        // Fallback to BMI-based body fat calculation
+                                        if (gender.toLowerCase().startsWith('f')) {
+                                          bfPercentageVal = (1.20 * bmiVal) + (0.23 * ageVal) - 5.4;
+                                        } else {
+                                          bfPercentageVal = (1.20 * bmiVal) + (0.23 * ageVal) - 16.2;
+                                        }
+                                      }
+
+                                      // Clamp body fat percentage between 2% and 60% for safety
+                                      bfPercentageVal = bfPercentageVal.clamp(2.0, 60.0);
+
                                       final heightStr = heightVal.toStringAsFixed(2);
                                       final weightStr = weightVal.toStringAsFixed(2);
+                                      
+                                      final newDob = DateTime(DateTime.now().year - ageVal, dob?.month ?? 1, dob?.day ?? 1);
+                                      final dobStr = '${newDob.year}-${newDob.month.toString().padLeft(2, '0')}-${newDob.day.toString().padLeft(2, '0')}';
                                       
                                       await profileCubit.updateHealthProfile(
                                         bloodGroup: widget.customerDetails.bloodGroup ?? '',
                                         height: heightStr,
                                         weight: weightStr,
+                                        extraBody: {
+                                          'blood_group': widget.customerDetails.bloodGroup ?? '',
+                                          'height': heightStr,
+                                          'weight': weightStr,
+                                          'gender': gender,
+                                          'date_of_birth': dobStr,
+                                          'bf_percentage': bfPercentageVal.toStringAsFixed(1),
+                                        },
                                       );
 
                                       setState(() {
@@ -1532,6 +1769,71 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     );
   }
 
+  Widget _buildSimpleInputField({
+    required TextEditingController controller,
+    required String hint,
+    required TextInputType keyboardType,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        style: AppStyles.text16Px.poppins.w500.copyWith(
+          color: AppColors.textDark,
+        ),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppStyles.text14Px.poppins.w400.copyWith(
+            color: const Color(0xFFADB5BD),
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGenderDropdown({
+    required String selectedGender,
+    required void Function(String) onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F9FA),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: selectedGender,
+          isExpanded: true,
+          onChanged: (v) => onChanged(v!),
+          style: AppStyles.text16Px.poppins.w500.copyWith(
+            color: AppColors.textDark,
+          ),
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 24,
+            color: Color(0xFF868E96),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Male', child: Text('Male')),
+            DropdownMenuItem(value: 'Female', child: Text('Female')),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDisclaimer() {
     return Container(
       decoration: BoxDecoration(
@@ -1573,16 +1875,25 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
   Widget _buildAboutSection({
     required String title,
     required String body,
+    String? formulaTitle,
+    List<String>? formulas,
     required bool expanded,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: const Color(0xFFF1FAF5),
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: expanded
+                ? const Color(0xFF2CB67D).withValues(alpha: 0.3)
+                : Colors.transparent,
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1620,6 +1931,65 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                   height: 1.5,
                 ),
               ),
+              if (formulas != null && formulas.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF2CB67D).withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.functions,
+                            size: 14,
+                            color: Color(0xFF2CB67D),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            formulaTitle ?? 'Calculation Formula:',
+                            style: AppStyles.text12Px.poppins.w600.copyWith(
+                              color: const Color(0xFF2CB67D),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      ...formulas.map(
+                        (formulaText) => Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8F9FA),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              formulaText,
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: const Color(0xFF212529),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ],
         ),
