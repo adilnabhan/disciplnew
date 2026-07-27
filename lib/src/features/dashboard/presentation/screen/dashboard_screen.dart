@@ -135,7 +135,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final currentIndex = state.navIndex.clamp(0, pages.length - 1);
 
           return Scaffold(
-<<<<<<< HEAD
             appBar: currentIndex == 0
                 ? AppBar(
                     title: Image.asset(
@@ -153,48 +152,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           width: 22,
                           height: 22,
                         ),
-=======
-            appBar:
-                state.navIndex == 0
-                    ? AppBar(
-                      title: Image.asset(
-                        'assets/images/png/vectors/discipl_spell.png',
-                        height: 24,
->>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
                       ),
-                      centerTitle: false,
-                      actions: [
-                        GestureDetector(
-                          onTap: () {
-                            context.push(const NotificationsScreen());
-                          },
-                          child: SvgPicture.asset(
-                            'assets/images/svg/icons/notification_icon.svg',
-                            width: 22,
-                            height: 22,
-                          ),
+                      const SizedBox(width: 20),
+                      GestureDetector(
+                        onTap: () {
+                          context.push(const SettingsScreen());
+                        },
+                        child: SvgPicture.asset(
+                          'assets/images/svg/icons/settings _icon.svg',
+                          width: 22,
+                          height: 22,
                         ),
-                        const SizedBox(width: 20),
-                        GestureDetector(
-                          onTap: () {
-                            context.push(const SettingsScreen());
-                          },
-                          child: SvgPicture.asset(
-                            'assets/images/svg/icons/settings _icon.svg',
-                            width: 22,
-                            height: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                      ],
-                    )
-                    : null,
+                      ),
+                      const SizedBox(width: 20),
+                    ],
+                  )
+                : null,
             body: LazyIndexedStack(
               index: currentIndex,
               children: pages,
             ),
             extendBody: false,
-<<<<<<< HEAD
             bottomNavigationBar: Container(
               height: 72,
               decoration: const BoxDecoration(
@@ -216,35 +194,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return Expanded(
                       child: InkWell(
                         onTap: () => context.read<DashboardCubit>().changeNav(index: i),
-=======
-            bottomNavigationBar: SafeArea(
-              top: false,
-              child: Container(
-                height: 70,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: AppColors.borderGrey,
-                      width: 0.5,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(
-                    _icons.length,
-                    (i) => Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          context.read<DashboardCubit>().changeNav(index: i);
-                        },
->>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-<<<<<<< HEAD
                             if (isProfile)
                               _buildProfileTabIcon(isSelected)
                             else if (isNutrition)
@@ -290,38 +243,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                             : AppColors.primary)
                                     : AppColors.textGrey,
                                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-=======
-                            if (i == 3)
-                              _buildProfileTabIcon(state.navIndex == i)
-                            else
-                              SvgPicture.asset(
-                                (i == 0 && state.navIndex == i)
-                                    ? 'assets/images/svg/icons/new_home_selected.svg'
-                                    : (i == 1 && state.navIndex == i)
-                                        ? 'assets/images/svg/icons/workout_selected.svg'
-                                        : (i == 2 && state.navIndex == i)
-                                            ? 'assets/images/svg/icons/selected_explore.svg'
-                                            : _icons[i],
-                                width: 24,
-                                height: 24,
-                                color: (i == 0 && state.navIndex == i) ||
-                                        (i == 2 && state.navIndex == i)
-                                    ? null
-                                    : state.navIndex == i
-                                        ? AppColors.primary
-                                        : AppColors.textGrey,
-                              ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _labels[i],
-                              style: AppStyles.text12Px.poppins.copyWith(
-                                color: state.navIndex == i
-                                    ? AppColors.primary
-                                    : AppColors.textGrey,
-                                fontWeight: state.navIndex == i
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
->>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
                               ),
                             ),
                           ],
