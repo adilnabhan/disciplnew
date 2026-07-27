@@ -165,10 +165,6 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           ),
         ),
       ];
-            ),
-          ),
-        ),
-      ];
     } else {
       _healthDetails = [
         FieldData(
@@ -208,140 +204,9 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
             ),
           ),
         ),
-<<<<<<< HEAD
-      ),
-      FieldData(
-        type: FieldType.word,
-        textInputAction: TextInputAction.done,
-        label: 'Waist Circumference (cm)',
-        requiredLabel: false,
-        controller: TextEditingController(
-          text: widget.customerDetailsModel.waistCircumference?.toString() ?? '',
-        ),
-        focusNode: FocusNode(),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        maxLength: 5,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
-          LengthLimitingTextInputFormatter(5),
-        ],
-        validator: (value) {
-          if (value != null && value.isNotEmpty) {
-            final v = double.tryParse(value);
-            if (v == null || v < 30 || v > 200) {
-              return 'Must be between 30 and 200 cm';
-            }
-          }
-          return null;
-        },
-        onSubmitted: (value) {
-          _healthDetails[4].focusNode?.requestFocus();
-        },
-        decoration: InputDecoration(
-          hintText: '0',
-          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          suffixIcon: SizedBox.square(
-            dimension: 22,
-            child: Center(
-              child: Text('CM', style: AppStyles.text14Px.poppins.w400.dark),
-            ),
-          ),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: AppColors.borderGrey),
-          ),
-        ),
-      ),
-      FieldData(
-        type: FieldType.word,
-        textInputAction: TextInputAction.done,
-        label: 'Hip Circumference (cm)',
-        requiredLabel: false,
-        controller: TextEditingController(
-          text: widget.customerDetailsModel.hipCircumference?.toString() ?? '',
-        ),
-        focusNode: FocusNode(),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        maxLength: 5,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
-          LengthLimitingTextInputFormatter(5),
-        ],
-        validator: (value) {
-          if (value != null && value.isNotEmpty) {
-            final v = double.tryParse(value);
-            if (v == null || v < 30 || v > 200) {
-              return 'Must be between 30 and 200 cm';
-            }
-          }
-          return null;
-        },
-        onSubmitted: (value) {
-          _healthDetails[5].focusNode?.requestFocus();
-        },
-        decoration: InputDecoration(
-          hintText: '0',
-          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          suffixIcon: SizedBox.square(
-            dimension: 22,
-            child: Center(
-              child: Text('CM', style: AppStyles.text14Px.poppins.w400.dark),
-            ),
-          ),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: AppColors.borderGrey),
-          ),
-        ),
-      ),
-      FieldData(
-        type: FieldType.word,
-        textInputAction: TextInputAction.done,
-        label: 'Neck Circumference (cm)',
-        requiredLabel: false,
-        controller: TextEditingController(
-          text: widget.customerDetailsModel.neckCircumference?.toString() ?? '',
-        ),
-        focusNode: FocusNode(),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        maxLength: 4,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,2}\.?\d{0,1}')),
-          LengthLimitingTextInputFormatter(4),
-        ],
-        validator: (value) {
-          if (value != null && value.isNotEmpty) {
-            final v = double.tryParse(value);
-            if (v == null || v < 20 || v > 70) {
-              return 'Must be between 20 and 70 cm';
-            }
-          }
-          return null;
-        },
-        onSubmitted: (value) {
-          _healthDetails[5].focusNode?.unfocus();
-        },
-        decoration: InputDecoration(
-          hintText: '0',
-          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          suffixIcon: SizedBox.square(
-            dimension: 22,
-            child: Center(
-              child: Text('CM', style: AppStyles.text14Px.poppins.w400.dark),
-            ),
-          ),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: AppColors.borderGrey),
-          ),
-        ),
-      ),
-    ];
-    super.initState();
-=======
       ];
     }
->>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
+    super.initState();
   }
 
   @override
