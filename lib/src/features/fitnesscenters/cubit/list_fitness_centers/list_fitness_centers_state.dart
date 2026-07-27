@@ -7,8 +7,9 @@ class ListFitnessCentersState with _$ListFitnessCentersState {
     @Default(None()) Option<Either<ApiException, FitnesscenterCategoriesModel>> categories,
     SingleFitnesscenterCategoryModel? selectedCategory,
     @Default('') String searchQuery,
-    @Default(11.2588) double? latitude,
-    @Default(75.7804) double? longitude,
+    double? latitude,
+    double? longitude,
     @Default(false) bool showLocationBanner,
+    @Default(false) bool isLocationPermanentlyDenied,
   }) = _ListFitnessCentersState;
 }

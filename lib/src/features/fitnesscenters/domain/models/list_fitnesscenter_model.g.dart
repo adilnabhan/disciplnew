@@ -54,6 +54,7 @@ _$SingleFItnessCenterModelImpl _$$SingleFItnessCenterModelImplFromJson(
       json['location'] == null
           ? null
           : Location.fromJson(json['location'] as Map<String, dynamic>),
+  googleMapsUrl: json['google_maps_url'] as String?,
   mentorName: json['mentor_name'] as String?,
   reviewCount: (json['review_count'] as num?)?.toInt(),
   averageRating: (json['average_rating'] as num?)?.toDouble(),
@@ -82,6 +83,7 @@ Map<String, dynamic> _$$SingleFItnessCenterModelImplToJson(
   'categories': instance.categories,
   'category': instance.category,
   'location': instance.location,
+  'google_maps_url': instance.googleMapsUrl,
   'mentor_name': instance.mentorName,
   'review_count': instance.reviewCount,
   'average_rating': instance.averageRating,

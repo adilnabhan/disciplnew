@@ -6,8 +6,10 @@ import 'package:customer_mobile_app/src/features/workout/presentation/screens/pr
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_execution_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/preset_model.dart';
+import 'package:customer_mobile_app/core/widgets/image_network.dart';
 
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_preview_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
@@ -26,6 +28,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   late final ScrollController _scrollController;
   late final List<DateTime> _scrollableDays;
   bool _showWorkoutCard = false;
+  Map<String, dynamic>? _activeSessionData;
   bool _isLoadingDateLog = true;
   List<Map<String, dynamic>> _selectedDateWorkouts = [];
   List<PresetModel> _myPlans = [];
@@ -130,6 +133,18 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final enrichedList = <Map<String, dynamic>>[];
         for (final item in list) {
           final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
+
+          final isCompleted =
+              ((map['is_completed'] as bool?) ?? false) ||
+              (map['status']?.toString().toLowerCase() == 'completed');
+          final trainerName = map['trainer_name']?.toString() ?? '';
+          final isMentorGiven = trainerName.isNotEmpty;
+
+          // Skip user's own/preset workouts that are not completed (drafts / in-progress)
+          if (!isMentorGiven && !isCompleted) {
+            continue;
+          }
+
           final sessionId = map['session_id'] ?? map['id'];
           if (sessionId != null) {
             try {
@@ -174,6 +189,23 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             if (aCompleted && !bCompleted) return 1;
           }
 
+          // Both user-created: last created on top
+          if (!aIsTrainer && !bIsTrainer) {
+            final aStart = DateTime.tryParse(a['started_at']?.toString() ?? '');
+            final bStart = DateTime.tryParse(b['started_at']?.toString() ?? '');
+            if (aStart != null && bStart != null) {
+              final cmp = bStart.compareTo(aStart);
+              if (cmp != 0) return cmp;
+            }
+            final aId =
+                int.tryParse((a['session_id'] ?? a['id'] ?? '').toString()) ??
+                0;
+            final bId =
+                int.tryParse((b['session_id'] ?? b['id'] ?? '').toString()) ??
+                0;
+            return bId.compareTo(aId);
+          }
+
           return 0;
         });
         if (mounted) {
@@ -195,24 +227,25 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         if (mounted) {
           setState(() {
             _showWorkoutCard = false;
+            _activeSessionData = null;
           });
         }
       },
       (data) {
         if (mounted) {
           setState(() {
-            bool hasExercises = false;
+            bool hasActiveSession = false;
             if (data is Map<String, dynamic>) {
-              final exercisesData =
-                  data['logs'] ??
-                  data['exercises'] ??
-                  data['session_exercises'] ??
-                  data['results'];
-              if (exercisesData is List && exercisesData.isNotEmpty) {
-                hasExercises = true;
+              if (data['id'] != null) {
+                hasActiveSession = true;
+                _activeSessionData = data;
+              } else {
+                _activeSessionData = null;
               }
+            } else {
+              _activeSessionData = null;
             }
-            _showWorkoutCard = hasExercises;
+            _showWorkoutCard = hasActiveSession;
           });
         }
       },
@@ -257,6 +290,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   void _changeMonth(int delta) {
     final today = DateTime.now();
+
+    if (delta > 0) {
+      setState(() {
+        _selectedDate = today;
+      });
+      _centerSelectedDate();
+      _loadWorkoutLogForSelectedDate();
+      return;
+    }
+
     final targetDate = DateTime(
       _selectedDate.year,
       _selectedDate.month + delta,
@@ -461,7 +504,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         await _loadActiveSessionTitle();
         await _loadWorkoutLogForSelectedDate();
         if (finished == true && context.mounted) {
-          context.read<DashboardCubit>().changeNav(index: 0);
+          // Stay on Workout Log screen
         }
       },
       child: Container(
@@ -563,17 +606,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           Navigator.push<dynamic>(
             context,
             MaterialPageRoute<dynamic>(
-              builder: (context) => WorkoutDetailsScreen(
-                sessionId: autoSessionId,
-                fallbackTitle: 'Workout',
-              ),
+              builder:
+                  (context) => WorkoutDetailsScreen(
+                    sessionId: autoSessionId,
+                    fallbackTitle: 'Workout',
+                    onRefresh: _loadWorkoutLogForSelectedDate,
+                  ),
             ),
           ).then((refresh) {
             if (refresh == true) {
               _loadWorkoutLogForSelectedDate();
-              if (context.mounted) {
-                context.read<DashboardCubit>().changeNav(index: 0);
-              }
             }
           });
         }
@@ -685,21 +727,33 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
                 );
                 if (sessionId != null) {
+                  final isMentor =
+                      workoutItem['trainer_name']?.toString().isNotEmpty ??
+                      false;
                   final refresh = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<dynamic>(
-                      builder:
-                          (context) => WorkoutDetailsScreen(
+                      builder: (context) {
+                        if (isMentor && !isCompleted) {
+                          return WorkoutPreviewScreen(
                             sessionId: sessionId,
                             fallbackTitle: title,
-                          ),
+                            trainerName:
+                                workoutItem['trainer_name']?.toString(),
+                            onRefresh: _loadWorkoutLogForSelectedDate,
+                          );
+                        } else {
+                          return WorkoutDetailsScreen(
+                            sessionId: sessionId,
+                            fallbackTitle: title,
+                            onRefresh: _loadWorkoutLogForSelectedDate,
+                          );
+                        }
+                      },
                     ),
                   );
                   if (refresh == true) {
                     _loadWorkoutLogForSelectedDate();
-                    if (context.mounted) {
-                      context.read<DashboardCubit>().changeNav(index: 0);
-                    }
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -776,9 +830,9 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                           const SizedBox(height: 21),
                         ],
                         _buildMonthNav(),
-                        const SizedBox(height: 34),
+                        const SizedBox(height: 20),
                         _buildWeekStrip(),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 20),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
@@ -974,6 +1028,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             icon: const Icon(Icons.add, color: Colors.white, size: 20),
             raduis: 12,
             ontap: () async {
+              if (_activeSessionData != null) {
+                _showResumeOrNewDialog(context, isPreset: false);
+                return;
+              }
               final finished = await Navigator.push<dynamic>(
                 context,
                 MaterialPageRoute<void>(
@@ -985,7 +1043,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadActiveSessionTitle();
               await _loadWorkoutLogForSelectedDate();
               if (finished == true && context.mounted) {
-                context.read<DashboardCubit>().changeNav(index: 0);
+                // Stay on Workout Log screen
               }
             },
           ),
@@ -1009,6 +1067,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             ),
             raduis: 12,
             ontap: () async {
+              if (_activeSessionData != null) {
+                _showResumeOrNewDialog(context, isPreset: true);
+                return;
+              }
               final finished = await Navigator.push<dynamic>(
                 context,
                 MaterialPageRoute<void>(
@@ -1019,12 +1081,293 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadActiveSessionTitle();
               await _loadWorkoutLogForSelectedDate();
               if (finished == true && context.mounted) {
-                context.read<DashboardCubit>().changeNav(index: 0);
+                // Stay on Workout Log screen
               }
             },
           ),
         ],
       ),
+    );
+  }
+
+  void _showResumeOrNewDialog(BuildContext context, {required bool isPreset}) {
+    final data = _activeSessionData;
+    if (data == null) return;
+
+    // Parse active draft title
+    final title =
+        data['plan_name']?.toString() ??
+        data['plan_day_title']?.toString() ??
+        data['title']?.toString() ??
+        data['name']?.toString() ??
+        'Active Workout';
+
+    // Parse elapsed time
+    String elapsedText = '';
+    final startedAtStr = data['started_at'] ?? data['created_at'];
+    if (startedAtStr != null) {
+      final startedAt = DateTime.tryParse(startedAtStr.toString());
+      if (startedAt != null) {
+        final diff = DateTime.now().difference(startedAt.toLocal());
+        if (diff.inMinutes < 60) {
+          elapsedText = 'Started ${diff.inMinutes} minutes ago';
+        } else if (diff.inHours < 24) {
+          elapsedText = 'Started ${diff.inHours} hours ago';
+        } else {
+          elapsedText = 'Started ${diff.inDays} days ago';
+        }
+      }
+    }
+    if (elapsedText.isEmpty) {
+      elapsedText = 'Active draft session';
+    }
+
+    // Parse completion status (exercise logs)
+    int completedSets = 0;
+    int totalSets = 0;
+    final rawLogs =
+        data['logs'] ??
+        data['exercises'] ??
+        data['session_exercises'] ??
+        data['results'];
+    if (rawLogs is List) {
+      for (final log in rawLogs) {
+        if (log is Map<String, dynamic>) {
+          final sets = log['set_logs'] ?? log['sets'];
+          if (sets is List) {
+            for (final s in sets) {
+              if (s is Map<String, dynamic>) {
+                totalSets++;
+                final isCompleted = s['is_completed'] ?? s['checked'] ?? false;
+                if (isCompleted == true) {
+                  completedSets++;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          contentPadding: const EdgeInsets.only(
+            top: 24,
+            left: 20,
+            right: 20,
+            bottom: 16,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Blue circle 🏋️ icon
+              Container(
+                width: 56,
+                height: 56,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFE3F2FD),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Text('🏋️', style: TextStyle(fontSize: 28)),
+              ),
+              const SizedBox(height: 16),
+              // Title
+              Text(
+                'Continue Existing Workout?',
+                textAlign: TextAlign.center,
+                style: AppStyles.text18Px.poppins.w600.copyWith(
+                  color: const Color(0xFF222222),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Subtitle
+              Text(
+                'You already have an unfinished workout.',
+                textAlign: TextAlign.center,
+                style: AppStyles.text14Px.poppins.w500.copyWith(
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Starting a new workout will automatically delete your current draft. This action cannot be undone.',
+                textAlign: TextAlign.center,
+                style: AppStyles.text12Px.poppins.w400.copyWith(
+                  color: Colors.grey[500],
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Current Draft card
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F9FA),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE9ECEF)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Current Draft',
+                      style: AppStyles.text12Px.poppins.w500.copyWith(
+                        color: Colors.grey[500],
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Text('💪', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppStyles.text15Px.poppins.w600.copyWith(
+                              color: const Color(0xFF222222),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      elapsedText,
+                      style: AppStyles.text13Px.poppins.w500.copyWith(
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$completedSets/$totalSets sets completed',
+                      style: AppStyles.text12Px.poppins.w500.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Resume Draft Button
+              GestureDetector(
+                onTap: () async {
+                  Navigator.pop(dialogContext);
+                  final finished = await Navigator.push<dynamic>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder:
+                          (context) =>
+                              const OwnWorkoutScreen(isNewSession: false),
+                    ),
+                  );
+                  await _loadMyPlans();
+                  await _loadActiveSessionTitle();
+                  await _loadWorkoutLogForSelectedDate();
+                  if (finished == true && context.mounted) {
+                    // Stay on Workout Log screen
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  alignment: Alignment.center,
+                  child: const Text(
+                    'Resume Draft',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // Start New Workout Button
+              GestureDetector(
+                onTap: () async {
+                  Navigator.pop(dialogContext);
+                  final finished = await Navigator.push<dynamic>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder:
+                          (context) =>
+                              isPreset
+                                  ? const PresetsScreen()
+                                  : const OwnWorkoutScreen(isNewSession: true),
+                    ),
+                  );
+                  await _loadMyPlans();
+                  await _loadActiveSessionTitle();
+                  await _loadWorkoutLogForSelectedDate();
+                  if (finished == true && context.mounted) {
+                    // Stay on Workout Log screen
+                  }
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 45,
+                  decoration: BoxDecoration(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    isPreset ? '+ Start a Preset' : '+ Start New Workout',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Cancel Button
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                },
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(100, 36),
+                  padding: EdgeInsets.zero,
+                ),
+                child: Text(
+                  'Cancel',
+                  style: AppStyles.text14Px.poppins.w500.copyWith(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1263,14 +1606,14 @@ class _WorkoutCard extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: Container(
-            height: isMentorGiven ? (isCompleted ? 140 : 100) : 140,
+            height: isCompleted ? 140 : 100,
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               gradient:
                   isMentorGiven
                       ? const LinearGradient(
-                        colors: [Color(0xFFFFD6D6), Color(0xFFFFB4B4)],
+                        colors: [Color(0xffFFD5D5), Color(0xffFFD5D5)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
                       )
@@ -1299,12 +1642,18 @@ class _WorkoutCard extends StatelessWidget {
                     ? Stack(
                       children: [
                         Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
+                          padding: const EdgeInsets.only(
+                            left: 16,
+                            right: 68,
+                            top: 16,
+                            bottom: 16,
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment:
+                                isCompleted
+                                    ? MainAxisAlignment.start
+                                    : MainAxisAlignment.center,
                             children: [
                               Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1329,33 +1678,17 @@ class _WorkoutCard extends StatelessWidget {
                                           borderRadius: BorderRadius.circular(
                                             12,
                                           ),
-                                          child:
-                                              gymLogo != null &&
-                                                      gymLogo!.isNotEmpty
-                                                  ? Image.network(
-                                                    gymLogo!,
-                                                    fit: BoxFit.cover,
-                                                    errorBuilder:
-                                                        (
-                                                          _,
-                                                          __,
-                                                          ___,
-                                                        ) => const Center(
-                                                          child: Icon(
-                                                            Icons
-                                                                .fitness_center,
-                                                            color: Colors.grey,
-                                                            size: 28,
-                                                          ),
-                                                        ),
-                                                  )
-                                                  : const Center(
-                                                    child: Icon(
-                                                      Icons.fitness_center,
-                                                      color: Colors.grey,
-                                                      size: 28,
-                                                    ),
-                                                  ),
+                                          child: ImageNetwork(
+                                            gymLogo,
+                                            fit: BoxFit.cover,
+                                            errorWidget: const Center(
+                                              child: Icon(
+                                                Icons.fitness_center,
+                                                color: Colors.grey,
+                                                size: 28,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                   const SizedBox(width: 16),
@@ -1379,98 +1712,90 @@ class _WorkoutCard extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(height: 6),
-                                        Text(
-                                          trainerName!,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF222222),
-                                          ),
+                                        Row(
+                                          children: [
+                                            if (trainerProfileImage != null &&
+                                                trainerProfileImage!
+                                                    .isNotEmpty) ...[
+                                              ClipRRect(
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                                child: ImageNetwork(
+                                                  trainerProfileImage,
+                                                  width: 20,
+                                                  height: 20,
+                                                  fit: BoxFit.cover,
+                                                  errorWidget: const Icon(
+                                                    Icons.account_circle,
+                                                    size: 20,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                            ],
+                                            Expanded(
+                                              child: Text(
+                                                '$trainerName',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Poppins',
+                                                  fontSize: 14,
+                                                  color: Color(0xFF222222),
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                  // Right: Start Workout button (only when not completed)
-                                  if (!isCompleted) ...[
-                                    const SizedBox(width: 10),
-                                    InkWell(
-                                      borderRadius: BorderRadius.circular(40),
-                                      onTap: onTap,
-                                      child: Container(
-                                        height: 38,
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            40,
-                                          ),
-                                          border: Border.all(
-                                            color: const Color(0xffC84A4A),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Container(
-                                              width: 26,
-                                              height: 26,
-                                              decoration: const BoxDecoration(
-                                                color: Colors.white,
-                                                shape: BoxShape.circle,
-                                              ),
-                                              child: const Icon(
-                                                Icons.fitness_center_rounded,
-                                                color: Color(0xffC84A4A),
-                                                size: 15,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Text(
-                                              'Start workout',
-                                              style: TextStyle(
-                                                color: Color(0xff7A2A2A),
-                                                fontSize: 13,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ],
                               ),
                               if (isCompleted) ...[
                                 const SizedBox(height: 12),
-                                Text(
-                                  'Duration: ${duration ?? '--'}',
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF222222),
-                                  ),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Duration: ${duration ?? '--'}',
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF222222),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      isVerified ? '• Verified' : '• Pending',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            isVerified
+                                                ? const Color(0xFF019C37)
+                                                : const Color(0xFFA9AF00),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ],
                           ),
                         ),
-                        // Bottom-right: Chevron Button (completed only)
-                        if (isCompleted)
-                          Positioned(
-                            right: 16,
-                            bottom: 16,
+                        // Right: Chevron Button (always show, vertically centered)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 16),
                             child: Container(
                               width: 40,
                               height: 40,
                               decoration: BoxDecoration(
-                                color: const Color(0xFFBF5151),
+                                color: const Color(0xFFC84A4A),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
@@ -1487,6 +1812,7 @@ class _WorkoutCard extends StatelessWidget {
                               ),
                             ),
                           ),
+                        ),
                       ],
                     )
                     : Stack(
@@ -1620,7 +1946,24 @@ class _WorkoutCard extends StatelessWidget {
           Positioned(
             top: -7.0,
             right: -5.35,
-            child: CompletedBadge(isVerified: isVerified),
+            child:
+                (trainerName == null || trainerName!.isEmpty)
+                    ? SvgPicture.asset(
+                      'assets/images/svg/icons/user_completed_tick.svg',
+                      width: 28,
+                      height: 27,
+                    )
+                    : isVerified
+                    ? SvgPicture.asset(
+                      'assets/images/svg/icons/trainer_verified_tick.svg',
+                      width: 28,
+                      height: 27,
+                    )
+                    : SvgPicture.asset(
+                      'assets/images/svg/icons/not_verified_tick.svg',
+                      width: 28,
+                      height: 27,
+                    ),
           ),
         if (isMembershipExpired)
           Positioned(

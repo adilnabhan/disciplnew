@@ -1,0 +1,30 @@
+workflows:
+  ios-release:
+    name: iOS Release
+
+    environment:
+      flutter: stable
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.discipl.customer
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Install CocoaPods
+        script: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Build iOS
+        script: |
+          flutter build ipa \
+            --release \
+            --target=lib/main_production.dart \
+            --dart-define=baseUrl=https://discipl-backend.onrender.com
+
+    artifacts:
+      - build/ios/ipa/*.ipa

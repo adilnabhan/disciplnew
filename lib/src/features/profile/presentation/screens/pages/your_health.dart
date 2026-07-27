@@ -816,8 +816,6 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
             );
           }
 
-
-
           int age = 0;
           if (customer.dateOfBirth != null) {
             age = DateTime.now().year - customer.dateOfBirth!.year;
@@ -833,9 +831,15 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
 
           return Scaffold(
             appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(80), // 👈 Adjust total height (AppBar height + padding)
+              preferredSize: const Size.fromHeight(
+                80,
+              ), // 👈 Adjust total height (AppBar height + padding)
               child: Padding(
-                padding: const EdgeInsets.only(left:10,top: 20,bottom: 10), // 👈 Adjust vertical padding here
+                padding: const EdgeInsets.only(
+                  left: 10,
+                  top: 20,
+                  bottom: 10,
+                ), // 👈 Adjust vertical padding here
                 child: AppBar(
                   leading: const PopButton().center,
                   title: const Text('Other Details'),
@@ -844,9 +848,8 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
               ),
             ),
             body: Padding(
-              
               padding: const EdgeInsets.all(16),
-              
+
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -857,7 +860,10 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16,horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -873,19 +879,37 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          _buildProfileDetailRow('Age', age > 0 ? '$age' : 'N/A'),
+                          _buildProfileDetailRow(
+                            'Age',
+                            age > 0 ? '$age' : 'N/A',
+                          ),
                           const SizedBox(height: 16),
-                          _buildProfileDetailRow('Height', customer.height ?? 'N/A'),
+                          _buildProfileDetailRow(
+                            'Height',
+                            customer.height ?? 'N/A',
+                          ),
                           const SizedBox(height: 16),
-                          _buildProfileDetailRow('Weight', customer.weight ?? 'N/A'),
+                          _buildProfileDetailRow(
+                            'Weight',
+                            customer.weight ?? 'N/A',
+                          ),
                           const SizedBox(height: 16),
-                          _buildProfileDetailRow('Blood Group', customer.bloodGroup ?? 'N/A'),
+                          _buildProfileDetailRow(
+                            'Blood Group',
+                            (customer.bloodGroup == null ||
+                                    customer.bloodGroup!.toLowerCase() ==
+                                        'unknown')
+                                ? 'N/A'
+                                : customer.bloodGroup!,
+                          ),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow('Health Issues', healthIssues),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow(
                             'Health Status',
-                            customer.isHealthy ?? false ? 'Healthy' : 'Not Healthy',
+                            customer.isHealthy ?? false
+                                ? 'Healthy'
+                                : 'Not Healthy',
                           ),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow(
@@ -902,7 +926,10 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      padding: const EdgeInsets.symmetric(vertical: 16,horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 20,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
@@ -918,7 +945,6 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-
                           _buildProfileDetailRow(
                             'Profession',
                             widget.choicesModel.data.professions
@@ -975,7 +1001,6 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                         ],
                       ),
                     ),
-
                   ],
                 ),
               ),
@@ -986,8 +1011,6 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
       ),
     );
   }
-
-
 
   // ********* FINAL REQUEST FORMAT *********
   Map<String, dynamic> buildFinalRequest() {
@@ -1103,7 +1126,7 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
         ),
         Row(
           children: List.generate(5, (index) {
-            // Note: Generating the emojis according to original reverse map (5 to 1) 
+            // Note: Generating the emojis according to original reverse map (5 to 1)
             final value = 5 - index;
             final isSelected = rating == value;
 
@@ -1113,25 +1136,24 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
               height: 30,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:
-                    isSelected ? Colors.red.shade50 : Colors.transparent,
+                color: isSelected ? Colors.red.shade50 : Colors.transparent,
                 border: Border.all(
-                  color:
-                      isSelected ? Colors.red : Colors.grey.shade300,
+                  color: isSelected ? Colors.red : Colors.grey.shade300,
                   width: 1.5,
                 ),
               ),
-                alignment: Alignment.center,
-                child: Text(
-                  emojiMap[value]!,
-                  style: const TextStyle(fontSize: 18),
-                ),
-              );
-            }),
+              alignment: Alignment.center,
+              child: Text(
+                emojiMap[value]!,
+                style: const TextStyle(fontSize: 18),
+              ),
+            );
+          }),
         ),
       ],
     ).pOnly(bottom: 8);
   }
+
   Widget _buildProfileDetailRow(String label, String value) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1230,70 +1252,94 @@ class EditHealthStyle extends StatelessWidget {
   }
 }
 
-class EditTargetGoals extends StatelessWidget {
+class EditTargetGoals extends StatefulWidget {
   const EditTargetGoals({
     super.key,
     required this.customerDetailsModel,
-
     this.choicesModel,
   });
   final ConstantChoicesModel? choicesModel;
   final CustomerDetailsModel customerDetailsModel;
+
+  @override
+  State<EditTargetGoals> createState() => _EditTargetGoalsState();
+}
+
+class _EditTargetGoalsState extends State<EditTargetGoals> {
+  final _stepKey = GlobalKey<FitnessGoalStepState>();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Target Goals Edit')),
+    return BlocConsumer<ProfileCubit, ProfileState>(
+      listener: (context, state) {
+        state.updateProfileDetails?.fold(
+          () => null,
+          (either) => either.fold(
+            (error) {
+              Dialogs.showSnack(msg: error.msg);
+            },
+            (success) {
+              Dialogs.showSnack(msg: 'Target goals updated successfully');
+              Navigator.pop(context);
+            },
+          ),
+        );
+      },
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Target Goal Edit')),
+          body: FitnessGoalStep(
+            key: _stepKey,
+            isLoading: state.updateProfileDetails?.isNone() ?? false,
+            choices: widget.choicesModel,
+            customerDetailsModel: widget.customerDetailsModel,
+            hideButton: true,
+            onFinish: ({
+              required List<String> targetGoal,
+              required String targetGoalOther,
+            }) {
+              print('Goal: $targetGoal');
+              print('Goal Other: $targetGoalOther');
 
-      body: BlocProvider(
-        create:
-            (_) => CreateAccountCubit(
-              sentOtp: const SentOtpEntity(),
-              constChoices: choicesModel,
-            ),
-        child: BlocConsumer<CreateAccountCubit, CreateAccountState>(
-          listener: (context, state) {
-            state.createOrUpdateOnboarding?.fold(
-              () => null,
-              (either) => either.fold(
-                (error) {
-                  Dialogs.showSnack(msg: error.msg);
+              context.read<ProfileCubit>().updateHealthProfile(
+                bloodGroup: widget.customerDetailsModel.bloodGroup ?? '',
+                height: widget.customerDetailsModel.height ?? '',
+                weight: widget.customerDetailsModel.weight ?? '',
+                extraBody: {
+                  'target_goal': targetGoal,
+                  'target_goal_other': targetGoalOther,
                 },
-                (success) {
-                  context.read<ProfileCubit>().fetchCustomerDetails();
-                  Navigator.pop(context);
-                },
+              );
+            },
+          ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: 24,
               ),
-            );
-          },
-
-          builder: (context, state) {
-            return FitnessGoalStep(
-              isLoading: state.isLoading,
-              choices: choicesModel,
-              customerDetailsModel: customerDetailsModel,
-              onFinish: ({
-                required List<String> targetGoal,
-                required String targetGoalOther,
-              }) {
-                print('Goal: $targetGoal');
-                print('Goal Other: $targetGoalOther');
-
-                print(targetGoal.contains('Other'));
-                print(targetGoal);
-
-                context.read<CreateAccountCubit>().onboardingUpdate(
-                  id: customerDetailsModel.id,
-                  body: {
-                    'target_goal': targetGoal,
-                    'target_goal_other': targetGoalOther,
-                    'profile_completeness': 3,
-                  },
-                );
-              },
-            );
-          },
-        ),
-      ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Button.filled(
+                    title: 'Update',
+                    isLoading: state.updateProfileDetails?.isNone() ?? false,
+                    ontap: () => _stepKey.currentState?.submit(),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    textAlign: TextAlign.center,
+                    'You’re defining your ‘why’ — and that’s \npowerful',
+                    style: AppStyles.text15Px.poppins.w400.textGrey,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -110,8 +110,15 @@ class ImageNetwork extends StatelessWidget {
 
     print(imageUrl);
 
+    String? cacheKey;
+    try {
+      final uri = Uri.parse(imageUrl!);
+      cacheKey = uri.replace(queryParameters: {}).toString();
+    } catch (_) {}
+
     return CachedNetworkImage(
       imageUrl: imageUrl!,
+      cacheKey: cacheKey,
       width: width,
       height: height,
       fit: fit,

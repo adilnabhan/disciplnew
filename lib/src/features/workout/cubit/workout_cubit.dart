@@ -90,10 +90,26 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           sessionId: activeSessionId!,
           title: activeTitle,
         );
+        
+        bool finishSuccess = false;
         finishRes.fold(
-          (error) => print('DEBUG: finishSession failed with error: $error'),
-          (data) => print('DEBUG: finishSession succeeded with data: $data'),
+          (error) {
+            print('DEBUG: finishSession failed with error: $error');
+          },
+          (data) {
+            print('DEBUG: finishSession succeeded with data: $data');
+            finishSuccess = true;
+          },
         );
+
+        if (!finishSuccess) {
+          print('DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...');
+          final deleteRes = await WorkoutRepository().deleteActiveSession();
+          deleteRes.fold(
+            (error) => print('DEBUG: Failed to delete active session: $error'),
+            (_) => print('DEBUG: Successfully deleted active session.'),
+          );
+        }
       }
 
       // 3. Now start a brand new session!
@@ -157,10 +173,26 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           sessionId: activeSessionId!,
           title: activeTitle,
         );
+        
+        bool finishSuccess = false;
         finishRes.fold(
-          (error) => print('DEBUG: finishSession failed with error: $error'),
-          (data) => print('DEBUG: finishSession succeeded with data: $data'),
+          (error) {
+            print('DEBUG: finishSession failed with error: $error');
+          },
+          (data) {
+            print('DEBUG: finishSession succeeded with data: $data');
+            finishSuccess = true;
+          },
         );
+
+        if (!finishSuccess) {
+          print('DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...');
+          final deleteRes = await WorkoutRepository().deleteActiveSession();
+          deleteRes.fold(
+            (error) => print('DEBUG: Failed to delete active session: $error'),
+            (_) => print('DEBUG: Successfully deleted active session.'),
+          );
+        }
       }
 
       // 3. Now start a brand new session!
@@ -190,7 +222,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
   }
 
-  Future<void> finishSession({required String title}) async {
+  Future<Either<ApiException, dynamic>> finishSession({required String title}) async {
     await flushPendingUpdates();
     final activeRes = await WorkoutRepository().getActiveSession();
     int? activeSessionId;
@@ -244,16 +276,37 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         sessionId: activeSessionId!,
         title: titleToUse,
       );
-      result.fold(
+      return result.fold(
         (error) {
           print('DEBUG: Error finishing session: $error');
+          return left(error);
         },
         (data) {
           print('DEBUG: Successfully finished session!');
+          final dateStr = startedAt;
+          if (dateStr != null) {
+            try {
+              final date = DateTime.parse(dateStr);
+              WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
+            } catch (_) {
+              final now = DateTime.now();
+              WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
+            }
+          } else {
+            final now = DateTime.now();
+            WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
+          }
+          final Map<String, dynamic> responseMap = data is Map<String, dynamic>
+              ? Map<String, dynamic>.from(data)
+              : <String, dynamic>{};
+          responseMap['id'] ??= activeSessionId;
+          responseMap['session_id'] ??= activeSessionId;
           emit(state.copyWith(exercises: [], sessionTitle: ''));
+          return right(responseMap);
         },
       );
     }
+    return left(const ApiException.unknown());
   }
 
   Future<void> saveDraftSession(String title) async {
@@ -279,13 +332,48 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     final equipResult = await WorkoutRepository().getEquipment();
     final typeResult = await WorkoutRepository().getExerciseTypes();
 
-    List<MuscleGroupModel> muscles = [];
-    List<EquipmentModel> equipment = [];
-    List<ExerciseTypeModel> types = [];
+    List<MuscleGroupModel> muscles = List<MuscleGroupModel>.from(state.muscleGroups);
+    List<EquipmentModel> equipment = List<EquipmentModel>.from(state.equipment);
+    List<ExerciseTypeModel> types = List<ExerciseTypeModel>.from(state.exerciseTypes);
 
-    muscleResult.fold((error) => null, (list) => muscles = list);
-    equipResult.fold((error) => null, (list) => equipment = list);
-    typeResult.fold((error) => null, (list) => types = list);
+    muscleResult.fold(
+      (error) => null,
+      (list) {
+        final merged = List<MuscleGroupModel>.from(list);
+        for (final m in state.muscleGroups) {
+          if (!merged.any((item) => item.id == m.id)) {
+            merged.add(m);
+          }
+        }
+        muscles = merged;
+      },
+    );
+
+    equipResult.fold(
+      (error) => null,
+      (list) {
+        final merged = List<EquipmentModel>.from(list);
+        for (final e in state.equipment) {
+          if (!merged.any((item) => item.id == e.id)) {
+            merged.add(e);
+          }
+        }
+        equipment = merged;
+      },
+    );
+
+    typeResult.fold(
+      (error) => null,
+      (list) {
+        final merged = List<ExerciseTypeModel>.from(list);
+        for (final t in state.exerciseTypes) {
+          if (!merged.any((item) => item.id == t.id)) {
+            merged.add(t);
+          }
+        }
+        types = merged;
+      },
+    );
 
     emit(
       state.copyWith(
@@ -423,6 +511,19 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
   }
 
+  void swapExercises(int indexA, int indexB) {
+    if (indexA < 0 || indexA >= state.exercises.length) return;
+    if (indexB < 0 || indexB >= state.exercises.length) return;
+
+    final updatedExercises = List<Map<String, dynamic>>.from(
+      state.exercises.map((e) => Map<String, dynamic>.from(e)),
+    );
+    final temp = updatedExercises[indexA];
+    updatedExercises[indexA] = updatedExercises[indexB];
+    updatedExercises[indexB] = temp;
+    emit(state.copyWith(exercises: updatedExercises));
+  }
+
   Future<void> deleteExercise(int exerciseIndex) async {
     if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
@@ -547,7 +648,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
 
     if (currentSet != null) {
-      final reps = int.tryParse(currentSet['reps']?.toString() ?? '');
+      final reps = double.tryParse(currentSet['reps']?.toString() ?? '')?.round();
       final weightKg = double.tryParse(currentSet['kg']?.toString() ?? '');
       final isCompleted = currentSet['checked'] as bool?;
 
@@ -578,7 +679,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     await Future.wait(futures);
   }
 
-  void toggleSetChecked(int exerciseIndex, int setIndex) {
+  Future<void> toggleSetChecked(int exerciseIndex, int setIndex, {void Function(String errorMessage)? onError}) async {
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
@@ -599,24 +700,41 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       _updateDebouncers[setLogId]?.cancel();
       _updateDebouncers.remove(setLogId);
 
-      final reps = int.tryParse(set['reps']?.toString() ?? '');
+      final reps = double.tryParse(set['reps']?.toString() ?? '')?.round();
       final weightKg = double.tryParse(set['kg']?.toString() ?? '');
-      WorkoutRepository()
-          .updateSetLog(
-            setLogId: setLogId,
-            reps: reps,
-            weightKg: weightKg,
-            isCompleted: newChecked,
-          )
-          .then((result) {
-            result.fold(
-              (error) =>
-                  print('DEBUG: Error updating set checked state: $error'),
-              (success) => print(
-                'DEBUG: Successfully updated set checked state to $newChecked',
-              ),
+      final result = await WorkoutRepository().updateSetLog(
+        setLogId: setLogId,
+        reps: reps,
+        weightKg: weightKg,
+        isCompleted: newChecked,
+      );
+      result.fold(
+        (error) {
+          print('DEBUG: Error updating set checked state: $error');
+          // Optimistic Rollback
+          final rollbackExercises = List<Map<String, dynamic>>.from(
+            state.exercises.map((e) => Map<String, dynamic>.from(e)),
+          );
+          if (exerciseIndex >= 0 && exerciseIndex < rollbackExercises.length) {
+            final rSets = List<Map<String, dynamic>>.from(
+              rollbackExercises[exerciseIndex]['sets'] as List,
             );
-          });
+            if (setIndex >= 0 && setIndex < rSets.length) {
+              final rSet = Map<String, dynamic>.from(rSets[setIndex]);
+              rSet['checked'] = !newChecked;
+              rSets[setIndex] = rSet;
+              rollbackExercises[exerciseIndex]['sets'] = rSets;
+              emit(state.copyWith(exercises: rollbackExercises));
+            }
+          }
+          if (onError != null) {
+            onError(error.msg);
+          }
+        },
+        (success) {
+          print('DEBUG: Successfully updated set checked state to $newChecked');
+        },
+      );
     }
   }
 
@@ -669,7 +787,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
 
     // Check if the weight is invalid, if so, automatically uncheck
     final kgVal = double.tryParse(val.trim()) ?? 0.0;
-    if (val.trim().isEmpty || kgVal <= 0.0) {
+    if (val.trim().isEmpty || kgVal < 0.0) {
       set['checked'] = false;
     }
 
@@ -696,8 +814,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     set['reps'] = val;
 
     // Check if the reps are invalid, if so, automatically uncheck
-    final repsVal = int.tryParse(val.trim()) ?? 0;
-    if (val.trim().isEmpty || repsVal <= 0) {
+    final repsVal = double.tryParse(val.trim()) ?? 0.0;
+    if (val.trim().isEmpty || repsVal < 0.0) {
       set['checked'] = false;
     }
 
@@ -1106,7 +1224,13 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         'subtitle': subtitle ?? '',
         'video_url': videoUrl ?? '',
         'track_by': resolvedTrackBy ?? 'rep',
-        'weight_type': item['weight_type']?.toString() ?? 'kg',
+        'weight_type': () {
+          final type = item['weight_type']?.toString();
+          if (type == null) return 'kg';
+          if (type.toLowerCase() == 'bw') return 'BW';
+          if (type.toLowerCase() == 'kg+bw') return 'kg+BW';
+          return type;
+        }(),
         'sets': sets,
       });
     }

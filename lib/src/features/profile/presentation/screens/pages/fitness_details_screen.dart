@@ -2,9 +2,14 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:intl/intl.dart';
 
 class FitnessDetailsScreen extends StatefulWidget {
-  const FitnessDetailsScreen({required this.customerDetailsModel, super.key});
-
   final CustomerDetailsModel customerDetailsModel;
+  final bool editBodyMetricsOnly;
+
+  const FitnessDetailsScreen({
+    required this.customerDetailsModel,
+    this.editBodyMetricsOnly = false,
+    super.key,
+  });
 
   @override
   State<FitnessDetailsScreen> createState() => FitnessDetailsScreenState();
@@ -23,6 +28,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
 
   @override
   void initState() {
+    super.initState();
     // Initialize age / DOB
     _selectedDateOfBirth = widget.customerDetailsModel.dateOfBirth;
     if (_selectedDateOfBirth != null) {
@@ -58,124 +64,151 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
       _selectedFitnessGoal = _selectedFitnessGoal!.replaceAll(' ', '_');
     }
 
-    _healthDetails = [
-      FieldData(
-        type: FieldType.radio,
-        textInputAction: TextInputAction.done,
-        label: 'Blood Group',
-        requiredLabel: true,
-        controller: TextEditingController(
-          text: widget.customerDetailsModel.bloodGroup,
-        ),
-        focusNode: FocusNode(),
-        items: [
-          (label: 'A+', value: 'A+'),
-          (label: 'A-', value: 'A-'),
-          (label: 'B+', value: 'B+'),
-          (label: 'B-', value: 'B-'),
-          (label: 'AB+', value: 'AB+'),
-          (label: 'AB-', value: 'AB-'),
-          (label: 'O+', value: 'O+'),
-          (label: 'O-', value: 'O-'),
-        ],
-        validator: (value) {
-          if (value?.isEmpty ?? true) {
-            return 'Blood Group must be selected';
-          }
-          return null;
-        },
-        onValueChanged: (p0) {
-          _healthDetails[1].focusNode?.requestFocus();
-        },
-        onSubmitted: (value) {
-          _healthDetails[1].focusNode?.requestFocus();
-        },
-        decoration: InputDecoration(
-          hintText: 'Select Blood Group',
-          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: AppColors.borderGrey),
+    if (widget.editBodyMetricsOnly) {
+      _healthDetails = [
+        FieldData(
+          type: FieldType.word,
+          textInputAction: TextInputAction.next,
+          label: 'Height',
+          requiredLabel: true,
+          controller: TextEditingController(
+            text: widget.customerDetailsModel.height,
           ),
-        ),
-      ),
-      FieldData(
-        type: FieldType.word,
-        textInputAction: TextInputAction.done,
-        label: 'Height',
-        requiredLabel: true,
-        controller: TextEditingController(
-          text: widget.customerDetailsModel.height,
-        ),
-        focusNode: FocusNode(),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        maxLength: 5,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
-          LengthLimitingTextInputFormatter(5),
-        ],
-        validator: (value) {
-          if (value?.isEmpty ?? true) {
-            return 'Height is required';
-          }
-          return null;
-        },
-        onSubmitted: (value) {
-          _healthDetails[2].focusNode?.requestFocus();
-        },
-        decoration: InputDecoration(
-          hintText: '0',
-          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          suffixIcon: SizedBox.square(
-            dimension: 22,
-            child: Center(
-              child: Text('CM', style: AppStyles.text14Px.poppins.w400.dark),
+          focusNode: FocusNode(),
+          keyboardType: TextInputType.number,
+          maxLength: 3,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(3),
+          ],
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return 'Height is required';
+            }
+            return null;
+          },
+          onSubmitted: (value) {
+            _healthDetails[1].focusNode?.requestFocus();
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            hintText: '0',
+            hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+            suffixIcon: SizedBox.square(
+              dimension: 22,
+              child: Center(
+                child: Text('CM', style: AppStyles.text14Px.poppins.w400.dark),
+              ),
+            ),
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
           ),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: AppColors.borderGrey),
+        ),
+        FieldData(
+          type: FieldType.word,
+          textInputAction: TextInputAction.done,
+          label: 'Weight',
+          requiredLabel: true,
+          controller: TextEditingController(
+            text: widget.customerDetailsModel.weight,
           ),
-        ),
-      ),
-      FieldData(
-        type: FieldType.word,
-        textInputAction: TextInputAction.done,
-        label: 'Weight',
-        requiredLabel: true,
-        controller: TextEditingController(
-          text: widget.customerDetailsModel.weight,
-        ),
-        focusNode: FocusNode(),
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        maxLength: 5,
-        inputFormatters: [
-          FilteringTextInputFormatter.allow(RegExp(r'^\d{0,3}\.?\d{0,1}')),
-          LengthLimitingTextInputFormatter(5),
-        ],
-        validator: (value) {
-          if (value?.isEmpty ?? true) {
-            return 'Weight is required';
-          }
-          return null;
-        },
-        onSubmitted: (value) {
-          _healthDetails[3].focusNode?.requestFocus();
-        },
-        decoration: InputDecoration(
-          hintText: '0',
-          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-          suffixIcon: SizedBox.square(
-            dimension: 22,
-            child: Center(
-              child: Text('KG', style: AppStyles.text14Px.poppins.w400.dark),
+          focusNode: FocusNode(),
+          keyboardType: TextInputType.number,
+          maxLength: 3,
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+            LengthLimitingTextInputFormatter(3),
+          ],
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return 'Weight is required';
+            }
+            return null;
+          },
+          onSubmitted: (value) {
+            _healthDetails[1].focusNode?.unfocus();
+          },
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: Colors.white,
+            hintText: '0',
+            hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+            suffixIcon: SizedBox.square(
+              dimension: 22,
+              child: Center(
+                child: Text('KG', style: AppStyles.text14Px.poppins.w400.dark),
+              ),
+            ),
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: AppColors.primary, width: 1.5),
             ),
           ),
-          border: const OutlineInputBorder(
-            borderRadius: BorderRadius.all(Radius.circular(8)),
-            borderSide: BorderSide(color: AppColors.borderGrey),
+        ),
+      ];
+            ),
           ),
         ),
+      ];
+    } else {
+      _healthDetails = [
+        FieldData(
+          type: FieldType.radio,
+          textInputAction: TextInputAction.done,
+          label: 'Blood Group',
+          requiredLabel: true,
+          controller: TextEditingController(
+            text: (widget.customerDetailsModel.bloodGroup == null ||
+                    widget.customerDetailsModel.bloodGroup!.toLowerCase() == 'unknown')
+                ? ''
+                : widget.customerDetailsModel.bloodGroup,
+          ),
+          focusNode: FocusNode(),
+          items: [
+            (label: 'A+', value: 'A+'),
+            (label: 'A-', value: 'A-'),
+            (label: 'B+', value: 'B+'),
+            (label: 'B-', value: 'B-'),
+            (label: 'AB+', value: 'AB+'),
+            (label: 'AB-', value: 'AB-'),
+            (label: 'O+', value: 'O+'),
+            (label: 'O-', value: 'O-'),
+          ],
+          validator: (value) {
+            if (value?.isEmpty ?? true) {
+              return 'Blood Group must be selected';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            hintText: 'Select Blood Group',
+            hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+            border: const OutlineInputBorder(
+              borderRadius: BorderRadius.all(Radius.circular(8)),
+              borderSide: BorderSide(color: AppColors.borderGrey),
+            ),
+          ),
+        ),
+<<<<<<< HEAD
       ),
       FieldData(
         type: FieldType.word,
@@ -305,6 +338,10 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
       ),
     ];
     super.initState();
+=======
+      ];
+    }
+>>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
   }
 
   @override
@@ -318,28 +355,24 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
     _healthIssuesController.dispose();
   }
 
-  Future<void> _pickDateOfBirth() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
+  void _pickDateOfBirth() async {
+    final first = DateTime(1900);
+    final last = DateTime.now();
+    DateTime initial = _selectedDateOfBirth ?? DateTime(2000);
+    if (initial.isAfter(last)) {
+      initial = last;
+    }
+    if (initial.isBefore(first)) {
+      initial = first;
+    }
+
+    final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDateOfBirth ?? DateTime(now.year - 25),
-      firstDate: DateTime(1940),
-      lastDate: now,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: AppColors.textDark,
-            ),
-          ),
-          child: child!,
-        );
-      },
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
     );
-    if (picked != null) {
+    if (picked != null && picked != _selectedDateOfBirth) {
       setState(() {
         _selectedDateOfBirth = picked;
         _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
@@ -349,6 +382,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
 
   void _onUpdate() {
     if (_formKey.currentState?.validate() ?? false) {
+<<<<<<< HEAD
       /// Health Details
       final bloodGroup = _healthDetails[0].controller?.text;
       final height = _healthDetails[1].controller?.text;
@@ -356,23 +390,57 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
       final waistCircumference = _healthDetails[3].controller?.text;
       final hipCircumference = _healthDetails[4].controller?.text;
       final neckCircumference = _healthDetails[5].controller?.text;
+=======
+      String? bloodGroup;
+      String? height;
+      String? weight;
+      int? bfPercentage;
+
+      if (widget.editBodyMetricsOnly) {
+        bloodGroup = widget.customerDetailsModel.bloodGroup;
+        height = _healthDetails[0].controller?.text;
+        weight = _healthDetails[1].controller?.text;
+      } else {
+        bloodGroup = _healthDetails[0].controller?.text;
+        height = widget.customerDetailsModel.height;
+        weight = widget.customerDetailsModel.weight;
+      }
+
+      final rawBf = widget.customerDetailsModel.bfPercentage;
+      if (rawBf != null) {
+        if (rawBf is num) {
+          bfPercentage = rawBf.toInt();
+        } else if (rawBf is String) {
+          bfPercentage = int.tryParse(rawBf);
+        }
+      }
+>>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
 
       final body = <String, dynamic>{
         'blood_group': bloodGroup,
         'height': height,
         'weight': weight,
-        'is_healthy': _isHealthy,
+        'bf_percentage': bfPercentage,
       };
 
-      // Add date_of_birth if selected
-      if (_selectedDateOfBirth != null) {
-        body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(_selectedDateOfBirth!);
-      }
-
-      // Add health issues
-      final healthIssuesText = _healthIssuesController.text.trim();
-      if (healthIssuesText.isNotEmpty) {
-        body['health_conditions_other'] = healthIssuesText;
+      if (widget.editBodyMetricsOnly) {
+        body['is_healthy'] = widget.customerDetailsModel.isHealthy ?? true;
+        if (widget.customerDetailsModel.dateOfBirth != null) {
+          body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(widget.customerDetailsModel.dateOfBirth!);
+        }
+        final conditions = widget.customerDetailsModel.healthConditionsOther;
+        if (conditions != null && conditions.isNotEmpty) {
+          body['health_conditions_other'] = conditions;
+        }
+      } else {
+        body['is_healthy'] = _isHealthy;
+        if (_selectedDateOfBirth != null) {
+          body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(_selectedDateOfBirth!);
+        }
+        final healthIssuesText = _healthIssuesController.text.trim();
+        if (healthIssuesText.isNotEmpty) {
+          body['health_conditions_other'] = healthIssuesText;
+        }
       }
 
       // Add measurement fields
@@ -394,9 +462,9 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
 
       print(' passing data is--$body');
       context.read<ProfileCubit>().updateHealthProfile(
-        bloodGroup: bloodGroup!,
-        height: height!,
-        weight: weight!,
+        bloodGroup: bloodGroup ?? '',
+        height: height ?? '',
+        weight: weight ?? '',
         extraBody: body,
       );
     } else {
@@ -422,10 +490,11 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
         );
       },
       child: Scaffold(
+        backgroundColor: widget.editBodyMetricsOnly ? const Color(0xFFF5F5F7) : null,
         appBar: AppBar(
           leading: const PopButton().center,
           title: Text(
-            'Fitness Details',
+            widget.editBodyMetricsOnly ? 'Body Metrix' : 'Health Details',
             style: AppStyles.text16Px.poppins.w500,
           ),
         ),
@@ -448,6 +517,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
               ),
               const SizedBox(height: 22),
 
+<<<<<<< HEAD
               // ── Activity Level ──
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,27 +610,233 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
                   RichText(
                     text: TextSpan(
                       text: 'Date of Birth',
+=======
+              if (widget.editBodyMetricsOnly) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE8F5E9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: Color(0xFF2E7D32),
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Tip',
+                              style: AppStyles.text14Px.poppins.w600.copyWith(
+                                color: const Color(0xFF2E7D32),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Keep your body metrics updated to get more accurate insights and recommendations.',
+                              style: AppStyles.text12Px.poppins.w400.copyWith(
+                                color: AppColors.textDark,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 22),
+              ],
+
+              if (!widget.editBodyMetricsOnly) ...[
+                // ── Age / Date of Birth ──
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(
+                      text: TextSpan(
+                        text: 'Date of Birth',
+                        style: AppStyles.text14Px.poppins.w500.copyWith(
+                          color: AppColors.textDark,
+                        ),
+                        children: const [
+                          TextSpan(
+                            text: ' *',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: _pickDateOfBirth,
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          controller: _dobController,
+                          decoration: InputDecoration(
+                            hintText: 'Select Date of Birth',
+                            hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+                            suffixIcon: const Icon(Icons.calendar_today, size: 20),
+                            border: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(8)),
+                              borderSide: BorderSide(color: AppColors.borderGrey),
+                            ),
+                            enabledBorder: const OutlineInputBorder(
+                              borderRadius: BorderRadius.all(Radius.circular(8)),
+                              borderSide: BorderSide(color: AppColors.borderGrey),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_selectedDateOfBirth != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text(
+                          'Age: ${DateTime.now().year - _selectedDateOfBirth!.year} years',
+                          style: AppStyles.text12Px.poppins.w400.copyWith(
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+
+                // ── Health Status ──
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Health Status',
+>>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
                       style: AppStyles.text14Px.poppins.w500.copyWith(
                         color: AppColors.textDark,
                       ),
-                      children: const [
-                        TextSpan(
-                          text: ' *',
-                          style: TextStyle(color: Colors.red),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() {
+                              _isHealthy = true;
+                              _healthIssuesController.clear();
+                            }),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _isHealthy
+                                    ? AppColors.primary.withOpacity(0.1)
+                                    : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: _isHealthy
+                                      ? AppColors.primary
+                                      : AppColors.borderGrey,
+                                  width: _isHealthy ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _isHealthy
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_off,
+                                    size: 18,
+                                    color: _isHealthy
+                                        ? AppColors.primary
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Healthy',
+                                    style: AppStyles.text14Px.poppins.w500.copyWith(
+                                      color: _isHealthy
+                                          ? AppColors.primary
+                                          : AppColors.textDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isHealthy = false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: !_isHealthy
+                                    ? Colors.red.withOpacity(0.1)
+                                    : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: !_isHealthy
+                                      ? Colors.red
+                                      : AppColors.borderGrey,
+                                  width: !_isHealthy ? 1.5 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    !_isHealthy
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_off,
+                                    size: 18,
+                                    color: !_isHealthy
+                                        ? Colors.red
+                                        : Colors.grey,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Not Healthy',
+                                    style: AppStyles.text14Px.poppins.w500.copyWith(
+                                      color: !_isHealthy
+                                          ? Colors.red
+                                          : AppColors.textDark,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
-                    onTap: _pickDateOfBirth,
-                    child: AbsorbPointer(
-                      child: TextFormField(
-                        controller: _dobController,
+                  ],
+                ),
+                if (!_isHealthy) ...[
+                  const SizedBox(height: 22),
+                  // ── Health Issues ──
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Health Issues',
+                        style: AppStyles.text14Px.poppins.w500.copyWith(
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _healthIssuesController,
+                        maxLines: 3,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
-                          hintText: 'Select Date of Birth',
+                          hintText: 'E.g., Diabetes, Back pain, Asthma...',
                           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-                          suffixIcon: const Icon(Icons.calendar_today, size: 20),
                           border: const OutlineInputBorder(
                             borderRadius: BorderRadius.all(Radius.circular(8)),
                             borderSide: BorderSide(color: AppColors.borderGrey),
@@ -571,158 +847,10 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  if (_selectedDateOfBirth != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        'Age: ${DateTime.now().year - _selectedDateOfBirth!.year} years',
-                        style: AppStyles.text12Px.poppins.w400.copyWith(
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 22),
-
-              // ── Health Status ──
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Health Status',
-                    style: AppStyles.text14Px.poppins.w500.copyWith(
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _isHealthy = true),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: _isHealthy
-                                  ? AppColors.primary.withOpacity(0.1)
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _isHealthy
-                                    ? AppColors.primary
-                                    : AppColors.borderGrey,
-                                width: _isHealthy ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  _isHealthy
-                                      ? Icons.radio_button_checked
-                                      : Icons.radio_button_off,
-                                  size: 18,
-                                  color: _isHealthy
-                                      ? AppColors.primary
-                                      : Colors.grey,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Healthy',
-                                  style: AppStyles.text14Px.poppins.w500.copyWith(
-                                    color: _isHealthy
-                                        ? AppColors.primary
-                                        : AppColors.textDark,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => _isHealthy = false),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: !_isHealthy
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: !_isHealthy
-                                    ? Colors.red
-                                    : AppColors.borderGrey,
-                                width: !_isHealthy ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  !_isHealthy
-                                      ? Icons.radio_button_checked
-                                      : Icons.radio_button_off,
-                                  size: 18,
-                                  color: !_isHealthy
-                                      ? Colors.red
-                                      : Colors.grey,
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Not Healthy',
-                                  style: AppStyles.text14Px.poppins.w500.copyWith(
-                                    color: !_isHealthy
-                                        ? Colors.red
-                                        : AppColors.textDark,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ],
-              ),
-              const SizedBox(height: 22),
-
-              // ── Health Issues ──
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Health Issues',
-                    style: AppStyles.text14Px.poppins.w500.copyWith(
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _healthIssuesController,
-                    maxLines: 3,
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      hintText: 'E.g., Diabetes, Back pain, Asthma...',
-                      hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                        borderSide: BorderSide(color: AppColors.borderGrey),
-                      ),
-                      enabledBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                        borderSide: BorderSide(color: AppColors.borderGrey),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              ],
 
               const SizedBox(height: 32),
             ],
@@ -733,11 +861,24 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
             return p.updateProfileDetails != c.updateProfileDetails;
           },
           builder: (context, state) {
-            return Button.filled(
-              title: 'Update',
-              ontap: _onUpdate,
-              isLoading: state.updateProfileDetails?.isNone() ?? false,
-            ).pad(16);
+            return Container(
+              color: widget.editBodyMetricsOnly ? const Color(0xFFF5F5F7) : null,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 16,
+                    top: 16,
+                    bottom: 24,
+                  ),
+                  child: Button.filled(
+                    title: 'Update',
+                    ontap: _onUpdate,
+                    isLoading: state.updateProfileDetails?.isNone() ?? false,
+                  ),
+                ),
+              ),
+            );
           },
         ),
       ),

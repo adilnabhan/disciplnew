@@ -17,7 +17,20 @@ final class FitnesscenterRepository {
 
   // Caching variables
   FitnesscenterCategoriesModel? _cachedCategories;
+  ListFitnesscenterModel? _cachedListFitnesscenter;
+  
+  FitnesscenterCategoriesModel? get cachedCategories => _cachedCategories;
+  ListFitnesscenterModel? get cachedListFitnesscenter => _cachedListFitnesscenter;
+
   final Map<int, List<FitnesscenterMembershipPlansModel>> _cachedMembershipPlans = {};
+  final Map<int, FitnesscenterDetailsModel> _cachedDetails = {};
+  final Map<int, FitnessCenterReviewsModel> _cachedReviews = {};
+
+  FitnesscenterDetailsModel? getCachedDetails(int id) => _cachedDetails[id];
+  void cacheDetails(int id, FitnesscenterDetailsModel details) => _cachedDetails[id] = details;
+
+  FitnessCenterReviewsModel? getCachedReviews(int id) => _cachedReviews[id];
+  void cacheReviews(int id, FitnessCenterReviewsModel reviews) => _cachedReviews[id] = reviews;
 
   final Dio _dio = DioClient().dio;
 
@@ -180,7 +193,7 @@ final class FitnesscenterRepository {
     bool allGyms = false,
   }) async {
     try {
-      return await Feggy.async(
+      final response = await Feggy.async(
         call: _dio.get<dynamic>(
           nextUrl ?? (allGyms ? ApiUris.listAllFitnesscenter : ApiUris.listFitnesscenter),
           options: _options,
@@ -189,6 +202,18 @@ final class FitnesscenterRepository {
         onSuccess:
             (res) => _handleMapResponse(res, ListFitnesscenterModel.fromJson),
       );
+
+      // Cache initial load (no pagination, no active search query, no specific category filtered)
+      if (nextUrl == null &&
+          (queryParameters['search'] == null || (queryParameters['search'] as String).isEmpty) &&
+          queryParameters['category_id'] == null) {
+        response.fold(
+          (_) => null,
+          (r) => _cachedListFitnesscenter = r,
+        );
+      }
+
+      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {

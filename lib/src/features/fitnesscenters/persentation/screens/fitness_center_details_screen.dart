@@ -1,7 +1,10 @@
 import 'dart:ui';
 import 'dart:async';
+import 'package:flutter/gestures.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/src/features/reviews_and_rating/presentation/screens/add_review.dart';
 
 class FitnessCenterDetailsScreen extends StatefulWidget {
   const FitnessCenterDetailsScreen({
@@ -15,7 +18,9 @@ class FitnessCenterDetailsScreen extends StatefulWidget {
   final ActiveMembershipModel? activeMembership;
   final SingleFItnessCenterModel? previewData;
 
-  static FitnesscenterDetailsModel fromPreview(SingleFItnessCenterModel preview) {
+  static FitnesscenterDetailsModel fromPreview(
+    SingleFItnessCenterModel preview,
+  ) {
     return FitnesscenterDetailsModel(
       id: preview.id,
       name: preview.name,
@@ -23,33 +28,52 @@ class FitnessCenterDetailsScreen extends StatefulWidget {
       email: preview.email,
       phoneNumber: preview.phoneNumber,
       location: preview.location,
+      googleMapsUrl: preview.googleMapsUrl,
       logo: preview.logo,
-      categories: preview.gymCategories?.map((c) => Amenity(id: c.id, name: c.name)).toList(),
+      categories:
+          preview.gymCategories
+              ?.map((c) => Amenity(id: c.id, name: c.name))
+              .toList(),
       reviewCount: preview.reviewCount,
       averageRating: preview.averageRating,
-      photos: preview.logo != null ? [Photo(id: 0, image: preview.logo, isPrimary: true)] : [],
+      photos:
+          preview.logo != null
+              ? [Photo(id: 0, image: preview.logo, isPrimary: true)]
+              : [],
     );
   }
 
   @override
-  State<FitnessCenterDetailsScreen> createState() => _FitnessCenterDetailsScreenState();
+  State<FitnessCenterDetailsScreen> createState() =>
+      _FitnessCenterDetailsScreenState();
 }
 
-class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen> {
+class _FitnessCenterDetailsScreenState
+    extends State<FitnessCenterDetailsScreen> {
   late final FitnessCenterDetailsCubit _cubit;
   final PageController _pageController = PageController();
   final ValueNotifier<int> _currentImageIndexNotifier = ValueNotifier<int>(0);
   final ValueNotifier<int> _selectedTabNotifier = ValueNotifier<int>(0);
-  final ValueNotifier<String> _selectedDayNotifier = ValueNotifier<String>('mon');
+  final ValueNotifier<int> _transformPageNotifier = ValueNotifier<int>(0);
+  final ValueNotifier<String> _selectedDayNotifier = ValueNotifier<String>(
+    'mon',
+  );
+  final ValueNotifier<bool> _descriptionExpandedNotifier = ValueNotifier<bool>(
+    false,
+  );
   Timer? _carouselTimer;
 
   @override
   void initState() {
     super.initState();
-    final FitnesscenterDetailsModel? initialDetails = widget.previewData != null
-        ? FitnessCenterDetailsScreen.fromPreview(widget.previewData!)
-        : null;
-    _cubit = FitnessCenterDetailsCubit(id: widget.fitnessCenterId, previewData: initialDetails);
+    final FitnesscenterDetailsModel? initialDetails =
+        widget.previewData != null
+            ? FitnessCenterDetailsScreen.fromPreview(widget.previewData!)
+            : null;
+    _cubit = FitnessCenterDetailsCubit(
+      id: widget.fitnessCenterId,
+      previewData: initialDetails,
+    );
     _fetch();
   }
 
@@ -59,7 +83,9 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     _pageController.dispose();
     _currentImageIndexNotifier.dispose();
     _selectedTabNotifier.dispose();
+    _transformPageNotifier.dispose();
     _selectedDayNotifier.dispose();
+    _descriptionExpandedNotifier.dispose();
     _carouselTimer?.cancel();
     super.dispose();
   }
@@ -86,7 +112,11 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     });
   }
 
-  void _openGalleryViewer(BuildContext context, List<String> images, int initialIndex) {
+  void _openGalleryViewer(
+    BuildContext context,
+    List<String> images,
+    int initialIndex,
+  ) {
     showGeneralDialog(
       context: context,
       barrierColor: Colors.transparent,
@@ -127,42 +157,48 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
               child: state.fitnessCenterDetails.fold(
                 () => _buildShimmerDetailsView(key: const ValueKey('shimmer')),
                 (eitherDetails) => eitherDetails.fold(
-                  (error) => error
-                      .maybeWhen(
-                        network: (e) => ErrorUi.network(onTap: _fetchDetails),
-                        notFound: (e) => ErrorUi.notFound(onTap: _fetchDetails),
-                        orElse: () => ErrorUi.server(onTap: _fetchDetails),
-                      )
-                      .center,
+                  (error) =>
+                      error
+                          .maybeWhen(
+                            network:
+                                (e) => ErrorUi.network(onTap: _fetchDetails),
+                            notFound:
+                                (e) => ErrorUi.notFound(onTap: _fetchDetails),
+                            orElse: () => ErrorUi.server(onTap: _fetchDetails),
+                          )
+                          .center,
                   (details) {
                     final reviews = state.fitnessCenterReviews.fold(
                       () => null,
-                      (eitherReviews) => eitherReviews.fold(
-                        (error) => null,
-                        (r) => r,
-                      ),
+                      (eitherReviews) =>
+                          eitherReviews.fold((error) => null, (r) => r),
                     );
-                    return _buildDetailsView(details, reviews, key: const ValueKey('details'));
+                    return _buildDetailsView(
+                      details,
+                      reviews,
+                      key: const ValueKey('details'),
+                    );
                   },
                 ),
               ),
             );
           },
         ),
-        bottomNavigationBar: BlocBuilder<FitnessCenterDetailsCubit, FitnessCenterDetailsState>(
+        bottomNavigationBar: BlocBuilder<
+          FitnessCenterDetailsCubit,
+          FitnessCenterDetailsState
+        >(
           buildWhen: (p, c) => p.fitnessCenterDetails != c.fitnessCenterDetails,
           builder: (context, state) {
             return state.fitnessCenterDetails.fold(
               () => const SizedBox.shrink(),
-              (either) => either.fold(
-                (error) => const SizedBox.shrink(),
-                (details) {
-                  if (widget.activeMembership == null) {
-                    return _buildJoinNowButton(details);
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
+              (either) =>
+                  either.fold((error) => const SizedBox.shrink(), (details) {
+                    if (widget.activeMembership == null) {
+                      return _buildJoinNowButton(details);
+                    }
+                    return const SizedBox.shrink();
+                  }),
             );
           },
         ),
@@ -277,8 +313,13 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     );
   }
 
-  Widget _buildDetailsView(FitnesscenterDetailsModel details, FitnessCenterReviewsModel? reviews, {Key? key}) {
-    final photos = details.photos?.where((photo) => photo.image != null).toList() ?? [];
+  Widget _buildDetailsView(
+    FitnesscenterDetailsModel details,
+    FitnessCenterReviewsModel? reviews, {
+    Key? key,
+  }) {
+    final photos =
+        details.photos?.where((photo) => photo.image != null).toList() ?? [];
     final hasPhotos = photos.isNotEmpty;
 
     if (hasPhotos) {
@@ -307,6 +348,12 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                         onTap: () => _openGalleryViewer(context, images, index),
                         child: ImageNetwork(
                           images[index],
+                          key: ValueKey(
+                            Uri.tryParse(
+                                  images[index],
+                                )?.replace(queryParameters: {}).toString() ??
+                                images[index],
+                          ),
                           fit: BoxFit.cover,
                         ),
                       );
@@ -377,7 +424,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                     right: 0,
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(12),
@@ -391,11 +441,16 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                                 final isActive = index == currentIdx;
                                 return AnimatedContainer(
                                   duration: const Duration(milliseconds: 250),
-                                  margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 2.5,
+                                  ),
                                   width: isActive ? 14 : 4,
                                   height: 4,
                                   decoration: BoxDecoration(
-                                    color: isActive ? Colors.white : Colors.white.withOpacity(0.4),
+                                    color:
+                                        isActive
+                                            ? Colors.white
+                                            : Colors.white.withOpacity(0.4),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                 );
@@ -423,7 +478,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                   _buildTagsAndLocationCard(details),
                   const SizedBox(height: 16),
                   _buildTabsCard(details),
-                  const SizedBox(height: 120), // extra padding for bottom button
+                  _buildExtraSections(details, reviews),
+                  const SizedBox(
+                    height: 120,
+                  ), // extra padding for bottom button
                 ],
               ),
             ),
@@ -477,7 +535,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                   _buildTagsAndLocationCard(details),
                   const SizedBox(height: 16),
                   _buildTabsCard(details),
-                  const SizedBox(height: 120), // extra padding for bottom button
+                  _buildExtraSections(details, reviews),
+                  const SizedBox(
+                    height: 120,
+                  ), // extra padding for bottom button
                 ],
               ),
             ),
@@ -487,10 +548,17 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     }
   }
 
-  Widget _buildProfileCard(FitnesscenterDetailsModel details, FitnessCenterReviewsModel? reviews) {
+  Widget _buildProfileCard(
+    FitnesscenterDetailsModel details,
+    FitnessCenterReviewsModel? reviews,
+  ) {
     final logoUrl = details.logo;
-    final avgRating = reviews != null ? ((reviews.results?.avgRating as num?)?.toDouble() ?? 4.5) : 4.5;
-    final reviewCount = reviews != null ? (reviews.results?.reviewCount ?? 0) : 0;
+    final avgRating =
+        reviews != null
+            ? ((reviews.results?.avgRating as num?)?.toDouble() ?? 4.5)
+            : 4.5;
+    final reviewCount =
+        reviews != null ? (reviews.results?.reviewCount ?? 0) : 0;
     final packagesCount = details.packages?.length ?? 0;
 
     return Container(
@@ -517,19 +585,30 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                   width: 80,
                   height: 80,
                   color: Colors.black,
-                  child: logoUrl != null && logoUrl.isNotEmpty
-                      ? ImageNetwork(
-                          logoUrl,
-                          fit: BoxFit.cover,
-                        )
-                      : Image.asset(
-                          'assets/mascot_Image.png',
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            color: Colors.grey[100],
-                            child: const Icon(Icons.fitness_center, color: Colors.grey),
+                  child:
+                      logoUrl != null && logoUrl.isNotEmpty
+                          ? ImageNetwork(
+                            logoUrl,
+                            key: ValueKey(
+                              Uri.tryParse(
+                                    logoUrl,
+                                  )?.replace(queryParameters: {}).toString() ??
+                                  logoUrl,
+                            ),
+                            fit: BoxFit.cover,
+                          )
+                          : Image.asset(
+                            'assets/mascot_Image.png',
+                            fit: BoxFit.cover,
+                            errorBuilder:
+                                (context, error, stackTrace) => Container(
+                                  color: Colors.grey[100],
+                                  child: const Icon(
+                                    Icons.fitness_center,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                           ),
-                        ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -560,18 +639,18 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                         _buildStatItem('$packagesCount', 'Packages'),
                         reviews == null
                             ? Shimmer.fromColors(
-                                baseColor: Colors.grey.shade300,
-                                highlightColor: Colors.grey.shade100,
-                                child: Container(
-                                  width: 50,
-                                  height: 36,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : _buildRatingItem(
-                                avgRating.toStringAsFixed(1),
-                                '($reviewCount)',
+                              baseColor: Colors.grey.shade300,
+                              highlightColor: Colors.grey.shade100,
+                              child: Container(
+                                width: 50,
+                                height: 36,
+                                color: Colors.white,
                               ),
+                            )
+                            : _buildRatingItem(
+                              avgRating.toStringAsFixed(1),
+                              '($reviewCount)',
+                            ),
                         _buildDirectionItem(details),
                       ],
                     ),
@@ -637,25 +716,48 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     return InkWell(
       onTap: () async {
         final loc = details.location;
-        if (loc != null) {
+        final directGoogleMapsUrl = details.googleMapsUrl;
+        final locGoogleMapsUrl = loc?.googleMapsUrl;
+        final targetUrl =
+            (directGoogleMapsUrl != null && directGoogleMapsUrl.isNotEmpty)
+                ? directGoogleMapsUrl
+                : (locGoogleMapsUrl != null && locGoogleMapsUrl.isNotEmpty)
+                ? locGoogleMapsUrl
+                : null;
+
+        Uri mapUri;
+        if (targetUrl != null) {
+          mapUri = Uri.parse(targetUrl.trim());
+        } else if (loc != null) {
           final lat = loc.latitude;
           final lng = loc.longitude;
-          Uri mapUri;
-          if (lat != null && lng != null && lat.toString().trim().isNotEmpty && lng.toString().trim().isNotEmpty && lat.toString() != 'null' && lng.toString() != 'null') {
-            mapUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$lat,$lng');
+          if (lat != null &&
+              lng != null &&
+              lat.toString().trim().isNotEmpty &&
+              lat.toString() != 'null') {
+            mapUri = Uri.parse(
+              'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
+            );
           } else {
-            final address = [loc.buildingName, loc.street, loc.city, loc.state]
-                .where((e) => e != null && e.isNotEmpty)
-                .join(', ');
-            mapUri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}');
-          }
-          try {
-            await launchUrl(mapUri, mode: LaunchMode.externalApplication);
-          } catch (e) {
-            await Dialogs.showSnack(msg: 'Could not open maps');
+            final address = [
+              loc.buildingName,
+              loc.street,
+              loc.city,
+              loc.state,
+            ].where((e) => e != null && e.isNotEmpty).join(', ');
+            mapUri = Uri.parse(
+              'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}',
+            );
           }
         } else {
           await Dialogs.showSnack(msg: 'Location not available');
+          return;
+        }
+
+        try {
+          await launchUrl(mapUri, mode: LaunchMode.externalApplication);
+        } catch (e) {
+          await Dialogs.showSnack(msg: 'Could not open maps');
         }
       },
       child: Column(
@@ -666,11 +768,7 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
               color: Colors.red.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.directions,
-              color: Colors.red,
-              size: 16,
-            ),
+            child: const Icon(Icons.directions, color: Colors.red, size: 16),
           ),
           const SizedBox(height: 2),
           const Text(
@@ -683,6 +781,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
   }
 
   Widget _buildTagsAndLocationCard(FitnesscenterDetailsModel details) {
+    final categories = details.categories ?? [];
+    final visibleCategories = categories.take(3).toList();
+    final remainingCount = categories.length - visibleCategories.length;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -692,9 +794,57 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (visibleCategories.isNotEmpty) ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ...visibleCategories.map((cat) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      cat.name ?? '',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF767676),
+                      ),
+                    ),
+                  );
+                }),
+                if (remainingCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '+$remainingCount',
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF767676),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
-              const Icon(Icons.location_on_outlined, color: Colors.green, size: 16),
+              const Icon(
+                Icons.location_on_outlined,
+                color: Colors.green,
+                size: 16,
+              ),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -709,70 +859,142 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            details.description ?? 'No description available.',
-            style: const TextStyle(fontSize: 14, color: Colors.black54, height: 1.4),
+          ValueListenableBuilder<bool>(
+            valueListenable: _descriptionExpandedNotifier,
+            builder: (context, isExpanded, _) {
+              final description =
+                  details.description ?? 'No description available.';
+              const bodyStyle = TextStyle(
+                fontSize: 14,
+                color: Colors.black54,
+                height: 1.4,
+              );
+              final showMoreStyle = TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              );
+
+              return LayoutBuilder(
+                builder: (context, constraints) {
+                  // Check if text overflows 3 lines
+                  final textScaler = MediaQuery.textScalerOf(context);
+                  final tp = TextPainter(
+                    text: TextSpan(text: description, style: bodyStyle),
+                    maxLines: 3,
+                    textDirection: TextDirection.ltr,
+                    textScaler: textScaler,
+                  )..layout(maxWidth: constraints.maxWidth);
+
+                  final needsTruncation = tp.didExceedMaxLines;
+
+                  if (!needsTruncation) {
+                    // Short text: just show it, no toggle needed
+                    return Text(
+                      description,
+                      style: bodyStyle,
+                      textAlign: TextAlign.start,
+                    );
+                  }
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        description,
+                        style: bodyStyle,
+                        textAlign: TextAlign.start,
+                        maxLines: isExpanded ? null : 3,
+                        overflow:
+                            isExpanded
+                                ? TextOverflow.visible
+                                : TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      GestureDetector(
+                        onTap:
+                            () =>
+                                _descriptionExpandedNotifier.value =
+                                    !isExpanded,
+                        child: Text(
+                          isExpanded ? 'Show less' : 'Show more',
+                          style: showMoreStyle,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
           ),
+
           const SizedBox(height: 16),
-          // if (details.socialMedia?.isNotEmpty ?? false)
-          //   Row(
-          //     children: details.socialMedia!.map((e) {
-          //       final platform = (e.platform ?? '').toLowerCase();
-          //       String assetPath;
-          //       switch (platform) {
-          //         case 'facebook':
-          //           assetPath = 'assets/images/svg/icons/facebook.svg';
-          //           break;
-          //         case 'instagram':
-          //           assetPath = 'assets/images/svg/icons/instagram.svg';
-          //           break;
-          //         case 'whatsapp':
-          //           assetPath = 'assets/images/svg/icons/whatsapp.svg';
-          //           break;
-          //         case 'youtube':
-          //           assetPath = 'assets/images/svg/icons/youtube.svg';
-          //           break;
-          //         default:
-          //           assetPath = 'assets/images/svg/icons/website.svg';
-          //       }
+          if (details.socialMedia?.isNotEmpty ?? false)
+            Row(
+              children:
+                  details.socialMedia!.map((e) {
+                    final platform = (e.platform ?? '').toLowerCase();
+                    String assetPath;
+                    switch (platform) {
+                      case 'facebook':
+                        assetPath = 'assets/images/svg/icons/facebook.svg';
+                        break;
+                      case 'instagram':
+                        assetPath = 'assets/images/svg/icons/instagram.svg';
+                        break;
+                      case 'whatsapp':
+                        assetPath = 'assets/images/svg/icons/whatsapp.svg';
+                        break;
+                      case 'youtube':
+                        assetPath = 'assets/images/svg/icons/youtube.svg';
+                        break;
+                      default:
+                        assetPath = 'assets/images/svg/icons/website.svg';
+                    }
 
-          //       final iconColor = AppColors.primary;
-          //       final bgColor = AppColors.primary.withOpacity(0.05);
+                    final iconColor = AppColors.primary;
+                    final bgColor = AppColors.primary.withOpacity(0.05);
 
-          //       return Padding(
-          //         padding: const EdgeInsets.only(right: 12.0),
-          //         child: InkWell(
-          //           borderRadius: BorderRadius.circular(99),
-          //           onTap: () async {
-          //             final url = e.url ?? '';
-          //             if (platform == 'whatsapp') {
-          //               final phone = url.replaceAll(RegExp('[^0-9+]'), '');
-          //               if (phone.isNotEmpty) {
-          //                 final waUrl = Uri.parse('https://wa.me/$phone');
-          //                 if (await canLaunchUrl(waUrl)) {
-          //                   await launchUrl(waUrl);
-          //                 } else {
-          //                   await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
-          //                 }
-          //               } else {
-          //                 await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
-          //               }
-          //             } else {
-          //               final uri = url.startsWith('http://') || url.startsWith('https://') 
-          //                   ? Uri.parse(url) 
-          //                   : Uri.parse('https://$url');
-          //               if (url.isNotEmpty && await canLaunchUrl(uri)) {
-          //                 await launchUrl(uri);
-          //               } else {
-          //                 await Dialogs.showSnack(msg: 'Invalid URL');
-          //               }
-          //             }
-          //           },
-          //           child: _buildSocialIcon(assetPath, iconColor, bgColor),
-          //         ),
-          //       );
-          //     }).toList(),
-          //   ),
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 12.0),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(99),
+                        onTap: () async {
+                          final url = e.url ?? '';
+                          if (platform == 'whatsapp') {
+                            final phone = url.replaceAll(RegExp('[^0-9+]'), '');
+                            if (phone.isNotEmpty) {
+                              final waUrl = Uri.parse('https://wa.me/$phone');
+                              if (await canLaunchUrl(waUrl)) {
+                                await launchUrl(waUrl);
+                              } else {
+                                await Dialogs.showSnack(
+                                  msg: 'Invalid WhatsApp number',
+                                );
+                              }
+                            } else {
+                              await Dialogs.showSnack(
+                                msg: 'Invalid WhatsApp number',
+                              );
+                            }
+                          } else {
+                            final uri =
+                                url.startsWith('http://') ||
+                                        url.startsWith('https://')
+                                    ? Uri.parse(url)
+                                    : Uri.parse('https://$url');
+                            if (url.isNotEmpty && await canLaunchUrl(uri)) {
+                              await launchUrl(uri);
+                            } else {
+                              await Dialogs.showSnack(msg: 'Invalid URL');
+                            }
+                          }
+                        },
+                        child: _buildSocialIcon(assetPath, iconColor, bgColor),
+                      ),
+                    );
+                  }).toList(),
+            ),
         ],
       ),
     );
@@ -801,10 +1023,7 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
       width: 44,
       height: 44,
       padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: bgColor, shape: BoxShape.circle),
       child: SvgPicture.asset(
         assetPath,
         colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
@@ -815,13 +1034,18 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
   IconData _getAmenityIcon(String name) {
     final lower = name.toLowerCase();
     if (lower.contains('wifi')) return Icons.wifi;
-    if (lower.contains('elevator') || lower.contains('lift')) return Icons.elevator;
+    if (lower.contains('elevator') || lower.contains('lift'))
+      return Icons.elevator;
     if (lower.contains('locker')) return Icons.lock_outline;
-    if (lower.contains('ac') || lower.contains('air condition')) return Icons.ac_unit;
-    if (lower.contains('cctv') || lower.contains('camera')) return Icons.videocam_outlined;
+    if (lower.contains('ac') || lower.contains('air condition'))
+      return Icons.ac_unit;
+    if (lower.contains('cctv') || lower.contains('camera'))
+      return Icons.videocam_outlined;
     if (lower.contains('parking')) return Icons.local_parking;
-    if (lower.contains('water') || lower.contains('drinking')) return Icons.local_drink;
-    if (lower.contains('changing') || lower.contains('shower')) return Icons.shower_outlined;
+    if (lower.contains('water') || lower.contains('drinking'))
+      return Icons.local_drink;
+    if (lower.contains('changing') || lower.contains('shower'))
+      return Icons.shower_outlined;
     return Icons.star_border; // fallback
   }
 
@@ -854,73 +1078,50 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
               child: ValueListenableBuilder<int>(
                 valueListenable: _selectedTabNotifier,
                 builder: (context, activeTab, _) {
+                  Widget tabItem(int index, String label) {
+                    final isActive =
+                        (activeTab == index) || (activeTab > 1 && index == 0);
+                    return Expanded(
+                      child: GestureDetector(
+                        onTap: () => _selectedTabNotifier.value = index,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isActive ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow:
+                                isActive
+                                    ? [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                    : null,
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            label,
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight:
+                                  isActive ? FontWeight.w500 : FontWeight.w400,
+                              fontSize: 14,
+                              height: 1.5,
+                              letterSpacing: -0.41,
+                              color:
+                                  isActive
+                                      ? AppColors.primary
+                                      : const Color(0xFF444444),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
                   return Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => _selectedTabNotifier.value = 0,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: activeTab == 0 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: activeTab == 0
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'Amenities',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: activeTab == 0 ? FontWeight.w500 : FontWeight.w400,
-                                fontSize: 14,
-                                height: 1.5,
-                                letterSpacing: -0.41,
-                                color: activeTab == 0 ? AppColors.primary : const Color(0xFF444444),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => _selectedTabNotifier.value = 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: activeTab == 1 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: activeTab == 1
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
-                                  : null,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              'Schedule',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: activeTab == 1 ? FontWeight.w500 : FontWeight.w400,
-                                fontSize: 14,
-                                height: 1.5,
-                                letterSpacing: -0.41,
-                                color: activeTab == 1 ? AppColors.primary : const Color(0xFF444444),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    children: [tabItem(0, 'Amenities'), tabItem(1, 'Schedule')],
                   );
                 },
               ),
@@ -929,7 +1130,7 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
           ValueListenableBuilder<int>(
             valueListenable: _selectedTabNotifier,
             builder: (context, activeTab, _) {
-              if (activeTab == 0) {
+              if (activeTab == 0 || activeTab > 1) {
                 return _buildAmenitiesTab(details);
               } else {
                 return _buildScheduleTab(details);
@@ -941,8 +1142,53 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     );
   }
 
+  Widget _buildAmenitiesShimmer() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          const columns = 4;
+          const spacing = 8.0;
+          final itemWidth =
+              (constraints.maxWidth - spacing * (columns - 1)) / columns;
+          return Shimmer.fromColors(
+            baseColor: Colors.grey.shade300,
+            highlightColor: Colors.grey.shade100,
+            child: Wrap(
+              spacing: spacing,
+              runSpacing: 12,
+              children: List.generate(4, (index) {
+                return SizedBox(
+                  width: itemWidth,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(width: 40, height: 10, color: Colors.white),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildAmenitiesTab(FitnesscenterDetailsModel details) {
-    final amenitiesList = details.amenities ?? [];
+    final amenitiesList = details.amenities;
+    if (amenitiesList == null) {
+      return _buildAmenitiesShimmer();
+    }
     if (amenitiesList.isEmpty) {
       return const Padding(
         padding: EdgeInsets.all(24.0),
@@ -966,39 +1212,40 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
           return Wrap(
             spacing: spacing,
             runSpacing: 12,
-            children: amenitiesList.map((amenity) {
-              final name = amenity.name ?? 'Amenity';
-              final icon = _getAmenityIcon(name);
-              return SizedBox(
-                width: itemWidth,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.05),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(icon, color: AppColors.primary, size: 22),
+            children:
+                amenitiesList.map((amenity) {
+                  final name = amenity.name ?? 'Amenity';
+                  final icon = _getAmenityIcon(name);
+                  return SizedBox(
+                    width: itemWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.05),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(icon, color: AppColors.primary, size: 22),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          name,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      name,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
           );
         },
       ),
@@ -1028,41 +1275,50 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
-                  children: daysOfWeek.map((day) {
-                    final isSelected = selectedDay == day;
-                    final workingDay = details.workingDays?.firstWhere(
-                      (d) => (d.day ?? '').toLowerCase() == day,
-                      orElse: () => WorkingDay(day: day, isOpen: day != 'sun'),
-                    );
-                    final isOpen = workingDay?.isOpen ?? (day != 'sun');
+                  children:
+                      daysOfWeek.map((day) {
+                        final isSelected = selectedDay == day;
+                        final workingDay = details.workingDays?.firstWhere(
+                          (d) => (d.day ?? '').toLowerCase() == day,
+                          orElse:
+                              () => WorkingDay(day: day, isOpen: day != 'sun'),
+                        );
+                        final isOpen = workingDay?.isOpen ?? (day != 'sun');
 
-                    final chipBgColor = isOpen ? const Color(0xFFE2F9EC) : const Color(0xFFF2F2F2);
-                    final textColor = isOpen ? const Color(0xFF1EA864) : Colors.grey;
+                        final chipBgColor =
+                            isOpen
+                                ? const Color(0xFFE2F9EC)
+                                : const Color(0xFFF2F2F2);
+                        final textColor =
+                            isOpen ? const Color(0xFF1EA864) : Colors.grey;
 
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: GestureDetector(
-                        onTap: () {
-                          _selectedDayNotifier.value = day;
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: chipBgColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            dayLabels[day] ?? day,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: textColor,
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              _selectedDayNotifier.value = day;
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: chipBgColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                dayLabels[day] ?? day,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                        );
+                      }).toList(),
                 ),
               ),
               const SizedBox(height: 20),
@@ -1070,14 +1326,15 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                 builder: (context) {
                   final workingDay = details.workingDays?.firstWhere(
                     (d) => (d.day ?? '').toLowerCase() == selectedDay,
-                    orElse: () => WorkingDay(
-                      day: selectedDay,
-                      isOpen: selectedDay != 'sun',
-                      morningOpeningTime: '05:30:00',
-                      morningClosingTime: '09:30:00',
-                      eveningOpeningTime: '16:00:00',
-                      eveningClosingTime: '22:30:00',
-                    ),
+                    orElse:
+                        () => WorkingDay(
+                          day: selectedDay,
+                          isOpen: selectedDay != 'sun',
+                          morningOpeningTime: '05:30:00',
+                          morningClosingTime: '09:30:00',
+                          eveningOpeningTime: '16:00:00',
+                          eveningClosingTime: '22:30:00',
+                        ),
                   );
 
                   final isOpen = workingDay?.isOpen ?? (selectedDay != 'sun');
@@ -1092,7 +1349,11 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                       ),
                       child: Column(
                         children: [
-                          const Icon(Icons.event_busy, color: Colors.grey, size: 40),
+                          const Icon(
+                            Icons.event_busy,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
                           const SizedBox(height: 12),
                           const Text(
                             'Gym is closed on this day',
@@ -1107,17 +1368,46 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                     );
                   }
 
-                  final morningStart = _formatTimeString(workingDay?.morningOpeningTime ?? '05:30:00');
-                  final morningEnd = _formatTimeString(workingDay?.morningClosingTime ?? '09:30:00');
-                  final eveningStart = _formatTimeString(workingDay?.eveningOpeningTime ?? '16:00:00');
-                  final eveningEnd = _formatTimeString(workingDay?.eveningClosingTime ?? '22:30:00');
+                  final morningStart = _formatTimeString(
+                    workingDay?.morningOpeningTime ?? '05:30:00',
+                  );
+                  final morningEnd = _formatTimeString(
+                    workingDay?.morningClosingTime ?? '09:30:00',
+                  );
+                  final eveningStart = _formatTimeString(
+                    workingDay?.eveningOpeningTime ?? '16:00:00',
+                  );
+                  final eveningEnd = _formatTimeString(
+                    workingDay?.eveningClosingTime ?? '22:30:00',
+                  );
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTimeSlotSection('Morning', morningStart, morningEnd),
+                      _buildTimeSlotSection(
+                        'Morning',
+                        morningStart,
+                        morningEnd,
+                      ),
                       const SizedBox(height: 16),
-                      _buildTimeSlotSection('Evening', eveningStart, eveningEnd),
+                      _buildTimeSlotSection(
+                        'Evening',
+                        eveningStart,
+                        eveningEnd,
+                      ),
+                      // Custom time_slots from API (e.g. Ladies, etc.)
+                      if (details.timeSlots?.isNotEmpty ?? false)
+                        ...details.timeSlots!.map((slot) {
+                          final start = _formatTimeString(slot.startTime);
+                          final end = _formatTimeString(slot.endTime);
+                          final name = slot.name ?? 'Special';
+                          return Column(
+                            children: [
+                              const SizedBox(height: 16),
+                              _buildTimeSlotSection(name, start, end),
+                            ],
+                          );
+                        }),
                     ],
                   );
                 },
@@ -1200,6 +1490,656 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     return timeStr;
   }
 
+  Widget _buildTrainersTab(FitnesscenterDetailsModel details) {
+    final trainers = details.trainers ?? [];
+    if (trainers.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Center(
+          child: Text(
+            'No trainers available',
+            style: TextStyle(color: Colors.grey, fontSize: 13),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+      child: Column(
+        children:
+            trainers.map((trainer) => _buildTrainerCard(trainer)).toList(),
+      ),
+    );
+  }
+
+  Widget _buildReviewsShimmer() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(width: 150, height: 16, color: Colors.white),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Container(width: 50, height: 32, color: Colors.white),
+                const SizedBox(width: 16),
+                Container(width: 120, height: 20, color: Colors.white),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(width: double.infinity, height: 80, color: Colors.white),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExtraSections(
+    FitnesscenterDetailsModel details,
+    FitnessCenterReviewsModel? reviews,
+  ) {
+    final list = reviews?.results?.reviews ?? [];
+    final currentUser = context.read<AppCubit>().state.currentUser;
+    final currentUserName = '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+    final hasOwnReview = list.any((review) {
+      final name = review.customerName ?? '';
+      return currentUserName.isNotEmpty && name.trim().toLowerCase() == currentUserName.toLowerCase();
+    });
+
+    final showAddReviewCard = !hasOwnReview;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildTransformationsSection(details.trainers ?? []),
+        _buildTrainersSection(details),
+        const SizedBox(height: 24),
+        if (reviews == null)
+          _buildReviewsShimmer()
+        else
+          _buildReviewsCard(details, reviews),
+        if (showAddReviewCard) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.rate_review_outlined,
+                    color: AppColors.primary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Share your experience',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Write a review for this fitness center',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    final currentUser =
+                        context.read<AppCubit>().state.currentUser;
+                    if (currentUser == null) {
+                      GuestLoginSheet.show(
+                        context,
+                        message: 'Log in to add reviews for fitness centers.',
+                      );
+                      return;
+                    }
+                    _showAddReviewDialog();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Add Review',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTransformationsSection(List<GymTrainer> trainers) {
+    // Collect all transformations from all trainers
+    final transformations = <Map<String, dynamic>>[];
+    for (final trainer in trainers) {
+      if (trainer.transformations != null) {
+        for (final trans in trainer.transformations!) {
+          transformations.add({
+            'trainerName': trainer.fullName,
+            'transformation': trans,
+          });
+        }
+      }
+    }
+
+    if (transformations.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        const Text(
+          'Transformations',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            itemCount: transformations.length,
+            onPageChanged: (index) {
+              _transformPageNotifier.value = index;
+            },
+            itemBuilder: (context, index) {
+              final item = transformations[index];
+              final trans = item['transformation'] as GymTransformation;
+              final trainerName = item['trainerName'] as String?;
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            // Before Image
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child:
+                                        trans.beforeImage != null &&
+                                                trans.beforeImage!.isNotEmpty
+                                            ? ImageNetwork(
+                                              trans.beforeImage!,
+                                              fit: BoxFit.cover,
+                                            )
+                                            : Container(
+                                              color: const Color(0xFFEAEAEA),
+                                              child: const Center(
+                                                child: Text(
+                                                  'Transformation\nBefore Pic',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontFamily: 'Poppins',
+                                                    color: Colors.grey,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                  ),
+                                  Positioned(
+                                    top: 10,
+                                    left: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.05,
+                                            ),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'Before',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Colors.black87,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const VerticalDivider(
+                              width: 1,
+                              color: Colors.white,
+                            ),
+                            // After Image
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child:
+                                        trans.afterImage != null &&
+                                                trans.afterImage!.isNotEmpty
+                                            ? ImageNetwork(
+                                              trans.afterImage!,
+                                              fit: BoxFit.cover,
+                                            )
+                                            : Container(
+                                              color: const Color(0xFFEAEAEA),
+                                              child: const Center(
+                                                child: Text(
+                                                  'Transformation\nAfter Pic',
+                                                  textAlign: TextAlign.center,
+                                                  style: TextStyle(
+                                                    fontFamily: 'Poppins',
+                                                    color: Colors.grey,
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                  ),
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(
+                                              0.05,
+                                            ),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'After',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Colors.black87,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 8.0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (trans.description != null &&
+                                      trans.description!.isNotEmpty)
+                                    Text(
+                                      trans.description!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  if (trainerName != null)
+                                    Text(
+                                      'Coach: $trainerName',
+                                      style: TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 10,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (transformations.length > 1) ...[
+          const SizedBox(height: 10),
+          Center(
+            child: ValueListenableBuilder<int>(
+              valueListenable: _transformPageNotifier,
+              builder: (context, activeIndex, _) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(
+                    transformations.length,
+                    (idx) => Container(
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            activeIndex == idx
+                                ? AppColors.primary
+                                : Colors.grey[300],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTrainersSection(FitnesscenterDetailsModel details) {
+    final trainers = details.trainers ?? [];
+    if (trainers.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        const Text(
+          'Trainers',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Column(
+          children:
+              trainers.map((trainer) => _buildTrainerCard(trainer)).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTrainerCard(GymTrainer trainer) {
+    final specs = trainer.specializations ?? [];
+    final visibleSpecs = specs.take(2).toList();
+    final extraCount = specs.length - visibleSpecs.length;
+    final rating = (trainer.averageRating as num?)?.toDouble() ?? 0.0;
+
+    return GestureDetector(
+      onTap: () {
+        context.push(TrainerDetailsScreen(trainer: trainer));
+      },
+      child: Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.grey.withOpacity(0.15)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Avatar
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: SizedBox(
+                    width: 52,
+                    height: 52,
+                    child:
+                        trainer.profileImage != null &&
+                                trainer.profileImage!.isNotEmpty
+                            ? ImageNetwork(
+                              trainer.profileImage!,
+                              fit: BoxFit.cover,
+                            )
+                            : Container(
+                              color: Colors.grey[100],
+                              child: const Icon(
+                                Icons.person,
+                                color: Colors.grey,
+                                size: 28,
+                              ),
+                            ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Name + type + specs
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RichText(
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: trainer.fullName ?? 'Trainer',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const WidgetSpan(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(left: 4),
+                                      child: Icon(
+                                        Icons.verified,
+                                        color: Colors.blue,
+                                        size: 15,
+                                      ),
+                                    ),
+                                  ),
+                                  if (trainer.userType != null) ...[
+                                    const TextSpan(text: '  '),
+                                    TextSpan(
+                                      text: '(${trainer.userType})',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w400,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.chevron_right,
+                            color: Colors.grey,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      // Specialization chips
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          ...visibleSpecs.map(
+                            (s) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                s,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (extraCount > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                '+$extraCount',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
+            const SizedBox(height: 10),
+            // Stats row
+            Row(
+              children: [
+                _buildTrainerStat('Clients: ${trainer.clientsCount ?? 0}'),
+                const SizedBox(width: 16),
+                _buildTrainerStat(
+                  'Verified Workouts: ${trainer.verifiedWorkoutsCount ?? 0}',
+                ),
+                const Spacer(),
+                Icon(Icons.star, color: Colors.amber[600], size: 16),
+                const SizedBox(width: 3),
+                Text(
+                  '${rating.toStringAsFixed(1)} (${trainer.reviewCount ?? 0})',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrainerStat(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 12,
+        color: Colors.black54,
+        fontWeight: FontWeight.w500,
+      ),
+    );
+  }
+
   Widget _buildCertificatesCard() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -1238,7 +2178,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
     );
   }
 
-  Widget _buildReviewsCard(FitnesscenterDetailsModel details, FitnessCenterReviewsModel reviews) {
+  Widget _buildReviewsCard(
+    FitnesscenterDetailsModel details,
+    FitnessCenterReviewsModel reviews,
+  ) {
     final list = reviews.results?.reviews ?? [];
     final avgRating = (reviews.results?.avgRating as num?)?.toDouble() ?? 4.5;
     final reviewCount = reviews.results?.reviewCount ?? 0;
@@ -1273,19 +2216,28 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
               ),
               const SizedBox(width: 16),
               Row(
-                children: List.generate(
-                  5,
-                  (index) {
-                    final starValue = index + 1;
-                    if (avgRating >= starValue) {
-                      return const Icon(Icons.star, color: Colors.orange, size: 24);
-                    } else if (avgRating >= starValue - 0.5) {
-                      return const Icon(Icons.star_half, color: Colors.orange, size: 24);
-                    } else {
-                      return const Icon(Icons.star_border, color: Colors.orange, size: 24);
-                    }
-                  },
-                ),
+                children: List.generate(5, (index) {
+                  final starValue = index + 1;
+                  if (avgRating >= starValue) {
+                    return const Icon(
+                      Icons.star,
+                      color: Colors.orange,
+                      size: 24,
+                    );
+                  } else if (avgRating >= starValue - 0.5) {
+                    return const Icon(
+                      Icons.star_half,
+                      color: Colors.orange,
+                      size: 24,
+                    );
+                  } else {
+                    return const Icon(
+                      Icons.star_border,
+                      color: Colors.orange,
+                      size: 24,
+                    );
+                  }
+                }),
               ),
             ],
           ),
@@ -1306,24 +2258,50 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
               ),
             )
           else ...[
-            ...list.take(3).map((review) => Padding(
-              padding: const EdgeInsets.only(bottom: 12.0),
-              child: _buildReviewItem(review),
-            )),
+            ...list
+                .take(3)
+                .map(
+                  (review) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: _buildReviewItem(review),
+                  ),
+                ),
           ],
           const SizedBox(height: 16),
-          if (reviews.next?.isNotEmpty ?? false)
-            InkWell(
-              overlayColor: const WidgetStatePropertyAll(Colors.transparent),
-              onTap: () {
-                context.push(ReviewsAndRatingsScreen(fitnessCenterId: widget.fitnessCenterId));
-              },
-              child: Row(
-                children: [
-                  Text('View All Reviews', style: AppStyles.text14Px.poppins.w500.copyWith(color: AppColors.primary)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_ios, size: 12, color: AppColors.primary),
-                ],
+          if (list.isNotEmpty)
+            Align(
+              alignment: Alignment.centerRight,
+              child: InkWell(
+                overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+                onTap: () async {
+                  final needRefresh = await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ReviewsAndRatingsScreen(
+                        fitnessCenterId: widget.fitnessCenterId,
+                      ),
+                    ),
+                  );
+                  if (needRefresh == true) {
+                    _fetchReviews();
+                  }
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'View all Reviews',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 12,
+                      color: AppColors.primary,
+                    ),
+                  ],
+                ),
               ),
             ),
         ],
@@ -1334,9 +2312,17 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
   Widget _buildReviewItem(SingleFitnessCenterReviewModel review) {
     final rating = (review.rating as num?)?.toDouble() ?? 0.0;
     final comment = review.comment ?? '';
-    final createdAt = review.created != null ? review.created!.toLocal().format('dd MMM yyyy') : '';
+    final createdAt =
+        review.created != null
+            ? review.created!.toLocal().format('dd MMM yyyy')
+            : '';
     final customerName = review.customerName ?? 'Anonymous';
     final customerImage = review.profilePicture;
+
+    final currentUser = context.read<AppCubit>().state.currentUser;
+    final currentUserName = '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+    final isOwnReview = currentUserName.isNotEmpty &&
+        customerName.trim().toLowerCase() == currentUserName.toLowerCase();
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1354,16 +2340,22 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                 child: SizedBox(
                   width: 32,
                   height: 32,
-                  child: customerImage != null && customerImage.toString().isNotEmpty
-                      ? ImageNetwork(
-                          customerImage.toString(),
-                          height: 32,
-                          width: 32,
-                        )
-                      : Container(
-                          color: Colors.grey[100],
-                          child: const Icon(Icons.person, size: 16, color: Colors.grey),
-                        ),
+                  child:
+                      customerImage != null &&
+                              customerImage.toString().isNotEmpty
+                          ? ImageNetwork(
+                            customerImage.toString(),
+                            height: 32,
+                            width: 32,
+                          )
+                          : Container(
+                            color: Colors.grey[100],
+                            child: const Icon(
+                              Icons.person,
+                              size: 16,
+                              color: Colors.grey,
+                            ),
+                          ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -1382,7 +2374,10 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                     if (createdAt.isNotEmpty)
                       Text(
                         createdAt,
-                        style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey,
+                        ),
                       ),
                   ],
                 ),
@@ -1408,26 +2403,339 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                   ],
                 ),
               ),
+              const SizedBox(width: 4),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: Colors.grey,
+                  size: 20,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: Colors.white,
+                elevation: 4,
+                onSelected: (value) async {
+                  if (value == 'edit') {
+                    _showEditReviewDialog(review);
+                  } else if (value == 'delete') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Review'),
+                        content: const Text('Are you sure you want to delete this review?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true && context.mounted) {
+                      final res = await ReviewsAndReatingRepository().deleteReview(id: review.id ?? 0, body: {});
+                      res.fold(
+                        (error) => Dialogs.showSnack(msg: error.msg),
+                        (_) {
+                          Dialogs.showSnack(msg: 'Review deleted successfully');
+                          _fetchReviews();
+                          _fetchDetails();
+                        },
+                      );
+                    }
+                  } else if (value == 'report') {
+                    Dialogs.showSnack(msg: 'Review reported successfully');
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (isOwnReview) ...[
+                    PopupMenuItem(
+                      value: 'edit',
+                      height: 32,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, color: Colors.black87, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Edit Review',
+                            style: AppStyles.text14Px.poppins.w500.copyWith(color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      height: 32,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete_outline, color: AppColors.error, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Delete Review',
+                            style: AppStyles.text14Px.poppins.w500.copyWith(color: AppColors.error),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ] else
+                    PopupMenuItem(
+                      value: 'report',
+                      height: 32,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.report_gmailerrorred, color: Colors.black87, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Report Review',
+                            style: AppStyles.text14Px.poppins.w500.copyWith(color: Colors.black87),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
             comment,
-            style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.black87,
+              height: 1.4,
+            ),
           ),
         ],
       ),
     );
   }
 
+  Future<void> _showEditReviewDialog(SingleFitnessCenterReviewModel review) async {
+    double currentRating = (review.rating as num?)?.toDouble() ?? 0.0;
+    final commentController = TextEditingController(text: review.comment);
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('Edit Review'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Rating', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    RatingBar.builder(
+                      initialRating: currentRating,
+                      minRating: 1,
+                      direction: Axis.horizontal,
+                      allowHalfRating: false,
+                      itemCount: 5,
+                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      itemBuilder: (context, _) => const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                      ),
+                      onRatingUpdate: (rating) {
+                        setDialogState(() {
+                          currentRating = rating;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Comment', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Type your review here',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (commentController.text.trim().isEmpty) {
+                      Dialogs.showSnack(msg: 'Please enter your review');
+                      return;
+                    }
+                    final res = await ReviewsAndReatingRepository().updateReview(
+                      id: review.id ?? 0,
+                      body: {
+                        'rating': currentRating.toInt(),
+                        'comment': commentController.text,
+                      },
+                    );
+                    res.fold(
+                      (error) => Dialogs.showSnack(msg: error.msg),
+                      (_) {
+                        Dialogs.showSnack(msg: 'Review updated successfully');
+                        Navigator.pop(dialogContext);
+                        _fetchReviews();
+                        _fetchDetails();
+                      },
+                    );
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddReviewDialog({double initialRating = 0.0}) async {
+    double currentRating = initialRating;
+    final commentController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text('Add Review'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Rating', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    RatingBar.builder(
+                      initialRating: currentRating,
+                      minRating: 1,
+                      direction: Axis.horizontal,
+                      allowHalfRating: false,
+                      itemCount: 5,
+                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      itemBuilder: (context, _) => const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                      ),
+                      onRatingUpdate: (rating) {
+                        setDialogState(() {
+                          currentRating = rating;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Comment', style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: commentController,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText: 'Type your review here',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (currentRating == 0.0) {
+                      Dialogs.showSnack(msg: 'Please select a rating');
+                      return;
+                    }
+                    if (commentController.text.trim().isEmpty) {
+                      Dialogs.showSnack(msg: 'Please enter your review');
+                      return;
+                    }
+                    final res = await ReviewsAndReatingRepository().addReview(
+                      body: {
+                        'organization': widget.fitnessCenterId,
+                        'rating': currentRating.toInt(),
+                        'comment': commentController.text.trim(),
+                      },
+                    );
+                    res.fold(
+                      (error) => Dialogs.showSnack(msg: error.msg),
+                      (_) {
+                        Dialogs.showSnack(msg: 'Review added successfully');
+                        Navigator.pop(dialogContext);
+                        _fetchReviews();
+                        _fetchDetails();
+                      },
+                    );
+                  },
+                  child: const Text('Submit'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   String? _buildLocationString(Location? location) {
     if (location == null) return null;
 
-    final parts = <String>[];
-    if (location.city?.isNotEmpty ?? false) parts.add(location.city!);
-    if (location.state?.isNotEmpty ?? false) parts.add(location.state!);
+    final street = location.street?.trim();
+    if (street != null && street.isNotEmpty) {
+      return street;
+    }
 
-    return parts.isNotEmpty ? parts.join(', ') : null;
+    final city = location.city?.trim();
+    if (city != null && city.isNotEmpty) {
+      return city;
+    }
+
+    final state = location.state?.trim();
+    if (state != null && state.isNotEmpty) {
+      return state;
+    }
+
+    return null;
   }
 
   Widget _buildJoinNowButton(FitnesscenterDetailsModel details) {
@@ -1441,11 +2749,13 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
             if (currentUser == null) {
               GuestLoginSheet.show(
                 context,
-                message: 'Log in to explore fitness centers near you, view gym details, and send enquiries.',
+                message:
+                    'Log in to explore fitness centers near you, view gym details, and send enquiries.',
               );
               return;
             }
-            final phone = details.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
+            final phone =
+                details.phoneNumber?.replaceAll(RegExp('[^0-9+]'), '') ?? '';
             if (phone.isNotEmpty) {
               final message = Uri.encodeComponent(
                 'Hi,\n\n'
@@ -1479,10 +2789,7 @@ class _FitnessCenterDetailsScreenState extends State<FitnessCenterDetailsScreen>
                   height: 24,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Enquire',
-                  style: AppStyles.text16Px.poppins.w600.light,
-                ),
+                Text('Enquire', style: AppStyles.text16Px.poppins.w600.light),
               ],
             ),
           ),
@@ -1567,25 +2874,26 @@ class _GymGalleryViewerDialogState extends State<GymGalleryViewerDialog> {
           Positioned.fill(
             child: GestureDetector(
               onTap: () => Navigator.pop(context),
-              child: Container(
-                color: Colors.black.withValues(alpha:  0.92),
-              ),
+              child: Container(color: Colors.black.withValues(alpha: 0.92)),
             ),
           ),
-          
+
           // Back Button
           SafeArea(
             child: Align(
               alignment: Alignment.topLeft,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
                 child: GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppColors.bgcolorgrey.withValues(alpha:  0.3),
+                      color: AppColors.bgcolorgrey.withValues(alpha: 0.3),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -1698,7 +3006,8 @@ class _GymGalleryViewerDialogState extends State<GymGalleryViewerDialog> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? Colors.white : Colors.transparent,
+                            color:
+                                isSelected ? Colors.white : Colors.transparent,
                             width: 2,
                           ),
                         ),

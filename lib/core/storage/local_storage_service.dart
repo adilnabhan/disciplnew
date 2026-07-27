@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:customer_mobile_app/src/features/auth/login/domain/models/login_with_otp_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 🔐 Secure local storage service using encrypted Hive
 ///
@@ -74,6 +75,7 @@ class LocalStorageService {
   Future<void> saveUser(LoginSuccessModel user) async {
     try {
       await _box.put(_userKey, jsonEncode(user.toJson()));
+      print('DEBUG LOG: Tokens written to LocalStorageService. Access: ${user.access}, Refresh: ${user.refresh}');
       print('💾 User data saved securely');
     } catch (e) {
       print('❌ Error saving user to Hive: $e');
@@ -99,6 +101,8 @@ class LocalStorageService {
   Future<void> clearUser() async {
     try {
       await _box.delete(_userKey);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('has_seen_calendar_login_hint');
       print('🗑️ User data cleared');
     } catch (e) {
       print('❌ Error clearing user data: $e');

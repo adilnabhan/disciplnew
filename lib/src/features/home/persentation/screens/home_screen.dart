@@ -220,55 +220,49 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
             // Trainer Card under Banners View
-            if (!isGuest)
-              BlocBuilder<HomeCubit, HomeState>(
-                bloc: _homeCubit,
-                builder: (context, homeState) {
-                  return homeState.homeData.fold(
-                    () => const SizedBox.shrink(),
-                    (either) => either.fold((_) => const SizedBox.shrink(), (
-                      homeModel,
-                    ) {
-                      final trainer = homeModel.assignedTrainer;
-                      if (trainer == null) return const SizedBox.shrink();
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 20),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Assigned Trainer',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(
-                                color: const Color(0xFF222222),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          _buildTrainerCard(trainer).pxy(x: 16),
-                        ],
-                      );
-                    }),
-                  );
-                },
-              ),
+            // if (!isGuest)
+            //   BlocBuilder<HomeCubit, HomeState>(
+            //     bloc: _homeCubit,
+            //     builder: (context, homeState) {
+            //       return homeState.homeData.fold(
+            //         () => const SizedBox.shrink(),
+            //         (either) => either.fold((_) => const SizedBox.shrink(), (
+            //           homeModel,
+            //         ) {
+            //           final trainer = homeModel.assignedTrainer;
+            //           if (trainer == null) return const SizedBox.shrink();
+            //           return Column(
+            //             crossAxisAlignment: CrossAxisAlignment.start,
+            //             children: [
+            //               const SizedBox(height: 20),
+            //               Padding(
+            //                 padding: const EdgeInsets.symmetric(horizontal: 16),
+            //                 child: Text(
+            //                   'Assigned Trainer',
+            //                   style: AppStyles.text14Px.poppins.w600.copyWith(
+            //                     color: const Color(0xFF222222),
+            //                   ),
+            //                 ),
+            //               ),
+            //               const SizedBox(height: 10),
+            //               _buildTrainerCard(trainer).pxy(x: 16),
+            //             ],
+            //           );
+            //         }),
+            //       );
+            //     },
+            //   ),
 
-            // Reduced gap before calendar/card
-            const SizedBox(height: 8),
-
+            // // Reduced gap before calendar/card
+            // const SizedBox(height: 8),
             if (isGuest)
               _membershipExpireCard(context)
             else
               BlocBuilder<DashboardCubit, DashboardState>(
                 bloc: _dashboardCubit,
                 builder: (context, state) {
-                  final activeMembership = state.activeMembershipData.fold(
-                    () => null,
-                    (either) => either.fold((_) => null, (m) => m),
-                  );
                   return WorkoutHistoryCalendar(
                     key: ValueKey(_calendarRefreshCounter),
-                    startDate: activeMembership?.startDate,
                   ).pxy(x: 8);
                 },
               ),
@@ -701,7 +695,7 @@ Widget _buildDidYouKnowSection() {
           //     color: const Color(0xff666666),
           //   ),
           // ),
-          const SizedBox(height: 120),
+          const SizedBox(height: 20),
         ],
       ).pxy(x: 20),
     ),

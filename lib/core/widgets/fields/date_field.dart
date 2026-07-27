@@ -183,11 +183,23 @@ class DateFieldState extends State<DateField> {
   }
 
   Future<void> showPicker(BuildContext context) async {
+    final first = widget.startTime ?? DateTime(0000);
+    final last = widget.endTime ?? DateTime(2100);
+    DateTime initial = selectedDate ?? widget.endTime ?? DateTime.now();
+
+    // Clamp initialDate to be between firstDate and lastDate to prevent assertion crashes
+    if (initial.isAfter(last)) {
+      initial = last;
+    }
+    if (initial.isBefore(first)) {
+      initial = first;
+    }
+
     await showDatePicker(
       context: context,
-      initialDate: selectedDate ?? widget.endTime ?? DateTime.now(),
-      firstDate: widget.startTime ?? DateTime(0000),
-      lastDate: widget.endTime ?? DateTime(2100),
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(colorScheme: const ColorScheme.light(primary: AppColors.primary), dialogTheme: const DialogThemeData(backgroundColor: AppColors.primary)),
