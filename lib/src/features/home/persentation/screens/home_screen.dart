@@ -7,6 +7,7 @@ import 'package:customer_mobile_app/src/features/profile/presentation/widgets/wo
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/customer_membership_details_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/home_cubit.dart';
+import 'package:customer_mobile_app/src/features/home/domain/models/banner_model.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/home_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -46,11 +47,19 @@ class _HomeScreenState extends State<HomeScreen> {
         _calendarRefreshCounter++;
       });
     }
-    await Future.wait([
-      _dashboardCubit.fetchActiveMembership(),
-      if (Feggy.read<AppCubit>()?.state.currentUser != null)
-        _homeCubit.fetchHomeData(),
-    ]);
+    
+    // First fetch active membership
+    await _dashboardCubit.fetchActiveMembership();
+    
+    if (Feggy.read<AppCubit>()?.state.currentUser != null) {
+      int? orgId;
+      _dashboardCubit.state.activeMembershipData.fold(() {}, (either) {
+        either.fold((_) {}, (activeMembership) {
+          orgId = activeMembership?.organization?.id;
+        });
+      });
+      await _homeCubit.fetchHomeData(orgId: orgId);
+    }
   }
 
   @override
@@ -173,14 +182,43 @@ class _HomeScreenState extends State<HomeScreen> {
               },
             ),
 
-            // Carousel Banners (using local assets)
-            BannersView(
-              banners: const [
-                'assets/images/carousel_images/discipl_carousel .png',
-                'assets/images/carousel_images/carousel_discipl.jpg',
-              ],
-            ).pxy(x: 16),
+            // Banners View (Global and Gym)
+            BlocBuilder<HomeCubit, HomeState>(
+              bloc: _homeCubit,
+              builder: (context, homeState) {
+                List<Widget> bannerWidgets = [];
 
+                // Global Banners
+                homeState.globalBanners.fold(() {}, (either) {
+                  either.fold((_) {}, (banners) {
+                    if (banners.isNotEmpty) {
+                      bannerWidgets.add(
+                        BannersView(banners: banners).pxy(x: 16),
+                      );
+                      bannerWidgets.add(const SizedBox(height: 16));
+                    }
+                  });
+                });
+
+                // Gym Banners
+                homeState.gymBanners.fold(() {}, (either) {
+                  either.fold((_) {}, (banners) {
+                    if (banners.isNotEmpty) {
+                      bannerWidgets.add(
+                        BannersView(banners: banners).pxy(x: 16),
+                      );
+                      bannerWidgets.add(const SizedBox(height: 16));
+                    }
+                  });
+                });
+
+                if (bannerWidgets.isEmpty) return const SizedBox.shrink();
+
+                return Column(
+                  children: bannerWidgets,
+                );
+              },
+            ),
             // Trainer Card under Banners View
             if (!isGuest)
               BlocBuilder<HomeCubit, HomeState>(
@@ -733,7 +771,7 @@ Widget _membershipExpireCard(BuildContext context) {
 class BannersView extends StatefulWidget {
   const BannersView({required this.banners, super.key});
 
-  final List<String> banners;
+  final List<BannerModel> banners;
 
   @override
   State<BannersView> createState() => _BannersViewState();
@@ -782,33 +820,45 @@ class _BannersViewState extends State<BannersView> {
     super.dispose();
   }
 
+  void _onBannerTap(BannerModel banner) async {
+    if (banner.redirectType == null || banner.contactNumber == null) return;
+    
+    final phone = banner.contactNumber!;
+    Uri? uri;
+    if (banner.redirectType == 'whatsapp') {
+      uri = Uri.parse('https://wa.me/$phone');
+    } else if (banner.redirectType == 'phone') {
+      uri = Uri.parse('tel:$phone');
+    }
+    
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Handle single banner item state
     if (_bannerCount == 1) {
       final banner = widget.banners[0];
-      final isAsset = banner.startsWith('assets/');
+      final imageUrl = banner.bannerImage ?? '';
+      
       return AspectRatio(
         aspectRatio: 16 / 9,
-        child: ClipRRect(
-          borderRadius: const BorderRadius.all(Radius.circular(16)),
-          child:
-              isAsset
-                  ? Image.asset(
-                    banner,
-                    fit: BoxFit.cover,
-                    height: double.maxFinite,
-                    width: double.maxFinite,
-                  )
-                  : ImageNetwork(
-                    banner,
-                    height: double.maxFinite,
-                    width: double.maxFinite,
-                    errorWidget: ColoredBox(
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.error, color: Colors.grey),
-                    ),
-                  ),
+        child: GestureDetector(
+          onTap: () => _onBannerTap(banner),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(16)),
+            child: ImageNetwork(
+              imageUrl,
+              height: double.maxFinite,
+              width: double.maxFinite,
+              errorWidget: ColoredBox(
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.error, color: Colors.grey),
+              ),
+            ),
+          ),
         ),
       );
     }
@@ -830,23 +880,20 @@ class _BannersViewState extends State<BannersView> {
               },
               itemBuilder: (context, index) {
                 final banner = widget.banners[index];
-                final isAsset = banner.startsWith('assets/');
-                return isAsset
-                    ? Image.asset(
-                      banner,
-                      fit: BoxFit.cover,
-                      height: double.maxFinite,
-                      width: double.maxFinite,
-                    )
-                    : ImageNetwork(
-                      banner,
-                      height: double.maxFinite,
-                      width: double.maxFinite,
-                      errorWidget: ColoredBox(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.error, color: Colors.grey),
-                      ),
-                    );
+                final imageUrl = banner.bannerImage ?? '';
+                
+                return GestureDetector(
+                  onTap: () => _onBannerTap(banner),
+                  child: ImageNetwork(
+                    imageUrl,
+                    height: double.maxFinite,
+                    width: double.maxFinite,
+                    errorWidget: ColoredBox(
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.error, color: Colors.grey),
+                    ),
+                  ),
+                );
               },
             ),
           ),

@@ -19,6 +19,10 @@ final _privateConstructorUsedError = UnsupportedError(
 mixin _$HomeState {
   Option<Either<ApiException, HomeModel>> get homeData =>
       throw _privateConstructorUsedError;
+  Option<Either<ApiException, List<BannerModel>>> get gymBanners =>
+      throw _privateConstructorUsedError;
+  Option<Either<ApiException, List<BannerModel>>> get globalBanners =>
+      throw _privateConstructorUsedError;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -32,7 +36,11 @@ abstract class $HomeStateCopyWith<$Res> {
   factory $HomeStateCopyWith(HomeState value, $Res Function(HomeState) then) =
       _$HomeStateCopyWithImpl<$Res, HomeState>;
   @useResult
-  $Res call({Option<Either<ApiException, HomeModel>> homeData});
+  $Res call({
+    Option<Either<ApiException, HomeModel>> homeData,
+    Option<Either<ApiException, List<BannerModel>>> gymBanners,
+    Option<Either<ApiException, List<BannerModel>>> globalBanners,
+  });
 }
 
 /// @nodoc
@@ -49,7 +57,11 @@ class _$HomeStateCopyWithImpl<$Res, $Val extends HomeState>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? homeData = null}) {
+  $Res call({
+    Object? homeData = null,
+    Object? gymBanners = null,
+    Object? globalBanners = null,
+  }) {
     return _then(
       _value.copyWith(
             homeData:
@@ -57,6 +69,16 @@ class _$HomeStateCopyWithImpl<$Res, $Val extends HomeState>
                     ? _value.homeData
                     : homeData // ignore: cast_nullable_to_non_nullable
                         as Option<Either<ApiException, HomeModel>>,
+            gymBanners:
+                null == gymBanners
+                    ? _value.gymBanners
+                    : gymBanners // ignore: cast_nullable_to_non_nullable
+                        as Option<Either<ApiException, List<BannerModel>>>,
+            globalBanners:
+                null == globalBanners
+                    ? _value.globalBanners
+                    : globalBanners // ignore: cast_nullable_to_non_nullable
+                        as Option<Either<ApiException, List<BannerModel>>>,
           )
           as $Val,
     );
@@ -72,7 +94,11 @@ abstract class _$$HomeStateImplCopyWith<$Res>
   ) = __$$HomeStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call({Option<Either<ApiException, HomeModel>> homeData});
+  $Res call({
+    Option<Either<ApiException, HomeModel>> homeData,
+    Option<Either<ApiException, List<BannerModel>>> gymBanners,
+    Option<Either<ApiException, List<BannerModel>>> globalBanners,
+  });
 }
 
 /// @nodoc
@@ -88,7 +114,11 @@ class __$$HomeStateImplCopyWithImpl<$Res>
   /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
-  $Res call({Object? homeData = null}) {
+  $Res call({
+    Object? homeData = null,
+    Object? gymBanners = null,
+    Object? globalBanners = null,
+  }) {
     return _then(
       _$HomeStateImpl(
         homeData:
@@ -96,6 +126,16 @@ class __$$HomeStateImplCopyWithImpl<$Res>
                 ? _value.homeData
                 : homeData // ignore: cast_nullable_to_non_nullable
                     as Option<Either<ApiException, HomeModel>>,
+        gymBanners:
+            null == gymBanners
+                ? _value.gymBanners
+                : gymBanners // ignore: cast_nullable_to_non_nullable
+                    as Option<Either<ApiException, List<BannerModel>>>,
+        globalBanners:
+            null == globalBanners
+                ? _value.globalBanners
+                : globalBanners // ignore: cast_nullable_to_non_nullable
+                    as Option<Either<ApiException, List<BannerModel>>>,
       ),
     );
   }
@@ -104,15 +144,25 @@ class __$$HomeStateImplCopyWithImpl<$Res>
 /// @nodoc
 
 class _$HomeStateImpl implements _HomeState {
-  const _$HomeStateImpl({this.homeData = const None()});
+  const _$HomeStateImpl({
+    this.homeData = const None(),
+    this.gymBanners = const None(),
+    this.globalBanners = const None(),
+  });
 
   @override
   @JsonKey()
   final Option<Either<ApiException, HomeModel>> homeData;
+  @override
+  @JsonKey()
+  final Option<Either<ApiException, List<BannerModel>>> gymBanners;
+  @override
+  @JsonKey()
+  final Option<Either<ApiException, List<BannerModel>>> globalBanners;
 
   @override
   String toString() {
-    return 'HomeState(homeData: $homeData)';
+    return 'HomeState(homeData: $homeData, gymBanners: $gymBanners, globalBanners: $globalBanners)';
   }
 
   @override
@@ -121,11 +171,16 @@ class _$HomeStateImpl implements _HomeState {
         (other.runtimeType == runtimeType &&
             other is _$HomeStateImpl &&
             (identical(other.homeData, homeData) ||
-                other.homeData == homeData));
+                other.homeData == homeData) &&
+            (identical(other.gymBanners, gymBanners) ||
+                other.gymBanners == gymBanners) &&
+            (identical(other.globalBanners, globalBanners) ||
+                other.globalBanners == globalBanners));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, homeData);
+  int get hashCode =>
+      Object.hash(runtimeType, homeData, gymBanners, globalBanners);
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.
@@ -139,10 +194,16 @@ class _$HomeStateImpl implements _HomeState {
 abstract class _HomeState implements HomeState {
   const factory _HomeState({
     final Option<Either<ApiException, HomeModel>> homeData,
+    final Option<Either<ApiException, List<BannerModel>>> gymBanners,
+    final Option<Either<ApiException, List<BannerModel>>> globalBanners,
   }) = _$HomeStateImpl;
 
   @override
   Option<Either<ApiException, HomeModel>> get homeData;
+  @override
+  Option<Either<ApiException, List<BannerModel>>> get gymBanners;
+  @override
+  Option<Either<ApiException, List<BannerModel>>> get globalBanners;
 
   /// Create a copy of HomeState
   /// with the given fields replaced by the non-null parameter values.

@@ -30,6 +30,8 @@ final class ApiUris {
 
   ///============================= Home =============================\\\
   static final home = '${_v1}customer/customer-homepage/';
+  static String gymBanners(int organizationId) => '${_v1}fitnesscenter/gym-banners/?organization_id=$organizationId';
+  static final globalBanners = '${_v1}fitnesscenter/global-banners/';
 
   ///============================= Payment =============================\\\
   static final paymentHistory = '${_v1}customer/payment-history/';
@@ -95,4 +97,24 @@ final class ApiUris {
 
   static final workoutCalendar = '${_v1}customer/workout-calendar/';
   static final loginAsGuest = '${_v1}user/login/guest/';
+
+  ///============================= Notifications =============================\\\
+  static final notifications = '${_v1}customer/notifications/';
+  static final notificationsUnreadCount = '${_v1}customer/notifications/unread-count/';
+  static String markNotificationRead(int id) => '${_v1}customer/notifications/$id/read/';
+  static final markAllNotificationsRead = '${_v1}customer/notifications/read-all/';
+
+  ///============================= Nutrition =============================\\\
+  static final calorieSummary = '${_v1}customer/calorie-summary/';
+  static final foodSearch = '${_v1}customer/nutrition/foods/search/';
+  static final foodBulkUpload = '${_v1}customer/nutrition/foods/bulk-upload/';
+  static final foodLog = '${_v1}customer/food-log/';
+  static String foodLogDelete(int id) => '${_v1}customer/food-log/$id/';
+  static final waterLog = '${_v1}customer/water-log/';
+
+  ///============================= Social & Leaderboard =============================\\\
+  static final leaderboard = '${_v1}social/scoreboard/';
+  static final dailyWinner = '${_v1}social/winners/today/';
+  static final communityFeed = '${_v1}customer/community/feed/';
+  static final achievementsSummary = '${_v1}customer/achievements/';
 }
