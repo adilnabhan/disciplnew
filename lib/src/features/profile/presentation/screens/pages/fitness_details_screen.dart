@@ -385,6 +385,9 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
       String? bloodGroup;
       String? height;
       String? weight;
+      String? waistCircumference;
+      String? hipCircumference;
+      String? neckCircumference;
       int? bfPercentage;
 
       if (widget.editBodyMetricsOnly) {
@@ -611,7 +614,6 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
                   children: [
                     Text(
                       'Health Status',
->>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
                       style: AppStyles.text14Px.poppins.w500.copyWith(
                         color: AppColors.textDark,
                       ),
