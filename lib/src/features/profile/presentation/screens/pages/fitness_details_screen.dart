@@ -382,15 +382,6 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
 
   void _onUpdate() {
     if (_formKey.currentState?.validate() ?? false) {
-<<<<<<< HEAD
-      /// Health Details
-      final bloodGroup = _healthDetails[0].controller?.text;
-      final height = _healthDetails[1].controller?.text;
-      final weight = _healthDetails[2].controller?.text;
-      final waistCircumference = _healthDetails[3].controller?.text;
-      final hipCircumference = _healthDetails[4].controller?.text;
-      final neckCircumference = _healthDetails[5].controller?.text;
-=======
       String? bloodGroup;
       String? height;
       String? weight;
@@ -414,7 +405,6 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           bfPercentage = int.tryParse(rawBf);
         }
       }
->>>>>>> a57c1747f25d98ef67d58a5439b18757a56f484c
 
       final body = <String, dynamic>{
         'blood_group': bloodGroup,
@@ -517,100 +507,6 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
               ),
               const SizedBox(height: 22),
 
-<<<<<<< HEAD
-              // ── Activity Level ──
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Activity Level',
-                    style: AppStyles.text14Px.poppins.w500.copyWith(
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedActivityLevel,
-                    decoration: InputDecoration(
-                      hintText: 'Select Activity Level',
-                      hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                        borderSide: BorderSide(color: AppColors.borderGrey),
-                      ),
-                      enabledBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                        borderSide: BorderSide(color: AppColors.borderGrey),
-                      ),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'Sedentary', child: Text('Sedentary')),
-                      DropdownMenuItem(value: 'Lightly_Active', child: Text('Lightly Active')),
-                      DropdownMenuItem(value: 'Moderately_Active', child: Text('Moderately Active')),
-                      DropdownMenuItem(value: 'Very_Active', child: Text('Very Active')),
-                      DropdownMenuItem(value: 'Extra_Active', child: Text('Extra Active')),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedActivityLevel = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-
-              // ── Fitness Goal ──
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Fitness Goal',
-                    style: AppStyles.text14Px.poppins.w500.copyWith(
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    value: _selectedFitnessGoal,
-                    decoration: InputDecoration(
-                      hintText: 'Select Fitness Goal',
-                      hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-                      border: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                        borderSide: BorderSide(color: AppColors.borderGrey),
-                      ),
-                      enabledBorder: const OutlineInputBorder(
-                        borderRadius: BorderRadius.all(Radius.circular(8)),
-                        borderSide: BorderSide(color: AppColors.borderGrey),
-                      ),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'Weight_Loss', child: Text('Weight Loss')),
-                      DropdownMenuItem(value: 'Muscle_Gain', child: Text('Muscle Gain')),
-                      DropdownMenuItem(value: 'Fat_Loss', child: Text('Fat Loss')),
-                      DropdownMenuItem(value: 'Maintain_Weight', child: Text('Maintain Weight')),
-                      DropdownMenuItem(value: 'Improve_Fitness', child: Text('Improve Fitness')),
-                      DropdownMenuItem(value: 'Athletic_Performance', child: Text('Athletic Performance')),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedFitnessGoal = value;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 22),
-
-              // ── Age / Date of Birth ──
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      text: 'Date of Birth',
-=======
               if (widget.editBodyMetricsOnly) ...[
                 Container(
                   padding: const EdgeInsets.all(16),
