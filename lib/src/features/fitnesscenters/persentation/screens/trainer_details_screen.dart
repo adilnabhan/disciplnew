@@ -20,6 +20,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
   int _trainerReviewCount = 0;
   TrainerReviewsModel? _allReviews;
   bool _isLoadingReviewsAll = true;
+  CustomerDetailsModel? _customerDetails;
 
   @override
   void initState() {
@@ -28,6 +29,54 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
     _trainerReviewCount = widget.trainer.reviewCount ?? 0;
     _fetchReview();
     _fetchReviewsAll();
+    _fetchCustomerDetails();
+  }
+
+  Future<void> _fetchCustomerDetails() async {
+    final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+    final customerId = currentUser?.customer?.id;
+    if (customerId != null && _customerDetails == null) {
+      final res = await CustomerDetailsRepository().customerDetails(id: customerId);
+      if (mounted) {
+        res.fold(
+          (_) {},
+          (details) {
+            setState(() {
+              _customerDetails = details;
+            });
+          },
+        );
+      }
+    }
+  }
+
+  bool _isTrainerAssigned() {
+    if (_customerDetails == null) return false;
+    final assigned = _customerDetails!.assignedTrainer;
+    if (assigned == null) return false;
+
+    final trainerId = widget.trainer.id;
+    final assignedId = int.tryParse(assigned['id']?.toString() ?? '') ??
+        int.tryParse(assigned['trainer_id']?.toString() ?? '') ??
+        int.tryParse(assigned['trainer']?.toString() ?? '') ??
+        int.tryParse(assigned['pk']?.toString() ?? '');
+
+    if (trainerId != null && assignedId != null && assignedId == trainerId) {
+      return true;
+    }
+
+    final assignedName = assigned['name']?.toString()?.trim().toLowerCase() ??
+        assigned['full_name']?.toString()?.trim().toLowerCase();
+    final trainerName = widget.trainer.fullName?.trim().toLowerCase() ??
+        widget.trainer.userType?.trim().toLowerCase();
+
+    if (assignedName != null && trainerName != null && assignedName.isNotEmpty) {
+      if (assignedName == trainerName) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   Future<void> _fetchReview() async {
@@ -1232,7 +1281,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
               )
             else ...[
               _buildReviewsCard(),
-              if (_myReview == null) ...[
+              if (_isTrainerAssigned() && _myReview == null) ...[
                 const SizedBox(height: 12),
                 _buildCardContainer(
                   child: Column(

@@ -1,6 +1,7 @@
-import 'dart:ui';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/fitness_centers_listing_screen.dart';
+import 'package:customer_mobile_app/src/features/notifications/cubit/notification_cubit.dart';
+import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
 
 ///* This class contains dashbpard screen
 ///*eg : Pages manager , bottom nav ...
@@ -16,12 +17,14 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late final DashboardCubit _cubit;
+  late final NotificationCubit _notificationCubit;
   late final List<String> _icons;
   late final List<String> _labels;
 
   @override
   void initState() {
     _cubit = DashboardCubit(navIndex: widget.navIndex);
+    _notificationCubit = NotificationCubit()..fetchUnreadCount();
     _icons = [
       'assets/images/svg/icons/new_home_notselected.svg',
       'assets/images/svg/icons/workout_notseleted.svg',
@@ -77,6 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void dispose() {
     _cubit.close();
+    _notificationCubit.close();
     super.dispose();
   }
 
@@ -97,15 +101,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       centerTitle: false,
                       actions: [
-                        GestureDetector(
-                          onTap: () {
-                            context.push(const NotificationsScreen());
+                        BlocBuilder<NotificationCubit, NotificationState>(
+                          bloc: _notificationCubit,
+                          builder: (context, notificationState) {
+                            final int unreadCount =
+                                notificationState.unreadCount;
+                            return GestureDetector(
+                              onTap: () {
+                                context.push(
+                                  MultiBlocProvider(
+                                    providers: [
+                                      BlocProvider.value(
+                                        value: _notificationCubit,
+                                      ),
+                                      BlocProvider.value(value: _cubit),
+                                    ],
+                                    child: const NotificationsScreen(),
+                                  ),
+                                );
+                                _notificationCubit.fetchUnreadCount();
+                              },
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  SvgPicture.asset(
+                                    'assets/images/svg/icons/notification_icon.svg',
+                                    width: 22,
+                                    height: 22,
+                                  ),
+                                  if (unreadCount > 0)
+                                    Positioned(
+                                      right: -8,
+                                      top: -5,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                          vertical: 2,
+                                        ),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 16,
+                                          minHeight: 16,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.white,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                        child: Center(
+                                          child: Text(
+                                            unreadCount >= 100
+                                                ? '99+'
+                                                : '$unreadCount',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                              height: 1.0,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
                           },
-                          child: SvgPicture.asset(
-                            'assets/images/svg/icons/notification_icon.svg',
-                            width: 22,
-                            height: 22,
-                          ),
                         ),
                         const SizedBox(width: 20),
                         GestureDetector(
@@ -132,65 +198,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             extendBody: false,
-            bottomNavigationBar: SafeArea(
-              top: false,
-              child: Container(
-                height: 70,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(
-                      color: AppColors.borderGrey,
-                      width: 0.5,
+            bottomNavigationBar: Container(
+              color: Colors.white,
+              child: SafeArea(
+                top: false,
+                child: Container(
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: const Border(
+                      top: BorderSide(color: AppColors.borderGrey, width: 0.5),
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: List.generate(
-                    _icons.length,
-                    (i) => Expanded(
-                      child: InkWell(
-                        onTap: () {
-                          context.read<DashboardCubit>().changeNav(index: i);
-                        },
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (i == 3)
-                              _buildProfileTabIcon(state.navIndex == i)
-                            else
-                              SvgPicture.asset(
-                                (i == 0 && state.navIndex == i)
-                                    ? 'assets/images/svg/icons/new_home_selected.svg'
-                                    : (i == 1 && state.navIndex == i)
-                                        ? 'assets/images/svg/icons/workout_selected.svg'
-                                        : (i == 2 && state.navIndex == i)
-                                            ? 'assets/images/svg/icons/selected_explore.svg'
-                                            : _icons[i],
-                                width: 24,
-                                height: 24,
-                                color: (i == 0 && state.navIndex == i) ||
-                                        (i == 2 && state.navIndex == i)
-                                    ? null
-                                    : state.navIndex == i
-                                        ? AppColors.primary
-                                        : AppColors.textGrey,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(
+                      _icons.length,
+                      (i) => Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            context.read<DashboardCubit>().changeNav(index: i);
+                            _notificationCubit.fetchUnreadCount();
+                          },
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (i == 3)
+                                _buildProfileTabIcon(state.navIndex == i)
+                              else
+                                SvgPicture.asset(
+                                  (i == 0 && state.navIndex == i)
+                                      ? 'assets/images/svg/icons/new_home_selected.svg'
+                                      : (i == 1 && state.navIndex == i)
+                                      ? 'assets/images/svg/icons/workout_selected.svg'
+                                      : (i == 2 && state.navIndex == i)
+                                      ? 'assets/images/svg/icons/selected_explore.svg'
+                                      : _icons[i],
+                                  width: 24,
+                                  height: 24,
+                                  color:
+                                      (i == 0 && state.navIndex == i) ||
+                                              (i == 2 && state.navIndex == i)
+                                          ? null
+                                          : state.navIndex == i
+                                          ? AppColors.primary
+                                          : AppColors.textGrey,
+                                ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _labels[i],
+                                style: AppStyles.text12Px.poppins.copyWith(
+                                  color:
+                                      state.navIndex == i
+                                          ? AppColors.primary
+                                          : AppColors.textGrey,
+                                  fontWeight:
+                                      state.navIndex == i
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                ),
                               ),
-                            const SizedBox(height: 6),
-                            Text(
-                              _labels[i],
-                              style: AppStyles.text12Px.poppins.copyWith(
-                                color: state.navIndex == i
-                                    ? AppColors.primary
-                                    : AppColors.textGrey,
-                                fontWeight: state.navIndex == i
-                                    ? FontWeight.w600
-                                    : FontWeight.w400,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),

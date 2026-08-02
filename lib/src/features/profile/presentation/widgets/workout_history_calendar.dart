@@ -105,6 +105,15 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         final month = _focusedDay.month;
         final daysInMonth = DateTime(year, month + 1, 0).day;
 
+        final today = DateTime.now();
+        final todayOnly = DateTime(today.year, today.month, today.day);
+        final startDate = _firstWorkoutDate;
+        final startDateOnly = DateTime(
+          startDate.year,
+          startDate.month,
+          startDate.day,
+        );
+
         for (int day = 1; day <= daysInMonth; day++) {
           final date = DateTime(year, month, day);
           final dateOnly = DateTime(date.year, date.month, date.day);
@@ -132,6 +141,21 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
               'date': dateKey,
               'is_rest_day': shouldBeRest,
             });
+
+            // Optimistically update local day state immediately so UI updates instantly
+            _isRestDayMap[dateKey] = shouldBeRest;
+            if (shouldBeRest) {
+              _dayStates[dateKey] = CalendarDayState.rest;
+            } else {
+              if (dateOnly.isBefore(startDateOnly)) {
+                _dayStates[dateKey] = CalendarDayState.inactive;
+              } else if (dateOnly.isAfter(todayOnly) ||
+                  dateOnly.isAtSameMomentAs(todayOnly)) {
+                _dayStates[dateKey] = CalendarDayState.future;
+              } else {
+                _dayStates[dateKey] = CalendarDayState.missed;
+              }
+            }
           }
         }
 
@@ -158,10 +182,36 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     setState(() {
                       _isLoading = false;
                     });
-                    _loadMonthData();
+                    _loadMonthData(forceRefresh: true);
                   },
                   (data) {
                     debugPrint('Successfully updated rest days in bulk: $data');
+                    // Parse response rest_days if available to synchronize local state
+                    if (data['rest_days'] is List) {
+                      for (final item in (data['rest_days'] as List)) {
+                        if (item is Map<String, dynamic> && item['date'] != null) {
+                          final dStr = item['date'].toString();
+                          final isRest = item['is_rest_day'] == true;
+                          _isRestDayMap[dStr] = isRest;
+                          if (isRest) {
+                            _dayStates[dStr] = CalendarDayState.rest;
+                          } else {
+                            final dObj = DateTime.tryParse(dStr);
+                            if (dObj != null) {
+                              final dOnly = DateTime(dObj.year, dObj.month, dObj.day);
+                              if (dOnly.isBefore(startDateOnly)) {
+                                _dayStates[dStr] = CalendarDayState.inactive;
+                              } else if (dOnly.isAfter(todayOnly) ||
+                                  dOnly.isAtSameMomentAs(todayOnly)) {
+                                _dayStates[dStr] = CalendarDayState.future;
+                              } else {
+                                _dayStates[dStr] = CalendarDayState.missed;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
                     // Invalidate cache so the refreshed month reflects new rest days
                     WorkoutRepository().invalidateCalendarMonth(
                       _focusedDay.year,
@@ -272,31 +322,123 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     }
   }
 
+  void _parseAndSetCalendarData(Map<String, dynamic> data) {
+    final String? apiStartDateStr = data['calendar_start_date'] as String?;
+    if (apiStartDateStr != null) {
+      _calendarStartDate = DateTime.tryParse(apiStartDateStr);
+    }
+
+    final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final startDate = _firstWorkoutDate;
+    final startDateOnly = DateTime(
+      startDate.year,
+      startDate.month,
+      startDate.day,
+    );
+
+    setState(() {
+      _dayStates.clear();
+      _isRestDayMap.clear();
+      _dayPlanDayIds.clear();
+      _dayCustomerWorkoutPlanIds.clear();
+      _dayWorkoutIds.clear();
+
+      _prepopulateDefaultStates();
+
+      for (final dayItem in days) {
+        if (dayItem is Map<String, dynamic>) {
+          final dateStr = dayItem['date'] as String;
+          final date = DateTime.parse(dateStr);
+          final dateOnly = DateTime(date.year, date.month, date.day);
+          final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
+
+          final bool isCompleted = dayItem['is_completed'] == true;
+          final bool isVerified = dayItem['is_verified'] == true;
+          final bool isRestDay = dayItem['is_rest_day'] == true;
+          final int? planDayId =
+              dayItem['plan_day_id'] != null
+                  ? int.tryParse(dayItem['plan_day_id'].toString())
+                  : null;
+          final int? customerWorkoutPlanId =
+              dayItem['customer_workout_plan_id'] != null
+                  ? int.tryParse(
+                    dayItem['customer_workout_plan_id'].toString(),
+                  )
+                  : null;
+          final int? workoutId =
+              dayItem['workout_id'] != null
+                  ? int.tryParse(dayItem['workout_id'].toString())
+                  : null;
+
+          _isRestDayMap[dateKey] = isRestDay;
+
+          if (planDayId != null) _dayPlanDayIds[dateKey] = planDayId;
+          if (customerWorkoutPlanId != null) {
+            _dayCustomerWorkoutPlanIds[dateKey] = customerWorkoutPlanId;
+          }
+          if (workoutId != null) {
+            _dayWorkoutIds[dateKey] = workoutId;
+          }
+
+          CalendarDayState state;
+          if (dateOnly.isBefore(startDateOnly)) {
+            state = CalendarDayState.inactive;
+          } else if (isCompleted) {
+            state =
+                isVerified
+                    ? CalendarDayState.verified
+                    : CalendarDayState.completed;
+          } else if (isRestDay) {
+            state = CalendarDayState.rest;
+          } else if (dateOnly.isAfter(todayOnly) ||
+              dateOnly.isAtSameMomentAs(todayOnly)) {
+            state = CalendarDayState.future;
+          } else {
+            state = CalendarDayState.missed;
+          }
+
+          _dayStates[dateKey] = state;
+        }
+      }
+    });
+  }
+
   Future<void> _loadMonthData({bool forceRefresh = false}) async {
     if (!mounted) return;
 
     _loadingTimeoutTimer?.cancel();
-    setState(() {
-      _isLoading = true;
-      _completedRequestsCount = 0;
-    });
 
     final year = _focusedDay.year;
     final month = _focusedDay.month;
+    final cacheKey = '$year-${month.toString().padLeft(2, '0')}';
 
-    _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
-      if (mounted && _isLoading) {
-        setState(() {
-          _isLoading = false;
-        });
+    final hasCache = WorkoutRepository().hasCalendarCache(cacheKey);
+    if (hasCache) {
+      final cachedData = WorkoutRepository().getCalendarCache(cacheKey);
+      if (cachedData != null) {
+        _parseAndSetCalendarData(cachedData);
       }
-    });
+    } else {
+      setState(() {
+        _isLoading = true;
+        _completedRequestsCount = 0;
+      });
+      _loadingTimeoutTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted && _isLoading) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      });
+    }
 
     WorkoutRepository()
         .getWorkoutCalendarForMonth(
           year: year,
           month: month,
-          forceRefresh: forceRefresh,
+          forceRefresh: true, // Always fetch fresh data to update status (verified / completed)
         )
         .then((result) {
           if (!mounted) return;
@@ -308,87 +450,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
               });
             },
             (data) {
-              final String? apiStartDateStr =
-                  data['calendar_start_date'] as String?;
-              if (apiStartDateStr != null) {
-                _calendarStartDate = DateTime.tryParse(apiStartDateStr);
-              }
-
-              final List<dynamic> days = data['days'] as List<dynamic>? ?? [];
-              final today = DateTime.now();
-              final todayOnly = DateTime(today.year, today.month, today.day);
-              final startDate = _firstWorkoutDate;
-              final startDateOnly = DateTime(
-                startDate.year,
-                startDate.month,
-                startDate.day,
-              );
-
+              _parseAndSetCalendarData(data);
               setState(() {
-                _dayStates.clear();
-                _isRestDayMap.clear();
-                _dayPlanDayIds.clear();
-                _dayCustomerWorkoutPlanIds.clear();
-                _dayWorkoutIds.clear();
-
-                _prepopulateDefaultStates();
-
-                for (final dayItem in days) {
-                  if (dayItem is Map<String, dynamic>) {
-                    final dateStr = dayItem['date'] as String;
-                    final date = DateTime.parse(dateStr);
-                    final dateOnly = DateTime(date.year, date.month, date.day);
-                    final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
-
-                    final bool isCompleted = dayItem['is_completed'] == true;
-                    final bool isVerified = dayItem['is_verified'] == true;
-                    final bool isRestDay = dayItem['is_rest_day'] == true;
-                    final int? planDayId =
-                        dayItem['plan_day_id'] != null
-                            ? int.tryParse(dayItem['plan_day_id'].toString())
-                            : null;
-                    final int? customerWorkoutPlanId =
-                        dayItem['customer_workout_plan_id'] != null
-                            ? int.tryParse(
-                              dayItem['customer_workout_plan_id'].toString(),
-                            )
-                            : null;
-                    final int? workoutId =
-                        dayItem['workout_id'] != null
-                            ? int.tryParse(dayItem['workout_id'].toString())
-                            : null;
-
-                    _isRestDayMap[dateKey] = isRestDay;
-
-                    if (planDayId != null) _dayPlanDayIds[dateKey] = planDayId;
-                    if (customerWorkoutPlanId != null) {
-                      _dayCustomerWorkoutPlanIds[dateKey] =
-                          customerWorkoutPlanId;
-                    }
-                    if (workoutId != null) {
-                      _dayWorkoutIds[dateKey] = workoutId;
-                    }
-
-                    CalendarDayState state;
-                    if (dateOnly.isBefore(startDateOnly)) {
-                      state = CalendarDayState.inactive;
-                    } else if (isCompleted) {
-                      state =
-                          isVerified
-                              ? CalendarDayState.verified
-                              : CalendarDayState.completed;
-                    } else if (isRestDay) {
-                      state = CalendarDayState.rest;
-                    } else if (dateOnly.isAfter(todayOnly) ||
-                        dateOnly.isAtSameMomentAs(todayOnly)) {
-                      state = CalendarDayState.future;
-                    } else {
-                      state = CalendarDayState.missed;
-                    }
-
-                    _dayStates[dateKey] = state;
-                  }
-                }
                 _isLoading = false;
                 _loadingTimeoutTimer?.cancel();
               });

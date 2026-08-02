@@ -46,7 +46,11 @@ android {
 
     buildTypes {
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            if (keystorePropertiesFile.exists() && keystoreProperties.containsKey("storeFile") && keystoreProperties["storeFile"]?.toString()?.isNotEmpty() == true) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(

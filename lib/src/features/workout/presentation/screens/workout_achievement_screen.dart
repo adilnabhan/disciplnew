@@ -1,16 +1,32 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:lottie/lottie.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:gal/gal.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/repositories/customer_details_repository.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/models/customer_details_model.dart';
 
 class WorkoutAchievementScreen extends StatefulWidget {
   const WorkoutAchievementScreen({
     required this.sessionData,
     this.fallbackTitle,
+    this.trainerName,
+    this.gymName,
+    this.gymLogo,
     super.key,
   });
 
   final Map<String, dynamic> sessionData;
   final String? fallbackTitle;
+  final String? trainerName;
+  final String? gymName;
+  final String? gymLogo;
 
   @override
   State<WorkoutAchievementScreen> createState() =>
@@ -21,13 +37,179 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
   int _workoutCount = 1;
   bool _isLoadingCount = true;
   bool _isLoadingDetails = true;
+  bool _isCapturing = false;
   Map<String, dynamic>? _fullSessionData;
+  CustomerDetailsModel? _customerDetails;
+  final GlobalKey _cardKey = GlobalKey();
+
+  Future<File?> _captureCardImage() async {
+    try {
+      final boundary =
+          _cardKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        print('DEBUG CAPTURE: cardKey context render object is null');
+        return null;
+      }
+      if (boundary.debugNeedsPaint) {
+        print('DEBUG CAPTURE: boundary needs paint, waiting 50ms');
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
+
+      ui.Image image;
+      try {
+        image = await boundary.toImage(pixelRatio: 2.0);
+      } catch (e) {
+        print('DEBUG CAPTURE: 2.0x failed ($e), falling back to 1.5x');
+        try {
+          image = await boundary.toImage(pixelRatio: 1.5);
+        } catch (_) {
+          image = await boundary.toImage(pixelRatio: 1.0);
+        }
+      }
+
+      final ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return null;
+
+      final Uint8List pngBytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File(
+        '${tempDir.path}/discipl_workout_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(pngBytes);
+      print('DEBUG CAPTURE: Saved image to ${file.path} (${pngBytes.length} bytes)');
+      return file;
+    } catch (e, stack) {
+      print('DEBUG CAPTURE ERROR: $e\n$stack');
+      debugPrint('Error capturing workout summary card: $e');
+      return null;
+    }
+  }
+
+  Future<void> _handleDownload() async {
+    if (_isCapturing) return;
+    setState(() => _isCapturing = true);
+    try {
+      final file = await _captureCardImage();
+      if (file == null) {
+        Dialogs.showSnack(msg: 'Failed to generate card image');
+        return;
+      }
+      try {
+        bool hasAccess = await Gal.hasAccess();
+        if (!hasAccess) {
+          hasAccess = await Gal.requestAccess();
+        }
+
+        if (!hasAccess && Platform.isAndroid) {
+          // Additional fallback check for Android storage / photos permission
+          final storageStatus = await Permission.storage.request();
+          if (storageStatus.isGranted) {
+            hasAccess = true;
+          } else {
+            final photosStatus = await Permission.photos.request();
+            if (photosStatus.isGranted) {
+              hasAccess = true;
+            }
+          }
+        }
+
+        if (hasAccess) {
+          await Gal.putImage(file.path);
+          Dialogs.showSnack(msg: 'Workout card saved to Gallery! 📥');
+        } else {
+          // If permission returned false, attempt direct save first (supported on Android 10+ MediaStore)
+          try {
+            await Gal.putImage(file.path);
+            Dialogs.showSnack(msg: 'Workout card saved to Gallery! 📥');
+          } catch (_) {
+            Dialogs.showSnack(msg: 'Opening export options...');
+            final RenderBox? box = context.findRenderObject() as RenderBox?;
+            final Rect? sharePositionOrigin =
+                box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+            await Share.shareXFiles(
+              [XFile(file.path)],
+              text: 'Workout Summary',
+              sharePositionOrigin: sharePositionOrigin,
+            );
+          }
+        }
+      } catch (ge) {
+        print('DEBUG GAL SAVE ERROR: $ge');
+        try {
+          await Gal.putImage(file.path);
+          Dialogs.showSnack(msg: 'Workout card saved to Gallery! 📥');
+        } catch (_) {
+          final RenderBox? box = context.findRenderObject() as RenderBox?;
+          final Rect? sharePositionOrigin =
+              box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+          await Share.shareXFiles(
+            [XFile(file.path)],
+            text: 'Workout Summary',
+            sharePositionOrigin: sharePositionOrigin,
+          );
+        }
+      }
+    } catch (e) {
+      print('DEBUG DOWNLOAD ERROR: $e');
+      Dialogs.showSnack(msg: 'Download failed: $e');
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
+    }
+  }
+
+  Future<void> _handleShare({String? text}) async {
+    if (_isCapturing) return;
+    setState(() => _isCapturing = true);
+    try {
+      final file = await _captureCardImage();
+      if (file == null) {
+        Dialogs.showSnack(msg: 'Failed to generate card image');
+        return;
+      }
+      final RenderBox? box = context.findRenderObject() as RenderBox?;
+      final Rect? sharePositionOrigin =
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+      final result = await Share.shareXFiles(
+        [XFile(file.path)],
+        text: text ?? 'Check out my workout on Discipl! 💪 #discipl',
+        sharePositionOrigin: sharePositionOrigin,
+      );
+      print('DEBUG SHARE RESULT: ${result.status}');
+    } catch (e) {
+      print('DEBUG SHARE ERROR: $e');
+      Dialogs.showSnack(msg: 'Share failed: $e');
+    } finally {
+      if (mounted) setState(() => _isCapturing = false);
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _loadWorkoutCount();
     _loadFullSessionDetails();
+    _loadCustomerDetails();
+  }
+
+  Future<void> _loadCustomerDetails() async {
+    try {
+      final user = Feggy.read<AppCubit>()?.state.currentUser;
+      final customerId = user?.customer?.id ?? user?.id;
+      if (customerId != null) {
+        final res =
+            await CustomerDetailsRepository().customerDetails(id: customerId);
+        res.fold((_) => null, (details) {
+          if (mounted) {
+            setState(() {
+              _customerDetails = details;
+            });
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading customer details in achievement screen: $e');
+    }
   }
 
   Future<void> _loadWorkoutCount() async {
@@ -238,7 +420,34 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     return total;
   }
 
-  int _countSets(List<dynamic> logs) {
+  ({int completed, int total}) _countExercises(List<dynamic> logs) {
+    if (logs.isEmpty) return (completed: 0, total: 0);
+
+    int total = logs.length;
+    int completed = 0;
+
+    for (final log in logs) {
+      if (log is Map) {
+        final setLogs = log['set_logs'] as List? ?? log['sets'] as List? ?? [];
+        final completedSetsCount = setLogs.where((set) {
+          if (set is Map) {
+            return (set['is_completed'] == true) ||
+                (set['checked'] == true) ||
+                (set['status']?.toString().toLowerCase() == 'completed');
+          }
+          return false;
+        }).length;
+
+        if (completedSetsCount > 0) {
+          completed++;
+        }
+      }
+    }
+
+    return (completed: completed, total: total);
+  }
+
+  ({int completed, int total}) _countSets(List<dynamic> logs) {
     int total = 0;
     int completed = 0;
     for (final log in logs) {
@@ -247,8 +456,9 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         total += setLogs.length;
         for (final set in setLogs) {
           if (set is Map) {
-            final isCompleted =
-                (set['is_completed'] == true) || (set['checked'] == true);
+            final isCompleted = (set['is_completed'] == true) ||
+                (set['checked'] == true) ||
+                (set['status']?.toString().toLowerCase() == 'completed');
             if (isCompleted) {
               completed++;
             }
@@ -256,19 +466,48 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         }
       }
     }
-    return completed > 0 ? completed : total;
+    return (completed: completed, total: total);
   }
 
-  int _getDurationInMinutes(Map<String, dynamic> data) {
-    if (data['duration'] != null) {
-      final rawDuration = double.tryParse(data['duration'].toString()) ?? 0;
-      if (rawDuration > 0) {
-        if (rawDuration > 1000) {
-          return (rawDuration / 60).round();
-        }
-        return rawDuration.round();
+  String _getExactDuration(Map<String, dynamic> data) {
+    int totalSeconds = 0;
+
+    // 1. Check direct elapsed_seconds or duration_seconds or duration field
+    final rawElapsed = data['elapsed_seconds'] ?? data['duration_seconds'];
+    if (rawElapsed != null) {
+      final parsed = int.tryParse(rawElapsed.toString());
+      if (parsed != null && parsed > 0) {
+        totalSeconds = parsed;
       }
     }
+
+    if (totalSeconds == 0 && data['duration'] != null) {
+      final durVal = data['duration'].toString().trim();
+      if (durVal.contains(':')) {
+        final parts = durVal.split(':');
+        if (parts.length == 3) {
+          final h = int.tryParse(parts[0]) ?? 0;
+          final m = int.tryParse(parts[1]) ?? 0;
+          final s = int.tryParse(parts[2]) ?? 0;
+          totalSeconds = (h * 3600) + (m * 60) + s;
+        } else if (parts.length == 2) {
+          final m = int.tryParse(parts[0]) ?? 0;
+          final s = int.tryParse(parts[1]) ?? 0;
+          totalSeconds = (m * 60) + s;
+        }
+      } else {
+        final numVal = double.tryParse(durVal) ?? 0;
+        if (numVal > 0) {
+          if (numVal > 100000) {
+            totalSeconds = (numVal / 1000).round();
+          } else {
+            totalSeconds = numVal.round();
+          }
+        }
+      }
+    }
+
+    // 2. Check started_at and completed_at/updated_at timestamps
     final startedAtStr =
         data['started_at']?.toString() ??
         data['created_at']?.toString() ??
@@ -277,28 +516,47 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         data['completed_at']?.toString() ??
         data['updated_at']?.toString() ??
         data['end_time']?.toString();
-    if (startedAtStr == null || completedAtStr == null) return 1;
-    try {
-      final start = DateTime.parse(startedAtStr);
-      final end = DateTime.parse(completedAtStr);
-      final diff = end.difference(start);
-      final mins = diff.inMinutes;
-      return mins <= 0 ? 1 : mins;
-    } catch (_) {
-      return 1;
-    }
-  }
 
-  String _formatDuration(int totalMinutes) {
-    if (totalMinutes < 60) {
-      return '${totalMinutes}min';
-    } else {
-      final hours = totalMinutes ~/ 60;
-      final mins = totalMinutes % 60;
-      if (mins == 0) {
-        return '${hours}h';
+    if (startedAtStr != null && completedAtStr != null) {
+      try {
+        final start = DateTime.parse(startedAtStr);
+        final end = DateTime.parse(completedAtStr);
+        final diffInSecs = end.difference(start).inSeconds;
+        if (diffInSecs > 0) {
+          totalSeconds = diffInSecs;
+        }
+      } catch (_) {}
+    }
+
+    // 3. Fallback: check nested session / session_details map
+    if (totalSeconds == 0 && data['session'] is Map) {
+      return _getExactDuration(data['session'] as Map<String, dynamic>);
+    }
+    if (totalSeconds == 0 && data['session_details'] is Map) {
+      return _getExactDuration(data['session_details'] as Map<String, dynamic>);
+    }
+
+    if (totalSeconds <= 0) {
+      return '1min';
+    }
+
+    // 4. Format totalSeconds into exact string
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      if (minutes > 0) {
+        return '${hours}h ${minutes}m';
       }
-      return '${hours}h ${mins}m';
+      return '${hours}h';
+    } else if (minutes > 0) {
+      if (seconds > 0) {
+        return '${minutes}min ${seconds}s';
+      }
+      return '${minutes}min';
+    } else {
+      return '${seconds}s';
     }
   }
 
@@ -379,12 +637,135 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         data['exercises'] as List? ??
         data['session_exercises'] as List? ??
         [];
-    final durationMins = _getDurationInMinutes(data);
-    final durationStr = _formatDuration(durationMins);
+    final durationStr = _getExactDuration(data);
     final volume = _calculateVolume(logs);
     final volumeStr = volume > 0 ? '${volume.toStringAsFixed(0)} kg' : '0 kg';
-    final exerciseCount = logs.length;
-    final setsCount = _countSets(logs);
+    final exCounts = _countExercises(logs);
+    final setCounts = _countSets(logs);
+    final exerciseDisplay = exCounts.total > 0
+        ? '${exCounts.completed}/${exCounts.total}'
+        : '0';
+    final setsDisplay = setCounts.total > 0
+        ? '${setCounts.completed}/${setCounts.total}'
+        : '0';
+
+    // 1. Is this a trainer-assigned workout or assigned gym user?
+    final bool isTrainerAssigned = (widget.trainerName != null &&
+            widget.trainerName!.trim().isNotEmpty) ||
+        (data['trainer_name'] != null &&
+            data['trainer_name'].toString().trim().isNotEmpty) ||
+        (data['assigned_by'] != null &&
+            data['assigned_by'].toString().trim().isNotEmpty) ||
+        (data['is_mentor_workout'] == true) ||
+        (data['is_trainer_assigned'] == true);
+
+    // 2. Resolve Assigned Gym Name (MUST NOT use trainer name)
+    String? resolvedGymName = widget.gymName;
+    if (resolvedGymName == null || resolvedGymName.trim().isEmpty) {
+      resolvedGymName = data['gym_name']?.toString() ??
+          data['fitness_center_name']?.toString() ??
+          data['assigned_gym_name']?.toString() ??
+          (data['assigned_fitness_center'] is Map
+              ? (data['assigned_fitness_center']['name'] ??
+                      data['assigned_fitness_center']['center_name'])
+                  ?.toString()
+              : null) ??
+          (data['fitness_center'] is Map
+              ? (data['fitness_center']['name'] ??
+                      data['fitness_center']['center_name'])
+                  ?.toString()
+              : null) ??
+          (data['gym'] is Map ? data['gym']['name']?.toString() : null);
+    }
+    if (resolvedGymName == null || resolvedGymName.trim().isEmpty) {
+      resolvedGymName =
+          _customerDetails?.assignedFitnessCenter?['name']?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['center_name']
+                  ?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['fitness_center_name']
+                  ?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['title']?.toString();
+    }
+    final String assignedGymName =
+        (resolvedGymName != null && resolvedGymName.trim().isNotEmpty)
+            ? resolvedGymName
+            : 'Assigned Gym';
+
+    // 3. Resolve Assigned Gym Logo
+    String? resolvedGymLogo = widget.gymLogo;
+    if (resolvedGymLogo == null || resolvedGymLogo.trim().isEmpty) {
+      resolvedGymLogo = data['gym_logo']?.toString() ??
+          data['fitness_center_logo']?.toString() ??
+          data['assigned_gym_logo']?.toString() ??
+          (data['assigned_fitness_center'] is Map
+              ? (data['assigned_fitness_center']['logo'] ??
+                      data['assigned_fitness_center']['image'] ??
+                      data['assigned_fitness_center']['profile_image'])
+                  ?.toString()
+              : null) ??
+          (data['fitness_center'] is Map
+              ? (data['fitness_center']['logo'] ??
+                      data['fitness_center']['image'] ??
+                      data['fitness_center']['profile_image'])
+                  ?.toString()
+              : null) ??
+          (data['gym'] is Map
+              ? (data['gym']['logo'] ?? data['gym']['image'])?.toString()
+              : null);
+    }
+    if (resolvedGymLogo == null || resolvedGymLogo.trim().isEmpty) {
+      resolvedGymLogo =
+          _customerDetails?.assignedFitnessCenter?['logo']?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['image']?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['photo']?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['profile_image']
+                  ?.toString() ??
+              _customerDetails?.assignedFitnessCenter?['logo_url']?.toString();
+    }
+    final String? assignedGymLogo = resolvedGymLogo;
+
+    // 4. Resolve Trainer Name & Photo
+    String? resolvedTrainerName = widget.trainerName;
+    if (resolvedTrainerName == null || resolvedTrainerName.trim().isEmpty) {
+      resolvedTrainerName = data['trainer_name']?.toString() ??
+          data['assigned_by']?.toString() ??
+          (data['assigned_trainer'] is Map
+              ? (data['assigned_trainer']['full_name'] ??
+                      data['assigned_trainer']['name'] ??
+                      '${data['assigned_trainer']['first_name'] ?? ''} ${data['assigned_trainer']['last_name'] ?? ''}')
+                  .toString()
+              : null);
+    }
+    if (resolvedTrainerName == null || resolvedTrainerName.trim().isEmpty) {
+      final t = _customerDetails?.assignedTrainer;
+      if (t != null) {
+        final fn = t['full_name']?.toString() ?? t['name']?.toString();
+        if (fn != null && fn.trim().isNotEmpty) {
+          resolvedTrainerName = fn;
+        } else {
+          final first = t['first_name']?.toString() ?? '';
+          final last = t['last_name']?.toString() ?? '';
+          final combined = '$first $last'.trim();
+          if (combined.isNotEmpty) resolvedTrainerName = combined;
+        }
+      }
+    }
+    final String? assignedTrainerName =
+        (resolvedTrainerName != null && resolvedTrainerName.trim().isNotEmpty)
+            ? resolvedTrainerName
+            : null;
+
+    String? resolvedTrainerPhoto =
+        (data['assigned_trainer'] is Map
+            ? (data['assigned_trainer']['profile_image'] ??
+                    data['assigned_trainer']['photo'] ??
+                    data['assigned_trainer']['image'])
+                ?.toString()
+            : null) ??
+        _customerDetails?.assignedTrainer?['profile_image']?.toString() ??
+        _customerDetails?.assignedTrainer?['photo']?.toString() ??
+        _customerDetails?.assignedTrainer?['image']?.toString();
+    final String? assignedTrainerPhoto = resolvedTrainerPhoto;
 
     final user = Feggy.read<AppCubit>()?.state.currentUser;
     final fName = user?.firstName ?? '';
@@ -434,6 +815,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                     'assets/images/svg/vectors/thumbsUp_achievement.json',
                     height: 160,
                     fit: BoxFit.contain,
+                    repeat: false,
                   ),
                 ),
                 // const SizedBox(height: 4),
@@ -481,100 +863,271 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Achievement Card
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xffF0B5B7),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 16,
-                        offset: const Offset(0, 4),
+                // Assigned Gym Card (Shown ONLY for trainer assigned workouts)
+                if (isTrainerAssigned) ...[
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xFFF1F5F9),
+                        width: 1.5,
                       ),
-                    ],
-                  ),
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Card Title and Dumbbell Icon
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: AppStyles.text20Px.poppins.w700.copyWith(
-                                color: Colors.black,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Column(
+                      children: [
+                        // Fitness Center Row
+                        Row(
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF1E293B),
+                                shape: BoxShape.circle,
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: (assignedGymLogo != null &&
+                                      assignedGymLogo.isNotEmpty)
+                                  ? Image.network(
+                                      assignedGymLogo,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) => const Center(
+                                        child: Icon(
+                                          Icons.fitness_center_rounded,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                    )
+                                  : const Center(
+                                      child: Icon(
+                                        Icons.fitness_center_rounded,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'ASSIGNED GYM',
+                                    style: AppStyles.text10Px.poppins.w600.copyWith(
+                                      color: const Color(0xFF94A3B8),
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          assignedGymName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: AppStyles.text16Px.poppins.w700.copyWith(
+                                            color: const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(
+                                        Icons.check_circle_rounded,
+                                        color: Color(0xFFEF4444),
+                                        size: 16,
+                                      ),
+                                    ],
+                                  ),
+                                  if (assignedTrainerName == null ||
+                                      assignedTrainerName.isEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Stay strong, keep going!',
+                                      style: AppStyles.text12Px.poppins.w400.copyWith(
+                                        color: const Color(0xFF64748B),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.fitness_center,
-                            color: AppColors.primary,
-                            size: 24,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
+                          ],
+                        ),
 
-                      // Metrics Grid (2x2 Column/Row structure)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildMetric(durationStr, 'DURATION'),
-                                const SizedBox(height: 20),
-                                _buildMetric('$exerciseCount', 'EXERCISES'),
-                              ],
+                        // Personal Trainer Row (If assigned trainer exists)
+                        if (assignedTrainerName != null &&
+                            assignedTrainerName.isNotEmpty) ...[
+                          const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 10),
+                            child: Divider(
+                              height: 1,
+                              thickness: 0.5,
+                              color: Color(0xFFE2E8F0),
                             ),
                           ),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildMetric(volumeStr, 'VOLUME'),
-                                const SizedBox(height: 20),
-                                _buildMetric('$setsCount', 'SETS'),
-                              ],
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 44,
+                                height: 44,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF1F5F9),
+                                  shape: BoxShape.circle,
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: (assignedTrainerPhoto != null &&
+                                        assignedTrainerPhoto.isNotEmpty)
+                                    ? Image.network(
+                                        assignedTrainerPhoto,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => const Center(
+                                          child: Icon(
+                                            Icons.person_rounded,
+                                            color: Color(0xFF64748B),
+                                            size: 22,
+                                          ),
+                                        ),
+                                      )
+                                    : const Center(
+                                        child: Icon(
+                                          Icons.person_rounded,
+                                          color: Color(0xFF64748B),
+                                          size: 22,
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'PERSONAL TRAINER',
+                                      style: AppStyles.text10Px.poppins.w600.copyWith(
+                                        color: const Color(0xFF94A3B8),
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      assignedTrainerName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: AppStyles.text15Px.poppins.w700.copyWith(
+                                        color: const Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
-                      // Divider
-                      const Divider(
-                        color: Color(0xFFF1D1D2),
-                        height: 32,
-                        thickness: 1,
+                // Achievement Card (Shareable Workout Summary Card)
+                RepaintBoundary(
+                  key: _cardKey,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: const Color(0xffF0B5B7),
+                        width: 1.5,
                       ),
-
-                      // Bottom Row: Logo & Username
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Image.asset(
-                            'assets/images/png/vectors/discipl_spell.png',
-                            height: 20,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.04),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Card Title
+                        Text(
+                          title,
+                          style: AppStyles.text20Px.poppins.w700.copyWith(
+                            color: Colors.black,
                           ),
-                          Text(
-                            username,
-                            style: AppStyles.text14Px.poppins.w500.copyWith(
-                              color: Colors.grey.shade600,
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Metrics Grid (2x2 Column/Row structure)
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildMetric(durationStr, 'DURATION'),
+                                  const SizedBox(height: 20),
+                                  _buildMetric(exerciseDisplay, 'EXERCISES'),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildMetric(volumeStr, 'VOLUME'),
+                                  const SizedBox(height: 20),
+                                  _buildMetric(setsDisplay, 'SETS'),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Divider
+                        const Divider(
+                          color: Color(0xFFF1D1D2),
+                          height: 32,
+                          thickness: 1,
+                        ),
+
+                        // Bottom Row: Logo & Username
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Image.asset(
+                              'assets/images/png/vectors/discipl_spell.png',
+                              height: 20,
+                            ),
+                            Text(
+                              username,
+                              style: AppStyles.text14Px.poppins.w500.copyWith(
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -592,26 +1145,20 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
 
                 // Share Options Row
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
+                    // 📥 Download (Gallery)
                     _buildShareButton(
                       icon: Icon(
-                        Icons.photo_library_outlined,
+                        Icons.file_download_outlined,
                         color: Colors.grey.shade700,
                         size: 24,
                       ),
-                      label: 'Background',
-                      onTap: () {
-                        Dialogs.showSnack(msg: 'Feature coming soon!');
-                      },
+                      label: 'Download',
+                      onTap: _handleDownload,
                     ),
-                    const SizedBox(width: 16),
-                    Container(
-                      width: 1,
-                      height: 40,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(width: 16),
+
+                    // 📸 Stories (Instagram)
                     _buildShareButton(
                       useRawIcon: true,
                       icon: Container(
@@ -637,11 +1184,32 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                         ),
                       ),
                       label: 'Stories',
-                      onTap: () {
-                        Dialogs.showSnack(msg: 'Feature coming soon!');
-                      },
+                      onTap: () => _handleShare(
+                        text:
+                            'Check out my workout on Discipl! 💪 #discipl #workout',
+                      ),
                     ),
-                    const SizedBox(width: 20),
+
+                    // 💬 WhatsApp
+                    _buildShareButton(
+                      useRawIcon: true,
+                      icon: SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: SvgPicture.asset(
+                          'assets/images/svg/icons/whatsapp_logo.svg',
+                          width: 50,
+                          height: 50,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                      label: 'WhatsApp',
+                      onTap: () => _handleShare(
+                        text: 'Check out my workout summary on Discipl! 💪',
+                      ),
+                    ),
+
+                    // 📤 More (Native Share Sheet)
                     _buildShareButton(
                       icon: Icon(
                         Icons.ios_share,
@@ -649,21 +1217,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                         size: 22,
                       ),
                       label: 'More',
-                      onTap: () {
-                        Dialogs.showSnack(msg: 'Feature coming soon!');
-                      },
-                    ),
-                    const SizedBox(width: 20),
-                    _buildShareButton(
-                      icon: Icon(
-                        Icons.file_download_outlined,
-                        color: Colors.grey.shade700,
-                        size: 24,
-                      ),
-                      label: 'Download',
-                      onTap: () {
-                        Dialogs.showSnack(msg: 'Feature coming soon!');
-                      },
+                      onTap: () => _handleShare(),
                     ),
                   ],
                 ),

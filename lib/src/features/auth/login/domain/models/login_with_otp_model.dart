@@ -34,6 +34,7 @@ class CustomerDataModel with _$CustomerDataModel {
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') int? profileCompleteness,
     @JsonKey(name: 'organization_id') int? organizationId,
+    @JsonKey(name: 'assigned_fitness_center') Map<String, dynamic>? assignedFitnessCenter,
   }) = _CustomerDataModel;
 
   factory CustomerDataModel.fromJson(Map<String, dynamic> json) =>

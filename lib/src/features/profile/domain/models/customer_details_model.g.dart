@@ -16,6 +16,7 @@ _$CustomerDetailsModelImpl _$$CustomerDetailsModelImplFromJson(
   weight: json['weight'] as String?,
   profilePicture: json['profile_picture'],
   profession: json['profession'] as String?,
+  otherProfession: json['other_profession'] as String?,
   isActiveMember: json['is_active_member'] as bool?,
   memberships:
       (json['memberships'] as List<dynamic>?)
@@ -46,6 +47,8 @@ _$CustomerDetailsModelImpl _$$CustomerDetailsModelImplFromJson(
   averageWorkingHours: json['average_working_hours'] as String?,
   averageSleepingHours: json['average_sleep_hours'] as String?,
   fitnessLevel: json['fitness_level'],
+  activityLevel: json['activity_level'],
+  fitnessGoal: json['fitness_goal'],
   stressLevel: json['stress_level'],
   weightGoal: json['weight_goal'],
   targetWeight: json['target_weight'],
@@ -79,6 +82,7 @@ Map<String, dynamic> _$$CustomerDetailsModelImplToJson(
   'weight': instance.weight,
   'profile_picture': instance.profilePicture,
   'profession': instance.profession,
+  'other_profession': instance.otherProfession,
   'is_active_member': instance.isActiveMember,
   'memberships': instance.memberships,
   'full_name': instance.fullName,
@@ -97,6 +101,8 @@ Map<String, dynamic> _$$CustomerDetailsModelImplToJson(
   'average_working_hours': instance.averageWorkingHours,
   'average_sleep_hours': instance.averageSleepingHours,
   'fitness_level': instance.fitnessLevel,
+  'activity_level': instance.activityLevel,
+  'fitness_goal': instance.fitnessGoal,
   'stress_level': instance.stressLevel,
   'weight_goal': instance.weightGoal,
   'target_weight': instance.targetWeight,

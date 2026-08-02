@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/src/features/auth/login/domain/repositories/auth_repository.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({
@@ -18,10 +19,13 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   late final List<FieldData<dynamic>> _personalDetails;
   final _formKey = GlobalKey<FormState>();
   XFile? _pickedImage;
+  List<Profession> _professions = [];
+  String? _customProfession;
 
   @override
   void initState() {
     _profileCubit = context.read<ProfileCubit>();
+    _customProfession = widget.customerDetailsModel.otherProfession;
 
     _personalDetails = [
       /// ----------------------------------------
@@ -96,18 +100,20 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         textInputAction: TextInputAction.next,
         label: 'Email Address',
         requiredLabel: true,
-        readOnly: true,
+        readOnly: false,
         controller: TextEditingController(
-          text: widget.customerDetailsModel.email,
+          text: widget.customerDetailsModel.email ?? '',
         ),
         focusNode: FocusNode(),
         validator: (value) {
-          if (value?.isNotEmpty ?? false) {
-            if (!RegExp(
-              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
-            ).hasMatch(value!)) {
-              return 'Invalid email address!';
-            }
+          final trimmed = value?.trim();
+          if (trimmed == null || trimmed.isEmpty) {
+            return 'Please enter your email address.';
+          }
+          if (!RegExp(
+            r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+          ).hasMatch(trimmed)) {
+            return 'Please enter a valid email address.';
           }
           return null;
         },
@@ -116,7 +122,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         },
         keyboardType: TextInputType.emailAddress,
         decoration: InputDecoration(
-          hintText: 'Enter your email address',
+          hintText: 'Enter your email',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
           border: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -161,6 +167,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
       /// ----------------------------------------
       /// 4 - Gender
       /// ----------------------------------------
+      /// ----------------------------------------
+      /// 4 - Gender
+      /// ----------------------------------------
       FieldData(
         type: FieldType.radio,
         textInputAction: TextInputAction.next,
@@ -195,13 +204,50 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
       ),
 
       /// ----------------------------------------
-      /// 5 - Date of Birth
+      /// 5 - Blood Group
+      /// ----------------------------------------
+      FieldData(
+        type: FieldType.radio,
+        textInputAction: TextInputAction.next,
+        label: 'Blood Group',
+        requiredLabel: false,
+        controller: TextEditingController(
+          text: (widget.customerDetailsModel.bloodGroup == null ||
+                  widget.customerDetailsModel.bloodGroup!.toLowerCase() == 'unknown')
+              ? ''
+              : widget.customerDetailsModel.bloodGroup,
+        ),
+        focusNode: FocusNode(),
+        items: [
+          (label: 'A+', value: 'A+'),
+          (label: 'A-', value: 'A-'),
+          (label: 'B+', value: 'B+'),
+          (label: 'B-', value: 'B-'),
+          (label: 'AB+', value: 'AB+'),
+          (label: 'AB-', value: 'AB-'),
+          (label: 'O+', value: 'O+'),
+          (label: 'O-', value: 'O-'),
+        ],
+        onSubmitted: (value) {
+          _personalDetails[6].focusNode?.requestFocus();
+        },
+        decoration: InputDecoration(
+          hintText: 'Select Blood Group',
+          hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+          border: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+            borderSide: BorderSide(color: AppColors.borderGrey),
+          ),
+        ),
+      ),
+
+      /// ----------------------------------------
+      /// 6 - Date of Birth
       /// ----------------------------------------
       FieldData(
         type: FieldType.date,
         textInputAction: TextInputAction.next,
         label: 'Date of Birth',
-        // dateTimeShowFormat: DateFormat('dd MMM yyyy'),
         dateTimeShowFormat: DateFormat('dd/MM/yyyy'),
         endTime: DateTime.now(),
         requiredLabel: true,
@@ -215,7 +261,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           return null;
         },
         onChanged: (p0) {
-          _personalDetails[6].focusNode?.requestFocus();
+          _personalDetails[7].focusNode?.requestFocus();
         },
         decoration: InputDecoration(
           hintText: 'Select Date of Birth',
@@ -228,56 +274,40 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
       ),
 
       /// ----------------------------------------
-      /// 6 - Profession
+      /// 7 - Profession
       /// ----------------------------------------
-      // FieldData(
-      //   type: FieldType.word,
-      //   textInputAction: TextInputAction.done,
-      //   label: 'Profession',
-      //   requiredLabel: true,
-      //   validator: (value) {
-      //     if (value?.trim().isEmpty ?? true) {
-      //       return 'Profession is required';
-      //     }
-      //     return null;
-      //   },
-      //   onSubmitted: (value) {
-      //     _personalDetails[6].focusNode?.unfocus();
-      //
-      //   },
-      //   controller: TextEditingController(
-      //     text: widget.customerDetailsModel.profession,
-      //   ),
-      //   focusNode: FocusNode(),
-      //   keyboardType: TextInputType.name,
-      //   decoration: InputDecoration(
-      //     hintText: 'Enter Profession',
-      //     hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-      //     border: const OutlineInputBorder(
-      //       borderRadius: BorderRadius.all(Radius.circular(8)),
-      //       borderSide: BorderSide(color: AppColors.borderGrey),
-      //     ),
-      //   ),
-      // ),
       FieldData(
         type: FieldType.radio,
         textInputAction: TextInputAction.next,
         label: 'Profession',
         requiredLabel: true,
         controller: TextEditingController(
-          text: widget.customerDetailsModel.profession,
+          text: widget.customerDetailsModel.profession == 'Other'
+              ? (widget.customerDetailsModel.otherProfession ?? 'Other')
+              : widget.customerDetailsModel.profession,
         ),
         focusNode: FocusNode(),
-        items:
-            (widget.choicesModel?.data.professions ?? []).map((e) {
-              return (label: e.label, value: e.value);
-            }).toList(),
-
+        items: [],
+        onValueChanged: (value) async {
+          final selectedItem = value.isNotEmpty ? value.first : null;
+          if (selectedItem?.value == 'Other') {
+            final customProfession = await _showCustomProfessionDialog(context);
+            if (customProfession != null && customProfession.trim().isNotEmpty) {
+              _customProfession = customProfession.trim();
+              _personalDetails[7].controller?.text = customProfession.trim();
+            } else {
+              _personalDetails[7].controller?.text = '';
+              _customProfession = null;
+            }
+          } else {
+            _customProfession = null;
+          }
+        },
         onSubmitted: (value) {
-          _personalDetails[6].focusNode?.unfocus();
+          _personalDetails[7].focusNode?.unfocus();
         },
         decoration: InputDecoration(
-          hintText: 'Select  Profession',
+          hintText: 'Select Profession',
           hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
           border: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(8)),
@@ -291,7 +321,105 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
       FocusScope.of(context).requestFocus(_personalDetails[0].focusNode);
     });
 
+    _loadProfessions();
+
     super.initState();
+  }
+
+  Future<void> _loadProfessions() async {
+    final result = await CustomerDetailsRepository().fetchProfessionsList();
+    result.fold(
+      (error) async {
+        debugPrint('❌ Error fetching professions list: $error');
+        // Fallback: Fetch from constant choices
+        final choicesResult = await AuthRepository().fetchConstChoices();
+        choicesResult.fold(
+          (choicesError) {
+            debugPrint('❌ Error fetching constant choices: $choicesError');
+          },
+          (choices) {
+            _updateProfessionsList(choices.data.professions);
+          },
+        );
+      },
+      (professions) {
+        _updateProfessionsList(professions);
+      },
+    );
+  }
+
+  void _updateProfessionsList(List<Profession> professions) {
+    if (mounted) {
+      setState(() {
+        _professions = professions;
+        _personalDetails[7] = _personalDetails[7].copyWith(
+          items: professions.map((e) => (label: e.label, value: e.value)).toList(),
+        );
+
+        // Match initial value or label to update the text field controller
+        final initialVal = widget.customerDetailsModel.profession;
+        final initialOtherVal = widget.customerDetailsModel.otherProfession;
+
+        if (initialVal == 'Other' && initialOtherVal != null) {
+          _personalDetails[7].controller?.text = initialOtherVal;
+        } else if (initialVal != null) {
+          Profession? matched;
+          for (final p in professions) {
+            if (p.value == initialVal || p.label == initialVal) {
+              matched = p;
+              break;
+            }
+          }
+          if (matched != null) {
+            _personalDetails[7].controller?.text = matched.label;
+          }
+        }
+      });
+    }
+  }
+
+  Future<String?> _showCustomProfessionDialog(BuildContext context) async {
+    final textController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Custom Profession',
+            style: AppStyles.text18Px.poppins.w600,
+          ),
+          content: TextField(
+            controller: textController,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Enter your profession',
+              hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+              border: const OutlineInputBorder(
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderSide: BorderSide(color: AppColors.borderGrey),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: AppStyles.text14Px.poppins.w500.copyWith(color: AppColors.textGrey),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, textController.text),
+              child: Text(
+                'OK',
+                style: AppStyles.text14Px.poppins.w500.copyWith(color: AppColors.primary),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -307,24 +435,46 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       final firstName = _personalDetails[0].controller?.text;
       final lastName = _personalDetails[1].controller?.text;
-      final email = _personalDetails[2].controller?.text;
+      final email = _personalDetails[2].controller?.text?.trim() ?? '';
       final phone = _personalDetails[3].controller?.text;
       final gender = _personalDetails[4].controller?.text;
-      final dob = _personalDetails[5].selectedDateTime;
-      final profession = _personalDetails[6].controller?.text;
+      final bloodGroup = _personalDetails[5].controller?.text;
+      final dob = _personalDetails[6].selectedDateTime;
 
-      _profileCubit.updateProfileDetails(
-        firstName: firstName ?? '',
-        lastName: lastName ?? '',
-        email: email ?? '',
-        // phoneNumber: phone ?? '',
-        dateOfBirth: dob!,
-        gender: gender!.toLowerCase(),
-        profession: profession!,
-        image: _pickedImage,
-      );
+      final professionLabel = _personalDetails[7].controller?.text;
+      String selectedProfessionValue = '';
+      for (final p in _professions) {
+        if (p.label == professionLabel) {
+          selectedProfessionValue = p.value;
+          break;
+        }
+      }
+      if (_customProfession != null || selectedProfessionValue == 'Other') {
+        selectedProfessionValue = 'Other';
+      }
+
+      final currentEmail = widget.customerDetailsModel.email?.trim() ?? '';
+
+      if (email != currentEmail) {
+        _profileCubit.updateEmail(
+          email: email,
+          currentEmail: currentEmail,
+        );
+      } else {
+        _profileCubit.updateProfileDetails(
+          firstName: firstName ?? '',
+          lastName: lastName ?? '',
+          email: email,
+          dateOfBirth: dob ?? widget.customerDetailsModel.dateOfBirth ?? DateTime.now(),
+          gender: (gender ?? '').toLowerCase(),
+          bloodGroup: bloodGroup,
+          profession: selectedProfessionValue,
+          otherProfession: _customProfession,
+          image: _pickedImage,
+        );
+      }
     } else {
-      Dialogs.showSnack(msg: 'Please fill all the fields');
+      Dialogs.showSnack(msg: 'Please check your inputs.');
     }
   }
 
@@ -335,8 +485,14 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         state.updateProfileDetails?.fold(
           () => null,
           (t) => t.fold(
-            (l) => Dialogs.showSnack(msg: l.msg),
-            (r) => context.pop(),
+            (l) => Dialogs.showSnack(
+              msg: l.msg.isNotEmpty
+                  ? l.msg
+                  : "Couldn't update profile details. Please try again.",
+            ),
+            (r) {
+              Navigator.pop(context);
+            },
           ),
         );
       },

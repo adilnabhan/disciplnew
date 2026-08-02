@@ -1,3 +1,5 @@
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/auth/account_creation/cubit/guest_account/guest_account.dart';
 
@@ -24,6 +26,13 @@ class CreateOptionsPage extends StatefulWidget {
 }
 
 class _CreateOptionsPageState extends State<CreateOptionsPage> {
+  Future<void> _launchUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -99,10 +108,33 @@ class _CreateOptionsPageState extends State<CreateOptionsPage> {
 
                   /// Footer text
                   Center(
-                    child: Text(
-                      "You've already taken the first step —\nlet’s keep the momentum!",
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'By continuing, you agree to our\n',
+                        children: [
+                          TextSpan(
+                            text: 'Terms & Conditions',
+                            style: AppStyles.text13Px.w400.copyWith(
+                              color: AppColors.primary,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _launchUrl('https://thediscipl.com/terms-conditions'),
+                          ),
+                          const TextSpan(
+                            text: ' and ',
+                          ),
+                          TextSpan(
+                            text: 'Privacy Policy.',
+                            style: AppStyles.text13Px.w400.copyWith(
+                              color: AppColors.primary,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () => _launchUrl('https://thediscipl.com/privacy-policy'),
+                          ),
+                        ],
+                      ),
                       textAlign: TextAlign.center,
-                      style: AppStyles.text15Px.w400.copyWith(
+                      style: AppStyles.text13Px.w400.copyWith(
                         color: AppColors.dark.withOpacity(0.5),
                       ),
                     ),

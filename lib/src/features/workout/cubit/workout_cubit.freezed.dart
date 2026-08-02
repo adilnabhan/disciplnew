@@ -31,6 +31,8 @@ mixin _$WorkoutState {
   bool get isCreatingExercise => throw _privateConstructorUsedError;
   bool get isLoadingActiveSession => throw _privateConstructorUsedError;
   String get sessionTitle => throw _privateConstructorUsedError;
+  int? get sessionId => throw _privateConstructorUsedError;
+  int? get planDayId => throw _privateConstructorUsedError;
 
   /// Create a copy of WorkoutState
   /// with the given fields replaced by the non-null parameter values.
@@ -57,6 +59,8 @@ abstract class $WorkoutStateCopyWith<$Res> {
     bool isCreatingExercise,
     bool isLoadingActiveSession,
     String sessionTitle,
+    int? sessionId,
+    int? planDayId,
   });
 }
 
@@ -85,6 +89,8 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
     Object? isCreatingExercise = null,
     Object? isLoadingActiveSession = null,
     Object? sessionTitle = null,
+    Object? sessionId = freezed,
+    Object? planDayId = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -138,6 +144,16 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
                     ? _value.sessionTitle
                     : sessionTitle // ignore: cast_nullable_to_non_nullable
                         as String,
+            sessionId:
+                freezed == sessionId
+                    ? _value.sessionId
+                    : sessionId // ignore: cast_nullable_to_non_nullable
+                        as int?,
+            planDayId:
+                freezed == planDayId
+                    ? _value.planDayId
+                    : planDayId // ignore: cast_nullable_to_non_nullable
+                        as int?,
           )
           as $Val,
     );
@@ -164,6 +180,8 @@ abstract class _$$WorkoutStateImplCopyWith<$Res>
     bool isCreatingExercise,
     bool isLoadingActiveSession,
     String sessionTitle,
+    int? sessionId,
+    int? planDayId,
   });
 }
 
@@ -191,6 +209,8 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
     Object? isCreatingExercise = null,
     Object? isLoadingActiveSession = null,
     Object? sessionTitle = null,
+    Object? sessionId = freezed,
+    Object? planDayId = freezed,
   }) {
     return _then(
       _$WorkoutStateImpl(
@@ -244,6 +264,16 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
                 ? _value.sessionTitle
                 : sessionTitle // ignore: cast_nullable_to_non_nullable
                     as String,
+        sessionId:
+            freezed == sessionId
+                ? _value.sessionId
+                : sessionId // ignore: cast_nullable_to_non_nullable
+                    as int?,
+        planDayId:
+            freezed == planDayId
+                ? _value.planDayId
+                : planDayId // ignore: cast_nullable_to_non_nullable
+                    as int?,
       ),
     );
   }
@@ -263,6 +293,8 @@ class _$WorkoutStateImpl implements _WorkoutState {
     this.isCreatingExercise = false,
     this.isLoadingActiveSession = false,
     this.sessionTitle = '',
+    this.sessionId,
+    this.planDayId,
   }) : _exercises = exercises,
        _libraryExercises = libraryExercises,
        _customExercises = customExercises,
@@ -334,10 +366,14 @@ class _$WorkoutStateImpl implements _WorkoutState {
   @override
   @JsonKey()
   final String sessionTitle;
+  @override
+  final int? sessionId;
+  @override
+  final int? planDayId;
 
   @override
   String toString() {
-    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise, isLoadingActiveSession: $isLoadingActiveSession, sessionTitle: $sessionTitle)';
+    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise, isLoadingActiveSession: $isLoadingActiveSession, sessionTitle: $sessionTitle, sessionId: $sessionId, planDayId: $planDayId)';
   }
 
   @override
@@ -376,7 +412,11 @@ class _$WorkoutStateImpl implements _WorkoutState {
             (identical(other.isLoadingActiveSession, isLoadingActiveSession) ||
                 other.isLoadingActiveSession == isLoadingActiveSession) &&
             (identical(other.sessionTitle, sessionTitle) ||
-                other.sessionTitle == sessionTitle));
+                other.sessionTitle == sessionTitle) &&
+            (identical(other.sessionId, sessionId) ||
+                other.sessionId == sessionId) &&
+            (identical(other.planDayId, planDayId) ||
+                other.planDayId == planDayId));
   }
 
   @override
@@ -392,6 +432,8 @@ class _$WorkoutStateImpl implements _WorkoutState {
     isCreatingExercise,
     isLoadingActiveSession,
     sessionTitle,
+    sessionId,
+    planDayId,
   );
 
   /// Create a copy of WorkoutState
@@ -415,6 +457,8 @@ abstract class _WorkoutState implements WorkoutState {
     final bool isCreatingExercise,
     final bool isLoadingActiveSession,
     final String sessionTitle,
+    final int? sessionId,
+    final int? planDayId,
   }) = _$WorkoutStateImpl;
 
   @override
@@ -437,6 +481,10 @@ abstract class _WorkoutState implements WorkoutState {
   bool get isLoadingActiveSession;
   @override
   String get sessionTitle;
+  @override
+  int? get sessionId;
+  @override
+  int? get planDayId;
 
   /// Create a copy of WorkoutState
   /// with the given fields replaced by the non-null parameter values.

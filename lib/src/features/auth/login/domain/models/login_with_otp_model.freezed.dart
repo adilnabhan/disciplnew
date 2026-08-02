@@ -578,6 +578,9 @@ mixin _$CustomerDataModel {
   int? get profileCompleteness => throw _privateConstructorUsedError;
   @JsonKey(name: 'organization_id')
   int? get organizationId => throw _privateConstructorUsedError;
+  @JsonKey(name: 'assigned_fitness_center')
+  Map<String, dynamic>? get assignedFitnessCenter =>
+      throw _privateConstructorUsedError;
 
   /// Serializes this CustomerDataModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -601,6 +604,8 @@ abstract class $CustomerDataModelCopyWith<$Res> {
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') int? profileCompleteness,
     @JsonKey(name: 'organization_id') int? organizationId,
+    @JsonKey(name: 'assigned_fitness_center')
+    Map<String, dynamic>? assignedFitnessCenter,
   });
 }
 
@@ -623,6 +628,7 @@ class _$CustomerDataModelCopyWithImpl<$Res, $Val extends CustomerDataModel>
     Object? isActiveMember = freezed,
     Object? profileCompleteness = freezed,
     Object? organizationId = freezed,
+    Object? assignedFitnessCenter = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -646,6 +652,11 @@ class _$CustomerDataModelCopyWithImpl<$Res, $Val extends CustomerDataModel>
                     ? _value.organizationId
                     : organizationId // ignore: cast_nullable_to_non_nullable
                         as int?,
+            assignedFitnessCenter:
+                freezed == assignedFitnessCenter
+                    ? _value.assignedFitnessCenter
+                    : assignedFitnessCenter // ignore: cast_nullable_to_non_nullable
+                        as Map<String, dynamic>?,
           )
           as $Val,
     );
@@ -666,6 +677,8 @@ abstract class _$$CustomerDataModelImplCopyWith<$Res>
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') int? profileCompleteness,
     @JsonKey(name: 'organization_id') int? organizationId,
+    @JsonKey(name: 'assigned_fitness_center')
+    Map<String, dynamic>? assignedFitnessCenter,
   });
 }
 
@@ -687,6 +700,7 @@ class __$$CustomerDataModelImplCopyWithImpl<$Res>
     Object? isActiveMember = freezed,
     Object? profileCompleteness = freezed,
     Object? organizationId = freezed,
+    Object? assignedFitnessCenter = freezed,
   }) {
     return _then(
       _$CustomerDataModelImpl(
@@ -710,6 +724,11 @@ class __$$CustomerDataModelImplCopyWithImpl<$Res>
                 ? _value.organizationId
                 : organizationId // ignore: cast_nullable_to_non_nullable
                     as int?,
+        assignedFitnessCenter:
+            freezed == assignedFitnessCenter
+                ? _value._assignedFitnessCenter
+                : assignedFitnessCenter // ignore: cast_nullable_to_non_nullable
+                    as Map<String, dynamic>?,
       ),
     );
   }
@@ -723,7 +742,9 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
     @JsonKey(name: 'is_active_member') this.isActiveMember,
     @JsonKey(name: 'profile_completeness') this.profileCompleteness,
     @JsonKey(name: 'organization_id') this.organizationId,
-  });
+    @JsonKey(name: 'assigned_fitness_center')
+    final Map<String, dynamic>? assignedFitnessCenter,
+  }) : _assignedFitnessCenter = assignedFitnessCenter;
 
   factory _$CustomerDataModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$CustomerDataModelImplFromJson(json);
@@ -740,10 +761,21 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
   @override
   @JsonKey(name: 'organization_id')
   final int? organizationId;
+  final Map<String, dynamic>? _assignedFitnessCenter;
+  @override
+  @JsonKey(name: 'assigned_fitness_center')
+  Map<String, dynamic>? get assignedFitnessCenter {
+    final value = _assignedFitnessCenter;
+    if (value == null) return null;
+    if (_assignedFitnessCenter is EqualUnmodifiableMapView)
+      return _assignedFitnessCenter;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableMapView(value);
+  }
 
   @override
   String toString() {
-    return 'CustomerDataModel(id: $id, isActiveMember: $isActiveMember, profileCompleteness: $profileCompleteness, organizationId: $organizationId)';
+    return 'CustomerDataModel(id: $id, isActiveMember: $isActiveMember, profileCompleteness: $profileCompleteness, organizationId: $organizationId, assignedFitnessCenter: $assignedFitnessCenter)';
   }
 
   @override
@@ -757,7 +789,11 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
             (identical(other.profileCompleteness, profileCompleteness) ||
                 other.profileCompleteness == profileCompleteness) &&
             (identical(other.organizationId, organizationId) ||
-                other.organizationId == organizationId));
+                other.organizationId == organizationId) &&
+            const DeepCollectionEquality().equals(
+              other._assignedFitnessCenter,
+              _assignedFitnessCenter,
+            ));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -768,6 +804,7 @@ class _$CustomerDataModelImpl implements _CustomerDataModel {
     isActiveMember,
     profileCompleteness,
     organizationId,
+    const DeepCollectionEquality().hash(_assignedFitnessCenter),
   );
 
   /// Create a copy of CustomerDataModel
@@ -793,6 +830,8 @@ abstract class _CustomerDataModel implements CustomerDataModel {
     @JsonKey(name: 'is_active_member') final bool? isActiveMember,
     @JsonKey(name: 'profile_completeness') final int? profileCompleteness,
     @JsonKey(name: 'organization_id') final int? organizationId,
+    @JsonKey(name: 'assigned_fitness_center')
+    final Map<String, dynamic>? assignedFitnessCenter,
   }) = _$CustomerDataModelImpl;
 
   factory _CustomerDataModel.fromJson(Map<String, dynamic> json) =
@@ -810,6 +849,9 @@ abstract class _CustomerDataModel implements CustomerDataModel {
   @override
   @JsonKey(name: 'organization_id')
   int? get organizationId;
+  @override
+  @JsonKey(name: 'assigned_fitness_center')
+  Map<String, dynamic>? get assignedFitnessCenter;
 
   /// Create a copy of CustomerDataModel
   /// with the given fields replaced by the non-null parameter values.

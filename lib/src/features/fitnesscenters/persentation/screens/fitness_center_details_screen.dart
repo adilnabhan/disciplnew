@@ -62,6 +62,7 @@ class _FitnessCenterDetailsScreenState
     false,
   );
   Timer? _carouselTimer;
+  CustomerDetailsModel? _customerDetails;
 
   @override
   void initState() {
@@ -75,6 +76,53 @@ class _FitnessCenterDetailsScreenState
       previewData: initialDetails,
     );
     _fetch();
+    _fetchCustomerDetails();
+  }
+
+  Future<void> _fetchCustomerDetails() async {
+    final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+    final customerId = currentUser?.customer?.id;
+    if (customerId != null && _customerDetails == null) {
+      final res = await CustomerDetailsRepository().customerDetails(id: customerId);
+      if (mounted) {
+        res.fold(
+          (_) {},
+          (details) {
+            setState(() {
+              _customerDetails = details;
+            });
+          },
+        );
+      }
+    }
+  }
+
+  bool _isGymAssigned(FitnesscenterDetailsModel details) {
+    if (_customerDetails == null) return false;
+    final assigned = _customerDetails!.assignedFitnessCenter;
+    if (assigned == null) return false;
+
+    final assignedId = int.tryParse(assigned['id']?.toString() ?? '') ??
+        int.tryParse(assigned['fitness_center_id']?.toString() ?? '') ??
+        int.tryParse(assigned['fitness_center']?.toString() ?? '') ??
+        int.tryParse(assigned['pk']?.toString() ?? '');
+
+    final gymId = details.id ?? widget.fitnessCenterId;
+
+    if (assignedId != null && assignedId == gymId) {
+      return true;
+    }
+
+    final assignedName = assigned['name']?.toString()?.trim().toLowerCase();
+    final gymName = details.name?.trim().toLowerCase() ?? widget.previewData?.name?.trim().toLowerCase();
+
+    if (assignedName != null && gymName != null && assignedName.isNotEmpty) {
+      if (assignedName == gymName) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   @override
@@ -1555,7 +1603,8 @@ class _FitnessCenterDetailsScreenState
       return currentUserName.isNotEmpty && name.trim().toLowerCase() == currentUserName.toLowerCase();
     });
 
-    final showAddReviewCard = !hasOwnReview;
+    final isAssigned = _isGymAssigned(details);
+    final showAddReviewCard = isAssigned && !hasOwnReview;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

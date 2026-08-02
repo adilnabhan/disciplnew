@@ -243,6 +243,103 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
                         ),
                       ],
                     ),
+                    () {
+                      final bool isVerifiedState = (data['is_verified'] as bool?) == true ||
+                          data['verification_status']?.toString().toLowerCase() == 'verified';
+                      final bool isRejectedState = (data['is_rejected'] as bool?) == true ||
+                          data['verification_status']?.toString().toLowerCase() == 'rejected';
+
+                      final String? remarksStr = data['rejection_remarks']?.toString() ??
+                          data['remarks']?.toString() ??
+                          data['verification_remarks']?.toString();
+                      final bool hasRemarks = remarksStr != null && remarksStr.trim().isNotEmpty;
+
+                      final String? noteToShow = (isRejectedState && hasRemarks)
+                          ? remarksStr
+                          : (isVerifiedState && hasRemarks)
+                              ? remarksStr
+                              : data['trainer_notes']?.toString();
+                      final bool isRemarksDisplayed =
+                          (isVerifiedState || isRejectedState) && hasRemarks;
+
+                      if (noteToShow == null || noteToShow.trim().isEmpty) {
+                        return const SizedBox.shrink();
+                      }
+
+                      final bool isRed = isRejectedState && hasRemarks;
+
+                      return Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isRed
+                                  ? const Color(0xFFFFF1F2)
+                                  : isRemarksDisplayed
+                                      ? const Color(0xFFF0FDF4)
+                                      : const Color(0xFFFFF5F5),
+                              borderRadius: BorderRadius.circular(12),
+                              border: isRed
+                                  ? Border.all(
+                                      color: const Color(0xFFFECDD3),
+                                      width: 1,
+                                    )
+                                  : isRemarksDisplayed
+                                      ? Border.all(
+                                          color: const Color(0xFFDCFCE7),
+                                          width: 1,
+                                        )
+                                      : null,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  isRed
+                                      ? Icons.cancel_outlined
+                                      : isRemarksDisplayed
+                                          ? Icons.check_circle_outline_rounded
+                                          : Icons.format_quote_rounded,
+                                  color: isRed
+                                      ? AppColors.primary
+                                      : isRemarksDisplayed
+                                          ? const Color(0xFF16A34A)
+                                          : const Color(0xFF666666),
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    noteToShow,
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      fontStyle: isRemarksDisplayed
+                                          ? FontStyle.normal
+                                          : FontStyle.italic,
+                                      fontWeight: isRemarksDisplayed
+                                          ? FontWeight.w500
+                                          : FontWeight.normal,
+                                      color: isRed
+                                          ? AppColors.primary
+                                          : isRemarksDisplayed
+                                              ? const Color(0xFF15803D)
+                                              : const Color(0xFF555555),
+                                      height: 1.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      );
+                    }(),
                   ],
                 ),
               ),

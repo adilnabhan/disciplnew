@@ -815,51 +815,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Health Status',
+              'Other Details',
               style: AppStyles.text16Px.poppins.w600.copyWith(
                 color: AppColors.textDark,
               ),
             ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder:
-                        (_) => BlocProvider.value(
-                          value: _cubit,
-                          child: FitnessDetailsScreen(
-                            customerDetailsModel: customerDetails,
+            if (choicesModel != null)
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder:
+                          (_) => BlocProvider.value(
+                            value: _cubit,
+                            child: HealthStatusScreen(
+                              choicesModel: choicesModel,
+                            ),
                           ),
-                        ),
-                  ),
-                ).then((_) {
-                  _cubit.fetchCustomerDetails();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                    ),
+                  ).then((_) {
+                    _cubit.fetchCustomerDetails();
+                  });
+                },
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.edit, size: 14, color: AppColors.primary),
-                    const SizedBox(width: 4),
                     Text(
-                      'Edit',
-                      style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: AppColors.primary,
+                      'Show all',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: AppColors.textDark,
+                        decoration: TextDecoration.underline,
                       ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(
+                      Icons.north_east,
+                      size: 14,
+                      color: AppColors.textDark,
                     ),
                   ],
                 ),
               ),
-            ),
           ],
         ),
         const SizedBox(height: 10),
@@ -882,95 +879,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _buildDetailRow('Age', age > 0 ? '$age' : '-'),
               const SizedBox(height: 14),
               _buildDetailRow(
-                'Blood Group',
-                (customerDetails.bloodGroup == null ||
-                        customerDetails.bloodGroup!.toLowerCase() == 'unknown')
-                    ? '-'
-                    : customerDetails.bloodGroup!,
+                'Height',
+                customerDetails.height != null &&
+                        customerDetails.height!.isNotEmpty
+                    ? (customerDetails.height!.toUpperCase().contains('CM') ||
+                            customerDetails.height!.toUpperCase().contains('FT')
+                        ? customerDetails.height!
+                        : '${customerDetails.height} CM')
+                    : '-',
+              ),
+              const SizedBox(height: 14),
+              _buildDetailRow(
+                'Weight',
+                customerDetails.weight != null &&
+                        customerDetails.weight!.isNotEmpty
+                    ? (customerDetails.weight!.toUpperCase().contains('KG') ||
+                            customerDetails.weight!.toUpperCase().contains('LBS')
+                        ? customerDetails.weight!
+                        : '${customerDetails.weight} KG')
+                    : '-',
               ),
               const SizedBox(height: 14),
               _buildDetailRow('Health Issues', healthIssues),
-              const SizedBox(height: 14),
-              _buildDetailRow(
-                'Health Status',
-                customerDetails.isHealthy ?? false ? 'Healthy' : 'Not Healthy',
-              ),
-              const SizedBox(height: 14),
-              _buildDetailRow(
-                'Active Scale',
-                '${customerDetails.activeScale ?? 'N/A'}/5',
-              ),
             ],
           ),
         ),
 
-        if (choicesModel != null) ...[
-          const SizedBox(height: 20),
-          // ── Lifestyle section ──
-          Text(
-            'Lifestyle',
-            style: AppStyles.text16Px.poppins.w600.copyWith(
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow(
-                  'Profession',
-                  choicesModel.data.professions
-                      .firstWhere(
-                        (e) => e.value == customerDetails.profession,
-                        orElse: () => const Profession(label: '-', value: ''),
-                      )
-                      .label,
-                ),
-                const SizedBox(height: 14),
-                _buildEmojiRatingRow(
-                  'Work Condition',
-                  int.tryParse(
-                    customerDetails.jobSatisfaction.toString() ?? '',
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _buildDetailRow(
-                  'Working Hour (avg)',
-                  choicesModel.data.workingHours
-                      .firstWhere(
-                        (e) => e.value == customerDetails.averageWorkingHours,
-                        orElse: () => const Profession(label: 'N/A', value: ''),
-                      )
-                      .label,
-                ),
-                const SizedBox(height: 14),
-                _buildDetailRow(
-                  'Sleeping Hour (avg)',
-                  choicesModel.data.sleepHours
-                      .firstWhere(
-                        (e) => e.value == customerDetails.averageSleepingHours,
-                        orElse: () => const Profession(label: 'N/A', value: ''),
-                      )
-                      .label,
-                ),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 40),
+        const SizedBox(height: 16),
       ],
     );
   }
@@ -1041,8 +976,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Pre-fill with existing values, store only the numeric part
     final existingHeight = double.tryParse(customerDetails.height ?? '');
     final existingWeight = double.tryParse(customerDetails.weight ?? '');
-    final dob = customerDetails.dateOfBirth;
-    final existingAge = dob != null ? (DateTime.now().year - dob.year) : null;
+    DateTime? selectedDob = customerDetails.dateOfBirth;
     final existingGender = customerDetails.gender?.toString() ?? 'Male';
 
     final heightController = TextEditingController(
@@ -1059,12 +993,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : existingWeight.toStringAsFixed(1))
           : '',
     );
-    final ageController = TextEditingController(
-      text: existingAge != null ? '$existingAge' : '',
-    );
     final neckController = TextEditingController();
     final waistController = TextEditingController();
     final hipController = TextEditingController();
+
+    CustomerDetailsRepository().fetchBodyMeasurements().then((res) {
+      res.fold((_) => null, (data) {
+        if (data.latest != null) {
+          String fmt(double val) => val == val.toInt().toDouble()
+              ? '${val.toInt()}'
+              : val.toStringAsFixed(1);
+          if (data.latest!.neckCm != null) neckController.text = fmt(data.latest!.neckCm!);
+          if (data.latest!.waistCm != null) waistController.text = fmt(data.latest!.waistCm!);
+          if (data.latest!.hipsCm != null) hipController.text = fmt(data.latest!.hipsCm!);
+        }
+      });
+    });
 
     // Unit state
     String heightUnit = 'cm';
@@ -1092,407 +1036,434 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle bar
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDEE2E6),
-                          borderRadius: BorderRadius.circular(2),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.only(bottom: 20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDEE2E6),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
-                    ),
-                    // Title row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Update Body Metrics',
-                          style: AppStyles.text18Px.poppins.w600.copyWith(
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.of(sheetContext).pop(),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F3F5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Color(0xFF495057),
+                      // Title row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Update Body Metrics',
+                            style: AppStyles.text18Px.poppins.w600.copyWith(
+                              color: AppColors.textDark,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    // Row 1: Height & Weight
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Height',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
+                          GestureDetector(
+                            onTap: () => Navigator.of(sheetContext).pop(),
+                            child: Container(
+                              width: 32,
+                              height: 32,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF1F3F5),
+                                shape: BoxShape.circle,
                               ),
-                              const SizedBox(height: 8),
-                              _buildMetricInputField(
-                                controller: heightController,
-                                hint: 'e.g. 170',
-                                selectedUnit: heightUnit,
-                                units: const ['cm', 'ft'],
-                                onUnitChanged: (val) {
-                                  setSheetState(() => heightUnit = val);
-                                },
+                              child: const Icon(
+                                Icons.close,
+                                size: 18,
+                                color: Color(0xFF495057),
                               ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Weight',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildMetricInputField(
-                                controller: weightController,
-                                hint: 'e.g. 65',
-                                selectedUnit: weightUnit,
-                                units: const ['kg', 'lbs'],
-                                onUnitChanged: (val) {
-                                  setSheetState(() => weightUnit = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Row 2: Age & Gender
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Age',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildSimpleInputField(
-                                controller: ageController,
-                                hint: 'e.g. 25',
-                                keyboardType: TextInputType.number,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Gender',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildGenderDropdown(
-                                selectedGender: gender,
-                                onChanged: (val) {
-                                  setSheetState(() => gender = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Row 3: Neck & Waist
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Neck',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildMetricInputField(
-                                controller: neckController,
-                                hint: 'e.g. 38',
-                                selectedUnit: neckUnit,
-                                units: const ['cm', 'in'],
-                                onUnitChanged: (val) {
-                                  setSheetState(() => neckUnit = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Waist',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildMetricInputField(
-                                controller: waistController,
-                                hint: 'e.g. 80',
-                                selectedUnit: waistUnit,
-                                units: const ['cm', 'in'],
-                                onUnitChanged: (val) {
-                                  setSheetState(() => waistUnit = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Row 4: Hip & Placeholder
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Hip',
-                                style: AppStyles.text13Px.poppins.w600.copyWith(
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildMetricInputField(
-                                controller: hipController,
-                                hint: 'e.g. 95',
-                                selectedUnit: hipUnit,
-                                units: const ['cm', 'in'],
-                                onUnitChanged: (val) {
-                                  setSheetState(() => hipUnit = val);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Expanded(child: SizedBox()),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    // Save button
-                    BlocConsumer<ProfileCubit, ProfileState>(
-                      listener: (ctx, state) {
-                        state.updateProfileDetails?.fold(
-                          () => null,
-                          (either) => either.fold(
-                            (error) {
-                              Navigator.of(sheetContext).pop();
-                              Dialogs.showSnack(
-                                msg: 'Failed to update metrics. Try again.',
-                              );
-                            },
-                            (_) {
-                              Navigator.of(sheetContext).pop();
-                              Dialogs.showSnack(
-                                msg: 'Body metrics updated successfully!',
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      builder: (ctx, state) {
-                        final isLoading =
-                            state.updateProfileDetails?.isNone() ?? false;
-                        return SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14)),
-                              elevation: 0,
                             ),
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                                    final heightText =
-                                        heightController.text.trim();
-                                    final weightText =
-                                        weightController.text.trim();
-                                    final ageText =
-                                        ageController.text.trim();
-                                    final neckText =
-                                        neckController.text.trim();
-                                    final waistText =
-                                        waistController.text.trim();
-                                    final hipText =
-                                        hipController.text.trim();
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      // Row 1: Height & Weight
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Height',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: heightController,
+                                  hint: 'e.g. 170',
+                                  selectedUnit: heightUnit,
+                                  units: const ['cm', 'ft'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => heightUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Weight',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: weightController,
+                                  hint: 'e.g. 65',
+                                  selectedUnit: weightUnit,
+                                  units: const ['kg', 'lbs'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => weightUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Row 2: Date of Birth & Gender
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Date of Birth',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildDateField(
+                                  context: ctx,
+                                  selectedDate: selectedDob,
+                                  onDateSelected: (newDate) {
+                                    setSheetState(() => selectedDob = newDate);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Gender',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildGenderDropdown(
+                                  selectedGender: gender,
+                                  onChanged: (val) {
+                                    setSheetState(() => gender = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Row 3: Neck & Waist
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Neck',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: neckController,
+                                  hint: 'e.g. 38',
+                                  selectedUnit: neckUnit,
+                                  units: const ['cm', 'in'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => neckUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Waist',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: waistController,
+                                  hint: 'e.g. 80',
+                                  selectedUnit: waistUnit,
+                                  units: const ['cm', 'in'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => waistUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      // Row 4: Hip & Placeholder
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hip',
+                                  style: AppStyles.text13Px.poppins.w600.copyWith(
+                                    color: AppColors.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _buildMetricInputField(
+                                  controller: hipController,
+                                  hint: 'e.g. 95',
+                                  selectedUnit: hipUnit,
+                                  units: const ['cm', 'in'],
+                                  onUnitChanged: (val) {
+                                    setSheetState(() => hipUnit = val);
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          const Expanded(child: SizedBox()),
+                        ],
+                      ),
+                      const SizedBox(height: 32),
+                      // Save button
+                      BlocConsumer<ProfileCubit, ProfileState>(
+                        listener: (ctx, state) {
+                          state.updateProfileDetails?.fold(
+                            () => null,
+                            (either) => either.fold(
+                              (error) {
+                                Navigator.of(sheetContext).pop();
+                                Dialogs.showSnack(
+                                  msg: 'Failed to update metrics. Try again.',
+                                );
+                              },
+                              (_) {
+                                Navigator.of(sheetContext).pop();
+                                Dialogs.showSnack(
+                                  msg: 'Body metrics updated successfully!',
+                                );
+                              },
+                            ),
+                          );
+                        },
+                        builder: (ctx, state) {
+                          final isLoading =
+                              state.updateProfileDetails?.isNone() ?? false;
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
+                                elevation: 0,
+                              ),
+                              onPressed: isLoading
+                                  ? null
+                                  : () async {
+                                      final heightText = heightController.text.trim();
+                                      final weightText = weightController.text.trim();
+                                      final neckText = neckController.text.trim();
+                                      final waistText = waistController.text.trim();
+                                      final hipText = hipController.text.trim();
 
-                                    if (heightText.isEmpty ||
-                                        weightText.isEmpty ||
-                                        ageText.isEmpty) {
-                                      Dialogs.showSnack(
-                                        msg: 'Please enter height, weight, and age.',
-                                      );
-                                      return;
-                                    }
-                                    double? heightVal =
-                                        double.tryParse(heightText);
-                                    double? weightVal =
-                                        double.tryParse(weightText);
-                                    int? ageVal =
-                                        int.tryParse(ageText);
-                                    if (heightVal == null ||
-                                        weightVal == null ||
-                                        ageVal == null) {
-                                      Dialogs.showSnack(
-                                        msg: 'Please enter valid numbers.',
-                                      );
-                                      return;
-                                    }
-                                    // Convert to cm if needed
-                                    if (heightUnit == 'ft') {
-                                      heightVal = heightVal * 30.48;
-                                    }
-                                    // Convert to kg if needed
-                                    if (weightUnit == 'lbs') {
-                                      weightVal = weightVal * 0.453592;
-                                    }
+                                      if (heightText.isEmpty || weightText.isEmpty || selectedDob == null) {
+                                        Dialogs.showSnack(
+                                          msg: 'Please enter height, weight, and date of birth.',
+                                        );
+                                        return;
+                                      }
+                                      double? heightVal = double.tryParse(heightText);
+                                      double? weightVal = double.tryParse(weightText);
+                                      if (heightVal == null || weightVal == null) {
+                                        Dialogs.showSnack(
+                                          msg: 'Please enter valid numbers.',
+                                        );
+                                        return;
+                                      }
+                                      final ageVal = DateTime.now().year - selectedDob!.year;
+                                      // Convert to cm if needed
+                                      if (heightUnit == 'ft') {
+                                        heightVal = heightVal * 30.48;
+                                      }
+                                      // Convert to kg if needed
+                                      if (weightUnit == 'lbs') {
+                                        weightVal = weightVal * 0.453592;
+                                      }
 
-                                    double? neckVal =
-                                        double.tryParse(neckText);
-                                    double? waistVal =
-                                        double.tryParse(waistText);
-                                    double? hipVal =
-                                        double.tryParse(hipText);
+                                      double? neckVal =
+                                          double.tryParse(neckText);
+                                      double? waistVal =
+                                          double.tryParse(waistText);
+                                      double? hipVal =
+                                          double.tryParse(hipText);
 
-                                    // Calculate body fat percentage
-                                    double bfPercentageVal;
-                                    final bmiVal = weightVal / pow(heightVal / 100, 2);
-                                    if (neckVal != null && waistVal != null && (gender.toLowerCase().startsWith('m') || hipVal != null)) {
-                                      // Convert neck, waist, hip to cm
-                                      double neckCm = neckVal;
-                                      if (neckUnit == 'in') neckCm = neckVal * 2.54;
-                                      double waistCm = waistVal;
-                                      if (waistUnit == 'in') waistCm = waistVal * 2.54;
-                                      
-                                      if (gender.toLowerCase().startsWith('f')) {
-                                        double hipCm = hipVal ?? 0.0;
-                                        if (hipUnit == 'in') hipCm = hipVal! * 2.54;
+                                      // Calculate body fat percentage
+                                      double bfPercentageVal;
+                                      final bmiVal = weightVal / pow(heightVal / 100, 2);
+                                      if (neckVal != null && waistVal != null && (gender.toLowerCase().startsWith('m') || hipVal != null)) {
+                                        // Convert neck, waist, hip to cm
+                                        double neckCm = neckVal;
+                                        if (neckUnit == 'in') neckCm = neckVal * 2.54;
+                                        double waistCm = waistVal;
+                                        if (waistUnit == 'in') waistCm = waistVal * 2.54;
                                         
-                                        final val = 1.29579 - 0.35004 * (log(waistCm + hipCm - neckCm) / ln10) + 0.22100 * (log(heightVal) / ln10);
-                                        bfPercentageVal = val > 0 ? (495 / val) - 450 : ((1.20 * bmiVal) + (0.23 * ageVal) - 5.4);
+                                        if (gender.toLowerCase().startsWith('f')) {
+                                          double hipCm = hipVal ?? 0.0;
+                                          if (hipUnit == 'in') hipCm = hipVal! * 2.54;
+                                          
+                                          final val = 1.29579 - 0.35004 * (log(waistCm + hipCm - neckCm) / ln10) + 0.22100 * (log(heightVal) / ln10);
+                                          bfPercentageVal = val > 0 ? (495 / val) - 450 : ((1.20 * bmiVal) + (0.23 * ageVal) - 5.4);
+                                        } else {
+                                          final val = 1.0324 - 0.19077 * (log(waistCm - neckCm) / ln10) + 0.15456 * (log(heightVal) / ln10);
+                                          bfPercentageVal = val > 0 ? (495 / val) - 450 : ((1.20 * bmiVal) + (0.23 * ageVal) - 16.2);
+                                        }
                                       } else {
-                                        final val = 1.0324 - 0.19077 * (log(waistCm - neckCm) / ln10) + 0.15456 * (log(heightVal) / ln10);
-                                        bfPercentageVal = val > 0 ? (495 / val) - 450 : ((1.20 * bmiVal) + (0.23 * ageVal) - 16.2);
+                                        // Fallback to BMI-based body fat calculation
+                                        if (gender.toLowerCase().startsWith('f')) {
+                                          bfPercentageVal = (1.20 * bmiVal) + (0.23 * ageVal) - 5.4;
+                                        } else {
+                                          bfPercentageVal = (1.20 * bmiVal) + (0.23 * ageVal) - 16.2;
+                                        }
                                       }
-                                    } else {
-                                      // Fallback to BMI-based body fat calculation
-                                      if (gender.toLowerCase().startsWith('f')) {
-                                        bfPercentageVal = (1.20 * bmiVal) + (0.23 * ageVal) - 5.4;
-                                      } else {
-                                        bfPercentageVal = (1.20 * bmiVal) + (0.23 * ageVal) - 16.2;
-                                      }
-                                    }
 
-                                    // Clamp body fat percentage between 2% and 60% for safety
-                                    bfPercentageVal = bfPercentageVal.clamp(2.0, 60.0);
+                                      // Clamp body fat percentage between 2% and 60% for safety
+                                      bfPercentageVal = bfPercentageVal.clamp(2.0, 60.0);
 
-                                    final heightStr = heightVal.toStringAsFixed(2);
-                                    final weightStr = weightVal.toStringAsFixed(2);
-                                    
-                                    final newDob = DateTime(DateTime.now().year - ageVal, dob?.month ?? 1, dob?.day ?? 1);
-                                    final dobStr = '${newDob.year}-${newDob.month.toString().padLeft(2, '0')}-${newDob.day.toString().padLeft(2, '0')}';
-                                    
-                                    await _cubit.updateHealthProfile(
-                                      bloodGroup: customerDetails.bloodGroup ?? '',
-                                      height: heightStr,
-                                      weight: weightStr,
-                                      extraBody: {
+                                      final heightStr = heightVal.toStringAsFixed(2);
+                                      final weightStr = weightVal.toStringAsFixed(2);
+                                      
+                                      final dobStr = '${selectedDob!.year}-${selectedDob!.month.toString().padLeft(2, '0')}-${selectedDob!.day.toString().padLeft(2, '0')}';
+                                      
+                                      final Map<String, dynamic> extraPayload = {
                                         'blood_group': customerDetails.bloodGroup ?? '',
                                         'height': heightStr,
                                         'weight': weightStr,
-                                        'gender': gender,
+                                        'gender': gender.toLowerCase(),
                                         'date_of_birth': dobStr,
                                         'bf_percentage': bfPercentageVal.toStringAsFixed(1),
-                                      },
-                                    );
-                                  },
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
+                                      };
+
+                                      if (neckVal != null) {
+                                        double neckCm = neckVal;
+                                        if (neckUnit == 'in') neckCm = neckVal * 2.54;
+                                        extraPayload['neck'] = neckCm.toStringAsFixed(1);
+                                      }
+                                      if (waistVal != null) {
+                                        double waistCm = waistVal;
+                                        if (waistUnit == 'in') waistCm = waistVal * 2.54;
+                                        extraPayload['waist'] = waistCm.toStringAsFixed(1);
+                                      }
+                                      if (hipVal != null) {
+                                        double hipCm = hipVal;
+                                        if (hipUnit == 'in') hipCm = hipVal * 2.54;
+                                        extraPayload['hip'] = hipCm.toStringAsFixed(1);
+                                      }
+
+                                      if (neckVal != null || waistVal != null || hipVal != null) {
+                                        double? finalNeckCm;
+                                        double? finalWaistCm;
+                                        double? finalHipCm;
+                                        if (neckVal != null) {
+                                          finalNeckCm = neckUnit == 'in' ? neckVal * 2.54 : neckVal;
+                                        }
+                                        if (waistVal != null) {
+                                          finalWaistCm = waistUnit == 'in' ? waistVal * 2.54 : waistVal;
+                                        }
+                                        if (hipVal != null) {
+                                          finalHipCm = hipUnit == 'in' ? hipVal * 2.54 : hipVal;
+                                        }
+                                        await CustomerDetailsRepository().logBodyMeasurements(
+                                          neck: finalNeckCm,
+                                          waist: finalWaistCm,
+                                          hip: finalHipCm,
+                                        );
+                                      }
+
+                                      await _cubit.updateHealthProfile(
+                                        bloodGroup: customerDetails.bloodGroup ?? '',
+                                        height: heightStr,
+                                        weight: weightStr,
+                                        extraBody: extraPayload,
+                                      );
+                                    },
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Save Changes',
+                                      style: AppStyles.text16Px.poppins.w600
+                                          .copyWith(color: Colors.white),
                                     ),
-                                  )
-                                : Text(
-                                    'Save Changes',
-                                    style: AppStyles.text16Px.poppins.w600
-                                        .copyWith(color: Colors.white),
-                                  ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    // Cancel
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(sheetContext).pop(),
-                        child: Text(
-                          'Cancel',
-                          style: AppStyles.text14Px.poppins.w600.copyWith(
-                            color: AppColors.primary,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      // Cancel
+                      Center(
+                        child: GestureDetector(
+                          onTap: () => Navigator.of(sheetContext).pop(),
+                          child: Text(
+                            'Cancel',
+                            style: AppStyles.text14Px.poppins.w600.copyWith(
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1634,6 +1605,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
           items: const [
             DropdownMenuItem(value: 'Male', child: Text('Male')),
             DropdownMenuItem(value: 'Female', child: Text('Female')),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateField({
+    required BuildContext context,
+    required DateTime? selectedDate,
+    required void Function(DateTime) onDateSelected,
+  }) {
+    final text = selectedDate != null
+        ? '${selectedDate.day.toString().padLeft(2, '0')}/${selectedDate.month.toString().padLeft(2, '0')}/${selectedDate.year}'
+        : 'DD/MM/YYYY';
+
+    return GestureDetector(
+      onTap: () async {
+        final now = DateTime.now();
+        final picked = await showDatePicker(
+          context: context,
+          initialDate: selectedDate ?? DateTime(2000, 1, 1),
+          firstDate: DateTime(1900),
+          lastDate: now,
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: const ColorScheme.light(primary: AppColors.primary),
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (picked != null) {
+          onDateSelected(picked);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              text,
+              style: AppStyles.text14Px.poppins.w500.copyWith(
+                color: selectedDate != null
+                    ? AppColors.textDark
+                    : const Color(0xFFADB5BD),
+              ),
+            ),
+            const Icon(
+              Icons.calendar_today_rounded,
+              size: 18,
+              color: Color(0xFF868E96),
+            ),
           ],
         ),
       ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/completed_badge.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
@@ -88,8 +89,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     });
   }
 
-  Future<void> _loadWorkoutLogForSelectedDate() async {
-    if (mounted) {
+  Future<void> _loadWorkoutLogForSelectedDate({bool showLoading = true}) async {
+    if (mounted && showLoading) {
       setState(() {
         _isLoadingDateLog = true;
         _activeError = null;
@@ -239,6 +240,14 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               if (data['id'] != null) {
                 hasActiveSession = true;
                 _activeSessionData = data;
+              } else {
+                _activeSessionData = null;
+              }
+            } else if (data is List && data.isNotEmpty) {
+              final first = data.first;
+              if (first is Map<String, dynamic> && first['id'] != null) {
+                hasActiveSession = true;
+                _activeSessionData = first;
               } else {
                 _activeSessionData = null;
               }
@@ -681,6 +690,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
         final isVerified = (workoutItem['is_verified'] as bool?) ?? false;
+        final isRejected =
+            ((workoutItem['is_rejected'] as bool?) ?? false) ||
+            (workoutItem['verification_status']?.toString().toLowerCase() ==
+                'rejected');
         final startedAt =
             workoutItem['started_at']?.toString() ??
             workoutItem['created_at']?.toString() ??
@@ -707,6 +720,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               hasImage: true,
               isCompleted: isCompleted,
               isVerified: isVerified,
+              isRejected: isRejected,
               duration: durationStr,
               trainerName: workoutItem['trainer_name']?.toString(),
               isMembershipExpired: isExpired,
@@ -719,6 +733,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               verificationStatus:
                   workoutItem['verification_status']?.toString() ??
                   workoutItem['verification']?.toString(),
+              trainerNotes: workoutItem['trainer_notes']?.toString(),
+              remarks:
+                  workoutItem['rejection_remarks']?.toString() ??
+                  workoutItem['remarks']?.toString() ??
+                  workoutItem['verification_remarks']?.toString(),
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -1542,6 +1561,7 @@ class _WorkoutCard extends StatelessWidget {
     required this.hasImage,
     required this.isCompleted,
     this.isVerified = false,
+    this.isRejected = false,
     this.duration,
     this.onTap,
     this.trainerName,
@@ -1550,6 +1570,8 @@ class _WorkoutCard extends StatelessWidget {
     this.isLoadingGymLogo = false,
     this.trainerProfileImage,
     this.verificationStatus,
+    this.trainerNotes,
+    this.remarks,
   });
 
   final int index;
@@ -1558,6 +1580,7 @@ class _WorkoutCard extends StatelessWidget {
   final bool hasImage;
   final bool isCompleted;
   final bool isVerified;
+  final bool isRejected;
   final String? duration;
   final VoidCallback? onTap;
   final String? trainerName;
@@ -1566,6 +1589,8 @@ class _WorkoutCard extends StatelessWidget {
   final bool isLoadingGymLogo;
   final String? trainerProfileImage;
   final String? verificationStatus;
+  final String? trainerNotes;
+  final String? remarks;
 
   @override
   Widget build(BuildContext context) {
@@ -1606,16 +1631,17 @@ class _WorkoutCard extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: Container(
-            height: isCompleted ? 140 : 100,
+            height: isMentorGiven ? null : (isCompleted ? 140 : 100),
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
+              color: isMentorGiven ? Colors.white : null,
               gradient:
                   isMentorGiven
                       ? const LinearGradient(
-                        colors: [Color(0xffFFD5D5), Color(0xffFFD5D5)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
+                        colors: [Color(0xFFFFEAEA), Color(0xFFFFF2F2)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       )
                       : cardGradient,
               borderRadius: BorderRadius.circular(20),
@@ -1630,190 +1656,342 @@ class _WorkoutCard extends StatelessWidget {
                       )
                       : null,
               boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
+                if (isMentorGiven) ...[
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 22,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.14),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ] else ...[
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
               ],
             ),
             child:
                 isMentorGiven
-                    ? Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            left: 16,
-                            right: 68,
-                            top: 16,
-                            bottom: 16,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment:
-                                isCompleted
-                                    ? MainAxisAlignment.start
-                                    : MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Gym Profile Logo
-                                  isLoadingGymLogo
-                                      ? const KShimmer(
-                                        width: 68,
-                                        height: 68,
-                                        radius: 12,
-                                      )
-                                      : Container(
-                                        width: 68,
-                                        height: 68,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          child: ImageNetwork(
-                                            gymLogo,
-                                            fit: BoxFit.cover,
-                                            errorWidget: const Center(
-                                              child: Icon(
-                                                Icons.fitness_center,
-                                                color: Colors.grey,
-                                                size: 28,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
+                    ? Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Left: Gym/Workout image
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child:
+                                isLoadingGymLogo
+                                    ? const KShimmer(
+                                      width: 90,
+                                      height: 90,
+                                      radius: 16,
+                                    )
+                                    : (gymLogo != null && gymLogo!.isNotEmpty)
+                                    ? ImageNetwork(
+                                      gymLogo,
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                      errorWidget: Image.asset(
+                                        'assets/images/png/vectors/workout_plan_creation_image.png',
+                                        width: 90,
+                                        height: 90,
+                                        fit: BoxFit.cover,
                                       ),
-                                  const SizedBox(width: 16),
-                                  // Middle: Workout title and Trainer Name
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF222222),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            if (trainerProfileImage != null &&
-                                                trainerProfileImage!
-                                                    .isNotEmpty) ...[
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: ImageNetwork(
+                                    )
+                                    : Image.asset(
+                                      'assets/images/png/vectors/workout_plan_creation_image.png',
+                                      width: 90,
+                                      height: 90,
+                                      fit: BoxFit.cover,
+                                    ),
+                          ),
+                          const SizedBox(width: 16),
+                          // Right: Title, Trainer, Notes, Duration
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF222222),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    // Trainer avatar
+                                    Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Color(0xFFE2E8F0),
+                                      ),
+                                      child: ClipOval(
+                                        child:
+                                            trainerProfileImage != null &&
+                                                    trainerProfileImage!
+                                                        .isNotEmpty
+                                                ? ImageNetwork(
                                                   trainerProfileImage,
                                                   width: 20,
                                                   height: 20,
                                                   fit: BoxFit.cover,
                                                   errorWidget: const Icon(
-                                                    Icons.account_circle,
-                                                    size: 20,
+                                                    Icons.person,
+                                                    size: 12,
                                                     color: Colors.grey,
                                                   ),
+                                                )
+                                                : const Icon(
+                                                  Icons.person,
+                                                  size: 12,
+                                                  color: Colors.grey,
                                                 ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    // Trainer name
+                                    Expanded(
+                                      child: RichText(
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        text: TextSpan(
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 13,
+                                            color: Color(0xFF666666),
+                                          ),
+                                          children: [
+                                            const TextSpan(
+                                              text: 'Assigned by ',
+                                            ),
+                                            TextSpan(
+                                              text: trainerName ?? '',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.primary,
                                               ),
-                                              const SizedBox(width: 6),
-                                            ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                () {
+                                  final bool isVerifiedState =
+                                      isVerified ||
+                                      (verificationStatus?.toLowerCase() ==
+                                          'verified');
+                                  final bool isRejectedState =
+                                      isRejected ||
+                                      (verificationStatus?.toLowerCase() ==
+                                          'rejected');
+
+                                  final bool hasRemarks =
+                                      remarks != null &&
+                                      remarks!.trim().isNotEmpty;
+                                  final String? noteToShow =
+                                      (isRejectedState && hasRemarks)
+                                          ? remarks
+                                          : (isVerifiedState && hasRemarks)
+                                          ? remarks
+                                          : trainerNotes;
+                                  final bool isRemarksDisplayed =
+                                      (isVerifiedState || isRejectedState) &&
+                                      hasRemarks;
+
+                                  if (noteToShow == null ||
+                                      noteToShow.trim().isEmpty) {
+                                    return const SizedBox.shrink();
+                                  }
+
+                                  final bool isRed =
+                                      isRejectedState && hasRemarks;
+
+                                  return Column(
+                                    children: [
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 10,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isRed
+                                                  ? const Color(0xFFFFF1F2)
+                                                  : isRemarksDisplayed
+                                                  ? const Color(0xFFF0FDF4)
+                                                  : Colors.white.withValues(
+                                                    alpha: 0.6,
+                                                  ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                          border:
+                                              isRed
+                                                  ? Border.all(
+                                                    color: const Color(
+                                                      0xFFFECDD3,
+                                                    ),
+                                                    width: 1,
+                                                  )
+                                                  : isRemarksDisplayed
+                                                  ? Border.all(
+                                                    color: const Color(
+                                                      0xFFDCFCE7,
+                                                    ),
+                                                    width: 1,
+                                                  )
+                                                  : null,
+                                        ),
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Icon(
+                                              isRed
+                                                  ? Icons.cancel_outlined
+                                                  : isRemarksDisplayed
+                                                  ? Icons
+                                                      .check_circle_outline_rounded
+                                                  : Icons.format_quote_rounded,
+                                              color:
+                                                  isRed
+                                                      ? AppColors.primary
+                                                      : isRemarksDisplayed
+                                                      ? const Color(0xFF16A34A)
+                                                      : const Color(0xFF666666),
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
                                             Expanded(
                                               child: Text(
-                                                '$trainerName',
-                                                maxLines: 1,
+                                                noteToShow,
+                                                maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
+                                                style: TextStyle(
                                                   fontFamily: 'Poppins',
-                                                  fontSize: 14,
-                                                  color: Color(0xFF222222),
-                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 13,
+                                                  fontStyle:
+                                                      isRemarksDisplayed
+                                                          ? FontStyle.normal
+                                                          : FontStyle.italic,
+                                                  fontWeight:
+                                                      isRemarksDisplayed
+                                                          ? FontWeight.w500
+                                                          : FontWeight.normal,
+                                                  color:
+                                                      isRed
+                                                          ? AppColors.primary
+                                                          : isRemarksDisplayed
+                                                          ? const Color(
+                                                            0xFF15803D,
+                                                          )
+                                                          : const Color(
+                                                            0xFF555555,
+                                                          ),
+                                                  height: 1.3,
                                                 ),
                                               ),
                                             ),
                                           ],
                                         ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
+                                  );
+                                }(),
+                                if (isCompleted) ...[
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Duration: ${duration ?? '--'}',
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF666666),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        (isRejected ||
+                                                verificationStatus
+                                                        ?.toLowerCase() ==
+                                                    'rejected')
+                                            ? '• Rejected'
+                                            : (isVerified ||
+                                                verificationStatus
+                                                        ?.toLowerCase() ==
+                                                    'verified')
+                                            ? '• Verified'
+                                            : '• Pending',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color:
+                                              (isRejected ||
+                                                      verificationStatus
+                                                              ?.toLowerCase() ==
+                                                          'rejected')
+                                                  ? AppColors.primary
+                                                  : (isVerified ||
+                                                      verificationStatus
+                                                              ?.toLowerCase() ==
+                                                          'verified')
+                                                  ? const Color(0xFF019C37)
+                                                  : const Color(0xFFA9AF00),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                              if (isCompleted) ...[
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Duration: ${duration ?? '--'}',
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF222222),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      isVerified ? '• Verified' : '• Pending',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            isVerified
-                                                ? const Color(0xFF019C37)
-                                                : const Color(0xFFA9AF00),
-                                      ),
-                                    ),
-                                  ],
-                                ),
                               ],
-                            ],
-                          ),
-                        ),
-                        // Right: Chevron Button (always show, vertically centered)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFC84A4A),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.06),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.chevron_right,
-                                size: 24,
-                                color: Colors.white,
-                              ),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 8),
+                          // Right Arrow
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.chevron_right,
+                              size: 22,
+                              color: Color(0xFF020202),
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                     : Stack(
                       children: [
@@ -1953,6 +2131,21 @@ class _WorkoutCard extends StatelessWidget {
                       width: 28,
                       height: 27,
                     )
+                    : (isRejected ||
+                        verificationStatus?.toLowerCase() == 'rejected')
+                    ? Container(
+                      width: 28,
+                      height: 27,
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    )
                     : isVerified
                     ? SvgPicture.asset(
                       'assets/images/svg/icons/trainer_verified_tick.svg',
@@ -1997,15 +2190,28 @@ class _RestDayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.only(top: 60),
-        child: Text(
-          'No workout created on this day .',
-          style: AppStyles.text14Px.poppins.w500.copyWith(
-            color: const Color(0xFF94A3B8),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 40),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Image.asset(
+            'assets/images/png/vectors/No_workout-removebg-preview.png',
+            width: 180,
+            height: 180,
+            fit: BoxFit.contain,
           ),
-        ),
+
+          Text(
+            'No workout on this day',
+            textAlign: TextAlign.center,
+            style: AppStyles.text14Px.poppins.w500.copyWith(
+              color: const Color(0xFF94A3B8),
+            ),
+          ),
+        ],
       ),
     );
   }

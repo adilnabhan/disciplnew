@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
@@ -370,31 +371,98 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                     ),
                   ),
                 ),
-                const Expanded(
-                  flex: 2,
-                  child: Text(
-                    'kg',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF212121),
-                      height: 1.0,
+                Expanded(
+                  flex: 3,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: () {
+                        final val = exercise['weight_type']?.toString();
+                        if (val == null) return 'kg';
+                        final lower = val.toLowerCase().replaceAll(' ', '');
+                        if (lower == 'bw') return 'BW';
+                        if (lower == 'kg+bw' || lower == 'kgbw') return 'kg+BW';
+                        if (lower == 'baronly' || lower == 'bo') return 'Bar only';
+                        return 'kg';
+                      }(),
+                      isDense: true,
+                      isExpanded: true,
+                      alignment: Alignment.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF212121),
+                      ),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'kg',
+                          child: Center(child: Text('kg')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'BW',
+                          child: Center(child: Text('BW')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'kg+BW',
+                          child: Center(child: Text('kg+BW')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Bar only',
+                          child: Center(child: Text('Bar only')),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            exercise['weight_type'] = val;
+                          });
+                        }
+                      },
                     ),
                   ),
                 ),
                 Expanded(
-                  flex: 2,
-                  child: Text(
-                    repsHeader,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF212121),
-                      height: 1.0,
+                  flex: 3,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: () {
+                        final val = exercise['track_by']?.toString().toLowerCase();
+                        if (val == 'time' || val == 'sec' || val == 'secs' || val == 'seconds') return 'time';
+                        if (val == 'distance' || val == 'dist' || val == 'km' || val == 'm') return 'distance';
+                        return 'rep';
+                      }(),
+                      isDense: true,
+                      isExpanded: true,
+                      alignment: Alignment.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF212121),
+                      ),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'rep',
+                          child: Center(child: Text('Rep')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'time',
+                          child: Center(child: Text('Sec')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'distance',
+                          child: Center(child: Text('Distance')),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            exercise['track_by'] = val;
+                          });
+                        }
+                      },
                     ),
                   ),
                 ),
@@ -469,14 +537,17 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                       ),
                       // kg Input Box
                       Expanded(
-                        flex: 2,
+                        flex: 3,
                         child: Align(
                           alignment: Alignment.center,
                           child: SizedBox(
-                            width: 60,
+                            width: 75,
                             child: TextFormField(
                               initialValue: set['kg'] as String?,
                               readOnly: widget.isReadOnly,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(8),
+                              ],
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
@@ -504,17 +575,29 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                           ),
                         ),
                       ),
-                      // Rep Input Box
+                      // Rep / Sec / Distance Input Box
                       Expanded(
-                        flex: 2,
+                        flex: 3,
                         child: Align(
                           alignment: Alignment.center,
                           child: SizedBox(
-                            width: 60,
+                            width: 75,
                             child: TextFormField(
+                              key: ValueKey(
+                                '${exerciseIndex}_${setIndex}_reps_${exercise['track_by']}',
+                              ),
                               initialValue: set['reps'] as String?,
                               readOnly: widget.isReadOnly,
-                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(8),
+                              ],
+                              keyboardType: () {
+                                final trackBy = exercise['track_by']?.toString().toLowerCase();
+                                if (trackBy == 'distance' || trackBy == 'dist' || trackBy == 'km' || trackBy == 'm') {
+                                  return const TextInputType.numberWithOptions(decimal: true);
+                                }
+                                return TextInputType.number;
+                              }(),
                               textAlign: TextAlign.center,
                               style: const TextStyle(
                                 fontFamily: 'Poppins',

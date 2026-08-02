@@ -90,7 +90,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           sessionId: activeSessionId!,
           title: activeTitle,
         );
-        
+
         bool finishSuccess = false;
         finishRes.fold(
           (error) {
@@ -103,7 +103,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         );
 
         if (!finishSuccess) {
-          print('DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...');
+          print(
+            'DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...',
+          );
           final deleteRes = await WorkoutRepository().deleteActiveSession();
           deleteRes.fold(
             (error) => print('DEBUG: Failed to delete active session: $error'),
@@ -124,6 +126,17 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           print(
             'DEBUG: Successfully started a new session! Response data: $data',
           );
+          int? sessionId;
+          int? planDayId;
+          if (data is Map<String, dynamic>) {
+            if (data['id'] != null) {
+              sessionId = data['id'] as int;
+            }
+            if (data['plan_day'] != null) {
+              planDayId = int.tryParse(data['plan_day'].toString());
+            }
+          }
+          emit(state.copyWith(sessionId: sessionId, planDayId: planDayId));
           loadActiveSession();
         },
       );
@@ -173,7 +186,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           sessionId: activeSessionId!,
           title: activeTitle,
         );
-        
+
         bool finishSuccess = false;
         finishRes.fold(
           (error) {
@@ -186,7 +199,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         );
 
         if (!finishSuccess) {
-          print('DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...');
+          print(
+            'DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...',
+          );
           final deleteRes = await WorkoutRepository().deleteActiveSession();
           deleteRes.fold(
             (error) => print('DEBUG: Failed to delete active session: $error'),
@@ -196,7 +211,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       }
 
       // 3. Now start a brand new session!
-      print('DEBUG: Starting preset session with title: ${preset.title} and ID: ${preset.id}...');
+      print(
+        'DEBUG: Starting preset session with title: ${preset.title} and ID: ${preset.id}...',
+      );
       final result = await WorkoutRepository().startSession(
         title: preset.title,
         presetId: preset.id,
@@ -209,6 +226,17 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         },
         (data) async {
           print('DEBUG: Successfully started preset session on backend!');
+          int? sessionId;
+          int? planDayId;
+          if (data is Map<String, dynamic>) {
+            if (data['id'] != null) {
+              sessionId = data['id'] as int;
+            }
+            if (data['plan_day'] != null) {
+              planDayId = int.tryParse(data['plan_day'].toString());
+            }
+          }
+          emit(state.copyWith(sessionId: sessionId, planDayId: planDayId));
 
           // 5. Reload active session from backend
           await loadActiveSession();
@@ -222,102 +250,249 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
   }
 
-  Future<Either<ApiException, dynamic>> finishSession({required String title}) async {
-    await flushPendingUpdates();
-    final activeRes = await WorkoutRepository().getActiveSession();
-    int? activeSessionId;
-    int? planDayId;
-    activeRes.fold((error) => null, (data) {
-      if (data != null && data is Map<String, dynamic>) {
-        if (data['id'] != null) {
-          activeSessionId = data['id'] as int;
+  Map<String, dynamic> _buildSessionPayload(String title, {String? status}) {
+    final List<Map<String, dynamic>> logsList = [];
+    for (int i = 0; i < state.exercises.length; i++) {
+      final ex = state.exercises[i];
+      final logId = int.tryParse(ex['workout_log_id']?.toString() ?? '');
+      final workoutId = int.tryParse(ex['id']?.toString() ?? '');
+
+      final trackBy = (ex['track_by']?.toString() ?? 'rep').toLowerCase();
+      final inputType =
+          (trackBy == 'time' ||
+                  trackBy == 'sec' ||
+                  trackBy == 'secs' ||
+                  trackBy == 'seconds')
+              ? 'time'
+              : ((trackBy == 'distance' ||
+                      trackBy == 'dist' ||
+                      trackBy == 'km' ||
+                      trackBy == 'm')
+                  ? 'distance'
+                  : 'rep');
+
+      final List<Map<String, dynamic>> setLogsList = [];
+      final sets = ex['sets'] as List? ?? [];
+      for (int j = 0; j < sets.length; j++) {
+        final s = sets[j];
+        final setId = int.tryParse(s['id']?.toString() ?? '');
+        final setNum = int.tryParse(s['setNum']?.toString() ?? '') ?? (j + 1);
+        final isCompleted = s['checked'] as bool? ?? false;
+
+        final valStr = s['reps']?.toString() ?? s['value']?.toString() ?? '';
+        final doubleVal = double.tryParse(valStr);
+        final weightKg = double.tryParse(s['kg']?.toString() ?? '') ?? 0.0;
+
+        final Map<String, dynamic> setLog = {
+          if (setId != null) 'id': setId,
+          'set_number': setNum,
+          'weight_kg': weightKg,
+          'is_completed': isCompleted,
+          'input_type': inputType,
+        };
+
+        if (inputType == 'time') {
+          setLog['duration'] = doubleVal;
+        } else if (inputType == 'distance') {
+          setLog['distance'] = doubleVal;
+        } else {
+          setLog['reps'] = doubleVal?.round();
         }
-        if (data['plan_day'] != null) {
-          planDayId = int.tryParse(data['plan_day'].toString());
-        }
-      }
-    });
 
-    if (activeSessionId != null) {
-      final titleToUse = title.isNotEmpty ? title : 'My Workout Plan';
-
-      if (planDayId != null && title.isNotEmpty) {
-        final presetsRes = await WorkoutRepository().getPresets();
-        await presetsRes.fold((error) async {}, (presetsList) async {
-          int? foundPlanId;
-          final checkLimit = presetsList.length > 5 ? 5 : presetsList.length;
-          final futures = <Future<void>>[];
-          for (int i = 0; i < checkLimit; i++) {
-            final preset = presetsList[i];
-            futures.add(
-              WorkoutRepository().getPresetDetail(preset.id).then((detailRes) {
-                detailRes.fold((err) {}, (detail) {
-                  final days = detail['days'] as List? ?? [];
-                  for (final d in days) {
-                    if (d['id'] == planDayId) {
-                      foundPlanId = preset.id;
-                    }
-                  }
-                });
-              }),
-            );
-          }
-          await Future.wait(futures);
-          if (foundPlanId != null) {
-            await WorkoutRepository().updatePlanName(
-              planId: foundPlanId!,
-              newName: titleToUse,
-            );
-          }
-        });
+        setLogsList.add(setLog);
       }
 
-      final result = await WorkoutRepository().finishSession(
-        sessionId: activeSessionId!,
-        title: titleToUse,
+      final Map<String, dynamic> exLog = {
+        if (logId != null) 'id': logId,
+        'workout_id': workoutId,
+        'order_index': i,
+        'weight_type': ex['weight_type'] ?? 'KG',
+        'input_type': inputType,
+        'notes': ex['notes'],
+        'set_logs': setLogsList,
+      };
+      logsList.add(exLog);
+    }
+
+    return {
+      'title': title,
+      if (status != null) 'status': status,
+      'logs': logsList,
+    };
+  }
+
+  Future<Either<ApiException, dynamic>> finishSession({
+    required String title,
+  }) async {
+    final activeSessionId = state.sessionId;
+    final planDayId = state.planDayId;
+
+    if (activeSessionId == null) {
+      return left(
+        const ApiException.unknown(msg: 'No active session found to finish'),
       );
-      return result.fold(
-        (error) {
-          print('DEBUG: Error finishing session: $error');
-          return left(error);
-        },
-        (data) {
-          print('DEBUG: Successfully finished session!');
-          final dateStr = startedAt;
-          if (dateStr != null) {
-            try {
-              final date = DateTime.parse(dateStr);
-              WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
-            } catch (_) {
-              final now = DateTime.now();
-              WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
-            }
-          } else {
+    }
+
+    final titleToUse = title.isNotEmpty ? title : 'My Workout Plan';
+
+    if (planDayId != null && title.isNotEmpty) {
+      final presetsRes = await WorkoutRepository().getPresets();
+      await presetsRes.fold((error) async {}, (presetsList) async {
+        int? foundPlanId;
+        final checkLimit = presetsList.length > 5 ? 5 : presetsList.length;
+        final futures = <Future<void>>[];
+        for (int i = 0; i < checkLimit; i++) {
+          final preset = presetsList[i];
+          futures.add(
+            WorkoutRepository().getPresetDetail(preset.id).then((detailRes) {
+              detailRes.fold((err) {}, (detail) {
+                final days = detail['days'] as List? ?? [];
+                for (final d in days) {
+                  if (d['id'] == planDayId) {
+                    foundPlanId = preset.id;
+                  }
+                }
+              });
+            }),
+          );
+        }
+        await Future.wait(futures);
+        if (foundPlanId != null) {
+          await WorkoutRepository().updatePlanName(
+            planId: foundPlanId!,
+            newName: titleToUse,
+          );
+        }
+      });
+    }
+
+    final payload = _buildSessionPayload(titleToUse, status: 'completed');
+
+    final result = await WorkoutRepository().finishSession(
+      sessionId: activeSessionId,
+      title: titleToUse,
+      payload: payload,
+    );
+
+    return result.fold(
+      (error) {
+        print('DEBUG: Error finishing session: $error');
+        return left(error);
+      },
+      (data) {
+        print('DEBUG: Successfully finished session!');
+        final dateStr = startedAt;
+        if (dateStr != null) {
+          try {
+            final date = DateTime.parse(dateStr);
+            WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
+          } catch (_) {
             final now = DateTime.now();
             WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
           }
-          final Map<String, dynamic> responseMap = data is Map<String, dynamic>
-              ? Map<String, dynamic>.from(data)
-              : <String, dynamic>{};
-          responseMap['id'] ??= activeSessionId;
-          responseMap['session_id'] ??= activeSessionId;
-          emit(state.copyWith(exercises: [], sessionTitle: ''));
-          return right(responseMap);
-        },
-      );
-    }
-    return left(const ApiException.unknown());
+        } else {
+          final now = DateTime.now();
+          WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
+        }
+        emit(
+          state.copyWith(
+            exercises: [],
+            sessionTitle: '',
+            sessionId: null,
+            planDayId: null,
+          ),
+        );
+        final Map<String, dynamic> responseMap =
+            data is Map<String, dynamic>
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{};
+        responseMap['id'] ??= activeSessionId;
+        responseMap['session_id'] ??= activeSessionId;
+        return right(responseMap);
+      },
+    );
   }
 
-  Future<void> saveDraftSession(String title) async {
-    await flushPendingUpdates();
-    if (title.isNotEmpty) {
-      await updateSessionTitle(title);
+  Future<Either<ApiException, Map<String, dynamic>>> saveDraftSession(
+    String title,
+  ) async {
+    final activeSessionId = state.sessionId;
+
+    if (activeSessionId == null) {
+      return left(
+        const ApiException.unknown(
+          msg: 'No active session found to save draft',
+        ),
+      );
     }
+
+    final titleToUse = title.isNotEmpty ? title : 'My Session';
+    final payload = _buildSessionPayload(titleToUse, status: 'in_progress');
+    print(
+      'DEBUG: Syncing draft session $activeSessionId with payload: $payload',
+    );
+
+    final result = await WorkoutRepository().syncSession(
+      sessionId: activeSessionId,
+      payload: payload,
+    );
+
+    return result.fold(
+      (error) {
+        print('DEBUG: Save Draft failed: $error');
+        return left(error);
+      },
+      (data) {
+        print('DEBUG: Save Draft succeeded! Response: $data');
+        if (data is Map<String, dynamic>) {
+          startedAt = data['started_at']?.toString();
+        }
+        final parsedExercises = _parseActiveSessionExercises(data);
+        String updatedTitle = '';
+        if (data is Map<String, dynamic>) {
+          updatedTitle =
+              data['plan_name']?.toString() ??
+              data['plan_day_title']?.toString() ??
+              data['title']?.toString() ??
+              data['name']?.toString() ??
+              '';
+        }
+        final finalTitle =
+            (updatedTitle.isNotEmpty && updatedTitle != 'My Session')
+                ? updatedTitle
+                : titleToUse;
+        int? resId;
+        int? resPlanDayId;
+        if (data is Map<String, dynamic>) {
+          if (data['id'] != null) {
+            resId = data['id'] as int;
+          }
+          if (data['plan_day'] != null) {
+            resPlanDayId = int.tryParse(data['plan_day'].toString());
+          }
+        }
+        emit(
+          state.copyWith(
+            exercises: parsedExercises,
+            sessionTitle: finalTitle,
+            sessionId: resId ?? activeSessionId,
+            planDayId: resPlanDayId ?? state.planDayId,
+          ),
+        );
+        return right(data);
+      },
+    );
   }
 
   Future<void> discardSession() async {
-    emit(state.copyWith(exercises: [], sessionTitle: ''));
+    emit(
+      state.copyWith(
+        exercises: [],
+        sessionTitle: '',
+        sessionId: null,
+        planDayId: null,
+      ),
+    );
     final res = await WorkoutRepository().deleteActiveSession();
     res.fold((error) => print('DEBUG: Error deleting active session: $error'), (
       _,
@@ -332,48 +507,43 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     final equipResult = await WorkoutRepository().getEquipment();
     final typeResult = await WorkoutRepository().getExerciseTypes();
 
-    List<MuscleGroupModel> muscles = List<MuscleGroupModel>.from(state.muscleGroups);
+    List<MuscleGroupModel> muscles = List<MuscleGroupModel>.from(
+      state.muscleGroups,
+    );
     List<EquipmentModel> equipment = List<EquipmentModel>.from(state.equipment);
-    List<ExerciseTypeModel> types = List<ExerciseTypeModel>.from(state.exerciseTypes);
-
-    muscleResult.fold(
-      (error) => null,
-      (list) {
-        final merged = List<MuscleGroupModel>.from(list);
-        for (final m in state.muscleGroups) {
-          if (!merged.any((item) => item.id == m.id)) {
-            merged.add(m);
-          }
-        }
-        muscles = merged;
-      },
+    List<ExerciseTypeModel> types = List<ExerciseTypeModel>.from(
+      state.exerciseTypes,
     );
 
-    equipResult.fold(
-      (error) => null,
-      (list) {
-        final merged = List<EquipmentModel>.from(list);
-        for (final e in state.equipment) {
-          if (!merged.any((item) => item.id == e.id)) {
-            merged.add(e);
-          }
+    muscleResult.fold((error) => null, (list) {
+      final merged = List<MuscleGroupModel>.from(list);
+      for (final m in state.muscleGroups) {
+        if (!merged.any((item) => item.id == m.id)) {
+          merged.add(m);
         }
-        equipment = merged;
-      },
-    );
+      }
+      muscles = merged;
+    });
 
-    typeResult.fold(
-      (error) => null,
-      (list) {
-        final merged = List<ExerciseTypeModel>.from(list);
-        for (final t in state.exerciseTypes) {
-          if (!merged.any((item) => item.id == t.id)) {
-            merged.add(t);
-          }
+    equipResult.fold((error) => null, (list) {
+      final merged = List<EquipmentModel>.from(list);
+      for (final e in state.equipment) {
+        if (!merged.any((item) => item.id == e.id)) {
+          merged.add(e);
         }
-        types = merged;
-      },
-    );
+      }
+      equipment = merged;
+    });
+
+    typeResult.fold((error) => null, (list) {
+      final merged = List<ExerciseTypeModel>.from(list);
+      for (final t in state.exerciseTypes) {
+        if (!merged.any((item) => item.id == t.id)) {
+          merged.add(t);
+        }
+      }
+      types = merged;
+    });
 
     emit(
       state.copyWith(
@@ -388,80 +558,42 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   Future<void> addSet(int exerciseIndex) async {
     if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
-    if (isPresetCreation) {
-      final updatedExercises = List<Map<String, dynamic>>.from(
-        state.exercises.map((e) => Map<String, dynamic>.from(e)),
-      );
-      final exercise = updatedExercises[exerciseIndex];
-      final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
-      final lastSet = sets.isNotEmpty ? sets.last : null;
-
-      final reps = lastSet != null ? lastSet['reps']?.toString() ?? '' : '';
-      final weight = lastSet != null ? lastSet['kg']?.toString() ?? '' : '';
-
-      sets.add({
-        'setNum': sets.length + 1,
-        'previous': 'no data',
-        'kg': weight,
-        'reps': reps,
-        'checked': false,
-      });
-      exercise['sets'] = sets;
-      emit(state.copyWith(exercises: updatedExercises));
-      return;
-    }
-
-    final exercise = state.exercises[exerciseIndex];
-    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
-    final logId = int.tryParse(logIdStr ?? '');
-
-    if (logId != null) {
-      final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
-      final lastSet = sets.isNotEmpty ? sets.last : null;
-
-      final reps = lastSet != null
-          ? int.tryParse(lastSet['reps']?.toString() ?? '') ?? 0
-          : 0;
-      final weight = lastSet != null
-          ? double.tryParse(lastSet['kg']?.toString() ?? '') ?? 0.0
-          : 0.0;
-
-      final result = await WorkoutRepository()
-          .addSetToExerciseLog(logId: logId, reps: reps, weightKg: weight);
-      await result.fold(
-        (error) async {
-          print('DEBUG: Error adding set to backend: $error');
-          await loadActiveSession();
-        },
-        (successData) async {
-          print('DEBUG: Successfully added set to backend: $successData');
-          await loadActiveSession();
-        },
-      );
-    }
-  }
-
-  Future<void> updateWorkoutLogWeightType(int exerciseIndex, String weightType) async {
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
     final exercise = updatedExercises[exerciseIndex];
-    exercise['weight_type'] = weightType;
+    final sets = List<Map<String, dynamic>>.from(
+      exercise['sets'] as List? ?? [],
+    );
+    final lastSet = sets.isNotEmpty ? sets.last : null;
+
+    final inputType =
+        lastSet != null ? lastSet['input_type']?.toString() : null;
+
+    sets.add({
+      'setNum': sets.length + 1,
+      'previous': 'no data',
+      'kg': '',
+      'reps': '',
+      'input_type': inputType,
+      'checked': false,
+    });
+    exercise['sets'] = sets;
     emit(state.copyWith(exercises: updatedExercises));
+    await saveDraftSession(state.sessionTitle);
+  }
 
-    if (isPresetCreation) return;
-
-    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
-    final logId = int.tryParse(logIdStr ?? '');
-    if (logId != null) {
-      final result = await WorkoutRepository().updateWorkoutLogWeightType(
-        logId: logId,
-        weightType: weightType,
-      );
-      result.fold(
-        (error) => print('DEBUG: Error updating workout log weight type: $error'),
-        (success) => print('DEBUG: Successfully updated workout log weight type'),
-      );
+  Future<void> updateWorkoutLogWeightType(
+    int exerciseIndex,
+    String weightType,
+  ) async {
+    final updatedExercises = List<Map<String, dynamic>>.from(
+      state.exercises.map((e) => Map<String, dynamic>.from(e)),
+    );
+    if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final exercise = updatedExercises[exerciseIndex];
+      exercise['weight_type'] = weightType;
+      emit(state.copyWith(exercises: updatedExercises));
     }
   }
 
@@ -470,45 +602,47 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     required String title,
     required String subtitle,
     String? videoUrl,
+    String? trackBy,
   }) async {
-    if (isPresetCreation) {
-      final updatedExercises = List<Map<String, dynamic>>.from(
-        state.exercises.map((e) => Map<String, dynamic>.from(e)),
-      );
-      updatedExercises.add({
-        'id': id.toString(),
-        'title': title,
-        'subtitle': subtitle,
-        'video_url': videoUrl ?? '',
-        'sets': [
-          {
-            'setNum': 1,
-            'previous': 'no data',
-            'kg': '',
-            'reps': '',
-            'checked': false,
-          }
-        ],
-      });
-      emit(state.copyWith(exercises: updatedExercises));
-      return;
-    }
+    final updatedExercises = List<Map<String, dynamic>>.from(
+      state.exercises.map((e) => Map<String, dynamic>.from(e)),
+    );
+    final resolvedTrackBy = trackBy ?? 'rep';
+    final trackByLower = resolvedTrackBy.toLowerCase();
+    final inputType =
+        (trackByLower == 'time' ||
+                trackByLower == 'sec' ||
+                trackByLower == 'secs' ||
+                trackByLower == 'seconds')
+            ? 'time'
+            : ((trackByLower == 'distance' ||
+                    trackByLower == 'dist' ||
+                    trackByLower == 'km' ||
+                    trackByLower == 'm')
+                ? 'distance'
+                : 'rep');
 
-    final result = await WorkoutRepository().addExercisesToActiveSession(
-      workoutIds: [id],
-    );
-    result.fold(
-      (error) {
-        print('DEBUG: Error adding exercise to active session: $error');
-        loadActiveSession();
-      },
-      (successData) {
-        print(
-          'DEBUG: Successfully added exercise to active session on backend!',
-        );
-        loadActiveSession();
-      },
-    );
+    updatedExercises.add({
+      'id': id.toString(),
+      'title': title,
+      'subtitle': subtitle,
+      'video_url': videoUrl ?? '',
+      'track_by': resolvedTrackBy,
+      'weight_type': 'KG',
+      'sets': [
+        {
+          'setNum': 1,
+          'previous': 'no data',
+          'kg': '',
+          'reps': '',
+          'input_type': inputType,
+          'checked': false,
+        },
+      ],
+    });
+    emit(state.copyWith(exercises: updatedExercises));
+    // Trigger background sync to get "previous" data and database IDs
+    saveDraftSession(state.sessionTitle);
   }
 
   void swapExercises(int indexA, int indexB) {
@@ -524,35 +658,63 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     emit(state.copyWith(exercises: updatedExercises));
   }
 
+  bool isReorderingExercises = false;
+  bool showReorderLoadingIndicator = false;
+  String? reorderError;
+
+  Future<void> reorderExercises(int oldIndex, int newIndex) async {
+    if (oldIndex < 0 || oldIndex >= state.exercises.length) return;
+    if (newIndex < 0 || newIndex >= state.exercises.length) return;
+    if (oldIndex == newIndex) return;
+
+    final updatedExercises = List<Map<String, dynamic>>.from(
+      state.exercises.map((e) => Map<String, dynamic>.from(e)),
+    );
+    final item = updatedExercises.removeAt(oldIndex);
+    updatedExercises.insert(newIndex, item);
+
+    // Recalculate each exercise's order_index starting from 1
+    for (var i = 0; i < updatedExercises.length; i++) {
+      updatedExercises[i]['order_index'] = i + 1;
+    }
+
+    emit(state.copyWith(exercises: updatedExercises));
+  }
+
+  void reorderExercise(int oldIndex, int newIndex) {
+    reorderExercises(oldIndex, newIndex);
+  }
+
+  void moveExerciseToTop(int index) {
+    reorderExercise(index, 0);
+  }
+
+  void moveExerciseToBottom(int index) {
+    reorderExercise(index, state.exercises.length - 1);
+  }
+
+  void moveExerciseUp(int index) {
+    if (index > 0) {
+      reorderExercise(index, index - 1);
+    }
+  }
+
+  void moveExerciseDown(int index) {
+    if (index < state.exercises.length - 1) {
+      reorderExercise(index, index + 1);
+    }
+  }
+
   Future<void> deleteExercise(int exerciseIndex) async {
     if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
-    final exercise = state.exercises[exerciseIndex];
-
-    // Perform optimistic local removal first so the UI updates instantly
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
     updatedExercises.removeAt(exerciseIndex);
     emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
-    final logId = int.tryParse(logIdStr ?? '');
-    if (logId != null) {
-      final res = await WorkoutRepository().deleteWorkoutLog(logId: logId);
-      res.fold(
-        (error) {
-          print('DEBUG: Error deleting workout log $logId: $error');
-          loadActiveSession();
-        },
-        (_) {
-          print('DEBUG: Successfully deleted workout log $logId');
-          loadActiveSession();
-        },
-      );
-    }
+    // Trigger background sync to update the session layout on the server
+    saveDraftSession(state.sessionTitle);
   }
 
   Future<void> createCustomExercise({
@@ -622,156 +784,86 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
   }
 
-  final Map<int, Timer> _updateDebouncers = {};
-
-  void _debounceSetUpdate(int setLogId) {
-    _updateDebouncers[setLogId]?.cancel();
-    _updateDebouncers[setLogId] = Timer(const Duration(milliseconds: 800), () {
-      _updateDebouncers.remove(setLogId);
-      _performSetUpdate(setLogId);
-    });
-  }
-
-  Future<void> _performSetUpdate(int setLogId) async {
-    Map<String, dynamic>? currentSet;
-    for (final exercise in state.exercises) {
-      final sets = exercise['sets'] as List?;
-      if (sets != null) {
-        for (final s in sets) {
-          if (s is Map<String, dynamic> && s['id'] == setLogId) {
-            currentSet = s;
-            break;
-          }
-        }
-      }
-      if (currentSet != null) break;
-    }
-
-    if (currentSet != null) {
-      final reps = double.tryParse(currentSet['reps']?.toString() ?? '')?.round();
-      final weightKg = double.tryParse(currentSet['kg']?.toString() ?? '');
-      final isCompleted = currentSet['checked'] as bool?;
-
-      final result = await WorkoutRepository().updateSetLog(
-        setLogId: setLogId,
-        reps: reps,
-        weightKg: weightKg,
-        isCompleted: isCompleted,
-      );
-      result.fold(
-        (error) => print('DEBUG: Error updating set $setLogId: $error'),
-        (success) => print(
-          'DEBUG: Successfully updated set $setLogId on backend',
-        ),
-      );
-    }
-  }
-
-  Future<void> flushPendingUpdates() async {
-    if (_updateDebouncers.isEmpty) return;
-    final ids = List<int>.from(_updateDebouncers.keys);
-    for (final timer in _updateDebouncers.values) {
-      timer.cancel();
-    }
-    _updateDebouncers.clear();
-
-    final futures = ids.map((id) => _performSetUpdate(id));
-    await Future.wait(futures);
-  }
-
-  Future<void> toggleSetChecked(int exerciseIndex, int setIndex, {void Function(String errorMessage)? onError}) async {
+  Future<void> updateWorkoutLogTrackBy(
+    int exerciseIndex,
+    String trackBy,
+  ) async {
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
-    final sets = List<Map<String, dynamic>>.from(
-      updatedExercises[exerciseIndex]['sets'] as List,
+    if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final exercise = Map<String, dynamic>.from(
+        updatedExercises[exerciseIndex],
+      );
+      exercise['track_by'] = trackBy;
+
+      final trackByLower = trackBy.toLowerCase();
+      final inputType =
+          (trackByLower == 'time' ||
+                  trackByLower == 'sec' ||
+                  trackByLower == 'secs' ||
+                  trackByLower == 'seconds')
+              ? 'time'
+              : ((trackByLower == 'distance' ||
+                      trackByLower == 'dist' ||
+                      trackByLower == 'km' ||
+                      trackByLower == 'm')
+                  ? 'distance'
+                  : 'rep');
+      final sets = List<Map<String, dynamic>>.from(
+        exercise['sets'] as List? ?? [],
+      );
+      for (var s in sets) {
+        s['input_type'] = inputType;
+      }
+      exercise['sets'] = sets;
+
+      updatedExercises[exerciseIndex] = exercise;
+      emit(state.copyWith(exercises: updatedExercises));
+    }
+  }
+
+  Future<void> toggleSetChecked(
+    int exerciseIndex,
+    int setIndex, {
+    void Function(String errorMessage)? onError,
+  }) async {
+    final updatedExercises = List<Map<String, dynamic>>.from(
+      state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
-    final set = Map<String, dynamic>.from(sets[setIndex]);
-    final newChecked = !(set['checked'] as bool? ?? false);
-    set['checked'] = newChecked;
-    sets[setIndex] = set;
-    updatedExercises[exerciseIndex]['sets'] = sets;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final setLogId = set['id'] as int?;
-    if (setLogId != null) {
-      _updateDebouncers[setLogId]?.cancel();
-      _updateDebouncers.remove(setLogId);
-
-      final reps = double.tryParse(set['reps']?.toString() ?? '')?.round();
-      final weightKg = double.tryParse(set['kg']?.toString() ?? '');
-      final result = await WorkoutRepository().updateSetLog(
-        setLogId: setLogId,
-        reps: reps,
-        weightKg: weightKg,
-        isCompleted: newChecked,
+    if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final sets = List<Map<String, dynamic>>.from(
+        updatedExercises[exerciseIndex]['sets'] as List,
       );
-      result.fold(
-        (error) {
-          print('DEBUG: Error updating set checked state: $error');
-          // Optimistic Rollback
-          final rollbackExercises = List<Map<String, dynamic>>.from(
-            state.exercises.map((e) => Map<String, dynamic>.from(e)),
-          );
-          if (exerciseIndex >= 0 && exerciseIndex < rollbackExercises.length) {
-            final rSets = List<Map<String, dynamic>>.from(
-              rollbackExercises[exerciseIndex]['sets'] as List,
-            );
-            if (setIndex >= 0 && setIndex < rSets.length) {
-              final rSet = Map<String, dynamic>.from(rSets[setIndex]);
-              rSet['checked'] = !newChecked;
-              rSets[setIndex] = rSet;
-              rollbackExercises[exerciseIndex]['sets'] = rSets;
-              emit(state.copyWith(exercises: rollbackExercises));
-            }
-          }
-          if (onError != null) {
-            onError(error.msg);
-          }
-        },
-        (success) {
-          print('DEBUG: Successfully updated set checked state to $newChecked');
-        },
-      );
+      if (setIndex >= 0 && setIndex < sets.length) {
+        final set = Map<String, dynamic>.from(sets[setIndex]);
+        final newChecked = !(set['checked'] as bool? ?? false);
+        set['checked'] = newChecked;
+        sets[setIndex] = set;
+        updatedExercises[exerciseIndex]['sets'] = sets;
+        emit(state.copyWith(exercises: updatedExercises));
+      }
     }
   }
 
   Future<void> deleteSet(int exerciseIndex, int setIndex) async {
-    final exercise = state.exercises[exerciseIndex];
-    final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
-    if (setIndex < 0 || setIndex >= sets.length) return;
-
-    final setLog = sets[setIndex];
-
-    // Perform optimistic local removal first so the UI updates instantly
-    sets.removeAt(setIndex);
-    // Reorder set numbers
-    for (int i = 0; i < sets.length; i++) {
-      sets[i]['setNum'] = i + 1;
-    }
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
-    updatedExercises[exerciseIndex]['sets'] = sets;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final setLogId = setLog['id'] as int?;
-    if (setLogId != null) {
-      final res = await WorkoutRepository().deleteSetLog(setLogId: setLogId);
-      res.fold(
-        (error) {
-          print('DEBUG: Error deleting set log $setLogId: $error');
-          loadActiveSession();
-        },
-        (_) {
-          print('DEBUG: Successfully deleted set log $setLogId');
-          loadActiveSession();
-        },
+    if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final exercise = updatedExercises[exerciseIndex];
+      final sets = List<Map<String, dynamic>>.from(
+        exercise['sets'] as List? ?? [],
       );
+      if (setIndex >= 0 && setIndex < sets.length) {
+        sets.removeAt(setIndex);
+        // Reorder set numbers
+        for (int i = 0; i < sets.length; i++) {
+          sets[i]['setNum'] = i + 1;
+        }
+        exercise['sets'] = sets;
+        emit(state.copyWith(exercises: updatedExercises));
+      }
     }
   }
 
@@ -779,27 +871,24 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
-    final sets = List<Map<String, dynamic>>.from(
-      updatedExercises[exerciseIndex]['sets'] as List,
-    );
-    final set = Map<String, dynamic>.from(sets[setIndex]);
-    set['kg'] = val;
+    if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final sets = List<Map<String, dynamic>>.from(
+        updatedExercises[exerciseIndex]['sets'] as List,
+      );
+      if (setIndex >= 0 && setIndex < sets.length) {
+        final set = Map<String, dynamic>.from(sets[setIndex]);
+        set['kg'] = val;
 
-    // Check if the weight is invalid, if so, automatically uncheck
-    final kgVal = double.tryParse(val.trim()) ?? 0.0;
-    if (val.trim().isEmpty || kgVal < 0.0) {
-      set['checked'] = false;
-    }
+        // Check if the weight is invalid, if so, automatically uncheck
+        final kgVal = double.tryParse(val.trim()) ?? 0.0;
+        if (val.trim().isEmpty || kgVal < 0.0) {
+          set['checked'] = false;
+        }
 
-    sets[setIndex] = set;
-    updatedExercises[exerciseIndex]['sets'] = sets;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final setLogId = set['id'] as int?;
-    if (setLogId != null) {
-      _debounceSetUpdate(setLogId);
+        sets[setIndex] = set;
+        updatedExercises[exerciseIndex]['sets'] = sets;
+        emit(state.copyWith(exercises: updatedExercises));
+      }
     }
   }
 
@@ -807,37 +896,25 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
-    final sets = List<Map<String, dynamic>>.from(
-      updatedExercises[exerciseIndex]['sets'] as List,
-    );
-    final set = Map<String, dynamic>.from(sets[setIndex]);
-    set['reps'] = val;
+    if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final sets = List<Map<String, dynamic>>.from(
+        updatedExercises[exerciseIndex]['sets'] as List,
+      );
+      if (setIndex >= 0 && setIndex < sets.length) {
+        final set = Map<String, dynamic>.from(sets[setIndex]);
+        set['reps'] = val;
 
-    // Check if the reps are invalid, if so, automatically uncheck
-    final repsVal = double.tryParse(val.trim()) ?? 0.0;
-    if (val.trim().isEmpty || repsVal < 0.0) {
-      set['checked'] = false;
+        // Check if the reps are invalid, if so, automatically uncheck
+        final repsVal = double.tryParse(val.trim()) ?? 0.0;
+        if (val.trim().isEmpty || repsVal < 0.0) {
+          set['checked'] = false;
+        }
+
+        sets[setIndex] = set;
+        updatedExercises[exerciseIndex]['sets'] = sets;
+        emit(state.copyWith(exercises: updatedExercises));
+      }
     }
-
-    sets[setIndex] = set;
-    updatedExercises[exerciseIndex]['sets'] = sets;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final setLogId = set['id'] as int?;
-    if (setLogId != null) {
-      _debounceSetUpdate(setLogId);
-    }
-  }
-
-  @override
-  Future<void> close() {
-    for (final timer in _updateDebouncers.values) {
-      timer.cancel();
-    }
-    _updateDebouncers.clear();
-    return super.close();
   }
 
   Future<void> loadLibraryExercises({
@@ -950,8 +1027,16 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       (data) {
         print('DEBUG: Successfully loaded active session data from API!');
         if (isClosed) return;
+        int? sessionId;
+        int? planDayId;
         if (data is Map<String, dynamic>) {
           startedAt = data['started_at']?.toString();
+          if (data['id'] != null) {
+            sessionId = data['id'] as int;
+          }
+          if (data['plan_day'] != null) {
+            planDayId = int.tryParse(data['plan_day'].toString());
+          }
         }
         final parsedExercises = _parseActiveSessionExercises(data);
         String title = '';
@@ -974,26 +1059,17 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             exercises: parsedExercises,
             sessionTitle: finalTitle,
             isLoadingActiveSession: false,
+            sessionId: sessionId ?? state.sessionId,
+            planDayId: planDayId ?? state.planDayId,
           ),
         );
       },
     );
   }
 
-  Future<void> updateSessionTitle(String title) async {
+  void updateSessionTitle(String title) {
     if (isClosed) return;
     emit(state.copyWith(sessionTitle: title));
-
-    print('DEBUG: Calling startSession API with title: $title');
-    final result = await WorkoutRepository().startSession(title: title);
-    result.fold(
-      (error) {
-        print('DEBUG: Error starting/updating session title: $error');
-      },
-      (data) {
-        print('DEBUG: Successfully updated/started session with title: $title');
-      },
-    );
   }
 
   List<Map<String, dynamic>> _parseActiveSessionExercises(dynamic data) {
@@ -1150,37 +1226,53 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           final s = rawSets[i];
           if (s is Map<String, dynamic>) {
             final targetWeight = s['target_weight'] ?? s['targetWeight'];
-            final targetReps = s['target_reps'] ?? s['targetReps'];
-            final rawKg = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight;
-            final rawReps = s['reps'] ?? targetReps;
+            final targetReps =
+                s['target_reps'] ??
+                s['targetReps'] ??
+                s['target_value'] ??
+                s['targetValue'];
+            final rawKg =
+                s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight;
+            final rawReps = s['reps'] ?? s['value'] ?? targetReps;
 
             String kgVal = '';
             if (rawKg != null) {
               final val = double.tryParse(rawKg.toString());
               if (val != null && val != 0.0) {
-                kgVal = val == val.truncateToDouble() ? val.toInt().toString() : val.toString();
+                kgVal =
+                    val == val.truncateToDouble()
+                        ? val.toInt().toString()
+                        : val.toString();
               }
             }
 
             String repsVal = '';
             if (rawReps != null) {
-              final val = int.tryParse(rawReps.toString());
-              if (val != null && val != 0) {
-                repsVal = val.toString();
+              final val = double.tryParse(rawReps.toString());
+              if (val != null && val != 0.0) {
+                repsVal =
+                    val == val.truncateToDouble()
+                        ? val.toInt().toString()
+                        : val.toString();
               }
             }
 
             final prevRaw = s['previous'];
             final prevWeightRaw = s['previous_weight_kg'];
             String prevStr;
-            if (prevRaw != null && prevRaw.toString().isNotEmpty && prevRaw.toString() != 'no data') {
-              // Backend returned formatted string like '80kgX10'
+            if (prevRaw != null &&
+                prevRaw.toString().isNotEmpty &&
+                prevRaw.toString() != 'no data') {
+              // Backend returned formatted string like '80kgX10' or '20kg x 45 sec'
               prevStr = prevRaw.toString();
             } else if (prevWeightRaw != null) {
               // Fallback: only weight available — format as '{weight}kg'
               final w = double.tryParse(prevWeightRaw.toString());
               if (w != null) {
-                final wStr = w == w.truncateToDouble() ? w.toInt().toString() : w.toString();
+                final wStr =
+                    w == w.truncateToDouble()
+                        ? w.toInt().toString()
+                        : w.toString();
                 prevStr = '${wStr}kg';
               } else {
                 prevStr = 'no data';
@@ -1195,6 +1287,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
               'previous': prevStr,
               'kg': kgVal,
               'reps': repsVal,
+              'input_type': s['input_type'],
               'checked': s['is_completed'] ?? s['checked'] ?? false,
             });
           }
@@ -1213,6 +1306,17 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           'previous': 'no data',
           'kg': '10',
           'reps': '15',
+          'input_type': () {
+            final val = resolvedTrackBy?.toLowerCase();
+            if (val == 'time' ||
+                val == 'sec' ||
+                val == 'secs' ||
+                val == 'seconds')
+              return 'time';
+            if (val == 'distance' || val == 'dist' || val == 'km' || val == 'm')
+              return 'distance';
+            return 'rep';
+          }(),
           'checked': false,
         });
       }
@@ -1220,15 +1324,45 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       result.add({
         'id': exerciseId?.toString() ?? '',
         'workout_log_id': item['id']?.toString() ?? '',
+        'order_index': item['order_index'] ?? item['order'] ?? result.length,
         'title': title,
         'subtitle': subtitle ?? '',
         'video_url': videoUrl ?? '',
-        'track_by': resolvedTrackBy ?? 'rep',
+        'track_by': () {
+          if (sets.isNotEmpty) {
+            final firstInputType =
+                sets.first['input_type']?.toString().toLowerCase();
+            if (firstInputType == 'time' ||
+                firstInputType == 'sec' ||
+                firstInputType == 'secs' ||
+                firstInputType == 'seconds')
+              return 'time';
+            if (firstInputType == 'distance' ||
+                firstInputType == 'dist' ||
+                firstInputType == 'km' ||
+                firstInputType == 'm')
+              return 'distance';
+            if (firstInputType == 'rep' || firstInputType == 'reps')
+              return 'rep';
+          }
+          final val = resolvedTrackBy?.toLowerCase();
+          if (val == 'time' ||
+              val == 'sec' ||
+              val == 'secs' ||
+              val == 'seconds')
+            return 'time';
+          if (val == 'distance' || val == 'dist' || val == 'km' || val == 'm')
+            return 'distance';
+          return 'rep';
+        }(),
         'weight_type': () {
           final type = item['weight_type']?.toString();
-          if (type == null) return 'kg';
-          if (type.toLowerCase() == 'bw') return 'BW';
-          if (type.toLowerCase() == 'kg+bw') return 'kg+BW';
+          if (type == null) return 'KG';
+          final lower = type.toLowerCase().replaceAll(' ', '');
+          if (lower == 'bw') return 'BW';
+          if (lower == 'kg+bw') return 'KG + BW';
+          if (lower == 'baronly' || lower == 'bo') return 'BAR only';
+          if (lower == 'kg') return 'KG';
           return type;
         }(),
         'sets': sets,
@@ -1255,6 +1389,12 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         }
       }
     }
+
+    result.sort((a, b) {
+      final aOrder = int.tryParse(a['order_index']?.toString() ?? '') ?? 0;
+      final bOrder = int.tryParse(b['order_index']?.toString() ?? '') ?? 0;
+      return aOrder.compareTo(bOrder);
+    });
 
     return result;
   }

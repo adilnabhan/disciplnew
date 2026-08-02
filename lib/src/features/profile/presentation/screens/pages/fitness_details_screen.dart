@@ -19,18 +19,22 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
   late final List<FieldData<dynamic>> _healthDetails;
   final _formKey = GlobalKey<FormState>();
 
-  DateTime? _selectedDateOfBirth;
   bool _isHealthy = true;
   final TextEditingController _healthIssuesController = TextEditingController();
-  final TextEditingController _dobController = TextEditingController();
+  final TextEditingController _targetWeightController = TextEditingController();
+
+  String? _selectedActivityLevel;
+  String? _selectedFitnessLevel;
 
   @override
   void initState() {
     super.initState();
-    // Initialize age / DOB
-    _selectedDateOfBirth = widget.customerDetailsModel.dateOfBirth;
-    if (_selectedDateOfBirth != null) {
-      _dobController.text = DateFormat('dd/MM/yyyy').format(_selectedDateOfBirth!);
+
+    // Initialize new fields
+    _selectedActivityLevel = widget.customerDetailsModel.activityLevel?.toString();
+    _selectedFitnessLevel = widget.customerDetailsModel.fitnessLevel?.toString();
+    if (widget.customerDetailsModel.targetWeight != null) {
+      _targetWeightController.text = widget.customerDetailsModel.targetWeight.toString();
     }
 
     // Initialize health status
@@ -152,45 +156,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
         ),
       ];
     } else {
-      _healthDetails = [
-        FieldData(
-          type: FieldType.radio,
-          textInputAction: TextInputAction.done,
-          label: 'Blood Group',
-          requiredLabel: true,
-          controller: TextEditingController(
-            text: (widget.customerDetailsModel.bloodGroup == null ||
-                    widget.customerDetailsModel.bloodGroup!.toLowerCase() == 'unknown')
-                ? ''
-                : widget.customerDetailsModel.bloodGroup,
-          ),
-          focusNode: FocusNode(),
-          items: [
-            (label: 'A+', value: 'A+'),
-            (label: 'A-', value: 'A-'),
-            (label: 'B+', value: 'B+'),
-            (label: 'B-', value: 'B-'),
-            (label: 'AB+', value: 'AB+'),
-            (label: 'AB-', value: 'AB-'),
-            (label: 'O+', value: 'O+'),
-            (label: 'O-', value: 'O-'),
-          ],
-          validator: (value) {
-            if (value?.isEmpty ?? true) {
-              return 'Blood Group must be selected';
-            }
-            return null;
-          },
-          decoration: InputDecoration(
-            hintText: 'Select Blood Group',
-            hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-            border: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(8)),
-              borderSide: BorderSide(color: AppColors.borderGrey),
-            ),
-          ),
-        ),
-      ];
+      _healthDetails = [];
     }
   }
 
@@ -201,48 +167,21 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
       element.controller?.dispose();
       element.focusNode?.dispose();
     }
-    _dobController.dispose();
     _healthIssuesController.dispose();
-  }
-
-  void _pickDateOfBirth() async {
-    final first = DateTime(1900);
-    final last = DateTime.now();
-    DateTime initial = _selectedDateOfBirth ?? DateTime(2000);
-    if (initial.isAfter(last)) {
-      initial = last;
-    }
-    if (initial.isBefore(first)) {
-      initial = first;
-    }
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: initial,
-      firstDate: first,
-      lastDate: last,
-    );
-    if (picked != null && picked != _selectedDateOfBirth) {
-      setState(() {
-        _selectedDateOfBirth = picked;
-        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
-      });
-    }
+    _targetWeightController.dispose();
   }
 
   void _onUpdate() {
     if (_formKey.currentState?.validate() ?? false) {
-      String? bloodGroup;
+      String? bloodGroup = widget.customerDetailsModel.bloodGroup;
       String? height;
       String? weight;
       int? bfPercentage;
 
       if (widget.editBodyMetricsOnly) {
-        bloodGroup = widget.customerDetailsModel.bloodGroup;
         height = _healthDetails[0].controller?.text;
         weight = _healthDetails[1].controller?.text;
       } else {
-        bloodGroup = _healthDetails[0].controller?.text;
         height = widget.customerDetailsModel.height;
         weight = widget.customerDetailsModel.weight;
       }
@@ -263,20 +202,29 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
         'bf_percentage': bfPercentage,
       };
 
+      if (_selectedActivityLevel != null && _selectedActivityLevel!.isNotEmpty) {
+        body['activity_level'] = _selectedActivityLevel;
+      }
+      if (_selectedFitnessLevel != null && _selectedFitnessLevel!.isNotEmpty) {
+        body['fitness_level'] = _selectedFitnessLevel;
+      }
+      final targetWStr = _targetWeightController.text.trim();
+      if (targetWStr.isNotEmpty) {
+        body['target_weight'] = double.tryParse(targetWStr) ?? targetWStr;
+      }
+
+      if (widget.customerDetailsModel.dateOfBirth != null) {
+        body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(widget.customerDetailsModel.dateOfBirth!);
+      }
+
       if (widget.editBodyMetricsOnly) {
         body['is_healthy'] = widget.customerDetailsModel.isHealthy ?? true;
-        if (widget.customerDetailsModel.dateOfBirth != null) {
-          body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(widget.customerDetailsModel.dateOfBirth!);
-        }
         final conditions = widget.customerDetailsModel.healthConditionsOther;
         if (conditions != null && conditions.isNotEmpty) {
           body['health_conditions_other'] = conditions;
         }
       } else {
         body['is_healthy'] = _isHealthy;
-        if (_selectedDateOfBirth != null) {
-          body['date_of_birth'] = DateFormat('yyyy-MM-dd').format(_selectedDateOfBirth!);
-        }
         final healthIssuesText = _healthIssuesController.text.trim();
         if (healthIssuesText.isNotEmpty) {
           body['health_conditions_other'] = healthIssuesText;
@@ -284,11 +232,8 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
       }
 
       print(' passing data is--$body');
-      context.read<ProfileCubit>().updateHealthProfile(
-        bloodGroup: bloodGroup ?? '',
-        height: height ?? '',
-        weight: weight ?? '',
-        extraBody: body,
+      context.read<ProfileCubit>().updateCustomerProfile(
+        body: body,
       );
     } else {
       Dialogs.showSnack(msg: 'Please fill all the fields');
@@ -326,19 +271,22 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           child: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             children: [
-              const SizedBox(height: 32),
-              ListView.separated(
-                itemCount: _healthDetails.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                separatorBuilder: (BuildContext context, int index) {
-                  return const SizedBox(height: 22);
-                },
-                itemBuilder: (BuildContext context, int index) {
-                  return Field(data: _healthDetails[index]);
-                },
-              ),
-              const SizedBox(height: 22),
+              if (_healthDetails.isNotEmpty) ...[
+                const SizedBox(height: 32),
+                ListView.separated(
+                  itemCount: _healthDetails.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  separatorBuilder: (BuildContext context, int index) {
+                    return const SizedBox(height: 22);
+                  },
+                  itemBuilder: (BuildContext context, int index) {
+                    return Field(data: _healthDetails[index]);
+                  },
+                ),
+                const SizedBox(height: 22),
+              ] else
+                const SizedBox(height: 16),
 
               if (widget.editBodyMetricsOnly) ...[
                 Container(
@@ -384,60 +332,6 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
               ],
 
               if (!widget.editBodyMetricsOnly) ...[
-                // ── Age / Date of Birth ──
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    RichText(
-                      text: TextSpan(
-                        text: 'Date of Birth',
-                        style: AppStyles.text14Px.poppins.w500.copyWith(
-                          color: AppColors.textDark,
-                        ),
-                        children: const [
-                          TextSpan(
-                            text: ' *',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: _pickDateOfBirth,
-                      child: AbsorbPointer(
-                        child: TextFormField(
-                          controller: _dobController,
-                          decoration: InputDecoration(
-                            hintText: 'Select Date of Birth',
-                            hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
-                            suffixIcon: const Icon(Icons.calendar_today, size: 20),
-                            border: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(8)),
-                              borderSide: BorderSide(color: AppColors.borderGrey),
-                            ),
-                            enabledBorder: const OutlineInputBorder(
-                              borderRadius: BorderRadius.all(Radius.circular(8)),
-                              borderSide: BorderSide(color: AppColors.borderGrey),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_selectedDateOfBirth != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          'Age: ${DateTime.now().year - _selectedDateOfBirth!.year} years',
-                          style: AppStyles.text12Px.poppins.w400.copyWith(
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-
                 // ── Health Status ──
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -578,6 +472,164 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
                     ],
                   ),
                 ],
+
+                const SizedBox(height: 22),
+
+                // ── Activity Level ──
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Activity Level',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: [
+                        'Sedentary',
+                        'Lightly_Active',
+                        'Moderately_Active',
+                        'Very_Active',
+                        'Extra_Active'
+                      ].contains(_selectedActivityLevel)
+                          ? _selectedActivityLevel
+                          : null,
+                      decoration: InputDecoration(
+                        hintText: 'Select Activity Level',
+                        hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderSide: BorderSide(color: AppColors.borderGrey),
+                        ),
+                        enabledBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderSide: BorderSide(color: AppColors.borderGrey),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Sedentary',
+                          child: Text('Sedentary'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Lightly_Active',
+                          child: Text('Lightly Active'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Moderately_Active',
+                          child: Text('Moderately Active'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Very_Active',
+                          child: Text('Very Active'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Extra_Active',
+                          child: Text('Extra Active'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedActivityLevel = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+
+                // ── Fitness Level ──
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Fitness Level',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: ['Beginner', 'Intermediate', 'Advanced']
+                              .contains(_selectedFitnessLevel)
+                          ? _selectedFitnessLevel
+                          : null,
+                      decoration: InputDecoration(
+                        hintText: 'Select Fitness Level',
+                        hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderSide: BorderSide(color: AppColors.borderGrey),
+                        ),
+                        enabledBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderSide: BorderSide(color: AppColors.borderGrey),
+                        ),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'Beginner',
+                          child: Text('Beginner'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Intermediate',
+                          child: Text('Intermediate'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'Advanced',
+                          child: Text('Advanced'),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedFitnessLevel = val;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 22),
+
+                // ── Target Weight ──
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Target Weight',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _targetWeightController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: 'E.g., 70.5',
+                        hintStyle: AppStyles.text14Px.poppins.w400.textGrey,
+                        suffixIcon: SizedBox.square(
+                          dimension: 22,
+                          child: Center(
+                            child: Text('KG', style: AppStyles.text14Px.poppins.w400.dark),
+                          ),
+                        ),
+                        border: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderSide: BorderSide(color: AppColors.borderGrey),
+                        ),
+                        enabledBorder: const OutlineInputBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(8)),
+                          borderSide: BorderSide(color: AppColors.borderGrey),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ],
 
               const SizedBox(height: 32),

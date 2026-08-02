@@ -854,9 +854,58 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Health Status',
-                      style: AppStyles.text18Px.poppins.w600.dark,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Health Style',
+                          style: AppStyles.text18Px.poppins.w600.dark,
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder:
+                                    (_) => BlocProvider.value(
+                                      value: _cubit,
+                                      child: FitnessDetailsScreen(
+                                        customerDetailsModel: customer,
+                                      ),
+                                    ),
+                              ),
+                            ).then((_) {
+                              _cubit.fetchCustomerDetails();
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.edit,
+                                  size: 14,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Edit',
+                                  style: AppStyles.text12Px.poppins.w600.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -886,35 +935,51 @@ class _HealthStatusScreenState extends State<HealthStatusScreen> {
                           const SizedBox(height: 16),
                           _buildProfileDetailRow(
                             'Height',
-                            customer.height ?? 'N/A',
+                            customer.height != null && customer.height!.isNotEmpty
+                                ? (customer.height!.toUpperCase().contains('CM') ||
+                                        customer.height!.toUpperCase().contains('FT')
+                                    ? customer.height!
+                                    : '${customer.height} CM')
+                                : 'N/A',
                           ),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow(
                             'Weight',
-                            customer.weight ?? 'N/A',
-                          ),
-                          const SizedBox(height: 16),
-                          _buildProfileDetailRow(
-                            'Blood Group',
-                            (customer.bloodGroup == null ||
-                                    customer.bloodGroup!.toLowerCase() ==
-                                        'unknown')
-                                ? 'N/A'
-                                : customer.bloodGroup!,
+                            customer.weight != null && customer.weight!.isNotEmpty
+                                ? (customer.weight!.toUpperCase().contains('KG') ||
+                                        customer.weight!.toUpperCase().contains('LBS')
+                                    ? customer.weight!
+                                    : '${customer.weight} KG')
+                                : 'N/A',
                           ),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow('Health Issues', healthIssues),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow(
-                            'Health Status',
-                            customer.isHealthy ?? false
-                                ? 'Healthy'
-                                : 'Not Healthy',
+                            'Activity Level',
+                            customer.activityLevel != null &&
+                                    customer.activityLevel.toString().isNotEmpty
+                                ? customer.activityLevel
+                                    .toString()
+                                    .replaceAll('_', ' ')
+                                : 'N/A',
                           ),
                           const SizedBox(height: 16),
                           _buildProfileDetailRow(
-                            'Active Scale',
-                            '${customer.activeScale.toString()}/5',
+                            'Fitness Level',
+                            customer.fitnessLevel != null &&
+                                    customer.fitnessLevel.toString().isNotEmpty
+                                ? customer.fitnessLevel
+                                    .toString()
+                                    .replaceAll('_', ' ')
+                                : 'N/A',
+                          ),
+                          const SizedBox(height: 16),
+                          _buildProfileDetailRow(
+                            'Target Weight',
+                            customer.targetWeight != null
+                                ? '${customer.targetWeight} KG'
+                                : 'N/A',
                           ),
                         ],
                       ),
@@ -1312,29 +1377,33 @@ class _EditTargetGoalsState extends State<EditTargetGoals> {
               );
             },
           ),
-          bottomNavigationBar: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: 24,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Button.filled(
-                    title: 'Update',
-                    isLoading: state.updateProfileDetails?.isNone() ?? false,
-                    ontap: () => _stepKey.currentState?.submit(),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    textAlign: TextAlign.center,
-                    'You’re defining your ‘why’ — and that’s \npowerful',
-                    style: AppStyles.text15Px.poppins.w400.textGrey,
-                  ),
-                ],
+          bottomNavigationBar: Container(
+            color: Colors.white,
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 16,
+                  bottom: 24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Button.filled(
+                      title: 'Update',
+                      isLoading: state.updateProfileDetails?.isNone() ?? false,
+                      ontap: () => _stepKey.currentState?.submit(),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      textAlign: TextAlign.center,
+                      'You’re defining your ‘why’ — and that’s \npowerful',
+                      style: AppStyles.text15Px.poppins.w400.textGrey,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

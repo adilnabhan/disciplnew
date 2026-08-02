@@ -41,6 +41,8 @@ class AssignedTrainerModel with _$AssignedTrainerModel {
     @JsonKey(name: 'experience_years') int? experienceYears,
     @JsonKey(name: 'bio') String? bio,
     @JsonKey(name: 'specializations') List<String>? specializations,
+    @JsonKey(name: 'user_type') String? userType,
+    @JsonKey(name: 'rating') double? rating,
   }) = _AssignedTrainerModel;
 
   factory AssignedTrainerModel.fromJson(Map<String, dynamic> json) => _$AssignedTrainerModelFromJson(json);

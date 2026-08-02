@@ -47,6 +47,12 @@ final class WorkoutRepository {
   /// Clears the entire calendar cache (e.g. on logout).
   void clearCalendarCache() => _monthCache.clear();
 
+  /// Checks if the calendar cache contains the specified month key ("yyyy-MM").
+  bool hasCalendarCache(String key) => _monthCache.containsKey(key);
+
+  /// Retrieves the cached data for the specified month key ("yyyy-MM").
+  Map<String, dynamic>? getCalendarCache(String key) => _monthCache[key];
+
   final Dio _dio = DioClient().dio;
 
   Either<ApiException, List<T>> _handleListResponse<T>(
@@ -405,13 +411,14 @@ final class WorkoutRepository {
   Future<Either<ApiException, dynamic>> finishSession({
     required int sessionId,
     required String title,
+    Map<String, dynamic>? payload,
   }) async {
     try {
       final baseUrl = ApiUris.activeSession.split('/sessions/')[0];
       final url = '$baseUrl/sessions/$sessionId/finish/';
       final res = await _dio.post<dynamic>(
         url,
-        data: {'title': title},
+        data: payload ?? {'title': title},
         options: Options(headers: {'X-Platform': platformSource}),
       );
       if ((res.statusCode == 200 || res.statusCode == 201) &&
@@ -438,6 +445,85 @@ final class WorkoutRepository {
         }
       }
       return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, Map<String, dynamic>>> syncSession({
+    required int sessionId,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      final baseUrl = ApiUris.activeSession.split('/sessions/')[0];
+      final url = '$baseUrl/sessions/$sessionId/sync/';
+      final res = await _dio.patch<dynamic>(
+        url,
+        data: payload,
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null) {
+        return right(res.data as Map<String, dynamic>);
+      }
+      return left(const ApiException.unknown());
+    } on DioException catch (e) {
+      debugPrint('syncSession DioException: $e');
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final errorMsg = data['error'] ?? data['detail'] ?? data['message'];
+          if (errorMsg != null) {
+            return left(ApiException.unknown(msg: errorMsg.toString()));
+          }
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          if (val is List && val.isNotEmpty) {
+            return left(ApiException.unknown(msg: val[0].toString()));
+          } else {
+            return left(ApiException.unknown(msg: val.toString()));
+          }
+        }
+      }
+      return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> reorderExercises({
+    required int sessionId,
+    required List<Map<String, dynamic>> logs,
+  }) async {
+    try {
+      final baseUrl = ApiUris.activeSession.split('/sessions/')[0];
+      final url = '$baseUrl/sessions/$sessionId/reorder-exercises/';
+      final res = await _dio.patch<dynamic>(
+        url,
+        data: {'logs': logs},
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+      if ((res.statusCode == 200 || res.statusCode == 201) &&
+          res.data != null) {
+        return right(res.data);
+      }
+      return left(const ApiException.unknown());
+    } on DioException catch (e) {
+      debugPrint('reorderExercises DioException: $e');
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final errorMsg = data['error'] ?? data['detail'] ?? data['message'];
+          if (errorMsg != null) {
+            return left(ApiException.unknown(msg: errorMsg.toString()));
+          }
+        }
+      }
+      return left(const ApiException.unknown());
+    } on ApiException catch (e) {
+      return left(e);
     } catch (e) {
       debugPrint(e.toString());
       return left(const ApiException.unknown());
@@ -506,8 +592,73 @@ final class WorkoutRepository {
     try {
       return await Feggy.async(
         call: _dio.patch<dynamic>(
-          ApiUris.updateWorkoutLogSetsBulk(logId),
+          ApiUris.deleteWorkoutLog(logId),
           data: {'weight_type': weightType},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) &&
+              res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> updateWorkoutLogTrackBy({
+    required int logId,
+    required String trackBy,
+  }) async {
+    try {
+      final normTrack = trackBy.toLowerCase() == 'sec' ||
+              trackBy.toLowerCase() == 'secs' ||
+              trackBy.toLowerCase() == 'seconds' ||
+              trackBy.toLowerCase() == 'time'
+          ? 'time'
+          : (trackBy.toLowerCase() == 'distance' ||
+                  trackBy.toLowerCase() == 'dist' ||
+                  trackBy.toLowerCase() == 'km' ||
+                  trackBy.toLowerCase() == 'm'
+              ? 'distance'
+              : 'rep');
+      return await Feggy.async(
+        call: _dio.patch<dynamic>(
+          ApiUris.deleteWorkoutLog(logId),
+          data: {'track_by': normTrack},
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if ((res.statusCode == 200 || res.statusCode == 201) &&
+              res.data != null) {
+            return right(res.data);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, dynamic>> updateWorkoutLogOrder({
+    required int logId,
+    required int orderIndex,
+  }) async {
+    try {
+      return await Feggy.async(
+        call: _dio.patch<dynamic>(
+          ApiUris.deleteWorkoutLog(logId),
+          data: {'order_index': orderIndex},
           options: Options(headers: {'X-Platform': platformSource}),
         ),
         onSuccess: (res) {
@@ -529,14 +680,46 @@ final class WorkoutRepository {
   Future<Either<ApiException, dynamic>> updateSetLog({
     required int setLogId,
     int? reps,
+    dynamic value,
+    String? inputType,
     double? weightKg,
     bool? isCompleted,
   }) async {
     try {
       final Map<String, dynamic> body = {};
-      if (reps != null) body['reps'] = reps;
       if (weightKg != null) body['weight_kg'] = weightKg;
       if (isCompleted != null) body['is_completed'] = isCompleted;
+
+      if (inputType != null && inputType.isNotEmpty) {
+        final normInput = inputType.toLowerCase() == 'sec' ||
+                inputType.toLowerCase() == 'secs' ||
+                inputType.toLowerCase() == 'seconds' ||
+                inputType.toLowerCase() == 'time'
+            ? 'time'
+            : (inputType.toLowerCase() == 'distance' ||
+                    inputType.toLowerCase() == 'dist' ||
+                    inputType.toLowerCase() == 'km' ||
+                    inputType.toLowerCase() == 'm'
+                ? 'distance'
+                : 'rep');
+        body['input_type'] = normInput;
+        if (normInput == 'rep') {
+          if (reps != null) {
+            body['reps'] = reps;
+          } else if (value != null) {
+            body['reps'] = (value is num) ? value.toInt() : (int.tryParse(value.toString()) ?? value);
+          }
+        } else {
+          if (value != null) {
+            body['value'] = value;
+          } else if (reps != null) {
+            body['value'] = reps;
+          }
+        }
+      } else {
+        if (reps != null) body['reps'] = reps;
+        if (value != null) body['value'] = value;
+      }
 
       final res = await _dio.patch<dynamic>(
         ApiUris.updateSetLog(setLogId),

@@ -35,6 +35,8 @@ mixin _$CustomerDetailsModel {
   dynamic get profilePicture => throw _privateConstructorUsedError;
   @JsonKey(name: 'profession')
   String? get profession => throw _privateConstructorUsedError;
+  @JsonKey(name: 'other_profession')
+  String? get otherProfession => throw _privateConstructorUsedError;
   @JsonKey(name: 'is_active_member')
   bool? get isActiveMember => throw _privateConstructorUsedError;
   @JsonKey(name: 'memberships')
@@ -71,6 +73,10 @@ mixin _$CustomerDetailsModel {
   String? get averageSleepingHours => throw _privateConstructorUsedError;
   @JsonKey(name: 'fitness_level')
   dynamic get fitnessLevel => throw _privateConstructorUsedError;
+  @JsonKey(name: 'activity_level')
+  dynamic get activityLevel => throw _privateConstructorUsedError;
+  @JsonKey(name: 'fitness_goal')
+  dynamic get fitnessGoal => throw _privateConstructorUsedError;
   @JsonKey(name: 'stress_level')
   dynamic get stressLevel => throw _privateConstructorUsedError;
   @JsonKey(name: 'weight_goal')
@@ -131,6 +137,7 @@ abstract class $CustomerDetailsModelCopyWith<$Res> {
     @JsonKey(name: 'weight') String? weight,
     @JsonKey(name: 'profile_picture') dynamic profilePicture,
     @JsonKey(name: 'profession') String? profession,
+    @JsonKey(name: 'other_profession') String? otherProfession,
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'memberships') List<Membership>? memberships,
     @JsonKey(name: 'full_name') String? fullName,
@@ -149,6 +156,8 @@ abstract class $CustomerDetailsModelCopyWith<$Res> {
     @JsonKey(name: 'average_working_hours') String? averageWorkingHours,
     @JsonKey(name: 'average_sleep_hours') String? averageSleepingHours,
     @JsonKey(name: 'fitness_level') dynamic fitnessLevel,
+    @JsonKey(name: 'activity_level') dynamic activityLevel,
+    @JsonKey(name: 'fitness_goal') dynamic fitnessGoal,
     @JsonKey(name: 'stress_level') dynamic stressLevel,
     @JsonKey(name: 'weight_goal') dynamic weightGoal,
     @JsonKey(name: 'target_weight') dynamic targetWeight,
@@ -194,6 +203,7 @@ class _$CustomerDetailsModelCopyWithImpl<
     Object? weight = freezed,
     Object? profilePicture = freezed,
     Object? profession = freezed,
+    Object? otherProfession = freezed,
     Object? isActiveMember = freezed,
     Object? memberships = freezed,
     Object? fullName = freezed,
@@ -212,6 +222,8 @@ class _$CustomerDetailsModelCopyWithImpl<
     Object? averageWorkingHours = freezed,
     Object? averageSleepingHours = freezed,
     Object? fitnessLevel = freezed,
+    Object? activityLevel = freezed,
+    Object? fitnessGoal = freezed,
     Object? stressLevel = freezed,
     Object? weightGoal = freezed,
     Object? targetWeight = freezed,
@@ -265,6 +277,11 @@ class _$CustomerDetailsModelCopyWithImpl<
                 freezed == profession
                     ? _value.profession
                     : profession // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            otherProfession:
+                freezed == otherProfession
+                    ? _value.otherProfession
+                    : otherProfession // ignore: cast_nullable_to_non_nullable
                         as String?,
             isActiveMember:
                 freezed == isActiveMember
@@ -355,6 +372,16 @@ class _$CustomerDetailsModelCopyWithImpl<
                 freezed == fitnessLevel
                     ? _value.fitnessLevel
                     : fitnessLevel // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            activityLevel:
+                freezed == activityLevel
+                    ? _value.activityLevel
+                    : activityLevel // ignore: cast_nullable_to_non_nullable
+                        as dynamic,
+            fitnessGoal:
+                freezed == fitnessGoal
+                    ? _value.fitnessGoal
+                    : fitnessGoal // ignore: cast_nullable_to_non_nullable
                         as dynamic,
             stressLevel:
                 freezed == stressLevel
@@ -459,6 +486,7 @@ abstract class _$$CustomerDetailsModelImplCopyWith<$Res>
     @JsonKey(name: 'weight') String? weight,
     @JsonKey(name: 'profile_picture') dynamic profilePicture,
     @JsonKey(name: 'profession') String? profession,
+    @JsonKey(name: 'other_profession') String? otherProfession,
     @JsonKey(name: 'is_active_member') bool? isActiveMember,
     @JsonKey(name: 'memberships') List<Membership>? memberships,
     @JsonKey(name: 'full_name') String? fullName,
@@ -477,6 +505,8 @@ abstract class _$$CustomerDetailsModelImplCopyWith<$Res>
     @JsonKey(name: 'average_working_hours') String? averageWorkingHours,
     @JsonKey(name: 'average_sleep_hours') String? averageSleepingHours,
     @JsonKey(name: 'fitness_level') dynamic fitnessLevel,
+    @JsonKey(name: 'activity_level') dynamic activityLevel,
+    @JsonKey(name: 'fitness_goal') dynamic fitnessGoal,
     @JsonKey(name: 'stress_level') dynamic stressLevel,
     @JsonKey(name: 'weight_goal') dynamic weightGoal,
     @JsonKey(name: 'target_weight') dynamic targetWeight,
@@ -518,6 +548,7 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
     Object? weight = freezed,
     Object? profilePicture = freezed,
     Object? profession = freezed,
+    Object? otherProfession = freezed,
     Object? isActiveMember = freezed,
     Object? memberships = freezed,
     Object? fullName = freezed,
@@ -536,6 +567,8 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
     Object? averageWorkingHours = freezed,
     Object? averageSleepingHours = freezed,
     Object? fitnessLevel = freezed,
+    Object? activityLevel = freezed,
+    Object? fitnessGoal = freezed,
     Object? stressLevel = freezed,
     Object? weightGoal = freezed,
     Object? targetWeight = freezed,
@@ -589,6 +622,11 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
             freezed == profession
                 ? _value.profession
                 : profession // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        otherProfession:
+            freezed == otherProfession
+                ? _value.otherProfession
+                : otherProfession // ignore: cast_nullable_to_non_nullable
                     as String?,
         isActiveMember:
             freezed == isActiveMember
@@ -679,6 +717,16 @@ class __$$CustomerDetailsModelImplCopyWithImpl<$Res>
             freezed == fitnessLevel
                 ? _value.fitnessLevel
                 : fitnessLevel // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        activityLevel:
+            freezed == activityLevel
+                ? _value.activityLevel
+                : activityLevel // ignore: cast_nullable_to_non_nullable
+                    as dynamic,
+        fitnessGoal:
+            freezed == fitnessGoal
+                ? _value.fitnessGoal
+                : fitnessGoal // ignore: cast_nullable_to_non_nullable
                     as dynamic,
         stressLevel:
             freezed == stressLevel
@@ -776,6 +824,7 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     @JsonKey(name: 'weight') this.weight,
     @JsonKey(name: 'profile_picture') this.profilePicture,
     @JsonKey(name: 'profession') this.profession,
+    @JsonKey(name: 'other_profession') this.otherProfession,
     @JsonKey(name: 'is_active_member') this.isActiveMember,
     @JsonKey(name: 'memberships') final List<Membership>? memberships,
     @JsonKey(name: 'full_name') this.fullName,
@@ -794,6 +843,8 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     @JsonKey(name: 'average_working_hours') this.averageWorkingHours,
     @JsonKey(name: 'average_sleep_hours') this.averageSleepingHours,
     @JsonKey(name: 'fitness_level') this.fitnessLevel,
+    @JsonKey(name: 'activity_level') this.activityLevel,
+    @JsonKey(name: 'fitness_goal') this.fitnessGoal,
     @JsonKey(name: 'stress_level') this.stressLevel,
     @JsonKey(name: 'weight_goal') this.weightGoal,
     @JsonKey(name: 'target_weight') this.targetWeight,
@@ -844,6 +895,9 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
   @override
   @JsonKey(name: 'profession')
   final String? profession;
+  @override
+  @JsonKey(name: 'other_profession')
+  final String? otherProfession;
   @override
   @JsonKey(name: 'is_active_member')
   final bool? isActiveMember;
@@ -906,6 +960,12 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
   @override
   @JsonKey(name: 'fitness_level')
   final dynamic fitnessLevel;
+  @override
+  @JsonKey(name: 'activity_level')
+  final dynamic activityLevel;
+  @override
+  @JsonKey(name: 'fitness_goal')
+  final dynamic fitnessGoal;
   @override
   @JsonKey(name: 'stress_level')
   final dynamic stressLevel;
@@ -1008,7 +1068,7 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
 
   @override
   String toString() {
-    return 'CustomerDetailsModel(id: $id, emergencyContactName: $emergencyContactName, emergencyContactNumber: $emergencyContactNumber, height: $height, weight: $weight, profilePicture: $profilePicture, profession: $profession, isActiveMember: $isActiveMember, memberships: $memberships, fullName: $fullName, created: $created, modified: $modified, mobileNumber: $mobileNumber, firstName: $firstName, lastName: $lastName, email: $email, isHealthy: $isHealthy, dateOfBirth: $dateOfBirth, gender: $gender, bloodGroup: $bloodGroup, jobSatisfaction: $jobSatisfaction, activeScale: $activeScale, averageWorkingHours: $averageWorkingHours, averageSleepingHours: $averageSleepingHours, fitnessLevel: $fitnessLevel, stressLevel: $stressLevel, weightGoal: $weightGoal, targetWeight: $targetWeight, sleepGoal: $sleepGoal, bmi: $bmi, bmr: $bmr, bfPercentage: $bfPercentage, injuries: $injuries, medicalConditions: $medicalConditions, healthConditions: $healthConditions, targetGoal: $targetGoal, healthConditionsOther: $healthConditionsOther, targetGoalOther: $targetGoalOther, assignedFitnessCenter: $assignedFitnessCenter, assignedTrainer: $assignedTrainer, trainerNotes: $trainerNotes)';
+    return 'CustomerDetailsModel(id: $id, emergencyContactName: $emergencyContactName, emergencyContactNumber: $emergencyContactNumber, height: $height, weight: $weight, profilePicture: $profilePicture, profession: $profession, otherProfession: $otherProfession, isActiveMember: $isActiveMember, memberships: $memberships, fullName: $fullName, created: $created, modified: $modified, mobileNumber: $mobileNumber, firstName: $firstName, lastName: $lastName, email: $email, isHealthy: $isHealthy, dateOfBirth: $dateOfBirth, gender: $gender, bloodGroup: $bloodGroup, jobSatisfaction: $jobSatisfaction, activeScale: $activeScale, averageWorkingHours: $averageWorkingHours, averageSleepingHours: $averageSleepingHours, fitnessLevel: $fitnessLevel, activityLevel: $activityLevel, fitnessGoal: $fitnessGoal, stressLevel: $stressLevel, weightGoal: $weightGoal, targetWeight: $targetWeight, sleepGoal: $sleepGoal, bmi: $bmi, bmr: $bmr, bfPercentage: $bfPercentage, injuries: $injuries, medicalConditions: $medicalConditions, healthConditions: $healthConditions, targetGoal: $targetGoal, healthConditionsOther: $healthConditionsOther, targetGoalOther: $targetGoalOther, assignedFitnessCenter: $assignedFitnessCenter, assignedTrainer: $assignedTrainer, trainerNotes: $trainerNotes)';
   }
 
   @override
@@ -1031,6 +1091,8 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
             ) &&
             (identical(other.profession, profession) ||
                 other.profession == profession) &&
+            (identical(other.otherProfession, otherProfession) ||
+                other.otherProfession == otherProfession) &&
             (identical(other.isActiveMember, isActiveMember) ||
                 other.isActiveMember == isActiveMember) &&
             const DeepCollectionEquality().equals(
@@ -1067,6 +1129,14 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
             const DeepCollectionEquality().equals(
               other.fitnessLevel,
               fitnessLevel,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other.activityLevel,
+              activityLevel,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other.fitnessGoal,
+              fitnessGoal,
             ) &&
             const DeepCollectionEquality().equals(
               other.stressLevel,
@@ -1127,6 +1197,7 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     weight,
     const DeepCollectionEquality().hash(profilePicture),
     profession,
+    otherProfession,
     isActiveMember,
     const DeepCollectionEquality().hash(_memberships),
     fullName,
@@ -1145,6 +1216,8 @@ class _$CustomerDetailsModelImpl implements _CustomerDetailsModel {
     averageWorkingHours,
     averageSleepingHours,
     const DeepCollectionEquality().hash(fitnessLevel),
+    const DeepCollectionEquality().hash(activityLevel),
+    const DeepCollectionEquality().hash(fitnessGoal),
     const DeepCollectionEquality().hash(stressLevel),
     const DeepCollectionEquality().hash(weightGoal),
     const DeepCollectionEquality().hash(targetWeight),
@@ -1191,6 +1264,7 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
     @JsonKey(name: 'weight') final String? weight,
     @JsonKey(name: 'profile_picture') final dynamic profilePicture,
     @JsonKey(name: 'profession') final String? profession,
+    @JsonKey(name: 'other_profession') final String? otherProfession,
     @JsonKey(name: 'is_active_member') final bool? isActiveMember,
     @JsonKey(name: 'memberships') final List<Membership>? memberships,
     @JsonKey(name: 'full_name') final String? fullName,
@@ -1209,6 +1283,8 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
     @JsonKey(name: 'average_working_hours') final String? averageWorkingHours,
     @JsonKey(name: 'average_sleep_hours') final String? averageSleepingHours,
     @JsonKey(name: 'fitness_level') final dynamic fitnessLevel,
+    @JsonKey(name: 'activity_level') final dynamic activityLevel,
+    @JsonKey(name: 'fitness_goal') final dynamic fitnessGoal,
     @JsonKey(name: 'stress_level') final dynamic stressLevel,
     @JsonKey(name: 'weight_goal') final dynamic weightGoal,
     @JsonKey(name: 'target_weight') final dynamic targetWeight,
@@ -1254,6 +1330,9 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
   @override
   @JsonKey(name: 'profession')
   String? get profession;
+  @override
+  @JsonKey(name: 'other_profession')
+  String? get otherProfession;
   @override
   @JsonKey(name: 'is_active_member')
   bool? get isActiveMember;
@@ -1308,6 +1387,12 @@ abstract class _CustomerDetailsModel implements CustomerDetailsModel {
   @override
   @JsonKey(name: 'fitness_level')
   dynamic get fitnessLevel;
+  @override
+  @JsonKey(name: 'activity_level')
+  dynamic get activityLevel;
+  @override
+  @JsonKey(name: 'fitness_goal')
+  dynamic get fitnessGoal;
   @override
   @JsonKey(name: 'stress_level')
   dynamic get stressLevel;

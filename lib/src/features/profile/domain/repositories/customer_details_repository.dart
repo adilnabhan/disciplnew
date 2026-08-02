@@ -1,4 +1,7 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/core/network/dio_client.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/models/body_measurement_model.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/models/body_matrix_model.dart';
 import 'package:dio/dio.dart';
 
 final class CustomerDetailsRepository {
@@ -212,27 +215,432 @@ final class CustomerDetailsRepository {
     required Map<String, dynamic> body,
   }) async {
     try {
-      return await Feggy.async(
-        call: Dio().patch<dynamic>(
-          ApiUris.updateCustomerProfile,
-          data: body,
-          options: Options(headers: {'X-Platform': platformSource}).token,
+      final cleanBody = Map<String, dynamic>.from(body);
+      cleanBody.removeWhere((key, value) =>
+          value == null || (value is String && value.trim().isEmpty));
+
+      final response = await Dio().request<dynamic>(
+        ApiUris.updateCustomerProfile,
+        data: cleanBody,
+        options: Options(
+          method: 'PATCH',
+          headers: {
+            'X-Platform': platformSource,
+            'Content-Type': 'application/json',
+          },
+        ).token,
+      );
+
+      print('update health profile status code is -- ${response.statusCode}');
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 || statusCode == 201) {
+        if (response.data != null && response.data is Map) {
+          return customerDetails(id: id, forceRefresh: true);
+        }
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: 'Unexpected response from server. Code: $statusCode',
+        ),
+      );
+    } on DioException catch (e) {
+      print('update health profile dio error -- $e');
+
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          final msgStr = (val is List && val.isNotEmpty)
+              ? val.first.toString()
+              : val.toString();
+          return left(ApiException.unknown(msg: '$firstKey: $msgStr'));
+        } else if (data is String && data.isNotEmpty) {
+          return left(ApiException.unknown(msg: data));
+        }
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? 'Failed to update health metrics.',
+        ),
+      );
+    } catch (e) {
+      return left(
+        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+      );
+    }
+  }
+
+  /// @api {PATCH /api/v1/customer/profile/}
+  Future<Either<ApiException, CustomerDetailsModel>> updateCustomerProfile({
+    required int id,
+    required Map<String, dynamic> body,
+  }) async {
+    try {
+      final cleanBody = Map<String, dynamic>.from(body);
+      cleanBody.removeWhere((key, value) =>
+          value == null || (value is String && value.trim().isEmpty));
+
+      final response = await Dio().request<dynamic>(
+        ApiUris.customerProfile,
+        data: cleanBody,
+        options: Options(
+          method: 'PATCH',
+          headers: {
+            'X-Platform': platformSource,
+            'Content-Type': 'application/json',
+          },
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 || statusCode == 201) {
+        return customerDetails(id: id, forceRefresh: true);
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: 'Unexpected response from server. Code: $statusCode',
+        ),
+      );
+    } on DioException catch (e) {
+      if (e.response?.data != null && e.response?.data is Map) {
+        final data = e.response!.data as Map;
+        if (data.containsKey('message')) {
+          return left(ApiException.unknown(msg: data['message'].toString()));
+        }
+      }
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? 'Failed to update customer profile.',
+        ),
+      );
+    } catch (e) {
+      return left(
+        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+      );
+    }
+  }
+
+  /// @api {PATCH https://discipl-backend.onrender.com/api/v1/customer/manage/profile/email-update/}
+  Future<Either<ApiException, CustomerDetailsModel>> updateEmail({
+    required String email,
+  }) async {
+    final trimmedEmail = email.trim();
+    try {
+      final response = await Dio().request<dynamic>(
+        ApiUris.updateEmail,
+        data: {'email': trimmedEmail},
+        options: Options(
+          method: 'PATCH',
+          headers: {
+            'X-Platform': platformSource,
+            'Content-Type': 'application/json',
+          },
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 || statusCode == 201) {
+        if (_cachedCustomerDetails != null) {
+          _cachedCustomerDetails = _cachedCustomerDetails!.copyWith(email: trimmedEmail);
+        }
+        final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
+        if (id != null) {
+          return customerDetails(id: id, forceRefresh: true);
+        }
+        if (_cachedCustomerDetails != null) {
+          return right(_cachedCustomerDetails!);
+        }
+      }
+
+      return left(
+        const ApiException.unknown(
+          msg: "Couldn't update your email. Please try again.",
+        ),
+      );
+    } on DioException catch (e) {
+      print('update email dio error -- $e');
+
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          final msgStr = (val is List && val.isNotEmpty)
+              ? val.first.toString()
+              : val.toString();
+          return left(ApiException.unknown(msg: msgStr));
+        } else if (data is String && data.isNotEmpty) {
+          return left(ApiException.unknown(msg: data));
+        }
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? "Couldn't update your email. Please try again.",
+        ),
+      );
+    } catch (e) {
+      return left(
+        const ApiException.unknown(
+          msg: "Couldn't update your email. Please try again.",
+        ),
+      );
+    }
+  }
+
+  Future<Either<ApiException, List<Profession>>> fetchProfessionsList() async {
+    try {
+      final response = await Feggy.async<Response<dynamic>, Either<ApiException, List<Profession>>>(
+        call: DioClient().dio.get<dynamic>(
+          ApiUris.professionsList,
+          options: Options(headers: {
+            'X-Platform': platformSource,
+            'Accept': 'application/json',
+          }),
         ),
         onSuccess: (res) {
-          if (res.statusCode == 200 || res.statusCode == 201) {
+          if (res.statusCode == 200) {
             if (res.data != null && res.data is Map) {
-              return customerDetails(id: id, forceRefresh: true);
+              final professionsData = (res.data['data'] ?? res.data['professions']) as List?;
+              if (professionsData != null) {
+                final list = professionsData
+                    .map((e) => Profession.fromJson(e as Map<String, dynamic>))
+                    .toList();
+                return right(list);
+              }
             }
           }
           return left(const ApiException.unknown());
         },
       );
-    } on ApiException catch (e) {
-      return left(e);
+      return response;
     } catch (e) {
-      debugPrint(e.toString());
-      return left(const ApiException.unknown());
+      return left(ApiException.unknown(msg: e.toString()));
     }
   }
 
+  Future<Either<ApiException, CustomerDetailsModel>> updateProfessionDetails({
+    required int id,
+    required String profession,
+    String? otherProfession,
+    int? jobSatisfaction,
+    String? workingHours,
+  }) async {
+    try {
+      final body = {
+        'profession': profession,
+        if (otherProfession != null) 'other_profession': otherProfession,
+        if (jobSatisfaction != null) 'job_satisfaction': jobSatisfaction,
+        if (workingHours != null) 'working_hours': workingHours,
+      };
+
+      final response = await Dio().request<dynamic>(
+        ApiUris.updateProfession,
+        data: body,
+        options: Options(
+          method: 'PATCH',
+          headers: {
+            'X-Platform': platformSource,
+            'Content-Type': 'application/json',
+          },
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 || statusCode == 201) {
+        return customerDetails(id: id, forceRefresh: true);
+      }
+
+      return left(
+        const ApiException.unknown(
+          msg: "Couldn't update your profession. Please try again.",
+        ),
+      );
+    } on DioException catch (e) {
+      print('update profession dio error -- $e');
+
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          final msgStr = (val is List && val.isNotEmpty)
+              ? val.first.toString()
+              : val.toString();
+          return left(ApiException.unknown(msg: msgStr));
+        } else if (data is String && data.isNotEmpty) {
+          return left(ApiException.unknown(msg: data));
+        }
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? "Couldn't update your profession. Please try again.",
+        ),
+      );
+    } catch (e) {
+      return left(
+        const ApiException.unknown(
+          msg: "Couldn't update your profession. Please try again.",
+        ),
+      );
+    }
+  }
+
+  /// @api {POST https://discipl-backend.onrender.com/api/v1/customer/measurements/}
+  Future<Either<ApiException, BodyMeasurementModel>> logBodyMeasurements({
+    double? neck,
+    double? waist,
+    double? hip,
+    double? chest,
+    double? biceps,
+    double? thighs,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        if (neck != null) 'neck': neck,
+        if (waist != null) 'waist': waist,
+        if (hip != null) 'hip': hip,
+        if (chest != null) 'chest_cm': chest,
+        if (biceps != null) 'biceps_cm': biceps,
+        if (thighs != null) 'thighs_cm': thighs,
+      };
+
+      final response = await Dio().post<dynamic>(
+        ApiUris.bodyMeasurements,
+        data: body,
+        options: Options(
+          headers: {
+            'X-Platform': platformSource,
+            'Content-Type': 'application/json',
+          },
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 || statusCode == 201) {
+        if (response.data != null && response.data is Map) {
+          final measurement = BodyMeasurementModel.fromJson(
+            Map<String, dynamic>.from(response.data as Map),
+          );
+          invalidateCache();
+          return right(measurement);
+        }
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: 'Unexpected response from server. Code: $statusCode',
+        ),
+      );
+    } on DioException catch (e) {
+      print('log body measurements dio error -- $e');
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final firstKey = data.keys.first;
+          final val = data[firstKey];
+          final msgStr = (val is List && val.isNotEmpty)
+              ? val.first.toString()
+              : val.toString();
+          return left(ApiException.unknown(msg: '$firstKey: $msgStr'));
+        } else if (data is String && data.isNotEmpty) {
+          return left(ApiException.unknown(msg: data));
+        }
+      }
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? 'Failed to log body measurements.',
+        ),
+      );
+    } catch (e) {
+      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+    }
+  }
+
+  /// @api {GET https://discipl-backend.onrender.com/api/v1/customer/measurements/}
+  Future<Either<ApiException, BodyMeasurementsHistoryModel>> fetchBodyMeasurements() async {
+    try {
+      final response = await Dio().get<dynamic>(
+        ApiUris.bodyMeasurements,
+        options: Options(
+          headers: {'X-Platform': platformSource},
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200) {
+        if (response.data != null) {
+          if (response.data is List) {
+            return right(
+              BodyMeasurementsHistoryModel.fromList(
+                (response.data as List).cast<dynamic>(),
+              ),
+            );
+          } else if (response.data is Map) {
+            return right(
+              BodyMeasurementsHistoryModel.fromJson(
+                Map<String, dynamic>.from(response.data as Map),
+              ),
+            );
+          }
+        }
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: 'Unexpected response from server. Code: $statusCode',
+        ),
+      );
+    } on DioException catch (e) {
+      print('fetch body measurements dio error -- $e');
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? 'Failed to fetch body measurements.',
+        ),
+      );
+    } catch (e) {
+      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+    }
+  }
+
+  /// @api {GET https://discipl-backend.onrender.com/api/v1/customer/body-matrix/}
+  Future<Either<ApiException, BodyMatrixModel>> fetchBodyMatrix() async {
+    try {
+      final response = await Dio().get<dynamic>(
+        ApiUris.bodyMatrix,
+        options: Options(
+          headers: {'X-Platform': platformSource},
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 && response.data != null) {
+        final dataMap = response.data is Map
+            ? Map<String, dynamic>.from(response.data as Map)
+            : <String, dynamic>{};
+        return right(BodyMatrixModel.fromJson(dataMap));
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: 'Unexpected response from server. Code: $statusCode',
+        ),
+      );
+    } on DioException catch (e) {
+      print('fetch body matrix dio error -- $e');
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? 'Failed to fetch body matrix.',
+        ),
+      );
+    } catch (e) {
+      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+    }
+  }
 }

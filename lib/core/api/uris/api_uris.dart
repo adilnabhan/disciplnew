@@ -26,9 +26,32 @@ final class ApiUris {
   ///============================= Customer =============================\\\
   static String customerDetails(int id) => '${_v1}customer/manage/$id/';
   static final updateCustomerProfile = '${_v1}customer/manage/profile/health/';
+  static final updateEmail = '${_v1}customer/manage/profile/email-update/';
+  static final professionsList = '${_v1}customer/professions/';
+  static final updateProfession = '${_v1}customer/manage/profile/profession/';
+  static final bodyMeasurements = '${_v1}customer/measurements/';
+  static final bodyMatrix = '${_v1}customer/body-matrix/';
+  static final customerProfile = '${_v1}customer/profile/';
+  static final profileCompletion = '${_v1}customer/profile/completion/';
+  static final profileCompletionDismiss =
+      '${_v1}customer/profile/completion/dismiss/';
+  static final assignedGymTrainers = '${_v1}customer/gym-trainers/';
 
-  ///============================= Home =============================\\\
+  ///============================= Home & Banners =============================\\\
   static final home = '${_v1}customer/customer-homepage/';
+  static String gymBanners(int orgId) =>
+      '${_v1}fitnesscenter/gym-banners/?organization_id=$orgId';
+  static final globalBanners = '${_v1}fitnesscenter/global-banners/';
+  static final promotionalBanners = '${_v1}fitnesscenter/banners/';
+
+  ///============================= Notifications =============================\\\
+  static final notificationsList = '${_v1}customer/notifications/';
+  static String markNotificationRead(int id) =>
+      '${_v1}customer/notifications/$id/read/';
+  static final markAllNotificationsRead =
+      '${_v1}customer/notifications/read-all/';
+  static final unreadNotificationsCount =
+      '${_v1}customer/notifications/unread-count/';
 
   ///============================= Payment =============================\\\
   static final paymentHistory = '${_v1}customer/payment-history/';

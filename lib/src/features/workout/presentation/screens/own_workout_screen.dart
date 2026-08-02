@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
@@ -708,6 +709,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               title: item['title']!,
                               subtitle: item['subtitle']!,
                               videoUrl: item['video_url'],
+                              trackBy: item['track_by'],
                             );
                           } finally {
                             if (mounted) {
@@ -1793,13 +1795,27 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     setState(() {
                       _isFinishing = true;
                     });
-                    await _cubit.saveDraftSession(_titleController.text.trim());
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Saved as draft!')),
-                      );
-                      Navigator.of(context).pop(true);
-                    }
+                    final res = await _cubit.saveDraftSession(_titleController.text.trim());
+                    res.fold(
+                      (error) {
+                        setState(() {
+                          _isFinishing = false;
+                        });
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to save draft: ${error.msg ?? "Unknown error"}')),
+                          );
+                        }
+                      },
+                      (_) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Saved as draft!')),
+                          );
+                          Navigator.of(context).pop(true);
+                        }
+                      },
+                    );
                   },
                   child: const Text(
                     'Save as Draft',
@@ -1827,6 +1843,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
       listener: (context, state) {
         if (!widget.isPresetCreation && state.exercises.isNotEmpty) {
           _syncTimer();
+        }
+        if (_cubit.reorderError != null) {
+          final errStr = _cubit.reorderError!;
+          _cubit.reorderError = null;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(errStr),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
         }
         if (_titleController.text != state.sessionTitle &&
             !_titleFocusNode.hasFocus) {
@@ -1980,6 +2007,37 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     ),
                                   ),
                                 ],
+                                if (_cubit.showReorderLoadingIndicator) ...[
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    '•',
+                                    style: TextStyle(
+                                      color: Color(0xFF888888),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'Saving...',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -2040,32 +2098,78 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       ),
                     )
                   else ...[
-                    // Scrollable Content
+                    // Scrollable Content with Drag-to-Reorder
                     Expanded(
-                      child: ListView(
+                      child: ReorderableListView.builder(
+                        buildDefaultDragHandles: false,
+                        onReorderStart: (index) {
+                          HapticFeedback.lightImpact();
+                        },
+                        proxyDecorator: (child, index, animation) {
+                          return AnimatedBuilder(
+                            animation: animation,
+                            builder: (BuildContext context, Widget? child) {
+                              final double animValue = Curves.easeInOut.transform(
+                                animation.value,
+                              );
+                              final double scale = 1.0 + (0.02 * animValue);
+                              return Transform.scale(
+                                scale: scale,
+                                child: Material(
+                                  color: Colors.white,
+                                  elevation: 4 * animValue,
+                                  shadowColor: Colors.black.withOpacity(
+                                    0.12 * animValue,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: child,
+                                ),
+                              );
+                            },
+                            child: child,
+                          );
+                        },
                         padding: const EdgeInsets.symmetric(
                           horizontal: 20,
                           vertical: 8,
                         ),
-                        children: [
-                          // Exercise list
-                          ...List.generate(state.exercises.length, (
-                            exerciseIndex,
-                          ) {
-                            final exercise = state.exercises[exerciseIndex];
-                            return _buildExerciseCard(exercise, exerciseIndex);
-                          }),
+                        itemCount: state.exercises.length,
+                        onReorder: (oldIndex, newIndex) {
+                          if (_cubit.isReorderingExercises) return;
+                          if (oldIndex < newIndex) {
+                            newIndex -= 1;
+                          }
+                          if (oldIndex == newIndex) return;
+                          _cubit.reorderExercises(oldIndex, newIndex);
+                        },
+                        footer: Column(
+                          key: const ValueKey('add_workout_footer'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 18),
+                            _buildOutlineRedButton(
+                              text: '+ Add Workout',
+                              onTap: _addExercise,
+                            ),
+                            const SizedBox(height: 32),
+                          ],
+                        ),
+                        itemBuilder: (context, index) {
+                          final exercise = state.exercises[index];
+                          final exId =
+                              exercise['id'] ??
+                              exercise['workout_log_id'] ??
+                              exercise['plan_exercise_id'] ??
+                              exercise['exercise_id'];
+                          final exerciseKey = ValueKey('ex_card_$exId');
 
-                          const SizedBox(height: 18),
-
-                          // + Add Workout Button
-                          _buildOutlineRedButton(
-                            text: '+ Add Workout',
-                            onTap: _addExercise,
-                          ),
-
-                          const SizedBox(height: 32),
-                        ],
+                          return ReorderableDelayedDragStartListener(
+                            key: exerciseKey,
+                            index: index,
+                            enabled: !_cubit.isReorderingExercises,
+                            child: _buildExerciseCard(exercise, index),
+                          );
+                        },
                       ),
                     ),
                     // Bottom Finish Button Container
@@ -2371,8 +2475,11 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         ); // close dialog
                                         final Map<String, dynamic> sessionMap =
                                             success is Map<String, dynamic>
-                                                ? success
+                                                ? Map<String, dynamic>.from(success)
                                                 : <String, dynamic>{};
+                                        if (_elapsedSeconds > 0) {
+                                          sessionMap['elapsed_seconds'] = _elapsedSeconds;
+                                        }
                                         Navigator.pushReplacement(
                                           context,
                                           MaterialPageRoute<bool>(
@@ -2434,14 +2541,12 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     final allExercises = _cubit.state.exercises;
     if (allExercises.length < 2) return;
 
-    if (allExercises.length == 2) {
-      final otherIndex = currentIndex == 0 ? 1 : 0;
-      _cubit.swapExercises(currentIndex, otherIndex);
-      return;
-    }
+    final isAtTop = currentIndex == 0;
+    final isAtBottom = currentIndex == allExercises.length - 1;
 
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2449,56 +2554,213 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
       builder: (bottomSheetContext) {
         return SafeArea(
           child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
             padding: const EdgeInsets.only(bottom: 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    'Swap "${currentExercise['title']}" with:',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Color(0xFF212121),
+                // Top handle indicator bar
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                 ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Reorder Exercise',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 18,
+                          color: Color(0xFF212121),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${currentExercise['title']} (Position ${currentIndex + 1} of ${allExercises.length})',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          color: Color(0xFF757575),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const Divider(height: 1),
+
+                // Quick Action Buttons
+                Column(
+                  children: [
+                    ListTile(
+                      enabled: !isAtTop,
+                      leading: Icon(
+                        Icons.vertical_align_top_rounded,
+                        color: isAtTop ? Colors.grey : AppColors.primary,
+                      ),
+                      title: const Text(
+                        'Move to Top',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Place this exercise first in order',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        Navigator.pop(bottomSheetContext);
+                        _cubit.moveExerciseToTop(currentIndex);
+                      },
+                    ),
+                    ListTile(
+                      enabled: !isAtTop,
+                      leading: Icon(
+                        Icons.arrow_upward_rounded,
+                        color: isAtTop ? Colors.grey : const Color(0xFF212121),
+                      ),
+                      title: const Text(
+                        'Move Up',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        isAtTop ? 'Already at top' : 'Move up to position ${currentIndex}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        Navigator.pop(bottomSheetContext);
+                        _cubit.moveExerciseUp(currentIndex);
+                      },
+                    ),
+                    ListTile(
+                      enabled: !isAtBottom,
+                      leading: Icon(
+                        Icons.arrow_downward_rounded,
+                        color: isAtBottom ? Colors.grey : const Color(0xFF212121),
+                      ),
+                      title: const Text(
+                        'Move Down',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: Text(
+                        isAtBottom ? 'Already at bottom' : 'Move down to position ${currentIndex + 2}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        Navigator.pop(bottomSheetContext);
+                        _cubit.moveExerciseDown(currentIndex);
+                      },
+                    ),
+                    ListTile(
+                      enabled: !isAtBottom,
+                      leading: Icon(
+                        Icons.vertical_align_bottom_rounded,
+                        color: isAtBottom ? Colors.grey : AppColors.primary,
+                      ),
+                      title: const Text(
+                        'Move to Bottom',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Place this exercise last in order',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      onTap: () {
+                        Navigator.pop(bottomSheetContext);
+                        _cubit.moveExerciseToBottom(currentIndex);
+                      },
+                    ),
+                  ],
+                ),
+
+                const Divider(height: 1),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 12, 20, 6),
+                  child: Text(
+                    'Or move directly to position:',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                      color: Color(0xFF757575),
+                    ),
+                  ),
+                ),
+
                 Flexible(
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: allExercises.length,
                     itemBuilder: (context, index) {
-                      if (index == currentIndex) return const SizedBox.shrink();
+                      final isCurrent = index == currentIndex;
                       final exercise = allExercises[index];
                       return ListTile(
+                        dense: true,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 20,
-                          vertical: 4,
+                          vertical: 0,
                         ),
+                        selected: isCurrent,
+                        selectedTileColor: AppColors.primary.withOpacity(0.05),
                         title: Text(
-                          '${index + 1}. ${exercise['title']}',
-                          style: const TextStyle(
+                          'Position ${index + 1}: ${exercise['title']}',
+                          style: TextStyle(
                             fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
+                            fontWeight: isCurrent ? FontWeight.w700 : FontWeight.w500,
+                            fontSize: 13,
+                            color: isCurrent ? AppColors.primary : const Color(0xFF212121),
                           ),
                         ),
-                        subtitle: Text(
-                          exercise['subtitle'] as String? ?? '',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _cubit.swapExercises(currentIndex, index);
-                        },
+                        trailing: isCurrent
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  'Current',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              )
+                            : const Icon(Icons.swap_vert, size: 18, color: Colors.grey),
+                        onTap: isCurrent
+                            ? null
+                            : () {
+                                Navigator.pop(bottomSheetContext);
+                                _cubit.reorderExercise(currentIndex, index);
+                              },
                       );
                     },
                   ),
@@ -2649,83 +2911,60 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_cubit.state.exercises.length > 1) ...[
+                if (_cubit.state.exercises.length > 1) ...[
+                  const SizedBox(width: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       GestureDetector(
-                        onTap: () => _showSwapDialog(exerciseIndex, exercise),
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) {
+                              return AlertDialog(
+                                title: const Text('Delete Exercise'),
+                                content: Text(
+                                  'Are you sure you want to delete ${exercise['title']} from this workout session?',
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(dialogContext),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.pop(dialogContext);
+                                      _cubit.deleteExercise(exerciseIndex);
+                                    },
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
                         child: Container(
                           width: 30,
                           height: 30,
                           decoration: const BoxDecoration(
-                            color: Color(0xFFF1F3F5),
+                            color: Color(0xFFFFF0F1),
                             shape: BoxShape.circle,
                           ),
-                          child: Center(
-                            child: SvgPicture.asset(
-                              'assets/images/svg/icons/swap_icon.svg',
-                              width: 16,
-                              height: 16,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF666666),
-                                BlendMode.srcIn,
-                              ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.delete_outline_rounded,
+                              color: Color(0xFFD30C15),
+                              size: 20,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                     ],
-                    GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (dialogContext) {
-                            return AlertDialog(
-                              title: const Text('Delete Exercise'),
-                              content: Text(
-                                'Are you sure you want to delete ${exercise['title']} from this workout session?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dialogContext),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(dialogContext);
-                                    _cubit.deleteExercise(exerciseIndex);
-                                  },
-                                  child: const Text(
-                                    'Delete',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFF0F1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Icon(
-                            Icons.delete_outline_rounded,
-                            color: Color(0xFFD30C15),
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -2735,8 +2974,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
           // Table header row
           Padding(
             padding: const EdgeInsets.only(
-              left: 16,
-              right: 16,
+              left: 12,
+              right: 12,
               top: 16,
               bottom: 8,
             ),
@@ -2769,15 +3008,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                   ),
                 ),
                 Expanded(
-                  flex: 2,
+                  flex: 3,
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: () {
                         final val = exercise['weight_type']?.toString();
-                        if (val == null) return 'kg';
-                        if (val.toLowerCase() == 'bw') return 'BW';
-                        if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
-                        return val;
+                        if (val == null) return 'KG';
+                        final lower = val.toLowerCase().replaceAll(' ', '');
+                        if (lower == 'bw') return 'BW';
+                        if (lower == 'kg+bw') return 'KG + BW';
+                        if (lower == 'baronly' || lower == 'bo') return 'BAR only';
+                        return 'KG';
                       }(),
                       isDense: true,
                       isExpanded: true,
@@ -2791,16 +3032,20 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       icon: const Icon(Icons.arrow_drop_down, size: 16),
                       items: const [
                         DropdownMenuItem(
-                          value: 'kg',
-                          child: Center(child: Text('kg')),
+                          value: 'KG',
+                          child: Center(child: Text('KG')),
                         ),
                         DropdownMenuItem(
                           value: 'BW',
                           child: Center(child: Text('BW')),
                         ),
                         DropdownMenuItem(
-                          value: 'kg+BW',
-                          child: Center(child: Text('kg+BW')),
+                          value: 'KG + BW',
+                          child: Center(child: Text('KG + BW')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'BAR only',
+                          child: Center(child: Text('BAR only')),
                         ),
                       ],
                       onChanged: (val) {
@@ -2812,16 +3057,44 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                   ),
                 ),
                 Expanded(
-                  flex: 2,
-                  child: Text(
-                    repsHeader,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF212121),
-                      height: 1.0,
+                  flex: 3,
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: () {
+                        final val = exercise['track_by']?.toString().toLowerCase();
+                        if (val == 'time' || val == 'sec' || val == 'secs' || val == 'seconds') return 'time';
+                        if (val == 'distance' || val == 'dist' || val == 'km' || val == 'm') return 'distance';
+                        return 'rep';
+                      }(),
+                      isDense: true,
+                      isExpanded: true,
+                      alignment: Alignment.center,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF212121),
+                      ),
+                      icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'rep',
+                          child: Center(child: Text('Rep')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'time',
+                          child: Center(child: Text('Sec')),
+                        ),
+                        DropdownMenuItem(
+                          value: 'distance',
+                          child: Center(child: Text('Distance')),
+                        ),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          _cubit.updateWorkoutLogTrackBy(exerciseIndex, val);
+                        }
+                      },
                     ),
                   ),
                 ),
@@ -2869,11 +3142,27 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
               focusKey,
               () => FocusNode(),
             );
+
+            // Compute hint values from preceding set or exercise target
+            String kgHintStr = '-';
+            String repsHintStr = '-';
+            if (setIndex > 0) {
+              final prevSet = sets[setIndex - 1];
+              final pKg = prevSet['kg']?.toString();
+              final pReps = prevSet['reps']?.toString();
+              if (pKg != null && pKg.isNotEmpty && pKg != '-') {
+                kgHintStr = pKg;
+              }
+              if (pReps != null && pReps.isNotEmpty && pReps != '-') {
+                repsHintStr = pReps;
+              }
+            }
+
             return Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
+                    horizontal: 12,
                     vertical: 12,
                   ),
                   child: Row(
@@ -2896,10 +3185,20 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       Expanded(
                         flex: 3,
                         child: Text(
-                          set['previous'] as String,
+                          () {
+                            final prev = set['previous']?.toString();
+                            if (prev != null &&
+                                prev != 'no data' &&
+                                prev.isNotEmpty) {
+                              return prev;
+                            }
+                            return 'no data';
+                          }(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontFamily: 'Poppins',
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w400,
                             color: Color(0xFF212121),
                             height: 1.0,
@@ -2908,176 +3207,197 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       ),
                       // kg Input Box
                       Expanded(
-                        flex: 2,
+                        flex: 3,
                         child: Align(
                           alignment: Alignment.center,
-                          child:
-                              (exercise['weight_type']
-                                          ?.toString()
-                                          .toUpperCase() ==
-                                      'BW')
-                                  ? Container(
-                                    width: 60,
-                                    height: 34,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEEEEEE),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: const Color(0xFFE0E0E0),
-                                        width: 1.0,
-                                      ),
+                          child: () {
+                            final weightType = exercise['weight_type']?.toString().toUpperCase().replaceAll(' ', '');
+                            if (weightType == 'BW' || weightType == 'BARONLY' || weightType == 'BO') {
+                              final displayText = (weightType == 'BW') ? 'BW' : 'BO';
+                              return Container(
+                                width: 58,
+                                height: 34,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEEEEEE),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFFE0E0E0),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: Text(
+                                  displayText,
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF666666),
+                                  ),
+                                ),
+                              );
+                            }
+                            return SizedBox(
+                              width: 58,
+                              child: TextFormField(
+                                key: ValueKey(
+                                  '${exerciseIndex}_${setIndex}_kg_${set['checked']}',
+                                ),
+                                initialValue: set['kg'] as String?,
+                                focusNode: focusNode,
+                                autofocus: false,
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(8),
+                                ],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
                                     ),
-                                    child: const Text(
-                                      'BW',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF666666),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF212121),
+                                  height: 1.0,
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding:
+                                      const EdgeInsets.symmetric(
+                                        vertical: 8,
+                                        horizontal: 2,
                                       ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      6,
                                     ),
-                                  )
-                                  : SizedBox(
-                                    width: 60,
-                                    child: TextFormField(
-                                      key: ValueKey(
-                                        '${exerciseIndex}_${setIndex}_kg',
-                                      ),
-                                      initialValue: set['kg'] as String?,
-                                      focusNode: focusNode,
-                                      autofocus: false,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xFF212121),
-                                        height: 1.0,
-                                      ),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              vertical: 8,
-                                              horizontal: 4,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: Color(0xFFE0E0E0),
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: Color(0xFFE0E0E0),
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: AppColors.primary,
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        filled: true,
-                                        fillColor: const Color(0xFFFAFAFA),
-                                        hintText: '-',
-                                        hintStyle: const TextStyle(
-                                          color: Color(0xFFCCCCCC),
-                                        ),
-                                      ),
-                                      onChanged: (val) {
-                                        _cubit.updateSetKg(
-                                          exerciseIndex,
-                                          setIndex,
-                                          val,
-                                        );
-                                        if (val.length == 6) {
-                                          FocusScope.of(context).nextFocus();
-                                        }
-                                      },
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE0E0E0),
+                                      width: 1.0,
                                     ),
                                   ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      6,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE0E0E0),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(
+                                      6,
+                                    ),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFFFAFAFA),
+                                  hintText: kgHintStr,
+                                  hintStyle: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF94A3B8),
+                                  ),
+                                ),
+                                onChanged: (val) {
+                                  _cubit.updateSetKg(
+                                    exerciseIndex,
+                                    setIndex,
+                                    val,
+                                  );
+                                  if (val.length == 8) {
+                                    FocusScope.of(context).nextFocus();
+                                  }
+                                },
+                              ),
+                            );
+                          }(),
                         ),
                       ),
-                      // Rep Input Box
+                      // Rep / Sec / Distance Input Box
                       Expanded(
-                        flex: 2,
+                        flex: 3,
                         child: Align(
                           alignment: Alignment.center,
-                          child: SizedBox(
-                            width: 60,
-                            child: TextFormField(
-                              key: ValueKey(
-                                '${exerciseIndex}_${setIndex}_reps',
-                              ),
-                              initialValue: set['reps'] as String?,
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: Color(0xFF212121),
-                                height: 1.0,
-                              ),
-                              decoration: InputDecoration(
-                                isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 4,
+                          child: () {
+                            return SizedBox(
+                              width: 58,
+                              child: TextFormField(
+                                key: ValueKey(
+                                  '${exerciseIndex}_${setIndex}_reps_${exercise['track_by']}_${set['checked']}',
                                 ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE0E0E0),
-                                    width: 1.0,
+                                initialValue: set['reps'] as String?,
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(8),
+                                ],
+                                keyboardType: () {
+                                  final trackBy = exercise['track_by']?.toString().toLowerCase();
+                                  if (trackBy == 'distance' || trackBy == 'dist' || trackBy == 'km' || trackBy == 'm') {
+                                    return const TextInputType.numberWithOptions(decimal: true);
+                                  }
+                                  return TextInputType.number;
+                                }(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF212121),
+                                  height: 1.0,
+                                ),
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                    horizontal: 2,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE0E0E0),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE0E0E0),
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.primary,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFFFAFAFA),
+                                  hintText: repsHintStr,
+                                  hintStyle: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w400,
+                                    color: Color(0xFF94A3B8),
                                   ),
                                 ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE0E0E0),
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primary,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFFFAFAFA),
-                                hintText: '-',
-                                hintStyle: const TextStyle(
-                                  color: Color(0xFFCCCCCC),
-                                ),
+                                onChanged: (val) {
+                                  _cubit.updateSetReps(
+                                    exerciseIndex,
+                                    setIndex,
+                                    val,
+                                  );
+                                },
                               ),
-                              onChanged: (val) {
-                                _cubit.updateSetReps(
-                                  exerciseIndex,
-                                  setIndex,
-                                  val,
-                                );
-                              },
-                            ),
-                          ),
+                            );
+                          }(),
                         ),
                       ),
                       // Check checkbox button
@@ -3089,34 +3409,75 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             if (!widget.isPresetCreation) ...[
                               GestureDetector(
                                 onTap: () async {
+                                  FocusScope.of(context).unfocus();
+                                  focusNode.unfocus();
+                                  final isCurrentlyChecked = set['checked'] as bool? ?? false;
+                                  if (!isCurrentlyChecked) {
+                                    var kgVal = set['kg']?.toString().trim() ?? '';
+                                    var repsVal = set['reps']?.toString().trim() ?? '';
+                                    final weightType = exercise['weight_type']?.toString().toUpperCase().replaceAll(' ', '') ?? '';
+                                    final isBodyweight = weightType == 'BW' || weightType == 'BARONLY' || weightType == 'BO';
+
+                                    // Fallback to ghost/hint text if unedited
+                                    if (kgVal.isEmpty && !isBodyweight && kgHintStr != '-') {
+                                      kgVal = kgHintStr;
+                                      _cubit.updateSetKg(exerciseIndex, setIndex, kgHintStr);
+                                    }
+                                    if (repsVal.isEmpty && repsHintStr != '-') {
+                                      repsVal = repsHintStr;
+                                      _cubit.updateSetReps(exerciseIndex, setIndex, repsHintStr);
+                                    }
+
+                                    if (repsVal.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please enter reps/seconds/distance first'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (!isBodyweight && kgVal.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Please enter weight first'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                  }
+
                                   final setLogId = set['id'] as int?;
                                   if (setLogId != null) {
-                                    if (_completingSetIds.contains(setLogId))
+                                    if (_completingSetIds.contains(setLogId)) {
                                       return;
+                                    }
                                     setState(() {
                                       _completingSetIds.add(setLogId);
                                     });
-                                    await _cubit.toggleSetChecked(
-                                      exerciseIndex,
-                                      setIndex,
-                                      onError: (errorMsg) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(errorMsg),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    );
-                                    if (mounted) {
-                                      setState(() {
-                                        _completingSetIds.remove(setLogId);
-                                      });
-                                    }
+                                  }
+                                  await _cubit.toggleSetChecked(
+                                    exerciseIndex,
+                                    setIndex,
+                                    onError: (errorMsg) {
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(errorMsg),
+                                            backgroundColor: Colors.red,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  );
+                                  if (setLogId != null && mounted) {
+                                    setState(() {
+                                      _completingSetIds.remove(setLogId);
+                                    });
                                   }
                                 },
                                 child: Container(

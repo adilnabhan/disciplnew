@@ -3,7 +3,7 @@ description: "A new Discipl Flutter project."
 
 publish_to: "none"
 
-version: 1.0.0+11
+version: 1.0.7+38
 
 environment:
   sdk: ^3.7.2
@@ -136,6 +136,8 @@ dependencies:
   razorpay_flutter: ^1.4.0
   pretty_dio_logger: ^1.4.0
   syncfusion_flutter_pdfviewer: ^29.2.11
+  share_plus: ^12.0.2
+  gal: ^2.3.3
 
 dependency_overrides:
   web: any
@@ -170,6 +172,7 @@ flutter:
     - assets/images/svg/vectors/celebrations.json
     - assets/images/png/icons/
     - assets/images/png/vectors/
+    - assets/images/png/vectors/No_workout-removebg-preview.png
     - assets/images/carousel_images/
     - assets/fonts/
 

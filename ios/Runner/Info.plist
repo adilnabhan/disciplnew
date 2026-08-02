@@ -32,6 +32,8 @@
 		<string>We use your location to show nearby gyms and fitness centers.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>We use your photo library so you can choose a profile picture.</string>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>We need access to save workout summary cards to your photo gallery.</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>
 		<true/>
 		<key>UILaunchStoryboardName</key>

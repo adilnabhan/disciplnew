@@ -77,6 +77,8 @@ _$AssignedTrainerModelImpl _$$AssignedTrainerModelImplFromJson(
       (json['specializations'] as List<dynamic>?)
           ?.map((e) => e as String)
           .toList(),
+  userType: json['user_type'] as String?,
+  rating: (json['rating'] as num?)?.toDouble(),
 );
 
 Map<String, dynamic> _$$AssignedTrainerModelImplToJson(
@@ -89,4 +91,6 @@ Map<String, dynamic> _$$AssignedTrainerModelImplToJson(
   'experience_years': instance.experienceYears,
   'bio': instance.bio,
   'specializations': instance.specializations,
+  'user_type': instance.userType,
+  'rating': instance.rating,
 };

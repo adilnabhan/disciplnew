@@ -13,5 +13,7 @@ class WorkoutState with _$WorkoutState {
     @Default(false) bool isCreatingExercise,
     @Default(false) bool isLoadingActiveSession,
     @Default('') String sessionTitle,
+    int? sessionId,
+    int? planDayId,
   }) = _WorkoutState;
 }

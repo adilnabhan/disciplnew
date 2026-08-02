@@ -185,7 +185,7 @@ class _RadioFieldState<T> extends State<RadioField<T>> {
                           padding: EdgeInsets.zero,
                           children: [
                             ...widget.items.map((e) {
-                              final isSelected = e.label == value.text;
+                              final isSelected = e.label == value.text || (e.value == 'Other' && value.text.isNotEmpty && !widget.items.any((item) => item.label == value.text && item.value != 'Other'));
                               return InkWell(
                                 onTap: () {
                                   _ctrl.value = TextEditingValue(text: e.label);
@@ -207,7 +207,11 @@ class _RadioFieldState<T> extends State<RadioField<T>> {
                                           child: Text(e.label, textAlign: TextAlign.start, style: isSelected ? AppStyles.text14Px.poppins.w500 : AppStyles.text14Px.poppins.w400),
                                         ).pxy(x: 16),
                                       ),
-                                      Icon(isSelected ? Icons.radio_button_checked : Icons.radio_button_off, size: 20).pxy(x: 16),
+                                      Icon(
+                                        isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                        size: 20,
+                                        color: isSelected ? AppColors.primary : AppColors.textGrey,
+                                      ).pxy(x: 16),
                                     ],
                                   ),
                                 ),

@@ -331,6 +331,86 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     }
   }
 
+  double _calculateVolume(List<dynamic> logs) {
+    double total = 0;
+    for (final log in logs) {
+      if (log is Map) {
+        final setLogs = log['set_logs'] as List? ?? log['sets'] as List? ?? [];
+        for (final set in setLogs) {
+          if (set is Map) {
+            final isCompleted =
+                (set['is_completed'] == true) ||
+                (set['checked'] == true) ||
+                (set['status']?.toString().toLowerCase() == 'completed');
+            if (isCompleted) {
+              final reps = double.tryParse(set['reps']?.toString() ?? '') ?? 0;
+              final weight =
+                  double.tryParse(
+                    set['weight_kg']?.toString() ??
+                        set['kg']?.toString() ??
+                        set['weight']?.toString() ??
+                        '',
+                  ) ??
+                  0;
+              total += reps * weight;
+            }
+          }
+        }
+      }
+    }
+    return total;
+  }
+
+  ({int completed, int total}) _countExercises(List<dynamic> logs) {
+    if (logs.isEmpty) return (completed: 0, total: 0);
+
+    int total = logs.length;
+    int completed = 0;
+
+    for (final log in logs) {
+      if (log is Map) {
+        final setLogs = log['set_logs'] as List? ?? log['sets'] as List? ?? [];
+        final completedSetsCount = setLogs.where((set) {
+          if (set is Map) {
+            return (set['is_completed'] == true) ||
+                (set['checked'] == true) ||
+                (set['status']?.toString().toLowerCase() == 'completed');
+          }
+          return false;
+        }).length;
+
+        if (completedSetsCount > 0) {
+          completed++;
+        }
+      }
+    }
+
+    return (completed: completed, total: total);
+  }
+
+  ({int completed, int total}) _countSets(List<dynamic> logs) {
+    int total = 0;
+    int completed = 0;
+    for (final log in logs) {
+      if (log is Map) {
+        final setLogs = log['set_logs'] as List? ?? log['sets'] as List? ?? [];
+        total += setLogs.length;
+        for (final set in setLogs) {
+          if (set is Map) {
+            final isCompleted =
+                (set['is_completed'] == true) ||
+                (set['checked'] == true) ||
+                (set['status']?.toString().toLowerCase() == 'completed');
+            if (isCompleted) {
+              completed++;
+            }
+          }
+        }
+      }
+    }
+    return (completed: completed, total: total);
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
@@ -652,6 +732,16 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final startedAt = data['started_at']?.toString();
     final completedAt = data['completed_at']?.toString();
     final logs = data['logs'] as List? ?? [];
+    final volume = _calculateVolume(logs);
+    final volumeStr = volume > 0 ? '${volume.toStringAsFixed(0)} kg' : '0 kg';
+    final exCounts = _countExercises(logs);
+    final setCounts = _countSets(logs);
+    final exDisplay =
+        exCounts.total > 0 ? '${exCounts.completed}/${exCounts.total}' : '0';
+    final setsDisplay =
+        setCounts.total > 0
+            ? '${setCounts.completed}/${setCounts.total}'
+            : '0';
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
     final bool isVerified =
@@ -744,7 +834,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               ),
             ],
           ),
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -754,7 +844,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   Expanded(
                     child: Text(
                       title,
-                      style: AppStyles.text20Px.poppins.w600.copyWith(
+                      style: AppStyles.text18Px.poppins.w600.copyWith(
                         color: Colors.black,
                         height: 1.2,
                       ),
@@ -771,8 +861,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 3,
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -780,7 +870,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                         const Icon(
                           Icons.check_circle_outline_rounded,
                           color: Color(0xFF10B981),
-                          size: 14,
+                          size: 13,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -794,34 +884,64 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              if (formattedDate.isNotEmpty)
+              if (formattedDate.isNotEmpty) ...[
+                const SizedBox(height: 4),
                 Text(
                   formattedDate,
-                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                  style: AppStyles.text12Px.poppins.w400.copyWith(
                     color: const Color(0xFF94A3B8),
                   ),
                 ),
-              const SizedBox(height: 20),
-              const Divider(color: Color(0xFF334155), height: 1),
-              const SizedBox(height: 20),
+              ],
+              const SizedBox(height: 10),
+              const Divider(color: Color(0xFFE2E8F0), height: 1),
+              const SizedBox(height: 10),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildSummaryInfo(
-                    icon: Icons.timer_outlined,
-                    label: 'Duration',
-                    value: duration,
+                  Expanded(
+                    child: _buildSummaryInfo(
+                      icon: Icons.timer_outlined,
+                      label: 'Duration',
+                      value: duration,
+                    ),
                   ),
                   Container(
                     width: 1,
-                    height: 32,
-                    color: const Color(0xFF334155),
+                    height: 28,
+                    color: const Color(0xFFE2E8F0),
                   ),
-                  _buildSummaryInfo(
-                    icon: Icons.fitness_center_outlined,
-                    label: 'Exercises',
-                    value: '${logs.length}',
+                  Expanded(
+                    child: _buildSummaryInfo(
+                      icon: Icons.fitness_center_outlined,
+                      label: 'Volume',
+                      value: volumeStr,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              const Divider(color: Color(0xFFE2E8F0), height: 1),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildSummaryInfo(
+                      icon: Icons.format_list_bulleted_rounded,
+                      label: 'Exercises',
+                      value: exDisplay,
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 28,
+                    color: const Color(0xFFE2E8F0),
+                  ),
+                  Expanded(
+                    child: _buildSummaryInfo(
+                      icon: Icons.check_circle_outline_rounded,
+                      label: 'Sets',
+                      value: setsDisplay,
+                    ),
                   ),
                 ],
               ),
@@ -889,10 +1009,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 2),
         Text(
           value,
-          style: AppStyles.text16Px.poppins.w600.copyWith(
+          style: AppStyles.text15Px.poppins.w600.copyWith(
             color:
                 isTimerActive
                     ? AppColors.primary
@@ -965,7 +1085,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     if (type != null && type.isNotEmpty) tags.add(type);
     final subtitle = tags.join(' / ');
 
-    String? trackBy = log['track_by']?.toString();
+    String? trackBy = log['track_by']?.toString() ??
+        (log['exercise'] is Map ? (log['exercise'] as Map)['track_by']?.toString() : null) ??
+        (log['workout'] is Map ? (log['workout'] as Map)['track_by']?.toString() : null);
     if (trackBy == null || trackBy.isEmpty) {
       if (workoutId != null) {
         final match = _exercises.firstWhere(
@@ -1003,15 +1125,21 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       }
     }
 
-    final isTimeBased =
-        trackBy?.toLowerCase() == 'time' ||
-        subtitle.toLowerCase().contains('cardio') ||
-        subtitle.toLowerCase().contains('flexibility') ||
-        subtitle.toLowerCase().contains('hiit') ||
-        setLogs.any(
-          (s) => s['input_type']?.toString().toLowerCase() == 'seconds',
-        );
-    final isDistanceBased = trackBy?.toLowerCase() == 'distance';
+    final String trackByLower = (trackBy ?? '').toLowerCase();
+    final bool isTimeBased = trackByLower == 'time' ||
+        trackByLower == 'sec' ||
+        trackByLower == 'secs' ||
+        trackByLower == 'seconds' ||
+        (trackByLower.isEmpty &&
+            (subtitle.toLowerCase().contains('cardio') ||
+                subtitle.toLowerCase().contains('flexibility') ||
+                subtitle.toLowerCase().contains('hiit') ||
+                setLogs.any(
+                  (s) => s['input_type']?.toString().toLowerCase() == 'seconds',
+                )));
+    final bool isDistanceBased = trackByLower == 'distance' ||
+        trackByLower == 'dist' ||
+        trackByLower == 'km';
 
     final String repsHeader =
         isTimeBased ? 'Secs' : (isDistanceBased ? 'Km' : 'Reps');
@@ -1215,13 +1343,68 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                 ),
                 Expanded(
                   flex: 3,
-                  child: Text(
-                    repsHeader,
-                    textAlign: TextAlign.center,
-                    style: AppStyles.text12Px.poppins.w500.copyWith(
-                      color: const Color(0xFF212121),
-                    ),
-                  ),
+                  child:
+                      isEditable
+                          ? Center(
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: () {
+                                  final val = (log['track_by']?.toString() ?? trackBy)?.toLowerCase();
+                                  if (val == 'time' || val == 'sec' || val == 'secs' || val == 'seconds') return 'time';
+                                  if (val == 'distance' || val == 'dist' || val == 'km' || val == 'm') return 'distance';
+                                  return 'rep';
+                                }(),
+                                isDense: true,
+                                isExpanded: true,
+                                alignment: Alignment.center,
+                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                  color: const Color(0xFF212121),
+                                ),
+                                icon: const Icon(
+                                  Icons.arrow_drop_down,
+                                  size: 14,
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'rep',
+                                    child: Center(child: Text('Reps')),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'time',
+                                    child: Center(child: Text('Secs')),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'distance',
+                                    child: Center(child: Text('Km')),
+                                  ),
+                                ],
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    final logId = int.tryParse(
+                                      log['id']?.toString() ?? '',
+                                    );
+                                    if (logId != null) {
+                                      setState(() {
+                                        log['track_by'] = val;
+                                      });
+                                      WorkoutRepository()
+                                          .updateWorkoutLogTrackBy(
+                                            logId: logId,
+                                            trackBy: val,
+                                          );
+                                    }
+                                  }
+                                },
+                              ),
+                            ),
+                          )
+                          : Text(
+                            repsHeader,
+                            textAlign: TextAlign.center,
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
+                              color: const Color(0xFF212121),
+                            ),
+                          ),
                 ),
                 Expanded(
                   flex: 2,
