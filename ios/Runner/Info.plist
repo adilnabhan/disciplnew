@@ -30,6 +30,8 @@
 		<string>We use your location to show nearby gyms and fitness centers.</string>
 		<key>NSLocationWhenInUseUsageDescription</key>
 		<string>We use your location to show nearby gyms and fitness centers.</string>
+		<key>NSLocationWhenInUseUsageDescription</key>
+		<string>This app uses your location to provide location-based features.</string>
 		<key>NSPhotoLibraryUsageDescription</key>
 		<string>We use your photo library so you can choose a profile picture.</string>
 		<key>NSPhotoLibraryAddUsageDescription</key>
