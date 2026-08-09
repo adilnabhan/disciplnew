@@ -11,6 +11,7 @@ class CompletedBadge extends StatelessWidget {
     this.coreColor = Colors.white,
     this.isVerified = false,
     this.showDoubleTick = false,
+    this.isMissed = false,
   });
 
   final double width;
@@ -20,9 +21,25 @@ class CompletedBadge extends StatelessWidget {
   final Color coreColor;
   final bool isVerified;
   final bool showDoubleTick;
+  final bool isMissed;
 
   @override
   Widget build(BuildContext context) {
+    if (isMissed) {
+      return Container(
+        width: width,
+        height: height,
+        decoration: const BoxDecoration(
+          color: Color(0xFFD30C15),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.close_rounded,
+          size: 16,
+          color: Colors.white,
+        ),
+      );
+    }
     if (isVerified) {
       return SizedBox(
         width: width,

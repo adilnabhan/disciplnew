@@ -217,6 +217,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         return RefreshIndicator(
                           onRefresh: _fetch,
                           child: ListView(
+                            physics: const AlwaysScrollableScrollPhysics(),
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                             children: [
                               // Profile Header Card

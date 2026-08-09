@@ -2732,6 +2732,8 @@ mixin _$GymTrainer {
   String? get userType => throw _privateConstructorUsedError;
   @JsonKey(name: 'bio')
   String? get bio => throw _privateConstructorUsedError;
+  @JsonKey(name: 'banner_image')
+  String? get bannerImage => throw _privateConstructorUsedError;
   @JsonKey(name: 'profile_image')
   String? get profileImage => throw _privateConstructorUsedError;
   @JsonKey(name: 'experience_years')
@@ -2757,6 +2759,12 @@ mixin _$GymTrainer {
   String? get mobile => throw _privateConstructorUsedError;
   @JsonKey(name: 'gender')
   String? get gender => throw _privateConstructorUsedError;
+  @JsonKey(name: 'place')
+  String? get place => throw _privateConstructorUsedError;
+  @JsonKey(name: 'location')
+  Location? get location => throw _privateConstructorUsedError;
+  @JsonKey(name: 'social_media')
+  List<SocialMedia>? get socialMedia => throw _privateConstructorUsedError;
 
   /// Serializes this GymTrainer to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -2780,6 +2788,7 @@ abstract class $GymTrainerCopyWith<$Res> {
     @JsonKey(name: 'full_name') String? fullName,
     @JsonKey(name: 'user_type') String? userType,
     @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'banner_image') String? bannerImage,
     @JsonKey(name: 'profile_image') String? profileImage,
     @JsonKey(name: 'experience_years') int? experienceYears,
     @JsonKey(name: 'average_rating') dynamic averageRating,
@@ -2792,7 +2801,12 @@ abstract class $GymTrainerCopyWith<$Res> {
     @JsonKey(name: 'email') String? email,
     @JsonKey(name: 'mobile') String? mobile,
     @JsonKey(name: 'gender') String? gender,
+    @JsonKey(name: 'place') String? place,
+    @JsonKey(name: 'location') Location? location,
+    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
   });
+
+  $LocationCopyWith<$Res>? get location;
 }
 
 /// @nodoc
@@ -2814,6 +2828,7 @@ class _$GymTrainerCopyWithImpl<$Res, $Val extends GymTrainer>
     Object? fullName = freezed,
     Object? userType = freezed,
     Object? bio = freezed,
+    Object? bannerImage = freezed,
     Object? profileImage = freezed,
     Object? experienceYears = freezed,
     Object? averageRating = freezed,
@@ -2826,6 +2841,9 @@ class _$GymTrainerCopyWithImpl<$Res, $Val extends GymTrainer>
     Object? email = freezed,
     Object? mobile = freezed,
     Object? gender = freezed,
+    Object? place = freezed,
+    Object? location = freezed,
+    Object? socialMedia = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -2848,6 +2866,11 @@ class _$GymTrainerCopyWithImpl<$Res, $Val extends GymTrainer>
                 freezed == bio
                     ? _value.bio
                     : bio // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            bannerImage:
+                freezed == bannerImage
+                    ? _value.bannerImage
+                    : bannerImage // ignore: cast_nullable_to_non_nullable
                         as String?,
             profileImage:
                 freezed == profileImage
@@ -2909,9 +2932,38 @@ class _$GymTrainerCopyWithImpl<$Res, $Val extends GymTrainer>
                     ? _value.gender
                     : gender // ignore: cast_nullable_to_non_nullable
                         as String?,
+            place:
+                freezed == place
+                    ? _value.place
+                    : place // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            location:
+                freezed == location
+                    ? _value.location
+                    : location // ignore: cast_nullable_to_non_nullable
+                        as Location?,
+            socialMedia:
+                freezed == socialMedia
+                    ? _value.socialMedia
+                    : socialMedia // ignore: cast_nullable_to_non_nullable
+                        as List<SocialMedia>?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of GymTrainer
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $LocationCopyWith<$Res>? get location {
+    if (_value.location == null) {
+      return null;
+    }
+
+    return $LocationCopyWith<$Res>(_value.location!, (value) {
+      return _then(_value.copyWith(location: value) as $Val);
+    });
   }
 }
 
@@ -2929,6 +2981,7 @@ abstract class _$$GymTrainerImplCopyWith<$Res>
     @JsonKey(name: 'full_name') String? fullName,
     @JsonKey(name: 'user_type') String? userType,
     @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'banner_image') String? bannerImage,
     @JsonKey(name: 'profile_image') String? profileImage,
     @JsonKey(name: 'experience_years') int? experienceYears,
     @JsonKey(name: 'average_rating') dynamic averageRating,
@@ -2941,7 +2994,13 @@ abstract class _$$GymTrainerImplCopyWith<$Res>
     @JsonKey(name: 'email') String? email,
     @JsonKey(name: 'mobile') String? mobile,
     @JsonKey(name: 'gender') String? gender,
+    @JsonKey(name: 'place') String? place,
+    @JsonKey(name: 'location') Location? location,
+    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
   });
+
+  @override
+  $LocationCopyWith<$Res>? get location;
 }
 
 /// @nodoc
@@ -2962,6 +3021,7 @@ class __$$GymTrainerImplCopyWithImpl<$Res>
     Object? fullName = freezed,
     Object? userType = freezed,
     Object? bio = freezed,
+    Object? bannerImage = freezed,
     Object? profileImage = freezed,
     Object? experienceYears = freezed,
     Object? averageRating = freezed,
@@ -2974,6 +3034,9 @@ class __$$GymTrainerImplCopyWithImpl<$Res>
     Object? email = freezed,
     Object? mobile = freezed,
     Object? gender = freezed,
+    Object? place = freezed,
+    Object? location = freezed,
+    Object? socialMedia = freezed,
   }) {
     return _then(
       _$GymTrainerImpl(
@@ -2996,6 +3059,11 @@ class __$$GymTrainerImplCopyWithImpl<$Res>
             freezed == bio
                 ? _value.bio
                 : bio // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        bannerImage:
+            freezed == bannerImage
+                ? _value.bannerImage
+                : bannerImage // ignore: cast_nullable_to_non_nullable
                     as String?,
         profileImage:
             freezed == profileImage
@@ -3057,6 +3125,21 @@ class __$$GymTrainerImplCopyWithImpl<$Res>
                 ? _value.gender
                 : gender // ignore: cast_nullable_to_non_nullable
                     as String?,
+        place:
+            freezed == place
+                ? _value.place
+                : place // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        location:
+            freezed == location
+                ? _value.location
+                : location // ignore: cast_nullable_to_non_nullable
+                    as Location?,
+        socialMedia:
+            freezed == socialMedia
+                ? _value._socialMedia
+                : socialMedia // ignore: cast_nullable_to_non_nullable
+                    as List<SocialMedia>?,
       ),
     );
   }
@@ -3070,6 +3153,7 @@ class _$GymTrainerImpl implements _GymTrainer {
     @JsonKey(name: 'full_name') this.fullName,
     @JsonKey(name: 'user_type') this.userType,
     @JsonKey(name: 'bio') this.bio,
+    @JsonKey(name: 'banner_image') this.bannerImage,
     @JsonKey(name: 'profile_image') this.profileImage,
     @JsonKey(name: 'experience_years') this.experienceYears,
     @JsonKey(name: 'average_rating') this.averageRating,
@@ -3083,9 +3167,13 @@ class _$GymTrainerImpl implements _GymTrainer {
     @JsonKey(name: 'email') this.email,
     @JsonKey(name: 'mobile') this.mobile,
     @JsonKey(name: 'gender') this.gender,
+    @JsonKey(name: 'place') this.place,
+    @JsonKey(name: 'location') this.location,
+    @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
   }) : _specializations = specializations,
        _transformations = transformations,
-       _certifications = certifications;
+       _certifications = certifications,
+       _socialMedia = socialMedia;
 
   factory _$GymTrainerImpl.fromJson(Map<String, dynamic> json) =>
       _$$GymTrainerImplFromJson(json);
@@ -3102,6 +3190,9 @@ class _$GymTrainerImpl implements _GymTrainer {
   @override
   @JsonKey(name: 'bio')
   final String? bio;
+  @override
+  @JsonKey(name: 'banner_image')
+  final String? bannerImage;
   @override
   @JsonKey(name: 'profile_image')
   final String? profileImage;
@@ -3162,10 +3253,26 @@ class _$GymTrainerImpl implements _GymTrainer {
   @override
   @JsonKey(name: 'gender')
   final String? gender;
+  @override
+  @JsonKey(name: 'place')
+  final String? place;
+  @override
+  @JsonKey(name: 'location')
+  final Location? location;
+  final List<SocialMedia>? _socialMedia;
+  @override
+  @JsonKey(name: 'social_media')
+  List<SocialMedia>? get socialMedia {
+    final value = _socialMedia;
+    if (value == null) return null;
+    if (_socialMedia is EqualUnmodifiableListView) return _socialMedia;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
 
   @override
   String toString() {
-    return 'GymTrainer(id: $id, fullName: $fullName, userType: $userType, bio: $bio, profileImage: $profileImage, experienceYears: $experienceYears, averageRating: $averageRating, reviewCount: $reviewCount, specializations: $specializations, clientsCount: $clientsCount, verifiedWorkoutsCount: $verifiedWorkoutsCount, transformations: $transformations, certifications: $certifications, email: $email, mobile: $mobile, gender: $gender)';
+    return 'GymTrainer(id: $id, fullName: $fullName, userType: $userType, bio: $bio, bannerImage: $bannerImage, profileImage: $profileImage, experienceYears: $experienceYears, averageRating: $averageRating, reviewCount: $reviewCount, specializations: $specializations, clientsCount: $clientsCount, verifiedWorkoutsCount: $verifiedWorkoutsCount, transformations: $transformations, certifications: $certifications, email: $email, mobile: $mobile, gender: $gender, place: $place, location: $location, socialMedia: $socialMedia)';
   }
 
   @override
@@ -3179,6 +3286,8 @@ class _$GymTrainerImpl implements _GymTrainer {
             (identical(other.userType, userType) ||
                 other.userType == userType) &&
             (identical(other.bio, bio) || other.bio == bio) &&
+            (identical(other.bannerImage, bannerImage) ||
+                other.bannerImage == bannerImage) &&
             (identical(other.profileImage, profileImage) ||
                 other.profileImage == profileImage) &&
             (identical(other.experienceYears, experienceYears) ||
@@ -3207,17 +3316,25 @@ class _$GymTrainerImpl implements _GymTrainer {
             ) &&
             (identical(other.email, email) || other.email == email) &&
             (identical(other.mobile, mobile) || other.mobile == mobile) &&
-            (identical(other.gender, gender) || other.gender == gender));
+            (identical(other.gender, gender) || other.gender == gender) &&
+            (identical(other.place, place) || other.place == place) &&
+            (identical(other.location, location) ||
+                other.location == location) &&
+            const DeepCollectionEquality().equals(
+              other._socialMedia,
+              _socialMedia,
+            ));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     fullName,
     userType,
     bio,
+    bannerImage,
     profileImage,
     experienceYears,
     const DeepCollectionEquality().hash(averageRating),
@@ -3230,7 +3347,10 @@ class _$GymTrainerImpl implements _GymTrainer {
     email,
     mobile,
     gender,
-  );
+    place,
+    location,
+    const DeepCollectionEquality().hash(_socialMedia),
+  ]);
 
   /// Create a copy of GymTrainer
   /// with the given fields replaced by the non-null parameter values.
@@ -3252,6 +3372,7 @@ abstract class _GymTrainer implements GymTrainer {
     @JsonKey(name: 'full_name') final String? fullName,
     @JsonKey(name: 'user_type') final String? userType,
     @JsonKey(name: 'bio') final String? bio,
+    @JsonKey(name: 'banner_image') final String? bannerImage,
     @JsonKey(name: 'profile_image') final String? profileImage,
     @JsonKey(name: 'experience_years') final int? experienceYears,
     @JsonKey(name: 'average_rating') final dynamic averageRating,
@@ -3265,6 +3386,9 @@ abstract class _GymTrainer implements GymTrainer {
     @JsonKey(name: 'email') final String? email,
     @JsonKey(name: 'mobile') final String? mobile,
     @JsonKey(name: 'gender') final String? gender,
+    @JsonKey(name: 'place') final String? place,
+    @JsonKey(name: 'location') final Location? location,
+    @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
   }) = _$GymTrainerImpl;
 
   factory _GymTrainer.fromJson(Map<String, dynamic> json) =
@@ -3282,6 +3406,9 @@ abstract class _GymTrainer implements GymTrainer {
   @override
   @JsonKey(name: 'bio')
   String? get bio;
+  @override
+  @JsonKey(name: 'banner_image')
+  String? get bannerImage;
   @override
   @JsonKey(name: 'profile_image')
   String? get profileImage;
@@ -3318,6 +3445,15 @@ abstract class _GymTrainer implements GymTrainer {
   @override
   @JsonKey(name: 'gender')
   String? get gender;
+  @override
+  @JsonKey(name: 'place')
+  String? get place;
+  @override
+  @JsonKey(name: 'location')
+  Location? get location;
+  @override
+  @JsonKey(name: 'social_media')
+  List<SocialMedia>? get socialMedia;
 
   /// Create a copy of GymTrainer
   /// with the given fields replaced by the non-null parameter values.

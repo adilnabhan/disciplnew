@@ -1902,6 +1902,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                         (context) => WorkoutAchievementScreen(
                           sessionData: sessionMap,
                           fallbackTitle: widget.fallbackTitle,
+                          trainerName: widget.trainerName,
                         ),
                   ),
                 );

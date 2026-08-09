@@ -88,22 +88,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             () => const _ProfileShimmerLoading(),
                             (either) {
                               return either.fold(
-                                (error) =>
-                                    error
-                                        .maybeWhen(
-                                          network:
-                                              (e) => ErrorUi.network(
-                                                onTap: _fetch,
-                                              ),
-                                          notFound:
-                                              (e) => ErrorUi.notFound(
-                                                onTap: _fetch,
-                                              ),
-                                          orElse:
-                                              () =>
-                                                  ErrorUi.server(onTap: _fetch),
-                                        )
-                                        .center,
+                                (error) => RefreshIndicator(
+                                  onRefresh: _fetch,
+                                  child: SingleChildScrollView(
+                                    physics: const AlwaysScrollableScrollPhysics(),
+                                    child: SizedBox(
+                                      height:
+                                          MediaQuery.of(context).size.height -
+                                          120,
+                                      child: error
+                                          .maybeWhen(
+                                            network:
+                                                (e) => ErrorUi.network(
+                                                  onTap: _fetch,
+                                                ),
+                                            notFound:
+                                                (e) => ErrorUi.notFound(
+                                                  onTap: _fetch,
+                                                ),
+                                            orElse:
+                                                () =>
+                                                    ErrorUi.server(onTap: _fetch),
+                                          )
+                                          .center,
+                                    ),
+                                  ),
+                                ),
                                 (customerDetails) {
                                   debugPrint(
                                     "DEBUG: assignedTrainer = ${customerDetails.assignedTrainer}",
@@ -117,6 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   return RefreshIndicator(
                                     onRefresh: _fetch,
                                     child: ListView(
+                                      physics: const AlwaysScrollableScrollPhysics(),
                                       padding: const EdgeInsets.all(16),
                                       children: [
                                         Container(
@@ -195,33 +206,75 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                           ),
                                                           if (customerDetails
                                                                   .mobileNumber !=
-                                                              null)
-                                                            Text(
-                                                              customerDetails
-                                                                  .mobileNumber!,
-                                                              style: AppStyles
-                                                                  .text14Px
-                                                                  .poppins
-                                                                  .w600
-                                                                  .copyWith(
-                                                                    color:
-                                                                        AppColors
-                                                                            .textGrey,
-                                                                  ),
-                                                            ),
-                                                          Text(
-                                                            customerDetails
-                                                                    .email ??
-                                                                '-',
-                                                            style: AppStyles
-                                                                .text14Px
-                                                                .poppins
-                                                                .w600
-                                                                .copyWith(
+                                                              null) ...[
+                                                            Row(
+                                                              children: [
+                                                                const Icon(
+                                                                  Icons.phone_outlined,
+                                                                  size: 15,
                                                                   color:
                                                                       AppColors
                                                                           .textGrey,
                                                                 ),
+                                                                const SizedBox(
+                                                                  width: 6,
+                                                                ),
+                                                                Expanded(
+                                                                  child: Text(
+                                                                    customerDetails
+                                                                        .mobileNumber!,
+                                                                    style: AppStyles
+                                                                        .text14Px
+                                                                        .poppins
+                                                                        .w600
+                                                                        .copyWith(
+                                                                          color:
+                                                                              AppColors
+                                                                                  .textGrey,
+                                                                        ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                            const SizedBox(
+                                                              height: 3,
+                                                            ),
+                                                          ],
+                                                          Row(
+                                                            children: [
+                                                              const Icon(
+                                                                Icons.email_outlined,
+                                                                size: 15,
+                                                                color:
+                                                                    AppColors
+                                                                        .textGrey,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 6,
+                                                              ),
+                                                              Expanded(
+                                                                child: Text(
+                                                                  customerDetails
+                                                                          .email ??
+                                                                      '-',
+                                                                  style: AppStyles
+                                                                      .text14Px
+                                                                      .poppins
+                                                                      .w600
+                                                                      .copyWith(
+                                                                        color:
+                                                                            AppColors
+                                                                                .textGrey,
+                                                                      ),
+                                                                  overflow:
+                                                                      TextOverflow
+                                                                          .ellipsis,
+                                                                ),
+                                                              ),
+                                                            ],
                                                           ),
                                                           const SizedBox(
                                                             height: 14,

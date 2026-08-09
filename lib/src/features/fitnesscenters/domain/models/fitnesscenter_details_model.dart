@@ -115,6 +115,7 @@ class GymTrainer with _$GymTrainer {
     @JsonKey(name: 'full_name') String? fullName,
     @JsonKey(name: 'user_type') String? userType,
     @JsonKey(name: 'bio') String? bio,
+    @JsonKey(name: 'banner_image') String? bannerImage,
     @JsonKey(name: 'profile_image') String? profileImage,
     @JsonKey(name: 'experience_years') int? experienceYears,
     @JsonKey(name: 'average_rating') dynamic averageRating,
@@ -127,6 +128,9 @@ class GymTrainer with _$GymTrainer {
     @JsonKey(name: 'email') String? email,
     @JsonKey(name: 'mobile') String? mobile,
     @JsonKey(name: 'gender') String? gender,
+    @JsonKey(name: 'place') String? place,
+    @JsonKey(name: 'location') Location? location,
+    @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
   }) = _GymTrainer;
 
   factory GymTrainer.fromJson(Map<String, dynamic> json) => _$GymTrainerFromJson(json);

@@ -138,11 +138,23 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           final isCompleted =
               ((map['is_completed'] as bool?) ?? false) ||
               (map['status']?.toString().toLowerCase() == 'completed');
+          final isMissedStatus =
+              ((map['is_missed'] as bool?) ?? false) ||
+              (map['status']?.toString().toLowerCase() == 'missed');
           final trainerName = map['trainer_name']?.toString() ?? '';
-          final isMentorGiven = trainerName.isNotEmpty;
+          final sourceVal = map['source']?.toString().toLowerCase() ?? '';
+          final isMentorGiven = trainerName.isNotEmpty || sourceVal == 'trainer';
 
-          // Skip user's own/preset workouts that are not completed (drafts / in-progress)
-          if (!isMentorGiven && !isCompleted) {
+          final now = DateTime.now();
+          final todayDate = DateTime(now.year, now.month, now.day);
+          final selectedDateOnly =
+              DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+          final isPastDate = selectedDateOnly.isBefore(todayDate);
+
+          final isMissed = isMissedStatus || (isPastDate && !isCompleted);
+
+          // Skip user's own/preset workouts that are not completed or missed (drafts / in-progress)
+          if (!isMentorGiven && !isCompleted && !isMissed) {
             continue;
           }
 
@@ -160,6 +172,12 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   map['completed_at'] = details['completed_at'];
                 if (details['duration'] != null)
                   map['duration'] = details['duration'];
+                if (details['status'] != null)
+                  map['status'] = details['status'];
+                if (details['is_completed'] != null)
+                  map['is_completed'] = details['is_completed'];
+                if (details['is_missed'] != null)
+                  map['is_missed'] = details['is_missed'];
               });
             } catch (e) {
               debugPrint('Error fetching session details: $e');
@@ -689,6 +707,21 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final isCompleted =
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
+        final isMissedStatus =
+            ((workoutItem['is_missed'] as bool?) ?? false) ||
+            (workoutItem['status']?.toString().toLowerCase() == 'missed');
+
+        final now = DateTime.now();
+        final todayDate = DateTime(now.year, now.month, now.day);
+        final selectedDateOnly =
+            DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+        final isPastDate = selectedDateOnly.isBefore(todayDate);
+
+        final rawTrainerName = workoutItem['trainer_name']?.toString();
+        final isTrainerSource =
+            workoutItem['source']?.toString().toLowerCase() == 'trainer';
+
+        final isMissed = isMissedStatus || (isPastDate && !isCompleted);
         final isVerified = (workoutItem['is_verified'] as bool?) ?? false;
         final isRejected =
             ((workoutItem['is_rejected'] as bool?) ?? false) ||
@@ -710,6 +743,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final bool isExpired =
             workoutItem['membership_status']?.toString().toLowerCase() ==
             'expired';
+
+        final fallbackTrainerName =
+            _customerDetails?.assignedTrainer?['name']?.toString() ??
+            _customerDetails?.assignedTrainer?['user_full_name']?.toString() ??
+            _customerDetails?.assignedTrainer?['full_name']?.toString();
+        final effectiveTrainerName =
+            (rawTrainerName != null && rawTrainerName.isNotEmpty)
+                ? rawTrainerName
+                : (isTrainerSource ? (fallbackTrainerName ?? 'Trainer') : null);
+
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -719,10 +762,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               badge: badge,
               hasImage: true,
               isCompleted: isCompleted,
+              isMissed: isMissed,
               isVerified: isVerified,
               isRejected: isRejected,
               duration: durationStr,
-              trainerName: workoutItem['trainer_name']?.toString(),
+              trainerName: effectiveTrainerName,
               isMembershipExpired: isExpired,
               gymLogo:
                   _customerDetails?.assignedFitnessCenter?['logo']?.toString(),
@@ -747,18 +791,19 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                 );
                 if (sessionId != null) {
                   final isMentor =
-                      workoutItem['trainer_name']?.toString().isNotEmpty ??
-                      false;
+                      (workoutItem['trainer_name']?.toString().isNotEmpty ?? false) ||
+                      workoutItem['source']?.toString().toLowerCase() == 'trainer';
                   final refresh = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<dynamic>(
                       builder: (context) {
-                        if (isMentor && !isCompleted) {
+                        if ((isMentor || isMissed) && !isCompleted) {
                           return WorkoutPreviewScreen(
                             sessionId: sessionId,
                             fallbackTitle: title,
                             trainerName:
                                 workoutItem['trainer_name']?.toString(),
+                            isMissed: isMissed,
                             onRefresh: _loadWorkoutLogForSelectedDate,
                           );
                         } else {
@@ -1560,6 +1605,7 @@ class _WorkoutCard extends StatelessWidget {
     required this.badge,
     required this.hasImage,
     required this.isCompleted,
+    this.isMissed = false,
     this.isVerified = false,
     this.isRejected = false,
     this.duration,
@@ -1579,6 +1625,7 @@ class _WorkoutCard extends StatelessWidget {
   final String? badge;
   final bool hasImage;
   final bool isCompleted;
+  final bool isMissed;
   final bool isVerified;
   final bool isRejected;
   final String? duration;
@@ -1918,22 +1965,26 @@ class _WorkoutCard extends StatelessWidget {
                                     ],
                                   );
                                 }(),
-                                if (isCompleted) ...[
+                                if (isCompleted || isMissed) ...[
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      Text(
-                                        'Duration: ${duration ?? '--'}',
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF666666),
+                                      if (!isMissed) ...[
+                                        Text(
+                                          'Duration: ${duration ?? '--'}',
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF666666),
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
+                                        const SizedBox(width: 8),
+                                      ],
                                       Text(
-                                        (isRejected ||
+                                        isMissed
+                                            ? '• Missed'
+                                            : (isRejected ||
                                                 verificationStatus
                                                         ?.toLowerCase() ==
                                                     'rejected')
@@ -1949,7 +2000,9 @@ class _WorkoutCard extends StatelessWidget {
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                           color:
-                                              (isRejected ||
+                                              isMissed
+                                                  ? const Color(0xFFD30C15)
+                                                  : (isRejected ||
                                                       verificationStatus
                                                               ?.toLowerCase() ==
                                                           'rejected')
@@ -2119,13 +2172,17 @@ class _WorkoutCard extends StatelessWidget {
           ),
         ),
 
-        // CompletedBadge overlay at top right of the card
-        if (isCompleted)
+        // Completed/Missed Badge overlay at top right of the card
+        if (isCompleted || isMissed)
           Positioned(
             top: -7.0,
             right: -5.35,
             child:
-                (trainerName == null || trainerName!.isEmpty)
+                isMissed
+                    ? const CompletedBadge(
+                      isMissed: true,
+                    )
+                    : (trainerName == null || trainerName!.isEmpty)
                     ? SvgPicture.asset(
                       'assets/images/svg/icons/user_completed_tick.svg',
                       width: 28,
@@ -2161,7 +2218,7 @@ class _WorkoutCard extends StatelessWidget {
         if (isMembershipExpired)
           Positioned(
             top: -7.0,
-            right: isCompleted ? 32.0 : -5.35,
+            right: (isCompleted || isMissed) ? 32.0 : -5.35,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(

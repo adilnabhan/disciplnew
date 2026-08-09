@@ -102,8 +102,8 @@ class LocalStorageService {
     try {
       await _box.delete(_userKey);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('has_seen_calendar_login_hint');
-      print('🗑️ User data cleared');
+      await prefs.clear();
+      print('🗑️ User data & SharedPreferences cleared');
     } catch (e) {
       print('❌ Error clearing user data: $e');
     }
@@ -114,7 +114,9 @@ class LocalStorageService {
     try {
       await _box.clear();
       await _secureStorage.delete(key: _encryptionKeyName);
-      print('🗑️ All secure data cleared');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+      print('🗑️ All secure data & SharedPreferences cleared');
     } catch (e) {
       print('❌ Error clearing all data: $e');
     }

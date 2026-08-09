@@ -29,6 +29,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     emit(state.copyWith(isLoadingActiveSession: true));
     try {
       await Future.wait([
+        loadMuscleClassification(),
         loadLibraryExercises(),
         loadCustomExercises(),
         loadLookups(),
@@ -917,24 +918,72 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
   }
 
+  Future<void> loadMuscleClassification({String? majorMuscle}) async {
+    final response = await WorkoutRepository().getMuscleClassification(
+      majorMuscle: majorMuscle,
+    );
+    response.fold(
+      (error) => debugPrint('Error loading muscle classification: ${error.msg}'),
+      (classification) {
+        final isAll = majorMuscle == null || majorMuscle.isEmpty || majorMuscle == 'All';
+        final existing = state.majorMuscleCategories;
+        final updatedMajorCategories = (isAll || existing.length <= 1)
+            ? (classification.allMajorMuscles.length > 1
+                ? classification.allMajorMuscles
+                : existing)
+            : existing;
+
+        emit(
+          state.copyWith(
+            majorMuscleCategories: updatedMajorCategories.isNotEmpty
+                ? updatedMajorCategories
+                : classification.allMajorMuscles,
+            subMuscles: classification.allSubMuscles,
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> loadLibraryExercises({
     String? search,
     String? muscleGroup,
+    String? majorMuscle,
+    dynamic subMuscle,
+    dynamic equipment,
+    String? type,
+    String? sort,
+    String? source,
   }) async {
     print(
-      'DEBUG: loadLibraryExercises() called in WorkoutCubit with search: $search, muscleGroup: $muscleGroup',
+      'DEBUG: loadLibraryExercises() called with search: $search, majorMuscle: $majorMuscle, subMuscle: $subMuscle, source: $source',
     );
     final queryParams = <String, dynamic>{};
-    final isSearching =
-        (search != null && search.trim().isNotEmpty) ||
-        (muscleGroup != null && muscleGroup.trim().isNotEmpty);
+    final sourceVal = (source != null && source.isNotEmpty) ? source : 'library';
+    queryParams['source'] = sourceVal;
 
     if (search != null && search.trim().isNotEmpty) {
       queryParams['search'] = search.trim();
     }
-    if (muscleGroup != null && muscleGroup.trim().isNotEmpty) {
-      queryParams['muscle_group'] = muscleGroup.trim();
+    if (majorMuscle != null && majorMuscle.trim().isNotEmpty && majorMuscle.trim() != 'All') {
+      queryParams['major_muscle'] = majorMuscle.trim();
     }
+    if (subMuscle != null && subMuscle.toString().trim().isNotEmpty && subMuscle.toString().trim() != 'All') {
+      queryParams['sub_muscle'] = subMuscle;
+    } else if (muscleGroup != null && muscleGroup.trim().isNotEmpty && muscleGroup.trim() != 'All') {
+      queryParams['sub_muscle'] = muscleGroup.trim();
+    }
+    if (equipment != null && equipment.toString().trim().isNotEmpty && equipment.toString().trim() != 'All') {
+      queryParams['equipment'] = equipment;
+    }
+    if (type != null && type.trim().isNotEmpty && type.trim() != 'All') {
+      queryParams['type'] = type.trim();
+    }
+    if (sort != null && sort.trim().isNotEmpty) {
+      queryParams['sort'] = sort.trim();
+    }
+
+    final isSearching = queryParams.length > 1;
 
     final response = await WorkoutRepository().getExerciseLibrary(
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
@@ -950,13 +999,16 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         );
         final mappedList =
             exercisesList.map((model) {
+              final formattedSub = model.subtitle ??
+                  '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}';
               return {
                 'id': (model.id ?? '').toString(),
                 'title': model.name ?? '',
-                'subtitle':
-                    '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}',
+                'subtitle': formattedSub,
                 'video_url': model.videoUrl?.toString() ?? '',
                 'track_by': model.trackBy ?? 'rep',
+                'major_muscle': model.majorMuscle ?? '',
+                'source': model.source ?? '',
               };
             }).toList();
         if (!isSearching) {
@@ -967,15 +1019,42 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
   }
 
-  Future<void> loadCustomExercises({String? search}) async {
+  Future<void> loadCustomExercises({
+    String? search,
+    String? majorMuscle,
+    dynamic subMuscle,
+    dynamic equipment,
+    String? type,
+    String? sort,
+  }) async {
     print(
-      'DEBUG: loadCustomExercises() called in WorkoutCubit with search: $search',
+      'DEBUG: loadCustomExercises() called with search: $search, majorMuscle: $majorMuscle',
     );
-    final queryParams = <String, dynamic>{'custom_only': true};
+    final queryParams = <String, dynamic>{
+      'source': 'custom',
+      'custom_only': true,
+    };
 
     if (search != null && search.trim().isNotEmpty) {
       queryParams['search'] = search.trim();
     }
+    if (majorMuscle != null && majorMuscle.trim().isNotEmpty && majorMuscle.trim() != 'All') {
+      queryParams['major_muscle'] = majorMuscle.trim();
+    }
+    if (subMuscle != null && subMuscle.toString().trim().isNotEmpty && subMuscle.toString().trim() != 'All') {
+      queryParams['sub_muscle'] = subMuscle;
+    }
+    if (equipment != null && equipment.toString().trim().isNotEmpty && equipment.toString().trim() != 'All') {
+      queryParams['equipment'] = equipment;
+    }
+    if (type != null && type.trim().isNotEmpty && type.trim() != 'All') {
+      queryParams['type'] = type.trim();
+    }
+    if (sort != null && sort.trim().isNotEmpty) {
+      queryParams['sort'] = sort.trim();
+    }
+
+    final isSearching = queryParams.length > 2;
 
     final response = await WorkoutRepository().getExerciseLibrary(
       queryParameters: queryParams,
@@ -992,16 +1071,18 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         );
         final mappedList =
             exercisesList.map((model) {
+              final formattedSub = model.subtitle ??
+                  '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}';
               return {
                 'id': (model.id ?? '').toString(),
                 'title': model.name ?? '',
-                'subtitle':
-                    '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}',
+                'subtitle': formattedSub,
                 'video_url': model.videoUrl?.toString() ?? '',
                 'track_by': model.trackBy ?? 'rep',
+                'major_muscle': model.majorMuscle ?? '',
+                'source': model.source ?? '',
               };
             }).toList();
-        final isSearching = search != null && search.trim().isNotEmpty;
         if (!isSearching) {
           _allCustomExercises = mappedList;
         }

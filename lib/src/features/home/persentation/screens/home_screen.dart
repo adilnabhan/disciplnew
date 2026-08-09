@@ -13,6 +13,10 @@ import 'package:customer_mobile_app/src/features/profile/cubit/profile_completio
 import 'package:customer_mobile_app/src/features/profile/presentation/widgets/profile_completion_banner.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/domain/models/fitnesscenter_details_model.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/trainer_details_screen.dart';
+import 'package:customer_mobile_app/src/features/home/cubit/home_challenge_cubit.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/widgets/home_challenge_card.dart';
+import 'package:customer_mobile_app/src/features/challenges/domain/repositories/challenge_repository.dart';
+import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/winner_announcement_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.activeMembership});
@@ -26,19 +30,42 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
   late final HomeCubit _homeCubit;
+  late final HomeChallengeCubit _homeChallengeCubit;
   final ProfileCompletionCubit _profileCompletionCubit =
       ProfileCompletionCubit();
   int _calendarRefreshCounter = 0;
+  static bool _hasCheckedWinnerPopupInSession = false;
 
   @override
   void initState() {
     super.initState();
     _dashboardCubit = DashboardCubit();
     _homeCubit = HomeCubit();
+    _homeChallengeCubit = HomeChallengeCubit();
+    _homeChallengeCubit.loadHomeChallenges();
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
     if (!isGuest) {
       _profileCompletionCubit.fetchProfileCompletion();
       _fetchActiveMembership();
+      _checkWinnerPopup();
+    }
+  }
+
+  Future<void> _checkWinnerPopup() async {
+    if (_hasCheckedWinnerPopupInSession) return;
+    _hasCheckedWinnerPopupInSession = true;
+
+    try {
+      final response = await ChallengeRepository().getWinnerPopup();
+      if (response.showPopup && response.winner != null && mounted) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            WinnerAnnouncementDialog.show(context, winner: response.winner!);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error in _checkWinnerPopup: $e');
     }
   }
 
@@ -46,6 +73,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _profileCompletionCubit.close();
     _homeCubit.close();
+    _homeChallengeCubit.close();
     super.dispose();
   }
 
@@ -57,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     await Future.wait([
       _dashboardCubit.fetchActiveMembership(),
+      _homeChallengeCubit.loadHomeChallenges(),
       if (Feggy.read<AppCubit>()?.state.currentUser != null) ...[
         _homeCubit.fetchHomeData(),
         _profileCompletionCubit.fetchProfileCompletion(),
@@ -228,6 +257,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             const SizedBox(height: 20),
+
+            // Customer Home Challenge Section
+            BlocProvider.value(
+              value: _homeChallengeCubit,
+              child: const HomeChallengeSection().pxy(x: 16),
+            ),
 
             if (isGuest)
               _membershipExpireCard(context)

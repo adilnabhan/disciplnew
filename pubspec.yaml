@@ -3,7 +3,7 @@ description: "A new Discipl Flutter project."
 
 publish_to: "none"
 
-version: 1.0.7+38
+version: 1.0.7+39
 
 environment:
   sdk: ^3.7.2

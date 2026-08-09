@@ -18,6 +18,30 @@ class CertificateViewerScreen extends StatefulWidget {
 class _CertificateViewerScreenState extends State<CertificateViewerScreen> {
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isImage = _checkIfImageUrl(widget.fileUrl);
+    if (_isImage) {
+      _isLoading = false;
+    }
+  }
+
+  bool _checkIfImageUrl(String url) {
+    final lower = Uri.parse(url).path.toLowerCase();
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.gif') ||
+        lower.endsWith('.bmp') ||
+        url.toLowerCase().contains('/images/') ||
+        url.toLowerCase().contains('.png?') ||
+        url.toLowerCase().contains('.jpg?') ||
+        url.toLowerCase().contains('.jpeg?');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +82,21 @@ class _CertificateViewerScreenState extends State<CertificateViewerScreen> {
       ),
       body: Stack(
         children: [
-          if (_errorMessage == null)
+          if (_isImage)
+            InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: ImageNetwork(
+                    widget.fileUrl,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            )
+          else if (_errorMessage == null)
             SfPdfViewer.network(
               widget.fileUrl,
               onDocumentLoaded: (details) {
@@ -71,17 +109,17 @@ class _CertificateViewerScreenState extends State<CertificateViewerScreen> {
               onDocumentLoadFailed: (details) {
                 if (mounted) {
                   setState(() {
+                    _isImage = true;
                     _isLoading = false;
-                    _errorMessage = details.description;
                   });
                 }
               },
             ),
-          if (_isLoading)
+          if (_isLoading && !_isImage)
             const Center(
               child: CircularProgressIndicator(),
             ),
-          if (_errorMessage != null)
+          if (_errorMessage != null && !_isImage)
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
@@ -115,6 +153,7 @@ class _CertificateViewerScreenState extends State<CertificateViewerScreen> {
                         setState(() {
                           _isLoading = true;
                           _errorMessage = null;
+                          _isImage = _checkIfImageUrl(widget.fileUrl);
                         });
                       },
                       buttonColor: AppColors.primary,

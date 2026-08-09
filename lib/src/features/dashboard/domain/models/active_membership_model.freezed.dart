@@ -1023,12 +1023,20 @@ mixin _$Location {
   String? get buildingName => throw _privateConstructorUsedError;
   @JsonKey(name: 'street')
   String? get street => throw _privateConstructorUsedError;
+  @JsonKey(name: 'area')
+  String? get area => throw _privateConstructorUsedError;
   @JsonKey(name: 'city')
   String? get city => throw _privateConstructorUsedError;
   @JsonKey(name: 'state')
   String? get state => throw _privateConstructorUsedError;
+  @JsonKey(name: 'country')
+  String? get country => throw _privateConstructorUsedError;
+  @JsonKey(name: 'place')
+  String? get place => throw _privateConstructorUsedError;
   @JsonKey(name: 'pin_code')
   String? get pinCode => throw _privateConstructorUsedError;
+  @JsonKey(name: 'pincode')
+  String? get pincode => throw _privateConstructorUsedError;
   @JsonKey(name: 'latitude')
   dynamic get latitude => throw _privateConstructorUsedError;
   @JsonKey(name: 'longitude')
@@ -1054,9 +1062,13 @@ abstract class $LocationCopyWith<$Res> {
   $Res call({
     @JsonKey(name: 'building_name') String? buildingName,
     @JsonKey(name: 'street') String? street,
+    @JsonKey(name: 'area') String? area,
     @JsonKey(name: 'city') String? city,
     @JsonKey(name: 'state') String? state,
+    @JsonKey(name: 'country') String? country,
+    @JsonKey(name: 'place') String? place,
     @JsonKey(name: 'pin_code') String? pinCode,
+    @JsonKey(name: 'pincode') String? pincode,
     @JsonKey(name: 'latitude') dynamic latitude,
     @JsonKey(name: 'longitude') dynamic longitude,
     @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
@@ -1080,9 +1092,13 @@ class _$LocationCopyWithImpl<$Res, $Val extends Location>
   $Res call({
     Object? buildingName = freezed,
     Object? street = freezed,
+    Object? area = freezed,
     Object? city = freezed,
     Object? state = freezed,
+    Object? country = freezed,
+    Object? place = freezed,
     Object? pinCode = freezed,
+    Object? pincode = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
     Object? googleMapsUrl = freezed,
@@ -1099,6 +1115,11 @@ class _$LocationCopyWithImpl<$Res, $Val extends Location>
                     ? _value.street
                     : street // ignore: cast_nullable_to_non_nullable
                         as String?,
+            area:
+                freezed == area
+                    ? _value.area
+                    : area // ignore: cast_nullable_to_non_nullable
+                        as String?,
             city:
                 freezed == city
                     ? _value.city
@@ -1109,10 +1130,25 @@ class _$LocationCopyWithImpl<$Res, $Val extends Location>
                     ? _value.state
                     : state // ignore: cast_nullable_to_non_nullable
                         as String?,
+            country:
+                freezed == country
+                    ? _value.country
+                    : country // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            place:
+                freezed == place
+                    ? _value.place
+                    : place // ignore: cast_nullable_to_non_nullable
+                        as String?,
             pinCode:
                 freezed == pinCode
                     ? _value.pinCode
                     : pinCode // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            pincode:
+                freezed == pincode
+                    ? _value.pincode
+                    : pincode // ignore: cast_nullable_to_non_nullable
                         as String?,
             latitude:
                 freezed == latitude
@@ -1147,9 +1183,13 @@ abstract class _$$LocationImplCopyWith<$Res>
   $Res call({
     @JsonKey(name: 'building_name') String? buildingName,
     @JsonKey(name: 'street') String? street,
+    @JsonKey(name: 'area') String? area,
     @JsonKey(name: 'city') String? city,
     @JsonKey(name: 'state') String? state,
+    @JsonKey(name: 'country') String? country,
+    @JsonKey(name: 'place') String? place,
     @JsonKey(name: 'pin_code') String? pinCode,
+    @JsonKey(name: 'pincode') String? pincode,
     @JsonKey(name: 'latitude') dynamic latitude,
     @JsonKey(name: 'longitude') dynamic longitude,
     @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
@@ -1172,9 +1212,13 @@ class __$$LocationImplCopyWithImpl<$Res>
   $Res call({
     Object? buildingName = freezed,
     Object? street = freezed,
+    Object? area = freezed,
     Object? city = freezed,
     Object? state = freezed,
+    Object? country = freezed,
+    Object? place = freezed,
     Object? pinCode = freezed,
+    Object? pincode = freezed,
     Object? latitude = freezed,
     Object? longitude = freezed,
     Object? googleMapsUrl = freezed,
@@ -1191,6 +1235,11 @@ class __$$LocationImplCopyWithImpl<$Res>
                 ? _value.street
                 : street // ignore: cast_nullable_to_non_nullable
                     as String?,
+        area:
+            freezed == area
+                ? _value.area
+                : area // ignore: cast_nullable_to_non_nullable
+                    as String?,
         city:
             freezed == city
                 ? _value.city
@@ -1201,10 +1250,25 @@ class __$$LocationImplCopyWithImpl<$Res>
                 ? _value.state
                 : state // ignore: cast_nullable_to_non_nullable
                     as String?,
+        country:
+            freezed == country
+                ? _value.country
+                : country // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        place:
+            freezed == place
+                ? _value.place
+                : place // ignore: cast_nullable_to_non_nullable
+                    as String?,
         pinCode:
             freezed == pinCode
                 ? _value.pinCode
                 : pinCode // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        pincode:
+            freezed == pincode
+                ? _value.pincode
+                : pincode // ignore: cast_nullable_to_non_nullable
                     as String?,
         latitude:
             freezed == latitude
@@ -1232,9 +1296,13 @@ class _$LocationImpl implements _Location {
   const _$LocationImpl({
     @JsonKey(name: 'building_name') this.buildingName,
     @JsonKey(name: 'street') this.street,
+    @JsonKey(name: 'area') this.area,
     @JsonKey(name: 'city') this.city,
     @JsonKey(name: 'state') this.state,
+    @JsonKey(name: 'country') this.country,
+    @JsonKey(name: 'place') this.place,
     @JsonKey(name: 'pin_code') this.pinCode,
+    @JsonKey(name: 'pincode') this.pincode,
     @JsonKey(name: 'latitude') this.latitude,
     @JsonKey(name: 'longitude') this.longitude,
     @JsonKey(name: 'google_maps_url') this.googleMapsUrl,
@@ -1250,14 +1318,26 @@ class _$LocationImpl implements _Location {
   @JsonKey(name: 'street')
   final String? street;
   @override
+  @JsonKey(name: 'area')
+  final String? area;
+  @override
   @JsonKey(name: 'city')
   final String? city;
   @override
   @JsonKey(name: 'state')
   final String? state;
   @override
+  @JsonKey(name: 'country')
+  final String? country;
+  @override
+  @JsonKey(name: 'place')
+  final String? place;
+  @override
   @JsonKey(name: 'pin_code')
   final String? pinCode;
+  @override
+  @JsonKey(name: 'pincode')
+  final String? pincode;
   @override
   @JsonKey(name: 'latitude')
   final dynamic latitude;
@@ -1270,7 +1350,7 @@ class _$LocationImpl implements _Location {
 
   @override
   String toString() {
-    return 'Location(buildingName: $buildingName, street: $street, city: $city, state: $state, pinCode: $pinCode, latitude: $latitude, longitude: $longitude, googleMapsUrl: $googleMapsUrl)';
+    return 'Location(buildingName: $buildingName, street: $street, area: $area, city: $city, state: $state, country: $country, place: $place, pinCode: $pinCode, pincode: $pincode, latitude: $latitude, longitude: $longitude, googleMapsUrl: $googleMapsUrl)';
   }
 
   @override
@@ -1281,9 +1361,13 @@ class _$LocationImpl implements _Location {
             (identical(other.buildingName, buildingName) ||
                 other.buildingName == buildingName) &&
             (identical(other.street, street) || other.street == street) &&
+            (identical(other.area, area) || other.area == area) &&
             (identical(other.city, city) || other.city == city) &&
             (identical(other.state, state) || other.state == state) &&
+            (identical(other.country, country) || other.country == country) &&
+            (identical(other.place, place) || other.place == place) &&
             (identical(other.pinCode, pinCode) || other.pinCode == pinCode) &&
+            (identical(other.pincode, pincode) || other.pincode == pincode) &&
             const DeepCollectionEquality().equals(other.latitude, latitude) &&
             const DeepCollectionEquality().equals(other.longitude, longitude) &&
             (identical(other.googleMapsUrl, googleMapsUrl) ||
@@ -1296,9 +1380,13 @@ class _$LocationImpl implements _Location {
     runtimeType,
     buildingName,
     street,
+    area,
     city,
     state,
+    country,
+    place,
     pinCode,
+    pincode,
     const DeepCollectionEquality().hash(latitude),
     const DeepCollectionEquality().hash(longitude),
     googleMapsUrl,
@@ -1322,9 +1410,13 @@ abstract class _Location implements Location {
   const factory _Location({
     @JsonKey(name: 'building_name') final String? buildingName,
     @JsonKey(name: 'street') final String? street,
+    @JsonKey(name: 'area') final String? area,
     @JsonKey(name: 'city') final String? city,
     @JsonKey(name: 'state') final String? state,
+    @JsonKey(name: 'country') final String? country,
+    @JsonKey(name: 'place') final String? place,
     @JsonKey(name: 'pin_code') final String? pinCode,
+    @JsonKey(name: 'pincode') final String? pincode,
     @JsonKey(name: 'latitude') final dynamic latitude,
     @JsonKey(name: 'longitude') final dynamic longitude,
     @JsonKey(name: 'google_maps_url') final String? googleMapsUrl,
@@ -1340,14 +1432,26 @@ abstract class _Location implements Location {
   @JsonKey(name: 'street')
   String? get street;
   @override
+  @JsonKey(name: 'area')
+  String? get area;
+  @override
   @JsonKey(name: 'city')
   String? get city;
   @override
   @JsonKey(name: 'state')
   String? get state;
   @override
+  @JsonKey(name: 'country')
+  String? get country;
+  @override
+  @JsonKey(name: 'place')
+  String? get place;
+  @override
   @JsonKey(name: 'pin_code')
   String? get pinCode;
+  @override
+  @JsonKey(name: 'pincode')
+  String? get pincode;
   @override
   @JsonKey(name: 'latitude')
   dynamic get latitude;

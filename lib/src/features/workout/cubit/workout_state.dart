@@ -9,6 +9,8 @@ class WorkoutState with _$WorkoutState {
     @Default([]) List<MuscleGroupModel> muscleGroups,
     @Default([]) List<EquipmentModel> equipment,
     @Default([]) List<ExerciseTypeModel> exerciseTypes,
+    @Default([]) List<String> majorMuscleCategories,
+    @Default([]) List<SubMuscleModel> subMuscles,
     @Default(false) bool isLoadingLookups,
     @Default(false) bool isCreatingExercise,
     @Default(false) bool isLoadingActiveSession,

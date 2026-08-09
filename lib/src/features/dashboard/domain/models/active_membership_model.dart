@@ -49,9 +49,13 @@ class Location with _$Location {
   const factory Location({
     @JsonKey(name: 'building_name') String? buildingName,
     @JsonKey(name: 'street') String? street,
+    @JsonKey(name: 'area') String? area,
     @JsonKey(name: 'city') String? city,
     @JsonKey(name: 'state') String? state,
+    @JsonKey(name: 'country') String? country,
+    @JsonKey(name: 'place') String? place,
     @JsonKey(name: 'pin_code') String? pinCode,
+    @JsonKey(name: 'pincode') String? pincode,
     @JsonKey(name: 'latitude') dynamic latitude,
     @JsonKey(name: 'longitude') dynamic longitude,
     @JsonKey(name: 'google_maps_url') String? googleMapsUrl,

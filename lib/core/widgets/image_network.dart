@@ -108,8 +108,6 @@ class ImageNetwork extends StatelessWidget {
       return errorWidget ?? empty;
     }
 
-    print(imageUrl);
-
     String? cacheKey;
     try {
       final uri = Uri.parse(imageUrl!);
@@ -129,6 +127,9 @@ class ImageNetwork extends StatelessWidget {
       // Faster appearance with premium subtle fade
       fadeInDuration: const Duration(milliseconds: 250),
       fadeOutDuration: const Duration(milliseconds: 250),
+
+      // Suppress cache file missing/eviction errors
+      errorListener: (value) {},
 
       // Keep shimmer
       placeholder: (_, __) {

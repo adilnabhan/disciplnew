@@ -27,6 +27,8 @@ mixin _$WorkoutState {
   List<EquipmentModel> get equipment => throw _privateConstructorUsedError;
   List<ExerciseTypeModel> get exerciseTypes =>
       throw _privateConstructorUsedError;
+  List<String> get majorMuscleCategories => throw _privateConstructorUsedError;
+  List<SubMuscleModel> get subMuscles => throw _privateConstructorUsedError;
   bool get isLoadingLookups => throw _privateConstructorUsedError;
   bool get isCreatingExercise => throw _privateConstructorUsedError;
   bool get isLoadingActiveSession => throw _privateConstructorUsedError;
@@ -55,6 +57,8 @@ abstract class $WorkoutStateCopyWith<$Res> {
     List<MuscleGroupModel> muscleGroups,
     List<EquipmentModel> equipment,
     List<ExerciseTypeModel> exerciseTypes,
+    List<String> majorMuscleCategories,
+    List<SubMuscleModel> subMuscles,
     bool isLoadingLookups,
     bool isCreatingExercise,
     bool isLoadingActiveSession,
@@ -85,6 +89,8 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
     Object? muscleGroups = null,
     Object? equipment = null,
     Object? exerciseTypes = null,
+    Object? majorMuscleCategories = null,
+    Object? subMuscles = null,
     Object? isLoadingLookups = null,
     Object? isCreatingExercise = null,
     Object? isLoadingActiveSession = null,
@@ -124,6 +130,16 @@ class _$WorkoutStateCopyWithImpl<$Res, $Val extends WorkoutState>
                     ? _value.exerciseTypes
                     : exerciseTypes // ignore: cast_nullable_to_non_nullable
                         as List<ExerciseTypeModel>,
+            majorMuscleCategories:
+                null == majorMuscleCategories
+                    ? _value.majorMuscleCategories
+                    : majorMuscleCategories // ignore: cast_nullable_to_non_nullable
+                        as List<String>,
+            subMuscles:
+                null == subMuscles
+                    ? _value.subMuscles
+                    : subMuscles // ignore: cast_nullable_to_non_nullable
+                        as List<SubMuscleModel>,
             isLoadingLookups:
                 null == isLoadingLookups
                     ? _value.isLoadingLookups
@@ -176,6 +192,8 @@ abstract class _$$WorkoutStateImplCopyWith<$Res>
     List<MuscleGroupModel> muscleGroups,
     List<EquipmentModel> equipment,
     List<ExerciseTypeModel> exerciseTypes,
+    List<String> majorMuscleCategories,
+    List<SubMuscleModel> subMuscles,
     bool isLoadingLookups,
     bool isCreatingExercise,
     bool isLoadingActiveSession,
@@ -205,6 +223,8 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
     Object? muscleGroups = null,
     Object? equipment = null,
     Object? exerciseTypes = null,
+    Object? majorMuscleCategories = null,
+    Object? subMuscles = null,
     Object? isLoadingLookups = null,
     Object? isCreatingExercise = null,
     Object? isLoadingActiveSession = null,
@@ -244,6 +264,16 @@ class __$$WorkoutStateImplCopyWithImpl<$Res>
                 ? _value._exerciseTypes
                 : exerciseTypes // ignore: cast_nullable_to_non_nullable
                     as List<ExerciseTypeModel>,
+        majorMuscleCategories:
+            null == majorMuscleCategories
+                ? _value._majorMuscleCategories
+                : majorMuscleCategories // ignore: cast_nullable_to_non_nullable
+                    as List<String>,
+        subMuscles:
+            null == subMuscles
+                ? _value._subMuscles
+                : subMuscles // ignore: cast_nullable_to_non_nullable
+                    as List<SubMuscleModel>,
         isLoadingLookups:
             null == isLoadingLookups
                 ? _value.isLoadingLookups
@@ -289,6 +319,8 @@ class _$WorkoutStateImpl implements _WorkoutState {
     final List<MuscleGroupModel> muscleGroups = const [],
     final List<EquipmentModel> equipment = const [],
     final List<ExerciseTypeModel> exerciseTypes = const [],
+    final List<String> majorMuscleCategories = const [],
+    final List<SubMuscleModel> subMuscles = const [],
     this.isLoadingLookups = false,
     this.isCreatingExercise = false,
     this.isLoadingActiveSession = false,
@@ -300,7 +332,9 @@ class _$WorkoutStateImpl implements _WorkoutState {
        _customExercises = customExercises,
        _muscleGroups = muscleGroups,
        _equipment = equipment,
-       _exerciseTypes = exerciseTypes;
+       _exerciseTypes = exerciseTypes,
+       _majorMuscleCategories = majorMuscleCategories,
+       _subMuscles = subMuscles;
 
   final List<Map<String, dynamic>> _exercises;
   @override
@@ -354,6 +388,25 @@ class _$WorkoutStateImpl implements _WorkoutState {
     return EqualUnmodifiableListView(_exerciseTypes);
   }
 
+  final List<String> _majorMuscleCategories;
+  @override
+  @JsonKey()
+  List<String> get majorMuscleCategories {
+    if (_majorMuscleCategories is EqualUnmodifiableListView)
+      return _majorMuscleCategories;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_majorMuscleCategories);
+  }
+
+  final List<SubMuscleModel> _subMuscles;
+  @override
+  @JsonKey()
+  List<SubMuscleModel> get subMuscles {
+    if (_subMuscles is EqualUnmodifiableListView) return _subMuscles;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_subMuscles);
+  }
+
   @override
   @JsonKey()
   final bool isLoadingLookups;
@@ -373,7 +426,7 @@ class _$WorkoutStateImpl implements _WorkoutState {
 
   @override
   String toString() {
-    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise, isLoadingActiveSession: $isLoadingActiveSession, sessionTitle: $sessionTitle, sessionId: $sessionId, planDayId: $planDayId)';
+    return 'WorkoutState(exercises: $exercises, libraryExercises: $libraryExercises, customExercises: $customExercises, muscleGroups: $muscleGroups, equipment: $equipment, exerciseTypes: $exerciseTypes, majorMuscleCategories: $majorMuscleCategories, subMuscles: $subMuscles, isLoadingLookups: $isLoadingLookups, isCreatingExercise: $isCreatingExercise, isLoadingActiveSession: $isLoadingActiveSession, sessionTitle: $sessionTitle, sessionId: $sessionId, planDayId: $planDayId)';
   }
 
   @override
@@ -405,6 +458,14 @@ class _$WorkoutStateImpl implements _WorkoutState {
               other._exerciseTypes,
               _exerciseTypes,
             ) &&
+            const DeepCollectionEquality().equals(
+              other._majorMuscleCategories,
+              _majorMuscleCategories,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._subMuscles,
+              _subMuscles,
+            ) &&
             (identical(other.isLoadingLookups, isLoadingLookups) ||
                 other.isLoadingLookups == isLoadingLookups) &&
             (identical(other.isCreatingExercise, isCreatingExercise) ||
@@ -428,6 +489,8 @@ class _$WorkoutStateImpl implements _WorkoutState {
     const DeepCollectionEquality().hash(_muscleGroups),
     const DeepCollectionEquality().hash(_equipment),
     const DeepCollectionEquality().hash(_exerciseTypes),
+    const DeepCollectionEquality().hash(_majorMuscleCategories),
+    const DeepCollectionEquality().hash(_subMuscles),
     isLoadingLookups,
     isCreatingExercise,
     isLoadingActiveSession,
@@ -453,6 +516,8 @@ abstract class _WorkoutState implements WorkoutState {
     final List<MuscleGroupModel> muscleGroups,
     final List<EquipmentModel> equipment,
     final List<ExerciseTypeModel> exerciseTypes,
+    final List<String> majorMuscleCategories,
+    final List<SubMuscleModel> subMuscles,
     final bool isLoadingLookups,
     final bool isCreatingExercise,
     final bool isLoadingActiveSession,
@@ -473,6 +538,10 @@ abstract class _WorkoutState implements WorkoutState {
   List<EquipmentModel> get equipment;
   @override
   List<ExerciseTypeModel> get exerciseTypes;
+  @override
+  List<String> get majorMuscleCategories;
+  @override
+  List<SubMuscleModel> get subMuscles;
   @override
   bool get isLoadingLookups;
   @override

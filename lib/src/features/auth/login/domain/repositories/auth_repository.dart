@@ -283,6 +283,10 @@ final class AuthRepository {
 
   static Either<ApiException, ConstantChoicesModel>? _cachedConstChoices;
 
+  static void clearMemoryCache() {
+    _cachedConstChoices = null;
+  }
+
   Future<Either<ApiException, ConstantChoicesModel>> fetchConstChoices() async {
     if (_cachedConstChoices != null && _cachedConstChoices!.isRight()) {
       return _cachedConstChoices!;

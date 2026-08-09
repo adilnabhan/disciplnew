@@ -7,6 +7,7 @@ class WorkoutPreviewScreen extends StatefulWidget {
     required this.fallbackTitle,
     this.trainerName,
     this.onRefresh,
+    this.isMissed = false,
     super.key,
   });
 
@@ -14,6 +15,7 @@ class WorkoutPreviewScreen extends StatefulWidget {
   final String fallbackTitle;
   final String? trainerName;
   final VoidCallback? onRefresh;
+  final bool isMissed;
 
   @override
   State<WorkoutPreviewScreen> createState() => _WorkoutPreviewScreenState();
@@ -455,6 +457,68 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
               ),
               raduis: 12,
               ontap: () {
+                final bool canStartFromApi = (data['can_start'] as bool?) ?? true;
+                final bool isMissedFromData =
+                    (data['is_missed'] as bool?) == true ||
+                    data['status']?.toString().toLowerCase() == 'missed' ||
+                    widget.isMissed;
+                final bool canStart = canStartFromApi && !isMissedFromData;
+
+                if (!canStart) {
+                  String sessionDateStr =
+                      data['session_date']?.toString() ?? '';
+                  String formattedDate = '';
+                  if (sessionDateStr.isNotEmpty) {
+                    try {
+                      final dt = DateTime.parse(sessionDateStr);
+                      final months = [
+                        'January',
+                        'February',
+                        'March',
+                        'April',
+                        'May',
+                        'June',
+                        'July',
+                        'August',
+                        'September',
+                        'October',
+                        'November',
+                        'December'
+                      ];
+                      final dayStr = dt.day.toString().padLeft(2, '0');
+                      formattedDate =
+                          '$dayStr ${months[dt.month - 1]} ${dt.year}';
+                    } catch (_) {
+                      formattedDate = sessionDateStr;
+                    }
+                  }
+
+                  final msg = data['message']?.toString() ??
+                      (formattedDate.isNotEmpty
+                          ? 'This workout was scheduled for $formattedDate. It can only be completed on its scheduled date.'
+                          : 'This workout is missed and can only be completed on its scheduled date.');
+
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        msg,
+                        style: AppStyles.text14Px.poppins.w500.copyWith(
+                          color: Colors.white,
+                        ),
+                      ),
+                      backgroundColor: const Color(0xFFD30C15),
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      margin: const EdgeInsets.all(16),
+                      duration: const Duration(seconds: 4),
+                    ),
+                  );
+                  return;
+                }
+
                 Navigator.pushReplacement<dynamic, dynamic>(
                   context,
                   MaterialPageRoute<dynamic>(

@@ -766,46 +766,123 @@ class _FitnessCenterDetailsScreenState
         final loc = details.location;
         final directGoogleMapsUrl = details.googleMapsUrl;
         final locGoogleMapsUrl = loc?.googleMapsUrl;
-        final targetUrl =
-            (directGoogleMapsUrl != null && directGoogleMapsUrl.isNotEmpty)
-                ? directGoogleMapsUrl
-                : (locGoogleMapsUrl != null && locGoogleMapsUrl.isNotEmpty)
+
+        String? rawUrl = (directGoogleMapsUrl != null &&
+                directGoogleMapsUrl.trim().isNotEmpty)
+            ? directGoogleMapsUrl
+            : (locGoogleMapsUrl != null && locGoogleMapsUrl.trim().isNotEmpty)
                 ? locGoogleMapsUrl
                 : null;
 
-        Uri mapUri;
-        if (targetUrl != null) {
-          mapUri = Uri.parse(targetUrl.trim());
-        } else if (loc != null) {
+        bool launched = false;
+
+        // 1. Try launching direct googleMapsUrl if present
+        if (rawUrl != null) {
+          String cleanUrl = rawUrl
+              .replaceAll('\n', '')
+              .replaceAll('\r', '')
+              .replaceAll(' ', '')
+              .trim();
+          if (cleanUrl.startsWith('http://google.com')) {
+            cleanUrl = cleanUrl.replaceFirst('http://google.com', 'https://www.google.com');
+          } else if (cleanUrl.startsWith('https://google.com')) {
+            cleanUrl = cleanUrl.replaceFirst('https://google.com', 'https://www.google.com');
+          } else if (cleanUrl.startsWith('http://')) {
+            cleanUrl = cleanUrl.replaceFirst('http://', 'https://');
+          } else if (!cleanUrl.startsWith('http://') &&
+              !cleanUrl.startsWith('https://')) {
+            cleanUrl = 'https://$cleanUrl';
+          }
+
+          final Uri? uri = Uri.tryParse(cleanUrl);
+          if (uri != null) {
+            try {
+              launched = await launchUrl(
+                uri,
+                mode: LaunchMode.externalApplication,
+              );
+            } catch (_) {}
+            if (!launched) {
+              try {
+                launched = await launchUrl(
+                  uri,
+                  mode: LaunchMode.platformDefault,
+                );
+              } catch (_) {}
+            }
+          }
+        }
+
+        // 2. Fallback to Lat/Lng direction URL
+        if (!launched && loc != null) {
           final lat = loc.latitude;
           final lng = loc.longitude;
           if (lat != null &&
               lng != null &&
               lat.toString().trim().isNotEmpty &&
-              lat.toString() != 'null') {
-            mapUri = Uri.parse(
+              lat.toString() != 'null' &&
+              lng.toString().trim().isNotEmpty &&
+              lng.toString() != 'null') {
+            final latLngUri = Uri.parse(
               'https://www.google.com/maps/dir/?api=1&destination=$lat,$lng',
             );
-          } else {
-            final address = [
-              loc.buildingName,
-              loc.street,
-              loc.city,
-              loc.state,
-            ].where((e) => e != null && e.isNotEmpty).join(', ');
-            mapUri = Uri.parse(
-              'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(address)}',
-            );
+            try {
+              launched = await launchUrl(
+                latLngUri,
+                mode: LaunchMode.externalApplication,
+              );
+            } catch (_) {}
+            if (!launched) {
+              try {
+                launched = await launchUrl(
+                  latLngUri,
+                  mode: LaunchMode.platformDefault,
+                );
+              } catch (_) {}
+            }
+
+            if (!launched) {
+              final geoUri = Uri.parse('geo:$lat,$lng?q=$lat,$lng');
+              try {
+                launched = await launchUrl(geoUri);
+              } catch (_) {}
+            }
           }
-        } else {
-          await Dialogs.showSnack(msg: 'Location not available');
-          return;
         }
 
-        try {
-          await launchUrl(mapUri, mode: LaunchMode.externalApplication);
-        } catch (e) {
-          await Dialogs.showSnack(msg: 'Could not open maps');
+        // 3. Fallback to Address text direction URL
+        if (!launched && loc != null) {
+          final addressParts = [
+            loc.buildingName,
+            loc.street,
+            loc.city,
+            loc.state,
+            loc.pinCode,
+          ].where((e) => e != null && e.toString().trim().isNotEmpty).join(', ');
+
+          if (addressParts.isNotEmpty) {
+            final addressUri = Uri.parse(
+              'https://www.google.com/maps/dir/?api=1&destination=${Uri.encodeComponent(addressParts)}',
+            );
+            try {
+              launched = await launchUrl(
+                addressUri,
+                mode: LaunchMode.externalApplication,
+              );
+            } catch (_) {}
+            if (!launched) {
+              try {
+                launched = await launchUrl(
+                  addressUri,
+                  mode: LaunchMode.platformDefault,
+                );
+              } catch (_) {}
+            }
+          }
+        }
+
+        if (!launched) {
+          await Dialogs.showSnack(msg: 'Could not open maps direction');
         }
       },
       child: Column(

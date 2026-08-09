@@ -657,7 +657,11 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         (data['assigned_by'] != null &&
             data['assigned_by'].toString().trim().isNotEmpty) ||
         (data['is_mentor_workout'] == true) ||
-        (data['is_trainer_assigned'] == true);
+        (data['is_trainer_assigned'] == true) ||
+        (data['source']?.toString().toLowerCase() == 'trainer');
+
+    final currentUserCustomer =
+        Feggy.read<AppCubit>()?.state.currentUser?.customer;
 
     // 2. Resolve Assigned Gym Name (MUST NOT use trainer name)
     String? resolvedGymName = widget.gymName;
@@ -667,24 +671,26 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
           data['assigned_gym_name']?.toString() ??
           (data['assigned_fitness_center'] is Map
               ? (data['assigned_fitness_center']['name'] ??
-                      data['assigned_fitness_center']['center_name'])
+                      data['assigned_fitness_center']['center_name'] ??
+                      data['assigned_fitness_center']['title'])
                   ?.toString()
               : null) ??
           (data['fitness_center'] is Map
               ? (data['fitness_center']['name'] ??
-                      data['fitness_center']['center_name'])
+                      data['fitness_center']['center_name'] ??
+                      data['fitness_center']['title'])
                   ?.toString()
               : null) ??
           (data['gym'] is Map ? data['gym']['name']?.toString() : null);
     }
     if (resolvedGymName == null || resolvedGymName.trim().isEmpty) {
-      resolvedGymName =
-          _customerDetails?.assignedFitnessCenter?['name']?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['center_name']
-                  ?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['fitness_center_name']
-                  ?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['title']?.toString();
+      final gymMap =
+          _customerDetails?.assignedFitnessCenter ??
+          currentUserCustomer?.assignedFitnessCenter;
+      resolvedGymName = gymMap?['name']?.toString() ??
+          gymMap?['center_name']?.toString() ??
+          gymMap?['fitness_center_name']?.toString() ??
+          gymMap?['title']?.toString();
     }
     final String assignedGymName =
         (resolvedGymName != null && resolvedGymName.trim().isNotEmpty)
@@ -700,13 +706,15 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
           (data['assigned_fitness_center'] is Map
               ? (data['assigned_fitness_center']['logo'] ??
                       data['assigned_fitness_center']['image'] ??
-                      data['assigned_fitness_center']['profile_image'])
+                      data['assigned_fitness_center']['profile_image'] ??
+                      data['assigned_fitness_center']['photo'])
                   ?.toString()
               : null) ??
           (data['fitness_center'] is Map
               ? (data['fitness_center']['logo'] ??
                       data['fitness_center']['image'] ??
-                      data['fitness_center']['profile_image'])
+                      data['fitness_center']['profile_image'] ??
+                      data['fitness_center']['photo'])
                   ?.toString()
               : null) ??
           (data['gym'] is Map
@@ -714,13 +722,14 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
               : null);
     }
     if (resolvedGymLogo == null || resolvedGymLogo.trim().isEmpty) {
-      resolvedGymLogo =
-          _customerDetails?.assignedFitnessCenter?['logo']?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['image']?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['photo']?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['profile_image']
-                  ?.toString() ??
-              _customerDetails?.assignedFitnessCenter?['logo_url']?.toString();
+      final gymMap =
+          _customerDetails?.assignedFitnessCenter ??
+          currentUserCustomer?.assignedFitnessCenter;
+      resolvedGymLogo = gymMap?['logo']?.toString() ??
+          gymMap?['image']?.toString() ??
+          gymMap?['photo']?.toString() ??
+          gymMap?['profile_image']?.toString() ??
+          gymMap?['logo_url']?.toString();
     }
     final String? assignedGymLogo = resolvedGymLogo;
 

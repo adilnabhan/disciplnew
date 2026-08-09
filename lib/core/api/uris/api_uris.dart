@@ -43,6 +43,10 @@ final class ApiUris {
       '${_v1}fitnesscenter/gym-banners/?organization_id=$orgId';
   static final globalBanners = '${_v1}fitnesscenter/global-banners/';
   static final promotionalBanners = '${_v1}fitnesscenter/banners/';
+  static final homeChallenges = '${_v1}customer/challenges/home/';
+  static final challengesList = '${_v1}customer/challenges/';
+  static final winnerPopup = '${_v1}customer/challenges/winner-popup/';
+  static final markWinnerPopupSeen = '${_v1}customer/challenges/winner-popup/seen/';
 
   ///============================= Notifications =============================\\\
   static final notificationsList = '${_v1}customer/notifications/';
@@ -96,6 +100,7 @@ final class ApiUris {
 
   ///============================= Workout =============================\\\
   static final exercises = '${_v1}customer/exercises/';
+  static final muscleClassification = '${_v1}customer/muscle-classification/';
   static final exerciseDetail = '${_v1}customer/exercises/detail/';
   static String exerciseDetailById(int id) => '${_v1}customer/exercises/$id/';
   static final muscleGroups = '${_v1}trainer/muscle-groups/';

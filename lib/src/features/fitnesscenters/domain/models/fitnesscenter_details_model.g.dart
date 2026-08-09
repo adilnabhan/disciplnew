@@ -213,6 +213,7 @@ _$GymTrainerImpl _$$GymTrainerImplFromJson(Map<String, dynamic> json) =>
       fullName: json['full_name'] as String?,
       userType: json['user_type'] as String?,
       bio: json['bio'] as String?,
+      bannerImage: json['banner_image'] as String?,
       profileImage: json['profile_image'] as String?,
       experienceYears: (json['experience_years'] as num?)?.toInt(),
       averageRating: json['average_rating'],
@@ -236,6 +237,15 @@ _$GymTrainerImpl _$$GymTrainerImplFromJson(Map<String, dynamic> json) =>
       email: json['email'] as String?,
       mobile: json['mobile'] as String?,
       gender: json['gender'] as String?,
+      place: json['place'] as String?,
+      location:
+          json['location'] == null
+              ? null
+              : Location.fromJson(json['location'] as Map<String, dynamic>),
+      socialMedia:
+          (json['social_media'] as List<dynamic>?)
+              ?.map((e) => SocialMedia.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
 
 Map<String, dynamic> _$$GymTrainerImplToJson(_$GymTrainerImpl instance) =>
@@ -244,6 +254,7 @@ Map<String, dynamic> _$$GymTrainerImplToJson(_$GymTrainerImpl instance) =>
       'full_name': instance.fullName,
       'user_type': instance.userType,
       'bio': instance.bio,
+      'banner_image': instance.bannerImage,
       'profile_image': instance.profileImage,
       'experience_years': instance.experienceYears,
       'average_rating': instance.averageRating,
@@ -256,6 +267,9 @@ Map<String, dynamic> _$$GymTrainerImplToJson(_$GymTrainerImpl instance) =>
       'email': instance.email,
       'mobile': instance.mobile,
       'gender': instance.gender,
+      'place': instance.place,
+      'location': instance.location,
+      'social_media': instance.socialMedia,
     };
 
 _$GymTransformationImpl _$$GymTransformationImplFromJson(

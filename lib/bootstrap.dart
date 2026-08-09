@@ -7,14 +7,21 @@ Future<void> bootstrap(FutureOr<Widget> Function() builder) async {
   //* ⚙️ widget binding
   WidgetsFlutterBinding.ensureInitialized();
   //*for log flutter global error 🐞
-  // FlutterError.onError = (details) {
-  //   FirebaseCrashlytics.instance.recordFlutterFatalError(details);
-  //   write(details.exceptionAsString(), stackTrace: details.stack);
-  // };
-  // PlatformDispatcher.instance.onError = (error, stack) {
-  //   FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-  //   return true;
-  // };
+  //* Suppress hardware keyboard sync assertion error on emulators/desktop
+  final originalOnError = FlutterError.onError;
+  FlutterError.onError = (FlutterErrorDetails details) {
+    final exceptionStr = details.exception.toString();
+    if (exceptionStr.contains('KeyUpEvent') ||
+        exceptionStr.contains('HardwareKeyboard') ||
+        exceptionStr.contains('_pressedKeys.containsKey')) {
+      return;
+    }
+    if (originalOnError != null) {
+      originalOnError(details);
+    } else {
+      FlutterError.presentError(details);
+    }
+  };
 
   //* firebase configuration
   // await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);

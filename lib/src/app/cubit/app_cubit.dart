@@ -140,11 +140,45 @@ class AppCubit extends HydratedCubit<AppState> {
     }
   }
 
-  void removeUser() {
-    print('DEBUG LOG: removeUser() called.');
-    LocalStorageService().clearUser();
-    WorkoutRepository().clearCalendarCache();
+  Future<void> removeUser() async {
+    print('DEBUG LOG: Full logout wipe initiated.');
+
+    // 1. Call server logout endpoint
+    try {
+      await AuthRepository().logout();
+    } catch (e) {
+      print('⚠️ Server logout call error: $e');
+    }
+
+    // 2. Clear Local Hive Box & SharedPreferences
+    await LocalStorageService().clearAll();
+
+    // 3. Clear HydratedBloc cache (wipes all cached cubit states on disk)
+    try {
+      await HydratedBloc.storage.clear();
+    } catch (e) {
+      print('⚠️ HydratedBloc clear error: $e');
+    }
+
+    // 4. Clear Image Cache in memory
+    try {
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+    } catch (e) {
+      print('⚠️ Image cache clear error: $e');
+    }
+
+    // 5. Clear repository caches
+    try {
+      WorkoutRepository().clearCalendarCache();
+      AuthRepository.clearMemoryCache();
+    } catch (e) {
+      print('⚠️ Repository cache clear error: $e');
+    }
+
+    // 6. Reset current state
     emit(state.copyWith(currentUser: null));
+    print('✅ All user cache, images, text, user data, and user id wiped.');
   }
 
   void updateProfilePicture(dynamic profilePic) {

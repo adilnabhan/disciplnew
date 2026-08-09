@@ -18,6 +18,7 @@ final class WorkoutRepository {
   List<MuscleGroupModel>? _cachedMuscleGroups;
   List<EquipmentModel>? _cachedEquipment;
   List<ExerciseTypeModel>? _cachedExerciseTypes;
+  MuscleClassificationResponse? _cachedMuscleClassification;
   final Map<String, List<ExerciseLibraryModel>> _cachedExerciseLibraries = {};
 
   // Calendar month cache – key format: "yyyy-MM" (e.g. "2026-07")
@@ -89,6 +90,48 @@ final class WorkoutRepository {
       response.fold(
         (_) => null,
         (list) => _cachedExerciseLibraries[cacheKey] = list,
+      );
+      return response;
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, MuscleClassificationResponse>> getMuscleClassification({
+    String? majorMuscle,
+    bool forceRefresh = false,
+  }) async {
+    if (_cachedMuscleClassification != null &&
+        (majorMuscle == null || majorMuscle.isEmpty || majorMuscle == 'All') &&
+        !forceRefresh) {
+      return right(_cachedMuscleClassification!);
+    }
+    try {
+      final queryParams = <String, dynamic>{};
+      if (majorMuscle != null && majorMuscle.isNotEmpty && majorMuscle != 'All') {
+        queryParams['major_muscle'] = majorMuscle;
+      }
+      final response = await Feggy.async<Response<dynamic>, Either<ApiException, MuscleClassificationResponse>>(
+        call: _dio.get<dynamic>(
+          ApiUris.muscleClassification,
+          queryParameters: queryParams.isNotEmpty ? queryParams : null,
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 && res.data != null) {
+            final parsed = MuscleClassificationResponse.fromJson(
+              res.data as Map<String, dynamic>,
+            );
+            if (majorMuscle == null || majorMuscle.isEmpty || majorMuscle == 'All') {
+              _cachedMuscleClassification = parsed;
+            }
+            return right(parsed);
+          }
+          return left(const ApiException.unknown());
+        },
       );
       return response;
     } on ApiException catch (e) {

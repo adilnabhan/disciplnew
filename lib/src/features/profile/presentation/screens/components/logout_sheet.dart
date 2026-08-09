@@ -48,9 +48,11 @@ class LogoutSheet extends StatelessWidget {
             Flexible(
               child: Button.filled(
                 buttonColor: AppColors.primary,
-                ontap: () {
-                  context.read<AppCubit>().removeUser();
-                  context.pushAndRemoveUntil(const SentOtpScreen());
+                ontap: () async {
+                  await context.read<AppCubit>().removeUser();
+                  if (context.mounted) {
+                    context.pushAndRemoveUntil(const SentOtpScreen());
+                  }
                 },
                 title: 'Logout',
                 style: AppStyles.text14Px.poppins.w500.light,

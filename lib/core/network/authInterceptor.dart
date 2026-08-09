@@ -19,7 +19,7 @@ class AuthInterceptor extends Interceptor {
         options.path.contains('register');
 
     if (token != null && !isPublicPath) {
-      options.headers['Authorization'] = 'JWT $token';
+      options.headers['Authorization'] ??= 'JWT $token';
     }
 
     options.headers['X-Platform'] = platformSource;

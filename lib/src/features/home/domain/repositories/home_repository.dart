@@ -1,6 +1,7 @@
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/banner_model.dart';
+import 'package:customer_mobile_app/src/features/home/domain/models/home_challenge_model.dart';
 import 'package:dio/dio.dart';
 
 @immutable
@@ -175,6 +176,26 @@ final class HomeRepository {
       }
     } catch (e) {
       debugPrint('Error fetching assigned gym trainers: $e');
+    }
+    return [];
+  }
+
+  /// GET /api/v1/customer/challenges/home/
+  Future<List<HomeChallenge>> getHomeChallenges() async {
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiUris.homeChallenges,
+        options: Options(headers: {'X-Platform': platformSource}).token,
+      );
+      if (response.statusCode == 200 &&
+          response.data != null &&
+          response.data is Map<String, dynamic>) {
+        final data = response.data as Map<String, dynamic>;
+        final challengeResponse = HomeChallengeResponse.fromJson(data);
+        return challengeResponse.results ?? [];
+      }
+    } catch (e) {
+      debugPrint('Error fetching home challenges: $e');
     }
     return [];
   }
