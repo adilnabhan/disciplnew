@@ -14,9 +14,15 @@ import 'package:customer_mobile_app/src/features/profile/presentation/widgets/pr
 import 'package:customer_mobile_app/src/features/fitnesscenters/domain/models/fitnesscenter_details_model.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/trainer_details_screen.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/home_challenge_cubit.dart';
-import 'package:customer_mobile_app/src/features/home/persentation/widgets/home_challenge_card.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/repositories/challenge_repository.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/widgets/home_challenge_card.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/winner_announcement_dialog.dart';
+import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
+import 'package:customer_mobile_app/src/features/home/domain/models/app_season_model.dart';
+import 'package:customer_mobile_app/src/features/notifications/cubit/notification_cubit.dart';
+import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/screens/notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.activeMembership});
@@ -31,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
   late final HomeCubit _homeCubit;
   late final HomeChallengeCubit _homeChallengeCubit;
+  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
+  late final NotificationCubit _notificationCubit;
   final ProfileCompletionCubit _profileCompletionCubit =
       ProfileCompletionCubit();
   int _calendarRefreshCounter = 0;
@@ -42,6 +50,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _dashboardCubit = DashboardCubit();
     _homeCubit = HomeCubit();
     _homeChallengeCubit = HomeChallengeCubit();
+    _appSeasonCubit.fetchAppSeason();
+    _notificationCubit = NotificationCubit()..fetchUnreadCount();
     _homeChallengeCubit.loadHomeChallenges();
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
     if (!isGuest) {
@@ -74,6 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _profileCompletionCubit.close();
     _homeCubit.close();
     _homeChallengeCubit.close();
+    _appSeasonCubit.close();
+    _notificationCubit.close();
     super.dispose();
   }
 
@@ -86,6 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.wait([
       _dashboardCubit.fetchActiveMembership(),
       _homeChallengeCubit.loadHomeChallenges(),
+      _appSeasonCubit.fetchAppSeason(),
       if (Feggy.read<AppCubit>()?.state.currentUser != null) ...[
         _homeCubit.fetchHomeData(),
         _profileCompletionCubit.fetchProfileCompletion(),
@@ -96,42 +109,63 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
-    return BlocProvider.value(
-      value: _profileCompletionCubit,
-      child:
-          isGuest
-              ? Scaffold(
-                backgroundColor: const Color(0xffF7F7F7),
-                body: homeView(),
-              )
-              : BlocListener<DashboardCubit, DashboardState>(
-                listenWhen:
-                    (previous, current) =>
-                        previous.navIndex != current.navIndex &&
-                        current.navIndex == 0,
-                listener: (context, state) {
-                  _profileCompletionCubit.fetchProfileCompletion();
-                },
-                child: Scaffold(
-                  backgroundColor: const Color(0xffF7F7F7),
-                  body: homeView(),
-                ),
-              ),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _profileCompletionCubit),
+        BlocProvider.value(value: _appSeasonCubit),
+      ],
+      child: BlocBuilder<AppSeasonCubit, AppSeasonState>(
+        bloc: _appSeasonCubit,
+        builder: (context, seasonState) {
+          final bool isSeasonalActive = seasonState.isActive;
+          final Color bgColor =
+              isSeasonalActive
+                  ? const Color(0xFFFCF2E3)
+                  : const Color(0xffF7F7F7);
+
+          if (isGuest) {
+            return Scaffold(
+              backgroundColor: bgColor,
+              body: homeView(seasonState),
+            );
+          }
+
+          return BlocListener<DashboardCubit, DashboardState>(
+            listenWhen:
+                (previous, current) =>
+                    previous.navIndex != current.navIndex &&
+                    current.navIndex == 0,
+            listener: (context, state) {
+              _profileCompletionCubit.fetchProfileCompletion();
+              _appSeasonCubit.fetchAppSeason();
+            },
+            child: Scaffold(
+              backgroundColor: bgColor,
+              body: homeView(seasonState),
+            ),
+          );
+        },
+      ),
     );
   }
 
-  Widget homeView() {
+  Widget homeView(AppSeasonState seasonState) {
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
+    final bool isSeasonalActive = seasonState.isActive;
+
     return RefreshIndicator(
       onRefresh: _fetchActiveMembership,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: EdgeInsets.only(bottom: 16, top: isSeasonalActive ? 0 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Seasonal Header (when active)
+            if (isSeasonalActive)
+              _buildSeasonalHeader(context, seasonState.seasonModel),
             // Expired Warning Banner
             BlocBuilder<DashboardCubit, DashboardState>(
               bloc: _dashboardCubit,
@@ -304,11 +338,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // Did You Know Section (always shown)
-            _buildDidYouKnowSection(),
+            _buildDidYouKnowSection(isSeasonal: isSeasonalActive),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSeasonalHeader(BuildContext context, AppSeasonModel season) {
+    return const SizedBox(height: 8);
   }
 
   Widget _buildActiveGymSection(ActiveMembershipModel activeMembership) {
@@ -757,9 +795,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-Widget _buildDidYouKnowSection() {
+Widget _buildDidYouKnowSection({bool isSeasonal = false}) {
   return ColoredBox(
-    color: const Color(0xffF7F7F7),
+    color: isSeasonal ? const Color(0xFFFCF2E3) : const Color(0xffF7F7F7),
     child: SizedBox(
       width: double.maxFinite,
       child: Column(
@@ -917,11 +955,7 @@ class _BannersViewState extends State<BannersView> {
   late final Duration _animationDuration;
   Ticker? _ticker;
 
-  static const List<String> _defaultLocalBanners = [
-    'assets/images/carousel_images/discipl_carousel .png',
-    'assets/images/carousel_images/carousel_discipl.jpg',
-    'assets/images/carousel_images/GYM (Banner (Landscape)).png',
-  ];
+
 
   @override
   void initState() {
@@ -961,14 +995,6 @@ class _BannersViewState extends State<BannersView> {
       if (b.bannerImage != null && b.bannerImage!.isNotEmpty) {
         combinedBanners.add(HomeBannerItem.fromModel(b));
       }
-    }
-
-    // Fallback: If both APIs return no banners, use default local asset banners
-    if (combinedBanners.isEmpty) {
-      combinedBanners =
-          _defaultLocalBanners
-              .map((path) => HomeBannerItem.asset(path))
-              .toList();
     }
 
     if (!mounted) return;
@@ -1062,6 +1088,10 @@ class _BannersViewState extends State<BannersView> {
           ),
         ),
       );
+    }
+
+    if (_banners.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     if (_banners.length == 1) {

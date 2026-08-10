@@ -172,6 +172,8 @@ flutter:
     - assets/images/svg/vectors/celebrations.json
     - assets/images/png/icons/
     - assets/images/png/vectors/
+    - assets/images/png/vectors/maveli_achievement_page.png
+    - assets/images/png/vectors/appbar_onam.png
     - assets/images/png/vectors/No_workout-removebg-preview.png
     - assets/images/carousel_images/
     - assets/fonts/

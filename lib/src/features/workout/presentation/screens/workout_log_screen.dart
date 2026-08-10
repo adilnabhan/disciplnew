@@ -12,6 +12,7 @@ import 'package:customer_mobile_app/core/widgets/image_network.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_preview_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
+import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
@@ -24,6 +25,7 @@ class WorkoutLogScreen extends StatefulWidget {
 }
 
 class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
+  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
   DateTime _selectedDate = DateTime.now();
 
   late final ScrollController _scrollController;
@@ -281,6 +283,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   @override
   void dispose() {
+    _appSeasonCubit.close();
     _scrollController.dispose();
     super.dispose();
   }
@@ -839,117 +842,130 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       logCards.add(const _RestDayCard());
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.bgcolorgrey,
-      appBar: AppBar(
-        backgroundColor: AppColors.light,
-        elevation: 0,
-        centerTitle: false,
-        titleSpacing: 20,
-        title: Text(
-          'Workout Log',
-          style: AppStyles.text20Px.poppins.w500.copyWith(
-            height: 1.0,
-            color: AppColors.textDark,
-          ),
-        ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: GestureDetector(
-              onTap: () {
-                context.push(const SettingsScreen());
-              },
-              child: SvgPicture.asset(
-                'assets/images/svg/icons/settings _icon.svg',
-                width: 22,
-                height: 22,
+    return BlocBuilder<AppSeasonCubit, AppSeasonState>(
+      bloc: _appSeasonCubit,
+      builder: (context, seasonState) {
+        final bool isSeasonal = seasonState.isActive;
+        return Scaffold(
+          backgroundColor: AppColors.bgcolorgrey,
+          appBar: AppBar(
+            backgroundColor: isSeasonal ? Colors.transparent : AppColors.light,
+            elevation: 0,
+            centerTitle: false,
+            titleSpacing: 20,
+            flexibleSpace: isSeasonal
+                ? Image.asset(
+                    'assets/images/png/vectors/appbar_onam.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  )
+                : null,
+            title: Text(
+              'Workout Log',
+              style: AppStyles.text20Px.poppins.w500.copyWith(
+                height: 1.0,
+                color: AppColors.textDark,
               ),
             ),
-          ),
-        ],
-      ),
-      body:
-          !isCustomer
-              ? _GuestWorkoutView(
-                onLoginTap: () {
-                  context.push(const SentOtpScreen());
-                },
-              )
-              : SafeArea(
-                child: RefreshIndicator(
-                  onRefresh: _retryLoading,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    clipBehavior: Clip.none,
-                    child: Column(
-                      children: [
-                        if (_showWorkoutCard) ...[
-                          const SizedBox(height: 8),
-                          _buildActiveWorkoutBanner(),
-                          const SizedBox(height: 12),
-                        ] else ...[
-                          const SizedBox(height: 21),
-                        ],
-                        _buildMonthNav(),
-                        const SizedBox(height: 20),
-                        _buildWeekStrip(),
-                        const SizedBox(height: 20),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const SizedBox(height: 12),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child:
-                                    _isLoadingDateLog
-                                        ? _buildShimmerWorkoutLogs(
-                                          key: const ValueKey('shimmer'),
-                                        )
-                                        : _activeError != null
-                                        ? Padding(
-                                          key: const ValueKey('error'),
-                                          padding: const EdgeInsets.only(
-                                            top: 20,
-                                          ),
-                                          child: _activeError!.maybeWhen(
-                                            network:
-                                                (e) => ErrorUi.network(
-                                                  onTap: _retryLoading,
-                                                ),
-                                            notFound:
-                                                (e) => ErrorUi.notFound(
-                                                  onTap: _retryLoading,
-                                                ),
-                                            orElse:
-                                                () => ErrorUi.server(
-                                                  onTap: _retryLoading,
-                                                ),
-                                          ),
-                                        )
-                                        : Column(
-                                          key: const ValueKey('content'),
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: logCards,
-                                        ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Add spacing so the bottom list items aren't hidden behind the floating buttons
-                        const SizedBox(height: 130),
-                      ],
-                    ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 20),
+                child: GestureDetector(
+                  onTap: () {
+                    context.push(const SettingsScreen());
+                  },
+                  child: SvgPicture.asset(
+                    'assets/images/svg/icons/settings _icon.svg',
+                    width: 22,
+                    height: 22,
                   ),
                 ),
               ),
-      floatingActionButton: !isCustomer ? null : _buildStartButton(),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+            ],
+          ),
+          body:
+              !isCustomer
+                  ? _GuestWorkoutView(
+                    onLoginTap: () {
+                      context.push(const SentOtpScreen());
+                    },
+                  )
+                  : SafeArea(
+                    child: RefreshIndicator(
+                      onRefresh: _retryLoading,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        clipBehavior: Clip.none,
+                        child: Column(
+                          children: [
+                            if (_showWorkoutCard) ...[
+                              const SizedBox(height: 8),
+                              _buildActiveWorkoutBanner(),
+                              const SizedBox(height: 12),
+                            ] else ...[
+                              const SizedBox(height: 21),
+                            ],
+                            _buildMonthNav(),
+                            const SizedBox(height: 20),
+                            _buildWeekStrip(),
+                            const SizedBox(height: 20),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const SizedBox(height: 12),
+                                  AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 300),
+                                    child:
+                                        _isLoadingDateLog
+                                            ? _buildShimmerWorkoutLogs(
+                                              key: const ValueKey('shimmer'),
+                                            )
+                                            : _activeError != null
+                                            ? Padding(
+                                              key: const ValueKey('error'),
+                                              padding: const EdgeInsets.only(
+                                                top: 20,
+                                              ),
+                                              child: _activeError!.maybeWhen(
+                                                network:
+                                                    (e) => ErrorUi.network(
+                                                      onTap: _retryLoading,
+                                                    ),
+                                                notFound:
+                                                    (e) => ErrorUi.notFound(
+                                                      onTap: _retryLoading,
+                                                    ),
+                                                orElse:
+                                                    () => ErrorUi.server(
+                                                      onTap: _retryLoading,
+                                                    ),
+                                              ),
+                                            )
+                                            : Column(
+                                              key: const ValueKey('content'),
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: logCards,
+                                            ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Add spacing so the bottom list items aren't hidden behind the floating buttons
+                            const SizedBox(height: 130),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+          floatingActionButton: !isCustomer ? null : _buildStartButton(),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+        );
+      },
     );
   }
 

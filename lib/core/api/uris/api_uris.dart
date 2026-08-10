@@ -38,6 +38,7 @@ final class ApiUris {
   static final assignedGymTrainers = '${_v1}customer/gym-trainers/';
 
   ///============================= Home & Banners =============================\\\
+  static final appSeason = '${_v1}customer/app-season/';
   static final home = '${_v1}customer/customer-homepage/';
   static String gymBanners(int orgId) =>
       '${_v1}fitnesscenter/gym-banners/?organization_id=$orgId';

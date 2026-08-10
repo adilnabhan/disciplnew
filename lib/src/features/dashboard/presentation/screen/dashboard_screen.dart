@@ -1,5 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/fitness_centers_listing_screen.dart';
+import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
 
@@ -18,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late final DashboardCubit _cubit;
   late final NotificationCubit _notificationCubit;
+  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
   late final List<String> _icons;
   late final List<String> _labels;
 
@@ -25,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     _cubit = DashboardCubit(navIndex: widget.navIndex);
     _notificationCubit = NotificationCubit()..fetchUnreadCount();
+    _appSeasonCubit.fetchAppSeason();
     _icons = [
       'assets/images/svg/icons/new_home_notselected.svg',
       'assets/images/svg/icons/workout_notseleted.svg',
@@ -81,113 +84,133 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _cubit.close();
     _notificationCubit.close();
+    _appSeasonCubit.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider.value(
-      value: _cubit,
-      child: BlocBuilder<DashboardCubit, DashboardState>(
-        buildWhen: (p, c) => p.navIndex != c.navIndex,
-        builder: (context, state) {
-          return Scaffold(
-            appBar:
-                state.navIndex == 0
-                    ? AppBar(
-                      title: Image.asset(
-                        'assets/images/png/vectors/discipl_spell.png',
-                        height: 24,
-                      ),
-                      centerTitle: false,
-                      actions: [
-                        BlocBuilder<NotificationCubit, NotificationState>(
-                          bloc: _notificationCubit,
-                          builder: (context, notificationState) {
-                            final int unreadCount =
-                                notificationState.unreadCount;
-                            return GestureDetector(
-                              onTap: () {
-                                context.push(
-                                  MultiBlocProvider(
-                                    providers: [
-                                      BlocProvider.value(
-                                        value: _notificationCubit,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider.value(value: _cubit),
+        BlocProvider.value(value: _appSeasonCubit),
+      ],
+      child: BlocBuilder<AppSeasonCubit, AppSeasonState>(
+        bloc: _appSeasonCubit,
+        builder: (context, seasonState) {
+          final bool isSeasonalActive = seasonState.isActive;
+          return BlocBuilder<DashboardCubit, DashboardState>(
+            buildWhen: (p, c) => p.navIndex != c.navIndex,
+            builder: (context, state) {
+              return Scaffold(
+                backgroundColor: isSeasonalActive && state.navIndex == 0
+                    ? const Color(0xFFFCF2E3)
+                    : const Color(0xFFF7F7F7),
+                appBar:
+                    state.navIndex == 0
+                        ? (isSeasonalActive
+                            ? SeasonalAppBar(
+                              seasonName: seasonState.seasonModel.name ?? 'Onam',
+                              notificationCubit: _notificationCubit,
+                              dashboardCubit: _cubit,
+                            )
+                            : AppBar(
+                              backgroundColor: const Color(0xFFF7F7F7),
+                              elevation: 0,
+                              scrolledUnderElevation: 0,
+                              title: Image.asset(
+                                'assets/images/png/vectors/discipl_spell.png',
+                                height: 24,
+                              ),
+                              centerTitle: false,
+                              actions: [
+                                BlocBuilder<NotificationCubit, NotificationState>(
+                                  bloc: _notificationCubit,
+                                  builder: (context, notificationState) {
+                                    final int unreadCount =
+                                        notificationState.unreadCount;
+                                    return GestureDetector(
+                                      onTap: () {
+                                        context.push(
+                                          MultiBlocProvider(
+                                            providers: [
+                                              BlocProvider.value(
+                                                value: _notificationCubit,
+                                              ),
+                                              BlocProvider.value(value: _cubit),
+                                            ],
+                                            child: const NotificationsScreen(),
+                                          ),
+                                        );
+                                        _notificationCubit.fetchUnreadCount();
+                                      },
+                                      child: Stack(
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          SvgPicture.asset(
+                                            'assets/images/svg/icons/notification_icon.svg',
+                                            width: 22,
+                                            height: 22,
+                                          ),
+                                          if (unreadCount > 0)
+                                            Positioned(
+                                              right: -8,
+                                              top: -5,
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 4,
+                                                  vertical: 2,
+                                                ),
+                                                constraints: const BoxConstraints(
+                                                  minWidth: 16,
+                                                  minHeight: 16,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.primary,
+                                                  borderRadius: BorderRadius.circular(
+                                                    10,
+                                                  ),
+                                                  border: Border.all(
+                                                    color: Colors.white,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    unreadCount >= 100
+                                                        ? '99+'
+                                                        : '$unreadCount',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 9,
+                                                      fontWeight: FontWeight.bold,
+                                                      height: 1.0,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                      BlocProvider.value(value: _cubit),
-                                    ],
-                                    child: const NotificationsScreen(),
-                                  ),
-                                );
-                                _notificationCubit.fetchUnreadCount();
-                              },
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  SvgPicture.asset(
-                                    'assets/images/svg/icons/notification_icon.svg',
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 20),
+                                GestureDetector(
+                                  onTap: () {
+                                    context.push(const SettingsScreen());
+                                  },
+                                  child: SvgPicture.asset(
+                                    'assets/images/svg/icons/settings _icon.svg',
                                     width: 22,
                                     height: 22,
                                   ),
-                                  if (unreadCount > 0)
-                                    Positioned(
-                                      right: -8,
-                                      top: -5,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 4,
-                                          vertical: 2,
-                                        ),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 16,
-                                          minHeight: 16,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                          border: Border.all(
-                                            color: Colors.white,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            unreadCount >= 100
-                                                ? '99+'
-                                                : '$unreadCount',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 9,
-                                              fontWeight: FontWeight.bold,
-                                              height: 1.0,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 20),
-                        GestureDetector(
-                          onTap: () {
-                            context.push(const SettingsScreen());
-                          },
-                          child: SvgPicture.asset(
-                            'assets/images/svg/icons/settings _icon.svg',
-                            width: 22,
-                            height: 22,
-                          ),
-                        ),
-                        const SizedBox(width: 20),
-                      ],
-                    )
-                    : null,
+                                ),
+                                const SizedBox(width: 20),
+                              ],
+                            ))
+                        : null,
             body: LazyIndexedStack(
               index: state.navIndex,
               children: const [
@@ -277,8 +300,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           );
         },
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }
 
@@ -340,6 +365,75 @@ class _LazyIndexedStackState extends State<LazyIndexedStack> {
       children: List<Widget>.generate(widget.children.length, (i) {
         return _activated[i] ? widget.children[i] : const SizedBox.shrink();
       }),
+    );
+  }
+}
+
+class SeasonalAppBar extends StatelessWidget implements PreferredSizeWidget {
+  const SeasonalAppBar({
+    required this.seasonName,
+    required this.notificationCubit,
+    required this.dashboardCubit,
+    super.key,
+  });
+
+  final String seasonName;
+  final NotificationCubit notificationCubit;
+  final DashboardCubit dashboardCubit;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(160);
+
+  @override
+  Widget build(BuildContext context) {
+    final double topPadding = MediaQuery.of(context).padding.top;
+
+    return Container(
+      height: preferredSize.height + topPadding,
+      width: double.infinity,
+      color: const Color(0xFFFCF2E3),
+      child: Stack(
+        children: [
+          // Single Seasonal Asset Image (onam_home_2.png)
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/png/vectors/onam_home_2.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+
+          // Header Top Action Row (DISCIPL Logo + Notifications + Settings)
+          Positioned(
+            left: 20,
+            top: topPadding + 8,
+            right: 20,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/png/vectors/discipl_spell.png',
+                  height: 24,
+                ),
+                Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        context.push(const SettingsScreen());
+                      },
+                      child: SvgPicture.asset(
+                        'assets/images/svg/icons/settings _icon.svg',
+                        width: 22,
+                        height: 22,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/src/features/home/domain/models/app_season_model.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/banner_model.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/home_challenge_model.dart';
 import 'package:dio/dio.dart';
@@ -199,4 +200,28 @@ final class HomeRepository {
     }
     return [];
   }
+
+  static AppSeasonModel? cachedSeasonModel;
+
+  /// GET /api/v1/customer/app-season/
+  Future<AppSeasonModel> fetchAppSeason() async {
+    try {
+      final response = await _dio.get<dynamic>(
+        ApiUris.appSeason,
+        options: Options(headers: {'X-Platform': platformSource}).token,
+      );
+      if (response.statusCode == 200 &&
+          response.data != null &&
+          response.data is Map<String, dynamic>) {
+        final model =
+            AppSeasonModel.fromJson(response.data as Map<String, dynamic>);
+        cachedSeasonModel = model;
+        return model;
+      }
+    } catch (e) {
+      debugPrint('Error fetching app season: $e');
+    }
+    return cachedSeasonModel ?? const AppSeasonModel(isActive: false);
+  }
 }
+

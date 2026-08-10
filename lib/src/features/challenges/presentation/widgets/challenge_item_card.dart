@@ -518,15 +518,15 @@ class ChallengeItemCard extends StatelessWidget {
                     child: Row(
                       children: [
                         SizedBox(
-                          width: 38,
-                          height: 38,
+                          width: 28,
+                          height: 28,
                           child: Image.asset(
                             'assets/images/png/icons/Giftbox_icon.png',
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => const Icon(
                               Icons.card_giftcard_rounded,
                               color: Colors.white,
-                              size: 26,
+                              size: 22,
                             ),
                           ),
                         ),

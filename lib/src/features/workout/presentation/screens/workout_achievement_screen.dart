@@ -11,6 +11,7 @@ import 'package:gal/gal.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/repositories/customer_details_repository.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/models/customer_details_model.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/onam_achievement_celebration.dart';
 
 class WorkoutAchievementScreen extends StatefulWidget {
   const WorkoutAchievementScreen({
@@ -34,6 +35,7 @@ class WorkoutAchievementScreen extends StatefulWidget {
 }
 
 class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
+  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
   int _workoutCount = 1;
   bool _isLoadingCount = true;
   bool _isLoadingDetails = true;
@@ -187,9 +189,16 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
   @override
   void initState() {
     super.initState();
+    _appSeasonCubit.fetchAppSeason();
     _loadWorkoutCount();
     _loadFullSessionDetails();
     _loadCustomerDetails();
+  }
+
+  @override
+  void dispose() {
+    _appSeasonCubit.close();
+    super.dispose();
   }
 
   Future<void> _loadCustomerDetails() async {
@@ -786,476 +795,517 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
       username = '@${user.email!.split('@').first.toLowerCase()}';
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            ListView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 16.0,
+    Widget buildAchievementCard() {
+      return Column(
+        children: [
+          // Assigned Gym Card (Shown ONLY for trainer assigned workouts)
+          if (isTrainerAssigned) ...[
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFF1F5F9),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              children: [
-                // Top Back button
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context, true),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEEEEE),
-                        shape: BoxShape.circle,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 14,
+              ),
+              child: Column(
+                children: [
+                  // Fitness Center Row
+                  Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF1E293B),
+                          shape: BoxShape.circle,
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: (assignedGymLogo != null &&
+                                assignedGymLogo.isNotEmpty)
+                            ? Image.network(
+                                assignedGymLogo,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Center(
+                                  child: Icon(
+                                    Icons.fitness_center_rounded,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                ),
+                              )
+                            : const Center(
+                                child: Icon(
+                                  Icons.fitness_center_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
                       ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Color(0xFF444444),
-                        size: 24,
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ASSIGNED GYM',
+                              style: AppStyles.text10Px.poppins.w600.copyWith(
+                                color: const Color(0xFF94A3B8),
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    assignedGymName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppStyles.text16Px.poppins.w700.copyWith(
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Color(0xFFEF4444),
+                                  size: 16,
+                                ),
+                              ],
+                            ),
+                            if (assignedTrainerName == null ||
+                                assignedTrainerName.isEmpty) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                'Stay strong, keep going!',
+                                style: AppStyles.text12Px.poppins.w400.copyWith(
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Personal Trainer Row (If assigned trainer exists)
+                  if (assignedTrainerName != null &&
+                      assignedTrainerName.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Divider(
+                        height: 1,
+                        thickness: 0.5,
+                        color: Color(0xFFE2E8F0),
                       ),
                     ),
-                  ),
-                ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF1F5F9),
+                            shape: BoxShape.circle,
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: (assignedTrainerPhoto != null &&
+                                  assignedTrainerPhoto.isNotEmpty)
+                              ? Image.network(
+                                  assignedTrainerPhoto,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                    child: Icon(
+                                      Icons.person_rounded,
+                                      color: Color(0xFF64748B),
+                                      size: 22,
+                                    ),
+                                  ),
+                                )
+                              : const Center(
+                                  child: Icon(
+                                    Icons.person_rounded,
+                                    color: Color(0xFF64748B),
+                                    size: 22,
+                                  ),
+                                ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'PERSONAL TRAINER',
+                                style: AppStyles.text10Px.poppins.w600.copyWith(
+                                  color: const Color(0xFF94A3B8),
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                assignedTrainerName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppStyles.text15Px.poppins.w700.copyWith(
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
-                // Wolf Mascot Lottie
-                Center(
-                  child: Lottie.asset(
-                    'assets/images/svg/vectors/thumbsUp_achievement.json',
-                    height: 160,
-                    fit: BoxFit.contain,
-                    repeat: false,
-                  ),
+          // Achievement Card (Shareable Workout Summary Card)
+          RepaintBoundary(
+            key: _cardKey,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xffF0B5B7),
+                  width: 1.5,
                 ),
-                // const SizedBox(height: 4),
-
-                // Headers
-                Center(
-                  child: Text(
-                    'Good Job!',
-                    style: AppStyles.text24Px.poppins.w700.copyWith(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Card Title
+                  Text(
+                    title,
+                    style: AppStyles.text20Px.poppins.w700.copyWith(
                       color: Colors.black,
                     ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Center(
-                  child: Text(
-                    'Workout Completed',
-                    style: AppStyles.text16Px.poppins.w500.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 1,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.star, color: AppColors.primary, size: 10),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.star, color: AppColors.primary, size: 14),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.star, color: AppColors.primary, size: 10),
-                    const SizedBox(width: 8),
-                    Container(
-                      width: 40,
-                      height: 1,
-                      color: Colors.grey.shade300,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                  const SizedBox(height: 14),
 
-                // Assigned Gym Card (Shown ONLY for trainer assigned workouts)
-                if (isTrainerAssigned) ...[
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xFFF1F5F9),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    child: Column(
-                      children: [
-                        // Fitness Center Row
-                        Row(
+                  // Metrics Grid (2x2 Column/Row structure)
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF1E293B),
-                                shape: BoxShape.circle,
-                              ),
-                              clipBehavior: Clip.antiAlias,
-                              child: (assignedGymLogo != null &&
-                                      assignedGymLogo.isNotEmpty)
-                                  ? Image.network(
-                                      assignedGymLogo,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Center(
-                                        child: Icon(
-                                          Icons.fitness_center_rounded,
-                                          color: Colors.white,
-                                          size: 24,
-                                        ),
-                                      ),
-                                    )
-                                  : const Center(
-                                      child: Icon(
-                                        Icons.fitness_center_rounded,
-                                        color: Colors.white,
-                                        size: 24,
-                                      ),
-                                    ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'ASSIGNED GYM',
-                                    style: AppStyles.text10Px.poppins.w600.copyWith(
-                                      color: const Color(0xFF94A3B8),
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          assignedGymName,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: AppStyles.text16Px.poppins.w700.copyWith(
-                                            color: const Color(0xFF0F172A),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const Icon(
-                                        Icons.check_circle_rounded,
-                                        color: Color(0xFFEF4444),
-                                        size: 16,
-                                      ),
-                                    ],
-                                  ),
-                                  if (assignedTrainerName == null ||
-                                      assignedTrainerName.isEmpty) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Stay strong, keep going!',
-                                      style: AppStyles.text12Px.poppins.w400.copyWith(
-                                        color: const Color(0xFF64748B),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
+                            _buildMetric(durationStr, 'DURATION'),
+                            const SizedBox(height: 14),
+                            _buildMetric(exerciseDisplay, 'EXERCISES'),
                           ],
                         ),
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildMetric(volumeStr, 'VOLUME'),
+                            const SizedBox(height: 14),
+                            _buildMetric(setsDisplay, 'SETS'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
 
-                        // Personal Trainer Row (If assigned trainer exists)
-                        if (assignedTrainerName != null &&
-                            assignedTrainerName.isNotEmpty) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 10),
-                            child: Divider(
-                              height: 1,
-                              thickness: 0.5,
-                              color: Color(0xFFE2E8F0),
-                            ),
-                          ),
-                          Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
+                  // Divider
+                  const Divider(
+                    color: Color(0xFFF1D1D2),
+                    height: 24,
+                    thickness: 1,
+                  ),
+
+                  // Bottom Row: Logo & Username
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Image.asset(
+                        'assets/images/png/vectors/discipl_spell.png',
+                        height: 20,
+                      ),
+                      Text(
+                        username,
+                        style: AppStyles.text14Px.poppins.w500.copyWith(
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return BlocBuilder<AppSeasonCubit, AppSeasonState>(
+      bloc: _appSeasonCubit,
+      builder: (context, seasonState) {
+        final bool isSeasonal = seasonState.isActive;
+        return Scaffold(
+          backgroundColor:
+              isSeasonal ? const Color(0xFFFCF2E3) : const Color(0xFFF8F9FA),
+          body: SafeArea(
+            child: isSeasonal
+                ? OnamAchievementCelebration(
+                    childCard: buildAchievementCard(),
+                    shareSection: buildShareSection(),
+                    doneButton: Button.filled(
+                      title: 'Done',
+                      ontap: () => Navigator.pop(context, true),
+                      buttonColor: AppColors.primary,
+                      style: AppStyles.text16Px.poppins.w600.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                    onBack: () => Navigator.pop(context, true),
+                  )
+                : Stack(
+                    children: [
+                      ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 10.0,
+                        ),
+                        children: [
+                          // Top Back button
+                          Align(
+                            alignment: Alignment.topLeft,
+                            child: GestureDetector(
+                              onTap: () => Navigator.pop(context, true),
+                              child: Container(
+                                width: 40,
+                                height: 40,
                                 decoration: const BoxDecoration(
-                                  color: Color(0xFFF1F5F9),
+                                  color: Color(0xFFEEEEEE),
                                   shape: BoxShape.circle,
                                 ),
-                                clipBehavior: Clip.antiAlias,
-                                child: (assignedTrainerPhoto != null &&
-                                        assignedTrainerPhoto.isNotEmpty)
-                                    ? Image.network(
-                                        assignedTrainerPhoto,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => const Center(
-                                          child: Icon(
-                                            Icons.person_rounded,
-                                            color: Color(0xFF64748B),
-                                            size: 22,
-                                          ),
-                                        ),
-                                      )
-                                    : const Center(
-                                        child: Icon(
-                                          Icons.person_rounded,
-                                          color: Color(0xFF64748B),
-                                          size: 22,
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'PERSONAL TRAINER',
-                                      style: AppStyles.text10Px.poppins.w600.copyWith(
-                                        color: const Color(0xFF94A3B8),
-                                        letterSpacing: 0.8,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      assignedTrainerName,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: AppStyles.text15Px.poppins.w700.copyWith(
-                                        color: const Color(0xFF0F172A),
-                                      ),
-                                    ),
-                                  ],
+                                child: const Icon(
+                                  Icons.chevron_left,
+                                  color: Color(0xFF444444),
+                                  size: 24,
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
 
-                // Achievement Card (Shareable Workout Summary Card)
-                RepaintBoundary(
-                  key: _cardKey,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: const Color(0xffF0B5B7),
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.04),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Card Title
-                        Text(
-                          title,
-                          style: AppStyles.text20Px.poppins.w700.copyWith(
-                            color: Colors.black,
+                          // Mascot / Non-seasonal Graphic
+                          Center(
+                            child: Lottie.asset(
+                              'assets/images/svg/vectors/thumbsUp_achievement.json',
+                              height: 160,
+                              fit: BoxFit.contain,
+                              repeat: false,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 20),
 
-                        // Metrics Grid (2x2 Column/Row structure)
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildMetric(durationStr, 'DURATION'),
-                                  const SizedBox(height: 20),
-                                  _buildMetric(exerciseDisplay, 'EXERCISES'),
-                                ],
+                          // Headers
+                          Center(
+                            child: Text(
+                              'Good Job!',
+                              style: AppStyles.text24Px.poppins.w700.copyWith(
+                                color: Colors.black,
                               ),
                             ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildMetric(volumeStr, 'VOLUME'),
-                                  const SizedBox(height: 20),
-                                  _buildMetric(setsDisplay, 'SETS'),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Divider
-                        const Divider(
-                          color: Color(0xFFF1D1D2),
-                          height: 32,
-                          thickness: 1,
-                        ),
-
-                        // Bottom Row: Logo & Username
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Image.asset(
-                              'assets/images/png/vectors/discipl_spell.png',
-                              height: 20,
-                            ),
-                            Text(
-                              username,
-                              style: AppStyles.text14Px.poppins.w500.copyWith(
+                          ),
+                          const SizedBox(height: 6),
+                          Center(
+                            child: Text(
+                              'Workout Completed',
+                              style: AppStyles.text16Px.poppins.w500.copyWith(
                                 color: Colors.grey.shade600,
                               ),
                             ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-
-                // Share Section
-                Center(
-                  child: Text(
-                    'Share workout – Tag @discipl',
-                    style: AppStyles.text14Px.poppins.w600.copyWith(
-                      color: const Color(0xFF6E5D5D),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Share Options Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // 📥 Download (Gallery)
-                    _buildShareButton(
-                      icon: Icon(
-                        Icons.file_download_outlined,
-                        color: Colors.grey.shade700,
-                        size: 24,
-                      ),
-                      label: 'Download',
-                      onTap: _handleDownload,
-                    ),
-
-                    // 📸 Stories (Instagram)
-                    _buildShareButton(
-                      useRawIcon: true,
-                      icon: Container(
-                        width: 50,
-                        height: 50,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Color(0xFF833AB4),
-                              Color(0xFFFD1D1D),
-                              Color(0xFFF56040),
-                              Color(0xFFFCAF45),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 1,
+                                color: Colors.grey.shade300,
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.star, color: AppColors.primary, size: 10),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.star, color: AppColors.primary, size: 14),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.star, color: AppColors.primary, size: 10),
+                              const SizedBox(width: 8),
+                              Container(
+                                width: 40,
+                                height: 1,
+                                color: Colors.grey.shade300,
+                              ),
                             ],
-                            begin: Alignment.bottomLeft,
-                            end: Alignment.topRight,
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Workout Summary Card
+                          buildAchievementCard(),
+
+                          const SizedBox(height: 16),
+
+                          // Share Section
+                          buildShareSection(),
+
+                          const SizedBox(height: 40),
+
+                          // Done Button
+                          Button.filled(
+                            title: 'Done',
+                            ontap: () => Navigator.pop(context, true),
+                            buttonColor: AppColors.primary,
+                            style: AppStyles.text16Px.poppins.w600.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                      ),
+                      Positioned.fill(
+                        child: IgnorePointer(
+                          child: Lottie.asset(
+                            'assets/images/svg/vectors/celebrations.json',
+                            fit: BoxFit.cover,
+                            repeat: false,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.camera_alt_outlined,
-                          color: Colors.white,
-                          size: 24,
-                        ),
                       ),
-                      label: 'Stories',
-                      onTap: () => _handleShare(
-                        text:
-                            'Check out my workout on Discipl! 💪 #discipl #workout',
-                      ),
-                    ),
+                    ],
+                  ),
+          ),
+        );
+      },
+    );
+  }
 
-                    // 💬 WhatsApp
-                    _buildShareButton(
-                      useRawIcon: true,
-                      icon: SizedBox(
-                        width: 50,
-                        height: 50,
-                        child: SvgPicture.asset(
-                          'assets/images/svg/icons/whatsapp_logo.svg',
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.contain,
-                        ),
-                      ),
-                      label: 'WhatsApp',
-                      onTap: () => _handleShare(
-                        text: 'Check out my workout summary on Discipl! 💪',
-                      ),
-                    ),
+  Widget buildShareSection() {
+    return Column(
+      children: [
+        Center(
+          child: Text(
+            'Share workout – Tag @discipl',
+            style: AppStyles.text14Px.poppins.w600.copyWith(
+              color: const Color(0xFF6E5D5D),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
 
-                    // 📤 More (Native Share Sheet)
-                    _buildShareButton(
-                      icon: Icon(
-                        Icons.ios_share,
-                        color: Colors.grey.shade700,
-                        size: 22,
-                      ),
-                      label: 'More',
-                      onTap: () => _handleShare(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 40),
+        // Share Options Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            // 📥 Download (Gallery)
+            _buildShareButton(
+              icon: Icon(
+                Icons.file_download_outlined,
+                color: Colors.grey.shade700,
+                size: 24,
+              ),
+              label: 'Download',
+              onTap: _handleDownload,
+            ),
 
-                // Done Button
-                Button.filled(
-                  title: 'Done',
-                  ontap: () => Navigator.pop(context, true),
-                  buttonColor: AppColors.primary,
-                  style: AppStyles.text16Px.poppins.w600.copyWith(
-                    color: Colors.white,
+            // 📸 Stories (Instagram)
+            _buildShareButton(
+              useRawIcon: true,
+              icon: Container(
+                width: 50,
+                height: 50,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF833AB4),
+                      Color(0xFFFD1D1D),
+                      Color(0xFFF56040),
+                      Color(0xFFFCAF45),
+                    ],
+                    begin: Alignment.bottomLeft,
+                    end: Alignment.topRight,
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Lottie.asset(
-                  'assets/images/svg/vectors/celebrations.json',
-                  fit: BoxFit.cover,
-                  repeat: false,
+                child: const Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.white,
+                  size: 24,
                 ),
               ),
+              label: 'Stories',
+              onTap: () => _handleShare(
+                text:
+                    'Check out my workout on Discipl! 💪 #discipl #workout',
+              ),
+            ),
+            // 💬 WhatsApp
+            _buildShareButton(
+              useRawIcon: true,
+              icon: SizedBox(
+                width: 50,
+                height: 50,
+                child: SvgPicture.asset(
+                  'assets/images/svg/icons/whatsapp_logo.svg',
+                  width: 50,
+                  height: 50,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              label: 'WhatsApp',
+              onTap: () => _handleShare(
+                text: 'Check out my workout summary on Discipl! 💪',
+              ),
+            ),
+
+            // 📤 More (Native Share Sheet)
+            _buildShareButton(
+              icon: Icon(
+                Icons.ios_share,
+                color: Colors.grey.shade700,
+                size: 22,
+              ),
+              label: 'More',
+              onTap: () => _handleShare(),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 }
