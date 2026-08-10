@@ -849,15 +849,19 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         return Scaffold(
           backgroundColor: AppColors.bgcolorgrey,
           appBar: AppBar(
-            backgroundColor: isSeasonal ? Colors.transparent : AppColors.light,
+            backgroundColor: AppColors.light,
+            surfaceTintColor: Colors.transparent,
             elevation: 0,
             centerTitle: false,
             titleSpacing: 20,
             flexibleSpace: isSeasonal
-                ? Image.asset(
-                    'assets/images/png/vectors/appbar_onam.png',
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ? Container(
+                    color: AppColors.light,
+                    child: Image.asset(
+                      'assets/images/png/vectors/appbar_onam.png',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
                   )
                 : null,
             title: Text(

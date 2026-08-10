@@ -46,12 +46,12 @@ class _OnamAchievementCelebrationState
   void initState() {
     super.initState();
     _initAnimations();
-    _mainController?.forward();
+    _mainController?.forward(from: 0.0);
 
-    // 0.8s: Trigger single-pass flower shower starting at 0.8s
-    Future.delayed(const Duration(milliseconds: 800), () {
+    // Trigger single-pass flower shower starting at 0.5s
+    Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        _petalsController?.forward();
+        _petalsController?.forward(from: 0.0);
       }
     });
   }
@@ -480,25 +480,27 @@ class FallingPetalsWidget extends StatelessWidget {
 enum _FlowerType { marigold, jasmine, rose, singlePetal }
 
 class _PetalItem {
-  final double xRatio;
-  final double size;
-  final Color color;
-  final double rotationSpeed;
-  final double driftAmplitude;
-  final double driftFrequency;
-  final double fallDelay;
-  final double initialAngle;
+  final double? xRatio;
+  final double? size;
+  final Color? color;
+  final double? rotationSpeed;
+  final double? driftAmplitude;
+  final double? driftFrequency;
+  final double? fallDelay;
+  final double? speedMultiplier;
+  final double? initialAngle;
   final _FlowerType? flowerType;
 
   const _PetalItem({
-    required this.xRatio,
-    required this.size,
-    required this.color,
-    required this.rotationSpeed,
-    required this.driftAmplitude,
-    required this.driftFrequency,
-    required this.fallDelay,
-    required this.initialAngle,
+    this.xRatio = 0.5,
+    this.size = 14.0,
+    this.color = const Color(0xFFFF8F00),
+    this.rotationSpeed = 1.0,
+    this.driftAmplitude = 3.0,
+    this.driftFrequency = 1.0,
+    this.fallDelay = 0.0,
+    this.speedMultiplier = 1.0,
+    this.initialAngle = 0.0,
     this.flowerType = _FlowerType.singlePetal,
   });
 }
@@ -525,15 +527,20 @@ class _OnamPetalsPainter extends CustomPainter {
       Color(0xFFFB8C00), // Vibrant Amber
     ];
 
-    return List.generate(14, (index) {
+    // Scattered X ratios across screen width
+    final xPositions = [0.08, 0.65, 0.32, 0.86, 0.18, 0.48, 0.76, 0.24, 0.92, 0.40, 0.14, 0.58, 0.82, 0.28, 0.70, 0.44];
+
+    return List.generate(16, (index) {
       final flowerType = index % 4 == 0
           ? _FlowerType.marigold
           : (index % 4 == 1
               ? _FlowerType.jasmine
               : (index % 4 == 2 ? _FlowerType.rose : _FlowerType.singlePetal));
 
+      final xPos = xPositions[index % xPositions.length] + (random.nextDouble() * 0.03 - 0.015);
+
       return _PetalItem(
-        xRatio: 0.04 + ((index * 0.068) % 0.9) + (random.nextDouble() * 0.02),
+        xRatio: xPos.clamp(0.04, 0.94),
         size: flowerType == _FlowerType.marigold
             ? 16.0 + random.nextDouble() * 5.0
             : (flowerType == _FlowerType.jasmine
@@ -541,11 +548,12 @@ class _OnamPetalsPainter extends CustomPainter {
                 : (flowerType == _FlowerType.rose
                     ? 14.0 + random.nextDouble() * 5.0
                     : 11.0 + random.nextDouble() * 5.0)),
-        color: colors[index % colors.length],
-        rotationSpeed: (random.nextDouble() - 0.5) * 3.5,
-        driftAmplitude: 12.0 + random.nextDouble() * 16.0,
-        driftFrequency: 0.9 + random.nextDouble() * 1.2,
-        fallDelay: (index / 14.0) * 0.22 + (random.nextDouble() * 0.03),
+        color: colors[(index * 2) % colors.length],
+        rotationSpeed: (random.nextDouble() - 0.5) * 2.5,
+        driftAmplitude: random.nextDouble() * 4.0, // Micro drift for straight top-to-bottom fall
+        driftFrequency: 0.8 + random.nextDouble() * 0.8,
+        fallDelay: (index % 6) * 0.05 + (random.nextDouble() * 0.02), // Staggered entry without forming horizontal line
+        speedMultiplier: 0.9 + (random.nextDouble() * 0.25),
         initialAngle: random.nextDouble() * math.pi * 2,
         flowerType: flowerType,
       );
@@ -556,33 +564,42 @@ class _OnamPetalsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress <= 0.0 || progress >= 1.0) return;
+    if (progress <= 0.0) return;
 
     for (final petal in _staticPetals) {
-      if (progress < petal.fallDelay) continue;
-      final t = ((progress - petal.fallDelay) / (1.0 - petal.fallDelay))
-          .clamp(0.0, 1.0);
+      final fallDelay = petal.fallDelay ?? 0.0;
+      final speedMultiplier = petal.speedMultiplier ?? 1.0;
+      final driftFrequency = petal.driftFrequency ?? 1.0;
+      final driftAmplitude = petal.driftAmplitude ?? 3.0;
+      final xRatio = petal.xRatio ?? 0.5;
+      final initialAngle = petal.initialAngle ?? 0.0;
+      final rotationSpeed = petal.rotationSpeed ?? 1.0;
+      final petalSize = petal.size ?? 14.0;
+      final petalColor = petal.color ?? const Color(0xFFFF8F00);
 
-      // Vertical position (gravity curve from top -35 to 88% height)
-      final startY = -35.0;
-      final endY = size.height * 0.88;
-      final currentY = startY + (endY - startY) * math.pow(t, 1.12);
+      if (progress < fallDelay) continue;
+      final rawT = (progress - fallDelay) / (1.0 - fallDelay);
+      final t = (rawT * speedMultiplier).clamp(0.0, 1.0);
 
-      // Horizontal drift (sine wave)
-      final startX = size.width * petal.xRatio;
-      final drift = math.sin(t * math.pi * 2 * petal.driftFrequency) *
-          petal.driftAmplitude;
+      // Direct straight vertical movement from top to bottom
+      final startY = -40.0;
+      final endY = size.height * 1.02;
+      final currentY = startY + (endY - startY) * t;
+
+      // Straight top-to-bottom X position with micro wiggle
+      final startX = size.width * xRatio;
+      final drift = math.sin(t * math.pi * driftFrequency) * driftAmplitude;
       final currentX = startX + drift;
 
       // Slow rotation
-      final currentRotation = petal.initialAngle + (t * petal.rotationSpeed);
+      final currentRotation = initialAngle + (t * rotationSpeed);
 
-      // Fade out before reaching bottom
+      // Fade out smoothly near the bottom of screen
       double opacity = 1.0;
-      if (t < 0.08) {
-        opacity = t / 0.08;
-      } else if (t > 0.72) {
-        opacity = (1.0 - t) / 0.28;
+      if (t < 0.05) {
+        opacity = t / 0.05;
+      } else if (t > 0.82) {
+        opacity = (1.0 - t) / 0.18;
       }
       opacity = opacity.clamp(0.0, 1.0);
 
@@ -593,14 +610,14 @@ class _OnamPetalsPainter extends CustomPainter {
       canvas.rotate(currentRotation);
 
       final paint = Paint()
-        ..color = petal.color.withValues(alpha: opacity * 0.95)
+        ..color = petalColor.withValues(alpha: opacity * 0.95)
         ..style = PaintingStyle.fill;
 
       final activeFlowerType = petal.flowerType ?? _FlowerType.singlePetal;
 
       if (activeFlowerType == _FlowerType.marigold) {
         // High Quality Dual-Layer 8-Petal Marigold
-        final radius = petal.size / 2;
+        final radius = petalSize / 2;
         for (int i = 0; i < 8; i++) {
           final angle = i * (math.pi / 4);
           canvas.save();
@@ -662,7 +679,7 @@ class _OnamPetalsPainter extends CustomPainter {
         canvas.drawCircle(Offset.zero, radius * 0.32, corePaint);
       } else if (activeFlowerType == _FlowerType.jasmine) {
         // High Quality 5-Petal White Jasmine Blossom
-        final radius = petal.size / 2;
+        final radius = petalSize / 2;
         final jasminePaint = Paint()
           ..color = Colors.white.withValues(alpha: opacity * 0.96)
           ..style = PaintingStyle.fill;
@@ -704,7 +721,7 @@ class _OnamPetalsPainter extends CustomPainter {
         canvas.drawCircle(Offset.zero, radius * 0.28, corePaint);
       } else if (activeFlowerType == _FlowerType.rose) {
         // Chetti / Red Rose Pookalam Flower
-        final radius = petal.size / 2;
+        final radius = petalSize / 2;
         final rosePaint = Paint()
           ..color = const Color(0xFFE53935).withValues(alpha: opacity * 0.94)
           ..style = PaintingStyle.fill;
@@ -729,7 +746,7 @@ class _OnamPetalsPainter extends CustomPainter {
         canvas.drawCircle(Offset.zero, radius * 0.35, corePaint);
       } else {
         // Detailed Organic Teardrop Petal
-        final pSize = petal.size;
+        final pSize = petalSize;
         final path = Path();
         path.moveTo(0, -pSize * 0.65);
         path.cubicTo(
