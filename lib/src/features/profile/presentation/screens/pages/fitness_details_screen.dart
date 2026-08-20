@@ -654,7 +654,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
                   child: Button.filled(
                     title: 'Update',
                     ontap: _onUpdate,
-                    isLoading: state.updateProfileDetails?.isNone() ?? false,
+                    isLoading: false,
                   ),
                 ),
               ),

@@ -32,7 +32,7 @@ class HomeChallengeSection extends StatelessWidget {
           children: [
             // Horizontal Scrollable Row of Challenge Cards
             SizedBox(
-              height: 210,
+              height: 205,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
@@ -44,46 +44,6 @@ class HomeChallengeSection extends StatelessWidget {
                     child: HomeChallengeCard(challenge: challenges[index]),
                   );
                 },
-              ),
-            ),
-
-            // View All Challenges Link
-            Align(
-              alignment: Alignment.centerRight,
-              child: GestureDetector(
-                onTap: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const AllChallengesScreen(),
-                    ),
-                  );
-                  if (context.mounted) {
-                    context.read<HomeChallengeCubit>().loadHomeChallenges();
-                  }
-                },
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8.0, bottom: 10.0, right: 4.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'view all challenges',
-                        style: AppStyles.text12Px.poppins.w600.copyWith(
-                          color: const Color(0xFF2E2E2E),
-                          decoration: TextDecoration.underline,
-                          decorationColor: const Color(0xFF2E2E2E),
-                          decorationThickness: 1.2,
-                        ),
-                      ),
-                      const SizedBox(width: 3),
-                      const Icon(
-                        Icons.north_east_rounded,
-                        size: 12,
-                        color: Color(0xFF2E2E2E),
-                      ),
-                    ],
-                  ),
-                ),
               ),
             ),
           ],
@@ -859,17 +819,14 @@ class _HomeChallengeShimmer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: Shimmer.fromColors(
-        baseColor: Colors.grey.shade300,
-        highlightColor: Colors.grey.shade100,
-        child: Container(
-          height: 210,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(22),
-          ),
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        height: 195,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
         ),
       ),
     );

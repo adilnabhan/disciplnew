@@ -36,6 +36,8 @@ final class ApiUris {
   static final profileCompletionDismiss =
       '${_v1}customer/profile/completion/dismiss/';
   static final assignedGymTrainers = '${_v1}customer/gym-trainers/';
+  static final scoreCard = '${_v1}customer/score-card/';
+  static String gymScoreCard(int gymId) => '${_v1}customer/gyms/$gymId/score-card/';
 
   ///============================= Home & Banners =============================\\\
   static final appSeason = '${_v1}customer/app-season/';
@@ -48,6 +50,8 @@ final class ApiUris {
   static final challengesList = '${_v1}customer/challenges/';
   static final winnerPopup = '${_v1}customer/challenges/winner-popup/';
   static final markWinnerPopupSeen = '${_v1}customer/challenges/winner-popup/seen/';
+  static final allChallengeWinners = '${_v1}customer/challenges/all-winners/';
+  static final challengeWinners = '${_v1}customer/challenges/winners/';
 
   ///============================= Notifications =============================\\\
   static final notificationsList = '${_v1}customer/notifications/';

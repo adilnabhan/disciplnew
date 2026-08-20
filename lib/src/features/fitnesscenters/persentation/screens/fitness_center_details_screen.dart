@@ -1782,10 +1782,13 @@ class _FitnessCenterDetailsScreenState
     for (final trainer in trainers) {
       if (trainer.transformations != null) {
         for (final trans in trainer.transformations!) {
-          transformations.add({
-            'trainerName': trainer.fullName,
-            'transformation': trans,
-          });
+          if ((trans.beforeImage != null && trans.beforeImage!.trim().isNotEmpty) ||
+              (trans.afterImage != null && trans.afterImage!.trim().isNotEmpty)) {
+            transformations.add({
+              'trainerName': trainer.fullName,
+              'transformation': trans,
+            });
+          }
         }
       }
     }

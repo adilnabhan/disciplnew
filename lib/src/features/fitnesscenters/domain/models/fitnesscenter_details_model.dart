@@ -134,6 +134,85 @@ class GymTrainer with _$GymTrainer {
   }) = _GymTrainer;
 
   factory GymTrainer.fromJson(Map<String, dynamic> json) => _$GymTrainerFromJson(json);
+
+  static GymTrainer fromApiJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+
+    if (!map.containsKey('full_name') || map['full_name'] == null || (map['full_name'] as String).isEmpty) {
+      final firstName = map['first_name']?.toString() ?? '';
+      final lastName = map['last_name']?.toString() ?? '';
+      final name = '$firstName $lastName'.trim();
+      if (name.isNotEmpty) {
+        map['full_name'] = name;
+      }
+    }
+
+    if (map['average_rating'] == null && map.containsKey('rating')) {
+      map['average_rating'] = map['rating'];
+    }
+
+    if (map['review_count'] == null && map.containsKey('ratings_count')) {
+      map['review_count'] = map['ratings_count'];
+    }
+
+    if ((map['social_media'] == null || (map['social_media'] is List && (map['social_media'] as List).isEmpty)) &&
+        map['social_links'] != null &&
+        map['social_links'] is Map) {
+      final Map<String, dynamic> links = map['social_links'] as Map<String, dynamic>;
+      final List<Map<String, dynamic>> socialList = [];
+      links.forEach((key, value) {
+        if (value != null && value.toString().trim().isNotEmpty) {
+          socialList.add({
+            'platform': key,
+            'url': value.toString(),
+          });
+        }
+      });
+      map['social_media'] = socialList;
+    }
+
+    if ((map['place'] == null || map['place'].toString().trim().isEmpty) && map['location'] == null) {
+      if (map['address'] != null && map['address'].toString().trim().isNotEmpty) {
+        map['place'] = map['address'].toString().trim();
+      } else if (map['city'] != null && map['city'].toString().trim().isNotEmpty) {
+        map['place'] = map['city'].toString().trim();
+      } else if (map['area'] != null && map['area'].toString().trim().isNotEmpty) {
+        map['place'] = map['area'].toString().trim();
+      }
+    }
+
+    if (!map.containsKey('bio') || map['bio'] == null || map['bio'].toString().trim().isEmpty) {
+      if (map['description'] != null && map['description'].toString().trim().isNotEmpty) {
+        map['bio'] = map['description'].toString().trim();
+      } else if (map['about'] != null && map['about'].toString().trim().isNotEmpty) {
+        map['bio'] = map['about'].toString().trim();
+      }
+    }
+
+    if (map['specializations'] == null || (map['specializations'] is List && (map['specializations'] as List).isEmpty)) {
+      if (map['specialization'] != null) {
+        if (map['specialization'] is List) {
+          map['specializations'] = map['specialization'];
+        } else if (map['specialization'] is String && (map['specialization'] as String).trim().isNotEmpty) {
+          map['specializations'] = [(map['specialization'] as String).trim()];
+        }
+      } else if (map['skills'] != null && map['skills'] is List) {
+        map['specializations'] = map['skills'];
+      }
+    }
+
+    if (map['certifications'] != null && map['certifications'] is List) {
+      final certsList = (map['certifications'] as List).map((c) {
+        if (c is Map<String, dynamic>) {
+          return Certification.fromApiJson(c).toJson();
+        }
+        return c;
+      }).toList();
+      map['certifications'] = certsList;
+    }
+
+    return GymTrainer.fromJson(map);
+  }
 }
 
 @freezed
@@ -157,5 +236,21 @@ class Certification with _$Certification {
   }) = _Certification;
 
   factory Certification.fromJson(Map<String, dynamic> json) => _$CertificationFromJson(json);
+
+  static Certification fromApiJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+    if (!map.containsKey('name') || map['name'] == null) {
+      map['name'] = map['title'] ?? map['certificate_title'] ?? 'Certification';
+    }
+    if (!map.containsKey('issued_by') || map['issued_by'] == null) {
+      map['issued_by'] = map['institution'] ?? map['issuedBy'];
+    }
+    if (!map.containsKey('file_url') || map['file_url'] == null) {
+      map['file_url'] = map['certificate_image'] ?? map['image'] ?? map['file'];
+    }
+    return Certification.fromJson(map);
+  }
 }
+
+
 

@@ -298,6 +298,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const HomeChallengeSection().pxy(x: 16),
             ),
 
+            const SizedBox(height: 20),
+
             if (isGuest)
               _membershipExpireCard(context)
             else
@@ -585,27 +587,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTrainerCard(AssignedTrainerModel trainer) {
     final experience = trainer.experienceYears ?? 0;
+    final String rawName = (trainer.name != null && trainer.name!.trim().isNotEmpty)
+        ? trainer.name!
+        : (trainer.fullGymTrainer?.fullName != null && trainer.fullGymTrainer!.fullName!.trim().isNotEmpty
+            ? trainer.fullGymTrainer!.fullName!
+            : 'Trainer');
+
+    final String displayName = rawName.trim().split(' ').map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+
     final specialization = (trainer.specializations != null &&
             trainer.specializations!.isNotEmpty)
         ? trainer.specializations!.first
-        : (trainer.userType ?? 'Trainer');
-    final double ratingVal = trainer.rating ?? 4.8;
+        : (trainer.userType != null && trainer.userType!.trim().isNotEmpty
+            ? trainer.userType![0].toUpperCase() + trainer.userType!.substring(1).toLowerCase()
+            : 'Trainer');
+    final double ratingVal = trainer.rating ?? (trainer.fullGymTrainer?.averageRating as num?)?.toDouble() ?? 4.8;
     final String ratingStr = ratingVal.toStringAsFixed(1);
 
     return GestureDetector(
       onTap: () {
-        final gymTrainer = GymTrainer(
-          id: trainer.id,
-          fullName: trainer.name,
-          userType: trainer.userType ?? 'Trainer',
-          bio: trainer.bio,
-          profileImage: trainer.profileImage,
-          experienceYears: trainer.experienceYears,
-          averageRating: trainer.rating ?? 4.8,
-          reviewCount: 0,
-          specializations: trainer.specializations,
-          mobile: trainer.mobile,
-        );
+        final gymTrainer = trainer.fullGymTrainer ??
+            GymTrainer(
+              id: trainer.id,
+              fullName: displayName,
+              userType: trainer.userType ?? 'Trainer',
+              bio: trainer.bio,
+              profileImage: trainer.profileImage,
+              experienceYears: trainer.experienceYears,
+              averageRating: ratingVal,
+              reviewCount: 0,
+              specializations: trainer.specializations,
+              mobile: trainer.mobile,
+            );
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => TrainerDetailsScreen(trainer: gymTrainer),
@@ -700,7 +716,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Name
             Text(
-              trainer.name ?? '',
+              displayName,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
@@ -911,9 +927,15 @@ class HomeBannerItem {
     this.contactNumber,
     this.websiteUrl,
     this.redirectType,
+    this.whatsappNumber,
   });
 
   factory HomeBannerItem.fromModel(BannerModel model) {
+    final rawWa = (model.whatsappNumber != null && model.whatsappNumber!.trim().isNotEmpty)
+        ? model.whatsappNumber
+        : (model.contactNumber != null && model.contactNumber!.trim().isNotEmpty)
+            ? model.contactNumber
+            : null;
     return HomeBannerItem(
       imagePath: model.bannerImage ?? '',
       isAsset: false,
@@ -921,11 +943,16 @@ class HomeBannerItem {
       contactNumber: model.contactNumber,
       websiteUrl: model.websiteUrl,
       redirectType: model.redirectType,
+      whatsappNumber: rawWa,
     );
   }
 
-  factory HomeBannerItem.asset(String path) {
-    return HomeBannerItem(imagePath: path, isAsset: true);
+  factory HomeBannerItem.asset(String path, {String? whatsappNumber}) {
+    return HomeBannerItem(
+      imagePath: path,
+      isAsset: true,
+      whatsappNumber: whatsappNumber,
+    );
   }
 
   final String imagePath;
@@ -934,6 +961,7 @@ class HomeBannerItem {
   final String? contactNumber;
   final String? websiteUrl;
   final String? redirectType;
+  final String? whatsappNumber;
 }
 
 class BannersView extends StatefulWidget {
@@ -1066,6 +1094,103 @@ class _BannersViewState extends State<BannersView> {
     }
   }
 
+  Future<void> _launchWhatsApp(String target) async {
+    final cleanStr = target.trim();
+    if (cleanStr.isEmpty) return;
+
+    if (cleanStr.startsWith('http://') ||
+        cleanStr.startsWith('https://') ||
+        cleanStr.startsWith('whatsapp://')) {
+      final Uri uri = Uri.parse(cleanStr);
+      try {
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return;
+        }
+      } catch (e) {
+        debugPrint('Error launching WhatsApp URL: $e');
+      }
+    }
+
+    final String phoneDigits = cleanStr.replaceAll(RegExp(r'[^\d]'), '');
+    final String phoneToUse = phoneDigits.isNotEmpty ? phoneDigits : cleanStr;
+
+    final Uri whatsappUri = Uri.parse('https://wa.me/$phoneToUse');
+    try {
+      if (await canLaunchUrl(whatsappUri)) {
+        await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    final Uri apiWhatsappUri =
+        Uri.parse('https://api.whatsapp.com/send?phone=$phoneToUse');
+    try {
+      if (await canLaunchUrl(apiWhatsappUri)) {
+        await launchUrl(apiWhatsappUri, mode: LaunchMode.externalApplication);
+        return;
+      }
+    } catch (_) {}
+
+    final Uri phoneUri = Uri(scheme: 'tel', path: phoneToUse);
+    try {
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      }
+    } catch (e) {
+      debugPrint('Error launching phone fallback: $e');
+    }
+  }
+
+  Widget _buildWhatsAppButton(String whatsappNum) {
+    return Positioned(
+      bottom: 10,
+      right: 10,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _launchWhatsApp(whatsappNum),
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF25D366),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SvgPicture.asset(
+                  'assets/images/svg/icons/whatsapp_logo.svg',
+                  width: 16,
+                  height: 16,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(width: 5),
+                const Text(
+                  'WhatsApp',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _ticker?.dispose();
@@ -1096,29 +1221,37 @@ class _BannersViewState extends State<BannersView> {
 
     if (_banners.length == 1) {
       final banner = _banners[0];
+      final hasWa = banner.whatsappNumber != null &&
+          banner.whatsappNumber!.trim().isNotEmpty;
       return AspectRatio(
         aspectRatio: 16 / 9,
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
-          child: GestureDetector(
-            onTap: () => _onBannerTap(banner),
-            child:
-                banner.isAsset
-                    ? Image.asset(
-                      banner.imagePath,
-                      fit: BoxFit.cover,
-                      height: double.maxFinite,
-                      width: double.maxFinite,
-                    )
-                    : ImageNetwork(
-                      banner.imagePath,
-                      height: double.maxFinite,
-                      width: double.maxFinite,
-                      errorWidget: ColoredBox(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.error, color: Colors.grey),
-                      ),
-                    ),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => _onBannerTap(banner),
+                  child: banner.isAsset
+                      ? Image.asset(
+                          banner.imagePath,
+                          fit: BoxFit.cover,
+                          height: double.maxFinite,
+                          width: double.maxFinite,
+                        )
+                      : ImageNetwork(
+                          banner.imagePath,
+                          height: double.maxFinite,
+                          width: double.maxFinite,
+                          errorWidget: ColoredBox(
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.error, color: Colors.grey),
+                          ),
+                        ),
+                ),
+              ),
+              if (hasWa) _buildWhatsAppButton(banner.whatsappNumber!),
+            ],
           ),
         ),
       );
@@ -1140,28 +1273,36 @@ class _BannersViewState extends State<BannersView> {
               },
               itemBuilder: (context, index) {
                 final banner = _banners[index];
-                return GestureDetector(
-                  onTap: () => _onBannerTap(banner),
-                  child:
-                      banner.isAsset
-                          ? Image.asset(
-                            banner.imagePath,
-                            fit: BoxFit.cover,
-                            height: double.maxFinite,
-                            width: double.maxFinite,
-                          )
-                          : ImageNetwork(
-                            banner.imagePath,
-                            height: double.maxFinite,
-                            width: double.maxFinite,
-                            errorWidget: ColoredBox(
-                              color: Colors.grey.shade200,
-                              child: const Icon(
-                                Icons.error,
-                                color: Colors.grey,
+                final hasWa = banner.whatsappNumber != null &&
+                    banner.whatsappNumber!.trim().isNotEmpty;
+                return Stack(
+                  children: [
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: () => _onBannerTap(banner),
+                        child: banner.isAsset
+                            ? Image.asset(
+                                banner.imagePath,
+                                fit: BoxFit.cover,
+                                height: double.maxFinite,
+                                width: double.maxFinite,
+                              )
+                            : ImageNetwork(
+                                banner.imagePath,
+                                height: double.maxFinite,
+                                width: double.maxFinite,
+                                errorWidget: ColoredBox(
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(
+                                    Icons.error,
+                                    color: Colors.grey,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
+                      ),
+                    ),
+                    if (hasWa) _buildWhatsAppButton(banner.whatsappNumber!),
+                  ],
                 );
               },
             ),
@@ -1214,6 +1355,8 @@ class __AssignedGymTrainersSectionState
     extends State<_AssignedGymTrainersSection> {
   bool _isLoading = true;
   List<AssignedTrainerModel> _trainers = [];
+  List<Map<String, dynamic>> _transformations = [];
+  int _currentTransformIndex = 0;
 
   @override
   void initState() {
@@ -1231,65 +1374,80 @@ class __AssignedGymTrainersSectionState
 
   Future<void> _loadTrainers() async {
     try {
+      List<AssignedTrainerModel> trainers = [];
+      List<Map<String, dynamic>> transformations = [];
+
       // 1. Fetch from assigned gym trainers API (/api/v1/customer/gym-trainers/)
       final apiTrainers = await HomeRepository().fetchAssignedGymTrainers();
       if (apiTrainers.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _trainers = apiTrainers;
-            _isLoading = false;
-          });
+        trainers = apiTrainers;
+        for (final t in apiTrainers) {
+          if (t.fullGymTrainer?.transformations != null) {
+            for (final trans in t.fullGymTrainer!.transformations!) {
+              if ((trans.beforeImage != null && trans.beforeImage!.trim().isNotEmpty) ||
+                  (trans.afterImage != null && trans.afterImage!.trim().isNotEmpty)) {
+                transformations.add({
+                  'trainerName': t.name ?? t.fullGymTrainer?.fullName,
+                  'transformation': trans,
+                });
+              }
+            }
+          }
         }
-        return;
       }
 
-      // 2. Fallback to fitness center details API
+      // 2. Fetch/check fitness center details API for complete trainers and transformations
       final repo = FitnesscenterRepository();
-      final cached = repo.getCachedDetails(widget.organizationId);
-      if (cached != null &&
-          cached.trainers != null &&
-          cached.trainers!.isNotEmpty) {
-        if (mounted) {
-          setState(() {
-            _trainers = cached.trainers!
-                .map((t) => AssignedTrainerModel(
-                      id: t.id,
-                      name: t.fullName,
-                      profileImage: t.profileImage,
-                      mobile: t.mobile,
-                      experienceYears: t.experienceYears,
-                      bio: t.bio,
-                      specializations: t.specializations,
-                    ))
-                .toList();
-            _isLoading = false;
-          });
-        }
-        return;
+      var cached = repo.getCachedDetails(widget.organizationId);
+      if (cached == null) {
+        final res = await repo.fitnesscenterDetails(id: widget.organizationId);
+        res.fold((_) {}, (details) {
+          repo.cacheDetails(widget.organizationId, details);
+          cached = details;
+        });
       }
 
-      final res = await repo.fitnesscenterDetails(id: widget.organizationId);
-      res.fold((_) {
-        if (mounted) setState(() => _isLoading = false);
-      }, (details) {
-        repo.cacheDetails(widget.organizationId, details);
-        if (mounted) {
-          setState(() {
-            _trainers = (details.trainers ?? [])
-                .map((t) => AssignedTrainerModel(
-                      id: t.id,
-                      name: t.fullName,
-                      profileImage: t.profileImage,
-                      mobile: t.mobile,
-                      experienceYears: t.experienceYears,
-                      bio: t.bio,
-                      specializations: t.specializations,
-                    ))
-                .toList();
-            _isLoading = false;
-          });
+      if (cached != null && cached!.trainers != null) {
+        if (trainers.isEmpty) {
+          trainers = cached!.trainers!
+              .map((t) => AssignedTrainerModel(
+                    id: t.id,
+                    name: t.fullName,
+                    profileImage: t.profileImage,
+                    mobile: t.mobile,
+                    experienceYears: t.experienceYears,
+                    bio: t.bio,
+                    specializations: t.specializations,
+                    fullGymTrainer: t,
+                  ))
+              .toList();
         }
-      });
+
+        // Collect transformations from cached gym details if list is empty
+        if (transformations.isEmpty) {
+          for (final t in cached!.trainers!) {
+            if (t.transformations != null) {
+              for (final trans in t.transformations!) {
+                if ((trans.beforeImage != null && trans.beforeImage!.trim().isNotEmpty) ||
+                    (trans.afterImage != null && trans.afterImage!.trim().isNotEmpty)) {
+                  transformations.add({
+                    'trainerName': t.fullName,
+                    'transformation': trans,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _trainers = trainers;
+          _transformations = transformations;
+          _isLoading = false;
+        });
+      }
     } catch (_) {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -1320,38 +1478,270 @@ class __AssignedGymTrainersSectionState
           }),
         );
 
-        if (finalTrainers.isEmpty) {
+        if (finalTrainers.isEmpty && _transformations.isEmpty) {
           return const SizedBox.shrink();
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              widget.gymName != null && widget.gymName!.trim().isNotEmpty
-                  ? '${widget.gymName!.trim()} Trainers'
-                  : 'Gym Trainers',
-              style: AppStyles.text16Px.poppins.w600.copyWith(
-                color: const Color(0xFF222222),
+            if (finalTrainers.isNotEmpty) ...[
+              Text(
+                widget.gymName != null && widget.gymName!.trim().isNotEmpty
+                    ? '${widget.gymName!.trim()} Trainers'
+                    : 'Gym Trainers',
+                style: AppStyles.text16Px.poppins.w600.copyWith(
+                  color: const Color(0xFF222222),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 215,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: finalTrainers.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
-                itemBuilder: (context, index) {
-                  final trainer = finalTrainers[index];
-                  return widget.onBuildTrainerCard(trainer);
-                },
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 215,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: finalTrainers.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 16),
+                  itemBuilder: (context, index) {
+                    final trainer = finalTrainers[index];
+                    return widget.onBuildTrainerCard(trainer);
+                  },
+                ),
               ),
-            ),
+            ],
+            if (_transformations.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              _buildGymTransformationsWidget(_transformations),
+            ],
             const SizedBox(height: 16),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildGymTransformationsWidget(List<Map<String, dynamic>> transformations) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Transformations',
+          style: AppStyles.text16Px.poppins.w600.copyWith(
+            color: const Color(0xFF222222),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 190,
+          child: PageView.builder(
+            itemCount: transformations.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentTransformIndex = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final item = transformations[index];
+              final trans = item['transformation'] as GymTransformation;
+              final trainerName = item['trainerName'] as String?;
+
+              return Container(
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            // Before Image
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: trans.beforeImage != null && trans.beforeImage!.isNotEmpty
+                                        ? ImageNetwork(
+                                            trans.beforeImage!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            color: const Color(0xFFEAEAEA),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.image_outlined,
+                                                color: Colors.grey,
+                                                size: 32,
+                                              ),
+                                            ),
+                                          ),
+                                  ),
+                                  Positioned(
+                                    top: 10,
+                                    left: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.05),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'Before',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Colors.black87,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const VerticalDivider(
+                              width: 1,
+                              color: Colors.white,
+                            ),
+                            // After Image
+                            Expanded(
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: trans.afterImage != null && trans.afterImage!.isNotEmpty
+                                        ? ImageNetwork(
+                                            trans.afterImage!,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            color: const Color(0xFFEAEAEA),
+                                            child: const Center(
+                                              child: Icon(
+                                                Icons.image_outlined,
+                                                color: Colors.grey,
+                                                size: 32,
+                                              ),
+                                            ),
+                                          ),
+                                  ),
+                                  Positioned(
+                                    top: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.05),
+                                            blurRadius: 4,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Text(
+                                        'After',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          color: Colors.black87,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if ((trans.description != null && trans.description!.isNotEmpty) ||
+                          (trainerName != null && trainerName.isNotEmpty))
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12.0,
+                            vertical: 8.0,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (trans.description != null && trans.description!.isNotEmpty)
+                                      Text(
+                                        trans.description!,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    if (trainerName != null && trainerName.isNotEmpty)
+                                      Text(
+                                        'Coach: $trainerName',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 10,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        if (transformations.length > 1) ...[
+          const SizedBox(height: 10),
+          Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(
+                transformations.length,
+                (idx) => Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _currentTransformIndex == idx
+                        ? const Color(0xFFE53935)
+                        : Colors.grey[300],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

@@ -3,9 +3,14 @@ import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FitnessCentersListingScreen extends StatefulWidget {
-  const FitnessCentersListingScreen({super.key, this.activeMembership});
+  const FitnessCentersListingScreen({
+    super.key,
+    this.activeMembership,
+    this.isFromBottomNav,
+  });
 
   final ActiveMembershipModel? activeMembership;
+  final bool? isFromBottomNav;
 
   @override
   State<FitnessCentersListingScreen> createState() =>
@@ -250,22 +255,45 @@ class _FitnessCentersListingScreenState
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<DashboardCubit, DashboardState>(
-      listener: (context, dashboardState) {
-        if (dashboardState.navIndex == 2) {
-          _initializeLocationFlow();
-        }
-      },
-      child: BlocProvider.value(
-        value: _cubit,
-        child: Scaffold(
-          backgroundColor: const Color(0xffF7F7F7),
+    final bool canPop = Navigator.canPop(context);
+    final bool showBackButton = (widget.isFromBottomNav == true)
+        ? false
+        : (widget.isFromBottomNav == false || canPop);
+
+    final Widget mainContent = BlocProvider.value(
+      value: _cubit,
+      child: Scaffold(
+        backgroundColor: const Color(0xffF7F7F7),
           appBar: AppBar(
             backgroundColor: Colors.white,
             elevation: 0,
             automaticallyImplyLeading: false,
+            leadingWidth: showBackButton ? 56 : 0,
+            leading: showBackButton
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 20),
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFEEEEEE),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.chevron_left,
+                            color: Color(0xFF444444),
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : null,
             centerTitle: false,
-            titleSpacing: 20,
+            titleSpacing: showBackButton ? 12 : 20,
             title: Text(
               'Explore',
               style: AppStyles.text20Px.poppins.w500.copyWith(
@@ -273,21 +301,23 @@ class _FitnessCentersListingScreenState
                 color: AppColors.textDark,
               ),
             ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: GestureDetector(
-                  onTap: () {
-                    context.push(const SettingsScreen());
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/svg/icons/settings _icon.svg',
-                    width: 22,
-                    height: 22,
-                  ),
-                ),
-              ),
-            ],
+            actions: showBackButton
+                ? null
+                : [
+                    Padding(
+                      padding: const EdgeInsets.only(right: 20),
+                      child: GestureDetector(
+                        onTap: () {
+                          context.push(const SettingsScreen());
+                        },
+                        child: SvgPicture.asset(
+                          'assets/images/svg/icons/settings _icon.svg',
+                          width: 22,
+                          height: 22,
+                        ),
+                      ),
+                    ),
+                  ],
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(66),
               child: Padding(
@@ -337,8 +367,28 @@ class _FitnessCentersListingScreenState
             },
           ),
         ),
-      ),
-    );
+      );
+
+    DashboardCubit? dashboardCubit;
+    try {
+      dashboardCubit = context.read<DashboardCubit>();
+    } catch (_) {
+      dashboardCubit = null;
+    }
+
+    if (dashboardCubit != null) {
+      return BlocListener<DashboardCubit, DashboardState>(
+        bloc: dashboardCubit,
+        listener: (context, dashboardState) {
+          if (dashboardState.navIndex == 2) {
+            _initializeLocationFlow();
+          }
+        },
+        child: mainContent,
+      );
+    }
+
+    return mainContent;
   }
 
   Widget _buildLoadedContent(ListFitnessCentersState state) {

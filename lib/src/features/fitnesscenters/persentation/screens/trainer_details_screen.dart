@@ -165,26 +165,24 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
   }
 
   void _onViewCertificates() {
-    final certs = widget.trainer.certifications ?? [];
+    final certs = (widget.trainer.certifications ?? [])
+        .where((c) => c.fileUrl != null && c.fileUrl!.trim().isNotEmpty)
+        .toList();
     if (certs.isEmpty) {
       Dialogs.showSnack(msg: 'No certificates available');
       return;
     }
     if (certs.length == 1) {
       final cert = certs.first;
-      final fileUrl = cert.fileUrl;
-      if (fileUrl != null && fileUrl.isNotEmpty) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => CertificateViewerScreen(
-              fileUrl: fileUrl,
-              certificateName: cert.name ?? 'Certificate',
-            ),
+      final fileUrl = cert.fileUrl!;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => CertificateViewerScreen(
+            fileUrl: fileUrl,
+            certificateName: cert.name ?? 'Certificate',
           ),
-        );
-      } else {
-        Dialogs.showSnack(msg: 'Certificate file not available');
-      }
+        ),
+      );
     } else {
       showModalBottomSheet(
         context: context,
@@ -491,7 +489,11 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
     final trainer = widget.trainer;
     final headerImages = _getHeaderImages();
     final specs = trainer.specializations ?? [];
-    final transformations = trainer.transformations ?? [];
+    final transformations = (trainer.transformations ?? [])
+        .where((t) =>
+            (t.beforeImage != null && t.beforeImage!.trim().isNotEmpty) ||
+            (t.afterImage != null && t.afterImage!.trim().isNotEmpty))
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F6F8),
@@ -605,7 +607,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                       ],
 
                       // CARD 4: View Certificates Tile
-                      if ((trainer.certifications ?? []).isNotEmpty) ...[
+                      if ((trainer.certifications ?? []).any((c) => c.fileUrl != null && c.fileUrl!.trim().isNotEmpty)) ...[
                         _buildViewCertificatesTile(),
                         const SizedBox(height: 14),
                       ],
@@ -885,8 +887,9 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
     }
 
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -910,8 +913,8 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                   .map(
                     (spec) => Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 7,
+                        horizontal: 16,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF4F4F6),
@@ -921,16 +924,16 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                         spec,
                         style: const TextStyle(
                           fontFamily: 'Poppins',
-                          fontSize: 12,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: Color(0xFF666666),
+                          color: Color(0xFF555555),
                         ),
                       ),
                     ),
                   )
                   .toList(),
             ),
-            if (hasLocation || hasBio || hasSocial) const SizedBox(height: 14),
+            if (hasLocation || hasBio || hasSocial) const SizedBox(height: 16),
           ],
 
           // Location Row
@@ -940,21 +943,23 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                 const Icon(
                   Icons.location_on,
                   color: Color(0xFF5B9E77),
-                  size: 18,
+                  size: 20,
                 ),
                 const SizedBox(width: 6),
-                Text(
-                  locationName!,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF555555),
+                Expanded(
+                  child: Text(
+                    locationName!,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF4A4A4A),
+                    ),
                   ),
                 ),
               ],
             ),
-            if (hasBio || hasSocial) const SizedBox(height: 10),
+            if (hasBio || hasSocial) const SizedBox(height: 12),
           ],
 
           // Bio / Description
@@ -965,10 +970,10 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                 fontFamily: 'Poppins',
                 fontSize: 13,
                 height: 1.45,
-                color: Color(0xFF666666),
+                color: Color(0xFF4A4A4A),
               ),
             ),
-            if (hasSocial) const SizedBox(height: 14),
+            if (hasSocial) const SizedBox(height: 16),
           ],
 
           // Social Icons Row
@@ -977,19 +982,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
               spacing: 12,
               runSpacing: 8,
               children: socialMedia.map((sm) {
-                IconData icon;
-                final platform = (sm.platform ?? '').toLowerCase();
-                if (platform.contains('instagram')) {
-                  icon = Icons.camera_alt_outlined;
-                } else if (platform.contains('facebook')) {
-                  icon = Icons.facebook;
-                } else if (platform.contains('youtube')) {
-                  icon = Icons.play_arrow_rounded;
-                } else {
-                  icon = Icons.link_rounded;
-                }
                 return _buildSocialButton(
-                  icon: icon,
                   platform: sm.platform ?? '',
                   url: sm.url,
                 );
@@ -1001,10 +994,25 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
   }
 
   Widget _buildSocialButton({
-    required IconData icon,
     required String platform,
     String? url,
   }) {
+    final p = platform.toLowerCase();
+    IconData iconData;
+    const Color iconColor = Color(0xFFE53935);
+
+    if (p.contains('instagram')) {
+      iconData = Icons.camera_alt_outlined;
+    } else if (p.contains('facebook')) {
+      iconData = Icons.facebook;
+    } else if (p.contains('youtube')) {
+      iconData = Icons.play_arrow_rounded;
+    } else if (p.contains('whatsapp')) {
+      iconData = Icons.chat_bubble_outline_rounded;
+    } else {
+      iconData = Icons.link_rounded;
+    }
+
     return InkWell(
       onTap: () async {
         if (url != null && url.isNotEmpty) {
@@ -1014,19 +1022,19 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
           }
         }
       },
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(22),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: const BoxDecoration(
           color: Color(0xFFFFECEF),
           shape: BoxShape.circle,
         ),
         child: Center(
           child: Icon(
-            icon,
-            color: const Color(0xFFE1306C),
-            size: 20,
+            iconData,
+            color: iconColor,
+            size: 22,
           ),
         ),
       ),

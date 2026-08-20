@@ -1,109 +1,168 @@
-import 'dart:ui';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list_cubit.dart';
 import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list_state.dart';
 
-class ChallengeFilterBar extends StatefulWidget {
+class ChallengeFilterBar extends StatelessWidget {
   const ChallengeFilterBar({super.key});
 
-  @override
-  State<ChallengeFilterBar> createState() => _ChallengeFilterBarState();
-}
-
-class _ChallengeFilterBarState extends State<ChallengeFilterBar> {
-  final TextEditingController _searchController = TextEditingController();
-
-  static const List<Map<String, String?>> _typeOptions = [
-    {'label': 'All', 'value': null},
-    {'label': 'Lucky Draw', 'value': 'lucky_draw'},
-    {'label': 'Performance', 'value': 'performance'},
-    {'label': 'Completed', 'value': 'completed'},
+  static const List<Map<String, dynamic>> _typeOptions = [
+    {
+      'label': 'All',
+      'value': null,
+      'icon': Icons.grid_view_rounded,
+    },
+    {
+      'label': 'Lucky Draw',
+      'value': 'lucky_draw',
+      'icon': Icons.card_giftcard_rounded,
+    },
+    {
+      'label': 'Performance',
+      'value': 'performance',
+      'icon': Icons.show_chart_rounded,
+    },
+    {
+      'label': 'Community',
+      'value': 'community',
+      'icon': Icons.people_outline_rounded,
+    },
   ];
 
-  static const List<Map<String, String>> _statusOptions = [
-    {'label': 'Ongoing', 'value': 'ongoing'},
-    {'label': 'Ending soon', 'value': 'ongoing'},
-    {'label': 'Upcoming', 'value': 'upcoming'},
-    {'label': 'Completed', 'value': 'completed'},
+  static const List<Map<String, dynamic>> _statusOptions = [
+    {
+      'label': 'Ongoing',
+      'value': 'ongoing',
+      'icon': Icons.play_circle_fill_rounded,
+    },
+    {
+      'label': 'Ending Soon',
+      'value': 'ending_soon',
+      'icon': Icons.hourglass_empty_rounded,
+    },
+    {
+      'label': 'Upcoming',
+      'value': 'upcoming',
+      'icon': Icons.calendar_month_outlined,
+    },
+    {
+      'label': 'Completed',
+      'value': 'completed',
+      'icon': Icons.check_circle_outline_rounded,
+    },
   ];
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Widget _buildFilterChip({
+  Widget _buildCategoryChip({
     required String label,
+    required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 9,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: isSelected
+              ? const LinearGradient(
+                  colors: [
+                    Color(0xFFE51D24),
+                    Color(0xFFC60000),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: isSelected ? null : Colors.white,
+          border: Border.all(
+            color: isSelected ? const Color(0xFFD71920) : const Color(0xFFE2E8F0),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? const Color(0xFFD71920).withOpacity(0.3)
+                  : Colors.black.withOpacity(0.04),
+              blurRadius: isSelected ? 8 : 4,
+              offset: const Offset(0, 2),
             ),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: isSelected
-                  ? const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Color(0xFFE52027),
-                        Color(0xFFBE1117),
-                      ],
-                    )
-                  : LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withValues(alpha: 0.95),
-                        const Color(0xFFEDEFF3).withValues(alpha: 0.85),
-                      ],
-                    ),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFFD71920)
-                    : const Color(0xFFCDD2DB),
-                width: 1.2,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFD71920).withValues(alpha: 0.35),
-                        blurRadius: 8,
-                        offset: const Offset(0, 3),
-                      ),
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                      BoxShadow(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        blurRadius: 3,
-                        offset: const Offset(-1, -1),
-                      ),
-                    ],
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? Colors.white : const Color(0xFF475569),
             ),
-            child: Text(
+            const SizedBox(width: 6),
+            Text(
               label,
               style: AppStyles.text14Px.poppins.w600.copyWith(
-                color: isSelected ? Colors.white : const Color(0xFF0F172A),
-                fontSize: 13.5,
+                color: isSelected ? Colors.white : const Color(0xFF334155),
+                fontSize: 13,
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusTab({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final activeColor = const Color(0xFFD71920);
+    final inactiveColor = const Color(0xFF475569);
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 2),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    icon,
+                    size: 14,
+                    color: isSelected ? activeColor : inactiveColor,
+                  ),
+                  const SizedBox(width: 3),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppStyles.text12Px.poppins.w600.copyWith(
+                        color: isSelected ? activeColor : inactiveColor,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Active Tab Red Indicator Bar
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              height: 3,
+              width: isSelected ? 32 : 0,
+              decoration: BoxDecoration(
+                color: isSelected ? activeColor : Colors.transparent,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -118,50 +177,62 @@ class _ChallengeFilterBarState extends State<ChallengeFilterBar> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Row 1: Type Filters (All, Lucky Draw, Performance, etc.)
+            // Row 1: Category Filter Chips (All, Lucky Draw, Performance, Community)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              physics: const BouncingScrollPhysics(),
               child: Row(
                 children: _typeOptions.map((opt) {
-                  final isSelected =
-                      (state.selectedChallengeType == opt['value']) ||
-                          (opt['value'] == null &&
-                              (state.selectedChallengeType == null ||
-                                  state.selectedChallengeType!.isEmpty));
+                  final isSelected = (state.selectedChallengeType == opt['value']) ||
+                      (opt['value'] == null &&
+                          (state.selectedChallengeType == null ||
+                              state.selectedChallengeType!.isEmpty));
                   return Padding(
-                    padding: const EdgeInsets.only(right: 10.0),
-                    child: _buildFilterChip(
-                      label: opt['label']!,
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: _buildCategoryChip(
+                      label: opt['label'] as String,
+                      icon: opt['icon'] as IconData,
                       isSelected: isSelected,
                       onTap: () {
-                        cubit.filterByChallengeType(opt['value']);
+                        cubit.filterByChallengeType(opt['value'] as String?);
                       },
                     ),
                   );
                 }).toList(),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
 
-            // Row 2: Status Filters (Ongoing, Ending soon, Upcoming, Completed)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
+            // Row 2: Status Tab Bar Container (Ongoing, Ending Soon, Upcoming, Completed)
+            Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: _statusOptions.map((opt) {
-                  final isSelected = state.selectedStatus == opt['value'];
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10.0),
-                    child: _buildFilterChip(
-                      label: opt['label']!,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: _statusOptions.map((opt) {
+                    final isSelected = state.selectedStatus == opt['value'];
+                    return _buildStatusTab(
+                      label: opt['label'] as String,
+                      icon: opt['icon'] as IconData,
                       isSelected: isSelected,
                       onTap: () {
-                        cubit.filterByStatus(opt['value']!);
+                        cubit.filterByStatus(opt['value'] as String);
                       },
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ],

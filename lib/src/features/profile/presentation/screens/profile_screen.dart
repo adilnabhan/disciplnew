@@ -1343,8 +1343,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           );
                         },
                         builder: (ctx, state) {
-                          final isLoading =
-                              state.updateProfileDetails?.isNone() ?? false;
+                          final isLoading = false;
                           return SizedBox(
                             width: double.infinity,
                             height: 52,

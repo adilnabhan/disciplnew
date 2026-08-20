@@ -684,6 +684,8 @@ mixin _$AssignedTrainerModel {
   String? get userType => throw _privateConstructorUsedError;
   @JsonKey(name: 'rating')
   double? get rating => throw _privateConstructorUsedError;
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  GymTrainer? get fullGymTrainer => throw _privateConstructorUsedError;
 
   /// Serializes this AssignedTrainerModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -712,7 +714,11 @@ abstract class $AssignedTrainerModelCopyWith<$Res> {
     @JsonKey(name: 'specializations') List<String>? specializations,
     @JsonKey(name: 'user_type') String? userType,
     @JsonKey(name: 'rating') double? rating,
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    GymTrainer? fullGymTrainer,
   });
+
+  $GymTrainerCopyWith<$Res>? get fullGymTrainer;
 }
 
 /// @nodoc
@@ -742,6 +748,7 @@ class _$AssignedTrainerModelCopyWithImpl<
     Object? specializations = freezed,
     Object? userType = freezed,
     Object? rating = freezed,
+    Object? fullGymTrainer = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -790,9 +797,28 @@ class _$AssignedTrainerModelCopyWithImpl<
                     ? _value.rating
                     : rating // ignore: cast_nullable_to_non_nullable
                         as double?,
+            fullGymTrainer:
+                freezed == fullGymTrainer
+                    ? _value.fullGymTrainer
+                    : fullGymTrainer // ignore: cast_nullable_to_non_nullable
+                        as GymTrainer?,
           )
           as $Val,
     );
+  }
+
+  /// Create a copy of AssignedTrainerModel
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $GymTrainerCopyWith<$Res>? get fullGymTrainer {
+    if (_value.fullGymTrainer == null) {
+      return null;
+    }
+
+    return $GymTrainerCopyWith<$Res>(_value.fullGymTrainer!, (value) {
+      return _then(_value.copyWith(fullGymTrainer: value) as $Val);
+    });
   }
 }
 
@@ -815,7 +841,12 @@ abstract class _$$AssignedTrainerModelImplCopyWith<$Res>
     @JsonKey(name: 'specializations') List<String>? specializations,
     @JsonKey(name: 'user_type') String? userType,
     @JsonKey(name: 'rating') double? rating,
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    GymTrainer? fullGymTrainer,
   });
+
+  @override
+  $GymTrainerCopyWith<$Res>? get fullGymTrainer;
 }
 
 /// @nodoc
@@ -841,6 +872,7 @@ class __$$AssignedTrainerModelImplCopyWithImpl<$Res>
     Object? specializations = freezed,
     Object? userType = freezed,
     Object? rating = freezed,
+    Object? fullGymTrainer = freezed,
   }) {
     return _then(
       _$AssignedTrainerModelImpl(
@@ -889,6 +921,11 @@ class __$$AssignedTrainerModelImplCopyWithImpl<$Res>
                 ? _value.rating
                 : rating // ignore: cast_nullable_to_non_nullable
                     as double?,
+        fullGymTrainer:
+            freezed == fullGymTrainer
+                ? _value.fullGymTrainer
+                : fullGymTrainer // ignore: cast_nullable_to_non_nullable
+                    as GymTrainer?,
       ),
     );
   }
@@ -907,6 +944,7 @@ class _$AssignedTrainerModelImpl implements _AssignedTrainerModel {
     @JsonKey(name: 'specializations') final List<String>? specializations,
     @JsonKey(name: 'user_type') this.userType,
     @JsonKey(name: 'rating') this.rating,
+    @JsonKey(includeFromJson: false, includeToJson: false) this.fullGymTrainer,
   }) : _specializations = specializations;
 
   factory _$AssignedTrainerModelImpl.fromJson(Map<String, dynamic> json) =>
@@ -947,10 +985,13 @@ class _$AssignedTrainerModelImpl implements _AssignedTrainerModel {
   @override
   @JsonKey(name: 'rating')
   final double? rating;
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final GymTrainer? fullGymTrainer;
 
   @override
   String toString() {
-    return 'AssignedTrainerModel(id: $id, name: $name, profileImage: $profileImage, mobile: $mobile, experienceYears: $experienceYears, bio: $bio, specializations: $specializations, userType: $userType, rating: $rating)';
+    return 'AssignedTrainerModel(id: $id, name: $name, profileImage: $profileImage, mobile: $mobile, experienceYears: $experienceYears, bio: $bio, specializations: $specializations, userType: $userType, rating: $rating, fullGymTrainer: $fullGymTrainer)';
   }
 
   @override
@@ -972,7 +1013,9 @@ class _$AssignedTrainerModelImpl implements _AssignedTrainerModel {
             ) &&
             (identical(other.userType, userType) ||
                 other.userType == userType) &&
-            (identical(other.rating, rating) || other.rating == rating));
+            (identical(other.rating, rating) || other.rating == rating) &&
+            (identical(other.fullGymTrainer, fullGymTrainer) ||
+                other.fullGymTrainer == fullGymTrainer));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -988,6 +1031,7 @@ class _$AssignedTrainerModelImpl implements _AssignedTrainerModel {
     const DeepCollectionEquality().hash(_specializations),
     userType,
     rating,
+    fullGymTrainer,
   );
 
   /// Create a copy of AssignedTrainerModel
@@ -1019,6 +1063,8 @@ abstract class _AssignedTrainerModel implements AssignedTrainerModel {
     @JsonKey(name: 'specializations') final List<String>? specializations,
     @JsonKey(name: 'user_type') final String? userType,
     @JsonKey(name: 'rating') final double? rating,
+    @JsonKey(includeFromJson: false, includeToJson: false)
+    final GymTrainer? fullGymTrainer,
   }) = _$AssignedTrainerModelImpl;
 
   factory _AssignedTrainerModel.fromJson(Map<String, dynamic> json) =
@@ -1051,6 +1097,9 @@ abstract class _AssignedTrainerModel implements AssignedTrainerModel {
   @override
   @JsonKey(name: 'rating')
   double? get rating;
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  GymTrainer? get fullGymTrainer;
 
   /// Create a copy of AssignedTrainerModel
   /// with the given fields replaced by the non-null parameter values.

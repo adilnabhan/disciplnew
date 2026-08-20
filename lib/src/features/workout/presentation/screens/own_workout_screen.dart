@@ -1853,30 +1853,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                       ],
                                     ),
                                     child: Center(
-                                      child:
-                                          state.isCreatingExercise
-                                              ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                  valueColor:
-                                                      AlwaysStoppedAnimation<
-                                                        Color
-                                                      >(Colors.white),
-                                                ),
-                                              )
-                                              : const Text(
-                                                'Create Exercise',
-                                                style: TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  fontWeight: FontWeight.w600,
-                                                  fontSize: 15,
-                                                  height: 1.0,
-                                                  letterSpacing: -0.3,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
+                                      child: const Text(
+                                        'Create Exercise',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 15,
+                                          height: 1.0,
+                                          letterSpacing: -0.3,
+                                          color: Colors.white,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -2599,6 +2586,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.primary,
+                      disabledForegroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -2764,26 +2753,25 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 }
                               }
                             },
-                    child:
-                        isSubmitting
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                            : Text(
-                              widget.isPresetCreation ? 'Save' : 'Finish',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
+                    child: isSubmitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
                               ),
                             ),
+                          )
+                        : Text(
+                            widget.isPresetCreation ? 'Save' : 'Finish',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
                   ),
                 ],
               ),

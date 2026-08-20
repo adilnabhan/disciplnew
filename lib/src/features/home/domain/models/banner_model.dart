@@ -14,9 +14,15 @@ class BannerModel {
     this.isActive,
     this.displayOrder,
     this.createdAt,
+    this.whatsappNumber,
   });
 
   factory BannerModel.fromJson(Map<String, dynamic> json) {
+    final rawWhatsapp = json['whatsapp_number'] ??
+        json['whatsapp_link'] ??
+        json['whatsapp_url'] ??
+        json['whatsapp'] ??
+        json['contact_number'];
     return BannerModel(
       id: json['id'] as int?,
       organization: json['organization'] as int?,
@@ -30,6 +36,7 @@ class BannerModel {
       isActive: json['is_active'] as bool?,
       displayOrder: json['display_order'] as int?,
       createdAt: json['created_at'] as String?,
+      whatsappNumber: rawWhatsapp?.toString(),
     );
   }
 
@@ -44,6 +51,7 @@ class BannerModel {
   final bool? isActive;
   final int? displayOrder;
   final String? createdAt;
+  final String? whatsappNumber;
 
   Map<String, dynamic> toJson() {
     return {
@@ -52,7 +60,7 @@ class BannerModel {
       'image': bannerImage,
       'banner_image': bannerImage,
       'title': title,
-      'whatsapp_number': contactNumber,
+      'whatsapp_number': whatsappNumber ?? contactNumber,
       'contact_number': contactNumber,
       'website_url': websiteUrl,
       'visibility': visibility,
@@ -63,3 +71,4 @@ class BannerModel {
     };
   }
 }
+

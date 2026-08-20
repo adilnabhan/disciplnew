@@ -5,16 +5,31 @@ import 'package:customer_mobile_app/src/features/challenges/presentation/screens
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/challenge_filter_bar.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/challenge_item_card.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
+import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_winners_screen.dart';
 import 'package:shimmer/shimmer.dart';
 
-class AllChallengesScreen extends StatefulWidget {
+class AllChallengesScreen extends StatelessWidget {
   const AllChallengesScreen({super.key});
 
   @override
-  State<AllChallengesScreen> createState() => _AllChallengesScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => ChallengeListCubit()..loadChallenges(),
+      child: const _AllChallengesScreenContent(),
+    );
+  }
 }
 
-class _AllChallengesScreenState extends State<AllChallengesScreen> {
+class _AllChallengesScreenContent extends StatefulWidget {
+  const _AllChallengesScreenContent();
+
+  @override
+  State<_AllChallengesScreenContent> createState() =>
+      __AllChallengesScreenContentState();
+}
+
+class __AllChallengesScreenContentState
+    extends State<_AllChallengesScreenContent> {
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -173,144 +188,206 @@ class _AllChallengesScreenState extends State<AllChallengesScreen> {
     );
   }
 
+  Widget _buildChampionsBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const ChallengeWinnersScreen(challengeId: 0),
+          ),
+        );
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                Color(0xFF041933),
+                Color(0xFF052044),
+              ],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF041933).withValues(alpha: 0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Trophy Asset Icon
+              Image.asset(
+                'assets/images/png/vectors/view_all_winners_icon.png',
+                width: 44,
+                height: 44,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(width: 12),
+
+              // Title & Subtitle
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Celebrate our champions!',
+                      style: AppStyles.text12Px.poppins.w400.copyWith(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          'View All Winners',
+                          style: AppStyles.text14Px.poppins.w700.copyWith(
+                            color: Colors.white,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => ChallengeListCubit()..loadChallenges(),
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          leadingWidth: 56,
-          leading: Padding(
-            padding: const EdgeInsets.only(left: 16),
-            child: Center(
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEEEEEE),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.chevron_left,
-                    color: Color(0xFF444444),
-                    size: 24,
-                  ),
-                ),
-              ),
-            ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
+        centerTitle: false,
+        title: Text(
+          'Challenges',
+          style: AppStyles.text20Px.poppins.w500.copyWith(
+            color: AppColors.textDark,
           ),
-          title: Text(
-            'Challenges',
-            style: AppStyles.text20Px.poppins.w500.copyWith(
-              color: AppColors.textDark,
-            ),
-          ),
-          centerTitle: false,
-          actions: [
-            GestureDetector(
-              onTap: () {
-                context.push(const SettingsScreen());
-              },
-              child: SvgPicture.asset(
-                'assets/images/svg/icons/settings _icon.svg',
-                width: 22,
-                height: 22,
-              ),
-            ).pOnly(right: 20),
-          ],
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 12),
-            const ChallengeFilterBar(),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'Open Challenges',
-                style: AppStyles.text16Px.poppins.w600.copyWith(
-                  fontSize: 15,
-                  height: 1.5,
-                  letterSpacing: -0.41,
-                  color: const Color(0xFF222222),
-                ),
+        actions: [
+          GestureDetector(
+            onTap: () {
+              context.push(const SettingsScreen());
+            },
+            child: SvgPicture.asset(
+              'assets/images/svg/icons/settings _icon.svg',
+              width: 22,
+              height: 22,
+            ),
+          ).pOnly(right: 20),
+        ],
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 12),
+          const ChallengeFilterBar(),
+          const SizedBox(height: 14),
+
+          // Champions Banner
+          _buildChampionsBanner(context),
+          const SizedBox(height: 16),
+
+          // Active Challenges Section Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              'Active Challenges',
+              style: AppStyles.text16Px.poppins.w700.copyWith(
+                fontSize: 17,
+                color: const Color(0xFF1F1F1F),
               ),
             ),
-            const SizedBox(height: 8),
-            Expanded(
-              child: BlocBuilder<ChallengeListCubit, ChallengeListState>(
-                builder: (context, state) {
-                  if (state.isLoading) {
-                    return _buildShimmerLoading();
-                  }
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: BlocBuilder<ChallengeListCubit, ChallengeListState>(
+              builder: (context, state) {
+                if (state.isLoading) {
+                  return _buildShimmerLoading();
+                }
 
-                  if (state.errorMessage != null && state.challenges.isEmpty) {
-                    return _buildErrorState(context, state.errorMessage!);
-                  }
+                if (state.errorMessage != null && state.challenges.isEmpty) {
+                  return _buildErrorState(context, state.errorMessage!);
+                }
 
-                  if (state.challenges.isEmpty) {
-                    return _buildEmptyState(context);
-                  }
+                if (state.challenges.isEmpty) {
+                  return _buildEmptyState(context);
+                }
 
-                  return RefreshIndicator(
-                    color: const Color(0xFFD71920),
-                    onRefresh: () async {
-                      await context.read<ChallengeListCubit>().refreshChallenges();
-                    },
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
-                      itemCount: state.challenges.length +
-                          (state.isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (index == state.challenges.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16.0),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFFD71920),
-                                strokeWidth: 2.5,
-                              ),
+                return RefreshIndicator(
+                  color: const Color(0xFFD71920),
+                  onRefresh: () async {
+                    await context.read<ChallengeListCubit>().refreshChallenges();
+                  },
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 8.0,
+                    ),
+                    itemCount: state.challenges.length +
+                        (state.isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index == state.challenges.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFD71920),
+                              strokeWidth: 2.5,
                             ),
-                          );
-                        }
-
-                        final challenge = state.challenges[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16.0),
-                          child: ChallengeItemCard(
-                            challenge: challenge,
-                            onTapDetails: () {
-                              if (challenge.id != null) {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => ChallengeDetailsScreen(
-                                      challengeId: challenge.id!,
-                                    ),
-                                  ),
-                                );
-                              }
-                            },
                           ),
                         );
-                      },
-                    ),
-                  );
-                },
-              ),
+                      }
+
+                      final challenge = state.challenges[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: ChallengeItemCard(
+                          challenge: challenge,
+                          onTapDetails: () {
+                            if (challenge.id != null) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ChallengeDetailsScreen(
+                                    challengeId: challenge.id!,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,4 +1,5 @@
 // ignore_for_file: invalid_annotation_target, constant_identifier_names, join_return_with_assignment
+import 'package:customer_mobile_app/src/features/fitnesscenters/domain/models/fitnesscenter_details_model.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'home_model.freezed.dart';
@@ -43,7 +44,9 @@ class AssignedTrainerModel with _$AssignedTrainerModel {
     @JsonKey(name: 'specializations') List<String>? specializations,
     @JsonKey(name: 'user_type') String? userType,
     @JsonKey(name: 'rating') double? rating,
+    @JsonKey(includeFromJson: false, includeToJson: false) GymTrainer? fullGymTrainer,
   }) = _AssignedTrainerModel;
 
   factory AssignedTrainerModel.fromJson(Map<String, dynamic> json) => _$AssignedTrainerModelFromJson(json);
 }
+

@@ -535,7 +535,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             return Button.filled(
               title: 'Update',
               ontap: _onContinue,
-              isLoading: state.updateProfileDetails?.isNone() ?? false,
+              isLoading: false,
             ).pad(16);
           },
         ),

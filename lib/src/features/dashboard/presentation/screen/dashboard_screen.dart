@@ -3,8 +3,10 @@ import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/scr
 import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
+import 'package:customer_mobile_app/src/features/scorecard/presentation/screens/score_card_screen.dart';
+import 'package:customer_mobile_app/src/features/challenges/presentation/screens/all_challenges_screen.dart';
 
-///* This class contains dashbpard screen
+///* This class contains dashboard screen
 ///*eg : Pages manager , bottom nav ...
 class DashboardScreen extends StatefulWidget {
   ///*
@@ -20,23 +22,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late final DashboardCubit _cubit;
   late final NotificationCubit _notificationCubit;
   late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
-  late final List<String> _icons;
-  late final List<String> _labels;
 
   @override
   void initState() {
-    _cubit = DashboardCubit(navIndex: widget.navIndex);
+    super.initState();
+    _cubit = DashboardCubit(navIndex: widget.navIndex)..fetchActiveMembership();
     _notificationCubit = NotificationCubit()..fetchUnreadCount();
     _appSeasonCubit.fetchAppSeason();
-    _icons = [
-      'assets/images/svg/icons/new_home_notselected.svg',
-      'assets/images/svg/icons/workout_notseleted.svg',
-      'assets/images/svg/icons/not selected_explore.svg',
-      'assets/images/svg/icons/person.svg',
-    ];
-
-    _labels = ['Home', 'Workouts', 'Explore', 'Profile'];
-    super.initState();
   }
 
   Widget _buildProfileTabIcon(bool isSelected) {
@@ -44,8 +36,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final String? profilePicUrl = currentUser?.profilePicture as String?;
 
     return Container(
-      width: 26,
-      height: 26,
+      width: 24,
+      height: 24,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
@@ -100,14 +92,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
         builder: (context, seasonState) {
           final bool isSeasonalActive = seasonState.isActive;
           return BlocBuilder<DashboardCubit, DashboardState>(
-            buildWhen: (p, c) => p.navIndex != c.navIndex,
             builder: (context, state) {
+              // Determine if user has an active gym/membership
+              final bool hasActiveGym = state.activeMembershipData.fold(
+                () {
+                  // Instant fallback evaluation while activeMembershipData is loading (0ms delay)
+                  final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+                  if (currentUser?.customer != null) {
+                    final c = currentUser!.customer!;
+                    if (c.isActiveMember == true ||
+                        c.organizationId != null ||
+                        c.assignedFitnessCenter != null) {
+                      return true;
+                    }
+                  }
+                  return false;
+                },
+                (either) => either.fold(
+                  (error) => false,
+                  (activeMembership) =>
+                      activeMembership != null &&
+                      (activeMembership.isActive == true ||
+                          activeMembership.organization != null ||
+                          activeMembership.id != null),
+                ),
+              );
+
+              final List<Widget> tabPages = hasActiveGym
+                  ? const [
+                      HomeScreen(),
+                      WorkoutLogScreen(),
+                      ScoreCardScreen(),
+                      AllChallengesScreen(),
+                      ProfileScreen(),
+                    ]
+                  : const [
+                      HomeScreen(),
+                      WorkoutLogScreen(),
+                      FitnessCentersListingScreen(isFromBottomNav: true),
+                      ProfileScreen(),
+                    ];
+
+              final List<String> tabLabels = hasActiveGym
+                  ? ['Home', 'Workouts', 'Score Card', 'Challenges', 'Profile']
+                  : ['Home', 'Workouts', 'Explore', 'Profile'];
+
+              int currentIndex = state.navIndex;
+              if (currentIndex >= tabPages.length) {
+                currentIndex = tabPages.length - 1;
+              }
+
               return Scaffold(
-                backgroundColor: isSeasonalActive && state.navIndex == 0
+                backgroundColor: isSeasonalActive && currentIndex == 0
                     ? const Color(0xFFFCF2E3)
                     : const Color(0xFFF7F7F7),
                 appBar:
-                    state.navIndex == 0
+                    currentIndex == 0
                         ? (isSeasonalActive
                             ? SeasonalAppBar(
                               seasonName: seasonState.seasonModel.name ?? 'Onam',
@@ -211,99 +251,197 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ],
                             ))
                         : null,
-            body: LazyIndexedStack(
-              index: state.navIndex,
-              children: const [
-                HomeScreen(),
-                WorkoutLogScreen(),
-                FitnessCentersListingScreen(),
-                ProfileScreen(),
-              ],
-            ),
-            extendBody: false,
-            bottomNavigationBar: Container(
-              color: Colors.white,
-              child: SafeArea(
-                top: false,
-                child: Container(
-                  height: 70,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: const Border(
-                      top: BorderSide(color: AppColors.borderGrey, width: 0.5),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2),
+                body: LazyIndexedStack(
+                  index: currentIndex,
+                  children: tabPages,
+                ),
+                extendBody: false,
+                bottomNavigationBar: Container(
+                  color: Colors.white,
+                  child: SafeArea(
+                    top: false,
+                    child: Container(
+                      height: 70,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: const Border(
+                          top: BorderSide(color: AppColors.borderGrey, width: 0.5),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 10,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: List.generate(
-                      _icons.length,
-                      (i) => Expanded(
-                        child: InkWell(
-                          onTap: () {
-                            context.read<DashboardCubit>().changeNav(index: i);
-                            _notificationCubit.fetchUnreadCount();
-                          },
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (i == 3)
-                                _buildProfileTabIcon(state.navIndex == i)
-                              else
-                                SvgPicture.asset(
-                                  (i == 0 && state.navIndex == i)
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: List.generate(tabLabels.length, (i) {
+                          final bool isSelected = currentIndex == i;
+                          Widget iconWidget;
+
+                          if (hasActiveGym) {
+                            // Active Member Tab Icons (5 tabs: Home, Workouts, Score Card, Challenges, Profile)
+                            switch (i) {
+                              case 0:
+                                iconWidget = SvgPicture.asset(
+                                  isSelected
                                       ? 'assets/images/svg/icons/new_home_selected.svg'
-                                      : (i == 1 && state.navIndex == i)
+                                      : 'assets/images/svg/icons/new_home_notselected.svg',
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: isSelected
+                                      ? null
+                                      : const ColorFilter.mode(
+                                          AppColors.textGrey,
+                                          BlendMode.srcIn,
+                                        ),
+                                );
+                                break;
+                              case 1:
+                                iconWidget = SvgPicture.asset(
+                                  isSelected
                                       ? 'assets/images/svg/icons/workout_selected.svg'
-                                      : (i == 2 && state.navIndex == i)
+                                      : 'assets/images/svg/icons/workout_notseleted.svg',
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: ColorFilter.mode(
+                                    isSelected ? AppColors.primary : AppColors.textGrey,
+                                    BlendMode.srcIn,
+                                  ),
+                                );
+                                break;
+                              case 2: // Score Card
+                                iconWidget = Icon(
+                                  isSelected
+                                      ? Icons.emoji_events_rounded
+                                      : Icons.emoji_events_outlined,
+                                  size: 22,
+                                  color: isSelected ? AppColors.primary : AppColors.textGrey,
+                                );
+                                break;
+                              case 3: // Challenges
+                                iconWidget = Icon(
+                                  isSelected
+                                      ? Icons.flag_rounded
+                                      : Icons.outlined_flag_rounded,
+                                  size: 22,
+                                  color: isSelected ? AppColors.primary : AppColors.textGrey,
+                                );
+                                break;
+                              case 4: // Profile
+                                iconWidget = _buildProfileTabIcon(isSelected);
+                                break;
+                              default:
+                                iconWidget = const SizedBox.shrink();
+                            }
+                          } else {
+                            // Regular Tab Icons (4 tabs: Home, Workouts, Explore, Profile)
+                            switch (i) {
+                              case 0:
+                                iconWidget = SvgPicture.asset(
+                                  isSelected
+                                      ? 'assets/images/svg/icons/new_home_selected.svg'
+                                      : 'assets/images/svg/icons/new_home_notselected.svg',
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: isSelected
+                                      ? null
+                                      : const ColorFilter.mode(
+                                          AppColors.textGrey,
+                                          BlendMode.srcIn,
+                                        ),
+                                );
+                                break;
+                              case 1:
+                                iconWidget = SvgPicture.asset(
+                                  isSelected
+                                      ? 'assets/images/svg/icons/workout_selected.svg'
+                                      : 'assets/images/svg/icons/workout_notseleted.svg',
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: ColorFilter.mode(
+                                    isSelected ? AppColors.primary : AppColors.textGrey,
+                                    BlendMode.srcIn,
+                                  ),
+                                );
+                                break;
+                              case 2:
+                                iconWidget = SvgPicture.asset(
+                                  isSelected
                                       ? 'assets/images/svg/icons/selected_explore.svg'
-                                      : _icons[i],
-                                  width: 24,
-                                  height: 24,
-                                  color:
-                                      (i == 0 && state.navIndex == i) ||
-                                              (i == 2 && state.navIndex == i)
-                                          ? null
-                                          : state.navIndex == i
-                                          ? AppColors.primary
-                                          : AppColors.textGrey,
-                                ),
-                              const SizedBox(height: 6),
-                              Text(
-                                _labels[i],
-                                style: AppStyles.text12Px.poppins.copyWith(
-                                  color:
-                                      state.navIndex == i
-                                          ? AppColors.primary
-                                          : AppColors.textGrey,
-                                  fontWeight:
-                                      state.navIndex == i
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
+                                      : 'assets/images/svg/icons/not selected_explore.svg',
+                                  width: 22,
+                                  height: 22,
+                                  colorFilter: isSelected
+                                      ? null
+                                      : const ColorFilter.mode(
+                                          AppColors.textGrey,
+                                          BlendMode.srcIn,
+                                        ),
+                                );
+                                break;
+                              case 3:
+                                iconWidget = _buildProfileTabIcon(isSelected);
+                                break;
+                              default:
+                                iconWidget = const SizedBox.shrink();
+                            }
+                          }
+
+                          return Expanded(
+                            child: InkWell(
+                              onTap: () {
+                                context.read<DashboardCubit>().changeNav(index: i);
+                                _notificationCubit.fetchUnreadCount();
+                              },
+                              borderRadius: BorderRadius.circular(12),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                decoration: isSelected
+                                    ? BoxDecoration(
+                                        color: AppColors.primary.withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(12),
+                                      )
+                                    : null,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    iconWidget,
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      tabLabels[i],
+                                      style: AppStyles.text12Px.poppins.copyWith(
+                                        fontSize: 10,
+                                        color: isSelected
+                                            ? AppColors.primary
+                                            : AppColors.textGrey,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
-      );
-    },
-  ),
-);
+      ),
+    );
   }
 }
 
@@ -348,7 +486,7 @@ class _LazyIndexedStackState extends State<LazyIndexedStack> {
         (i) => i < _activated.length ? _activated[i] : false,
       );
     }
-    if (!_activated[widget.index]) {
+    if (widget.index >= 0 && widget.index < _activated.length && !_activated[widget.index]) {
       setState(() {
         _activated[widget.index] = true;
       });

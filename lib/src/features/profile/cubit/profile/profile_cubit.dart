@@ -87,10 +87,6 @@ class ProfileCubit extends Cubit<ProfileState> {
     String? bloodGroup,
     XFile? image,
   }) async {
-    if (state.updateProfileDetails?.isNone() ?? false) {
-      return;
-    }
-
     emit(state.copyWith(updateProfileDetails: none()));
 
     final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
@@ -178,9 +174,6 @@ class ProfileCubit extends Cubit<ProfileState> {
     required String weight,
     Map<String, dynamic>? extraBody,
   }) async {
-    if (state.updateProfileDetails?.isNone() ?? false) {
-      return;
-    }
     emit(state.copyWith(updateProfileDetails: none()));
     final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
     if (id == null) {
@@ -212,9 +205,6 @@ class ProfileCubit extends Cubit<ProfileState> {
   Future<void> updateCustomerProfile({
     required Map<String, dynamic> body,
   }) async {
-    if (state.updateProfileDetails?.isNone() ?? false) {
-      return;
-    }
     emit(state.copyWith(updateProfileDetails: none()));
     final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
     if (id == null) {
@@ -251,9 +241,6 @@ class ProfileCubit extends Cubit<ProfileState> {
     String? workingHur,
     String? jobSatisfaction,
   }) async {
-    if (state.updateProfileDetails?.isNone() ?? false) {
-      return;
-    }
     emit(state.copyWith(updateProfileDetails: none()));
     final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
     if (id == null) {
@@ -359,10 +346,6 @@ class ProfileCubit extends Cubit<ProfileState> {
 
     // 3. Skip API call if email hasn't changed
     if (currentEmail != null && trimmed == currentEmail.trim()) {
-      return;
-    }
-
-    if (state.updateProfileDetails?.isNone() ?? false) {
       return;
     }
 

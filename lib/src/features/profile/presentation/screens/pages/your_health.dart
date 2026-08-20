@@ -1278,7 +1278,7 @@ class EditHealthStyle extends StatelessWidget {
 
           builder: (context, state) {
             return HealthStep(
-              isLoading: state.isLoading ?? false, // 👈 pass loader here
+              isLoading: false,
               customerDetailsModel: customerDetailsModel,
               choices: choicesModel,
 
@@ -1355,7 +1355,7 @@ class _EditTargetGoalsState extends State<EditTargetGoals> {
           appBar: AppBar(title: const Text('Target Goal Edit')),
           body: FitnessGoalStep(
             key: _stepKey,
-            isLoading: state.updateProfileDetails?.isNone() ?? false,
+            isLoading: false,
             choices: widget.choicesModel,
             customerDetailsModel: widget.customerDetailsModel,
             hideButton: true,
@@ -1393,7 +1393,7 @@ class _EditTargetGoalsState extends State<EditTargetGoals> {
                   children: [
                     Button.filled(
                       title: 'Update',
-                      isLoading: state.updateProfileDetails?.isNone() ?? false,
+                      isLoading: false,
                       ontap: () => _stepKey.currentState?.submit(),
                     ),
                     const SizedBox(height: 10),
@@ -1448,7 +1448,7 @@ class EditLifeStyle extends StatelessWidget {
 
           builder: (context, state) {
             return LifeStyleEditScreen(
-              isLoading: state.isLoading,
+              isLoading: false,
               choicesModel: choicesModel!,
               customerDetailsModel: customerDetailsModel,
               onUpdate: (value) {

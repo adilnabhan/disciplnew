@@ -62,10 +62,17 @@ class _OnamAchievementCelebrationState
       duration: const Duration(milliseconds: 2000),
     );
 
-    _petalsController ??= AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3800),
-    );
+    if (_petalsController == null) {
+      _petalsController = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 3000),
+      );
+      _petalsController!.addStatusListener((status) {
+        if (status == AnimationStatus.completed && mounted) {
+          setState(() {});
+        }
+      });
+    }
 
     _pookalamController ??= AnimationController(
       vsync: this,
@@ -468,6 +475,9 @@ class FallingPetalsWidget extends StatelessWidget {
       child: AnimatedBuilder(
         animation: activeController,
         builder: (context, child) {
+          if (activeController.value <= 0.0 || activeController.value >= 1.0) {
+            return const SizedBox.shrink();
+          }
           return CustomPaint(
             painter: _OnamPetalsPainter(progress: activeController.value),
           );
@@ -487,7 +497,6 @@ class _PetalItem {
   final double? driftAmplitude;
   final double? driftFrequency;
   final double? fallDelay;
-  final double? speedMultiplier;
   final double? initialAngle;
   final _FlowerType? flowerType;
 
@@ -499,7 +508,6 @@ class _PetalItem {
     this.driftAmplitude = 3.0,
     this.driftFrequency = 1.0,
     this.fallDelay = 0.0,
-    this.speedMultiplier = 1.0,
     this.initialAngle = 0.0,
     this.flowerType = _FlowerType.singlePetal,
   });
@@ -553,7 +561,6 @@ class _OnamPetalsPainter extends CustomPainter {
         driftAmplitude: random.nextDouble() * 4.0, // Micro drift for straight top-to-bottom fall
         driftFrequency: 0.8 + random.nextDouble() * 0.8,
         fallDelay: (index % 6) * 0.05 + (random.nextDouble() * 0.02), // Staggered entry without forming horizontal line
-        speedMultiplier: 0.9 + (random.nextDouble() * 0.25),
         initialAngle: random.nextDouble() * math.pi * 2,
         flowerType: flowerType,
       );
@@ -564,11 +571,10 @@ class _OnamPetalsPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (progress <= 0.0) return;
+    if (progress <= 0.0 || progress >= 1.0) return;
 
     for (final petal in _staticPetals) {
       final fallDelay = petal.fallDelay ?? 0.0;
-      final speedMultiplier = petal.speedMultiplier ?? 1.0;
       final driftFrequency = petal.driftFrequency ?? 1.0;
       final driftAmplitude = petal.driftAmplitude ?? 3.0;
       final xRatio = petal.xRatio ?? 0.5;
@@ -579,11 +585,11 @@ class _OnamPetalsPainter extends CustomPainter {
 
       if (progress < fallDelay) continue;
       final rawT = (progress - fallDelay) / (1.0 - fallDelay);
-      final t = (rawT * speedMultiplier).clamp(0.0, 1.0);
+      final t = rawT.clamp(0.0, 1.0);
 
-      // Direct straight vertical movement from top to bottom
-      final startY = -40.0;
-      final endY = size.height * 1.02;
+      // Direct straight vertical movement from top to completely below screen bottom
+      final startY = -50.0;
+      final endY = size.height + 80.0;
       final currentY = startY + (endY - startY) * t;
 
       // Straight top-to-bottom X position with micro wiggle
@@ -594,12 +600,12 @@ class _OnamPetalsPainter extends CustomPainter {
       // Slow rotation
       final currentRotation = initialAngle + (t * rotationSpeed);
 
-      // Fade out smoothly near the bottom of screen
+      // Fade out smoothly well before lower screen area (Done button)
       double opacity = 1.0;
-      if (t < 0.05) {
-        opacity = t / 0.05;
-      } else if (t > 0.82) {
-        opacity = (1.0 - t) / 0.18;
+      if (t < 0.08) {
+        opacity = t / 0.08;
+      } else if (t > 0.45) {
+        opacity = (0.70 - t) / 0.25;
       }
       opacity = opacity.clamp(0.0, 1.0);
 

@@ -153,27 +153,46 @@ final class HomeRepository {
         ApiUris.assignedGymTrainers,
         options: Options(headers: {'X-Platform': platformSource}).token,
       );
-      if (response.statusCode == 200 && response.data != null && response.data is Map) {
-        final Map<String, dynamic> data = response.data as Map<String, dynamic>;
-        if (data.containsKey('trainers') && data['trainers'] is List) {
-          return (data['trainers'] as List).map((json) {
-            final t = json as Map<String, dynamic>;
-            return AssignedTrainerModel(
-              id: t['id'] as int?,
-              name: (t['full_name'] as String?) ??
-                  '${t['first_name'] ?? ''} ${t['last_name'] ?? ''}'.trim(),
-              profileImage: t['profile_image'] as String?,
-              mobile: t['mobile'] as String?,
-              experienceYears: t['experience_years'] as int?,
-              bio: t['bio'] as String?,
-              specializations: (t['specializations'] as List<dynamic>?)
-                  ?.map((e) => e.toString())
-                  .toList(),
-              userType: t['user_type'] as String?,
-              rating: (t['rating'] as num?)?.toDouble(),
-            );
-          }).toList();
+      if (response.statusCode == 200 && response.data != null) {
+        List<dynamic> listData = [];
+        if (response.data is List) {
+          listData = response.data as List;
+        } else if (response.data is Map) {
+          final Map<String, dynamic> data = response.data as Map<String, dynamic>;
+          if (data.containsKey('trainers') && data['trainers'] is List) {
+            listData = data['trainers'] as List;
+          } else if (data.containsKey('results') && data['results'] is List) {
+            listData = data['results'] as List;
+          } else if (data.containsKey('id')) {
+            listData = [data];
+          }
         }
+
+        return listData.map((json) {
+          final Map<String, dynamic> t = Map<String, dynamic>.from(json as Map);
+          if (!t.containsKey('name') || t['name'] == null || t['name'].toString().trim().isEmpty) {
+            final fullName = t['full_name'] as String?;
+            if (fullName != null && fullName.trim().isNotEmpty) {
+              t['name'] = fullName;
+            } else {
+              final firstName = t['first_name']?.toString() ?? '';
+              final lastName = t['last_name']?.toString() ?? '';
+              final assembled = '$firstName $lastName'.trim();
+              if (assembled.isNotEmpty) {
+                t['name'] = assembled;
+              }
+            }
+          }
+
+          GymTrainer? fullTrainer;
+          try {
+            fullTrainer = GymTrainer.fromApiJson(t);
+          } catch (e) {
+            debugPrint('Error parsing GymTrainer in fetchAssignedGymTrainers: $e');
+          }
+          final model = AssignedTrainerModel.fromJson(t);
+          return model.copyWith(fullGymTrainer: fullTrainer);
+        }).toList();
       }
     } catch (e) {
       debugPrint('Error fetching assigned gym trainers: $e');
