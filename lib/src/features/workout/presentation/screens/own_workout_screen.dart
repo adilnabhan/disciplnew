@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 
 class OwnWorkoutScreen extends StatefulWidget {
   final bool isNewSession;
@@ -31,10 +30,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   bool _isFinishing = false;
   Timer? _timer;
   int _elapsedSeconds = 0;
-  final Map<String, FocusNode> _setKgFocusNodes = {};
-  final Set<int> _addingExerciseIds = {};
-  final Set<int> _addingSetExerciseIndices = {};
-  final Set<int> _completingSetIds = {};
 
   @override
   void initState() {
@@ -65,10 +60,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     _titleFocusNode.dispose();
     _timer?.cancel();
     _cubit.close();
-    for (final node in _setKgFocusNodes.values) {
-      node.dispose();
-    }
-    _setKgFocusNodes.clear();
     super.dispose();
   }
 
@@ -123,20 +114,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     }
   }
 
-  Future<void> _addSet(int exerciseIndex) async {
-    if (_addingSetExerciseIndices.contains(exerciseIndex)) return;
-    setState(() {
-      _addingSetExerciseIndices.add(exerciseIndex);
-    });
-    try {
-      await _cubit.addSet(exerciseIndex);
-    } finally {
-      if (mounted) {
-        setState(() {
-          _addingSetExerciseIndices.remove(exerciseIndex);
-        });
-      }
-    }
+  void _addSet(int exerciseIndex) {
+    _cubit.addSet(exerciseIndex);
   }
 
   void _addExercise() {
@@ -146,7 +125,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   void _showSelectWorkoutBottomSheet() {
     final searchController = TextEditingController();
     String searchQuery = '';
-    String? selectedMuscleGroup;
     int currentTab = 0; // 0 = Library, 1 = You created
     _cubit.loadLibraryExercises();
 
@@ -214,6 +192,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 setSheetState(() {
                                   searchQuery = v;
                                 });
+                                EasyDebounce.debounce(
+                                  'workout_search_debouncer',
+                                  const Duration(milliseconds: 500),
+                                  () {
+                                    if (currentTab == 0) {
+                                      _cubit.loadLibraryExercises(search: v);
+                                    } else {
+                                      _cubit.loadCustomExercises(search: v);
+                                    }
+                                  },
+                                );
                               },
                               style: const TextStyle(
                                 fontFamily: 'Poppins',
@@ -277,6 +266,18 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                             setSheetState(() {
                                               searchQuery = '';
                                             });
+                                            EasyDebounce.cancel(
+                                              'workout_search_debouncer',
+                                            );
+                                            if (currentTab == 0) {
+                                              _cubit.loadLibraryExercises(
+                                                search: '',
+                                              );
+                                            } else {
+                                              _cubit.loadCustomExercises(
+                                                search: '',
+                                              );
+                                            }
                                           },
                                         )
                                         : null,
@@ -304,6 +305,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         setSheetState(() {
                                           currentTab = 0;
                                         });
+                                        _cubit.loadLibraryExercises(
+                                          search: searchController.text,
+                                        );
                                       },
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -356,7 +360,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         setSheetState(() {
                                           currentTab = 1;
                                         });
-                                        _cubit.loadCustomExercises();
+                                        _cubit.loadCustomExercises(
+                                          search: searchController.text,
+                                        );
                                       },
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -408,23 +414,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          if (currentTab == 0) ...[
-                            _buildMuscleGroupFilter(
-                              state,
-                              setSheetState,
-                              searchController,
-                              selectedMuscleGroup,
-                              (muscle) {
-                                setSheetState(() {
-                                  selectedMuscleGroup = muscle;
-                                });
-                                _cubit.loadLibraryExercises(
-                                  muscleGroup: selectedMuscleGroup,
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                          ],
                           Expanded(
                             child: Stack(
                               children: [
@@ -486,92 +475,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     );
   }
 
-  Widget _buildMuscleGroupFilter(
-    WorkoutState state,
-    StateSetter setSheetState,
-    TextEditingController searchController,
-    String? selectedMuscleGroup,
-    Function(String?) onMuscleSelected,
-  ) {
-    final List<String> muscleNames = ['All'];
-    if (state.muscleGroups.isNotEmpty) {
-      muscleNames.addAll(state.muscleGroups.map((m) => m.name));
-    } else {
-      muscleNames.addAll([
-        'Chest',
-        'Back',
-        'Shoulders',
-        'Biceps',
-        'Triceps',
-        'Abs',
-        'Quadriceps',
-        'Hamstrings',
-        'Calves',
-        'Glutes',
-        'Lats',
-        'Obliques',
-        'Forearms',
-        'Hip Flexors',
-      ]);
-    }
-
-    return SizedBox(
-      height: 38,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        itemCount: muscleNames.length,
-        itemBuilder: (context, index) {
-          final name = muscleNames[index];
-          final isAll = name == 'All';
-          final isSelected =
-              isAll
-                  ? (selectedMuscleGroup == null || selectedMuscleGroup.isEmpty)
-                  : (selectedMuscleGroup == name);
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: GestureDetector(
-              onTap: () {
-                onMuscleSelected(isAll ? null : name);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppColors.primary : Colors.grey[100],
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color:
-                        isSelected
-                            ? AppColors.primary
-                            : const Color(0xFFEFEFEF),
-                    width: 1,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    name,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w500,
-                      fontSize: 13,
-                      color:
-                          isSelected ? Colors.white : const Color(0xFF444444),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
   Widget _buildExerciseTabList({
     required BuildContext context,
     required List<Map<String, String>> exercises,
@@ -580,15 +483,16 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     required bool localFilter,
     required bool showCreateButton,
   }) {
-    final lowercaseQuery = searchQuery.toLowerCase().trim();
     final filteredList =
-        exercises.where((item) {
-          if (lowercaseQuery.isEmpty) return true;
-          final title = (item['title'] ?? '').toLowerCase();
-          final subtitle = (item['subtitle'] ?? '').toLowerCase();
-          return title.contains(lowercaseQuery) ||
-              subtitle.contains(lowercaseQuery);
-        }).toList();
+        localFilter
+            ? exercises
+                .where(
+                  (item) => item['title']!.toLowerCase().contains(
+                    searchQuery.toLowerCase(),
+                  ),
+                )
+                .toList()
+            : exercises;
 
     if (filteredList.isEmpty) {
       return const Center(
@@ -652,25 +556,11 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      (isAdded ||
-                              _addingExerciseIds.contains(
-                                int.tryParse(item['id'] ?? '') ?? 0,
-                              ))
-                          ? const Color(0xFFFFF4F4)
-                          : AppColors.primary,
-                  foregroundColor:
-                      (isAdded ||
-                              _addingExerciseIds.contains(
-                                int.tryParse(item['id'] ?? '') ?? 0,
-                              ))
-                          ? AppColors.primary
-                          : Colors.white,
+                      isAdded ? const Color(0xFFFFF4F4) : AppColors.primary,
+                  foregroundColor: isAdded ? AppColors.primary : Colors.white,
                   elevation: 0,
                   side:
-                      (isAdded ||
-                              _addingExerciseIds.contains(
-                                int.tryParse(item['id'] ?? '') ?? 0,
-                              ))
+                      isAdded
                           ? const BorderSide(color: Color(0xFFF0B5B7))
                           : null,
                   shape: RoundedRectangleBorder(
@@ -680,169 +570,32 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 onPressed:
-                    (isAdded ||
-                            _addingExerciseIds.contains(
-                              int.tryParse(item['id'] ?? '') ?? 0,
-                            ))
-                        ? null
-                        : () async {
-                          // Dismiss keyboard so it doesn't pop back up on Add tap
-                          FocusScope.of(context).unfocus();
+                    isAdded
+                        ? () {}
+                        : () {
                           final exerciseId =
                               int.tryParse(item['id'] ?? '') ?? 0;
-                          setSheetState(() {
-                            _addingExerciseIds.add(exerciseId);
-                          });
+                          _cubit.addExercise(
+                            id: exerciseId,
+                            title: item['title']!,
+                            subtitle: item['subtitle']!,
+                            videoUrl: item['video_url'],
+                          );
                           if (!widget.isPresetCreation) {
                             _startTimer();
                           }
+                          setSheetState(() {});
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Adding exercise...'),
                               duration: Duration(seconds: 1),
                             ),
                           );
-                          try {
-                            await _cubit.addExercise(
-                              id: exerciseId,
-                              title: item['title']!,
-                              subtitle: item['subtitle']!,
-                              videoUrl: item['video_url'],
-                            );
-                          } finally {
-                            if (mounted) {
-                              setSheetState(() {
-                                _addingExerciseIds.remove(exerciseId);
-                              });
-                            }
-                          }
                         },
-                child:
-                    _addingExerciseIds.contains(
-                          int.tryParse(item['id'] ?? '') ?? 0,
-                        )
-                        ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.primary,
-                            ),
-                          ),
-                        )
-                        : Text(isAdded ? 'Added' : 'Add'),
+                child: Text(isAdded ? 'Added' : 'Add'),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  InputDecoration _dropdownDecoration() {
-    return InputDecoration(
-      filled: false,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-    );
-  }
-
-  Widget _buildLabelWithAddNew(
-    String label,
-    bool hasSelected,
-    String? selectedName,
-  ) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Poppins',
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-            height: 1.0,
-            letterSpacing: -0.3,
-            color: AppColors.button,
-          ),
-        ),
-        if (hasSelected && selectedName != null)
-          Text(
-            selectedName,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w400,
-              fontSize: 12,
-              color: Colors.grey,
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showAddNewDialog({
-    required BuildContext context,
-    required String title,
-    required String hintText,
-    required void Function(String name) onSave,
-  }) {
-    final controller = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(
-            title,
-            style: const TextStyle(
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: const TextStyle(
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final name = controller.text.trim();
-                if (name.isNotEmpty) {
-                  Navigator.pop(ctx);
-                  onSave(name);
-                }
-              },
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );
@@ -856,10 +609,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     final nameController = TextEditingController();
     final youtubeLinkController = TextEditingController();
     int? selectedMuscleId;
-    List<int> selectedSecondaryMuscleIds = [];
     String? selectedTypeCode;
     int? selectedEquipmentId;
-    String selectedTrackBy = 'rep';
     final formKey = GlobalKey<FormState>();
 
     showModalBottomSheet(
@@ -881,9 +632,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
               builder: (BuildContext context, StateSetter setDialogState) {
                 return BlocBuilder<WorkoutCubit, WorkoutState>(
                   bloc: _cubit,
-                  builder: (context, blocState) {
-                    final state = _cubit.state;
-                    if (state.isLoadingLookups && state.muscleGroups.isEmpty) {
+                  builder: (context, state) {
+                    if (state.isLoadingLookups) {
                       return Container(
                         height: MediaQuery.of(sheetContext).size.height * 0.4,
                         padding: const EdgeInsets.symmetric(vertical: 24),
@@ -1006,21 +756,16 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               const SizedBox(height: 20),
 
                               // Muscle
-                              _buildLabelWithAddNew(
+                              const Text(
                                 'Muscle',
-                                selectedMuscleId != null,
-                                selectedMuscleId != null
-                                    ? state.muscleGroups
-                                        .firstWhere(
-                                          (m) => m.id == selectedMuscleId,
-                                          orElse:
-                                              () => MuscleGroupModel(
-                                                id: 0,
-                                                name: 'Custom',
-                                              ),
-                                        )
-                                        .name
-                                    : null,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 14,
+                                  height: 1.0,
+                                  letterSpacing: -0.3,
+                                  color: AppColors.button,
+                                ),
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<int>(
@@ -1031,7 +776,25 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   }
                                   return null;
                                 },
-                                decoration: _dropdownDecoration(),
+                                decoration: InputDecoration(
+                                  filled: false,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFDDDDDD),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFDDDDDD),
+                                    ),
+                                  ),
+                                ),
                                 hint: const Text(
                                   'Select the muscle',
                                   style: TextStyle(
@@ -1047,171 +810,31 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items: [
-                                  ...state.muscleGroups
-                                      .map(
-                                        (m) => DropdownMenuItem(
-                                          value: m.id,
-                                          child: Text(
-                                            m.name,
-                                            style: const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 15,
-                                              height: 1.0,
-                                              letterSpacing: -0.3,
-                                              color: AppColors.button,
+                                items:
+                                    state.muscleGroups
+                                        .map(
+                                          (m) => DropdownMenuItem(
+                                            value: m.id,
+                                            child: Text(
+                                              m.name,
+                                              style: const TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 15,
+                                                height: 1.0,
+                                                letterSpacing: -0.3,
+                                                color: AppColors.button,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  DropdownMenuItem(
-                                    value: -1,
-                                    child: Row(
-                                      children: const [
-                                        Icon(
-                                          Icons.add_circle_outline,
-                                          size: 18,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Add New Muscle',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 15,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                        )
+                                        .toList(),
                                 onChanged: (val) {
-                                  if (val == -1) {
-                                    _showAddNewDialog(
-                                      context: sheetContext,
-                                      title: 'Add New Muscle',
-                                      hintText: 'Enter muscle name',
-                                      onSave: (name) async {
-                                        final result = await WorkoutRepository()
-                                            .createMuscleGroup(name: name);
-                                        result.fold(
-                                          (error) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Failed to create: ${error.msg}',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          (newMuscle) {
-                                            _cubit.addMuscleGroup(newMuscle);
-                                            _cubit.loadLookups();
-                                            setDialogState(() {
-                                              selectedMuscleId = newMuscle.id;
-                                            });
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  '"${newMuscle.name}" added!',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                    return;
-                                  }
                                   setDialogState(() {
                                     selectedMuscleId = val;
                                   });
                                 },
                               ),
-                              const SizedBox(height: 20),
-
-                              // Secondary Muscle Groups
-                              const Text(
-                                'Secondary Muscle Groups (Optional)',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                  height: 1.0,
-                                  letterSpacing: -0.3,
-                                  color: AppColors.button,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              SecondaryMuscleDropdown(
-                                allMuscleGroups: state.muscleGroups,
-                                selectedPrimaryMuscleId: selectedMuscleId,
-                                selectedIds: selectedSecondaryMuscleIds,
-                                decoration: _dropdownDecoration(),
-                                onChanged: (newIds) {
-                                  setDialogState(() {
-                                    selectedSecondaryMuscleIds = List<int>.from(newIds);
-                                  });
-                                },
-                              ),
-                              if (selectedSecondaryMuscleIds.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 8,
-                                  runSpacing: 4,
-                                  children:
-                                      selectedSecondaryMuscleIds.map<Widget>((
-                                        id,
-                                      ) {
-                                        final m = state.muscleGroups.firstWhere(
-                                          (element) => element.id == id,
-                                          orElse:
-                                              () => MuscleGroupModel(
-                                                id: id,
-                                                name: 'Muscle $id',
-                                              ),
-                                        );
-                                        return InputChip(
-                                          label: Text(
-                                            m.name,
-                                            style: const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 13,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          backgroundColor: AppColors.primary,
-                                          deleteIcon: const Icon(
-                                            Icons.close,
-                                            size: 14,
-                                            color: Colors.white,
-                                          ),
-                                          onDeleted: () {
-                                            setDialogState(() {
-                                              selectedSecondaryMuscleIds.remove(
-                                                id,
-                                              );
-                                            });
-                                          },
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          side: BorderSide.none,
-                                        );
-                                      }).toList(),
-                                ),
-                              ],
                               const SizedBox(height: 20),
 
                               // Type
@@ -1235,7 +858,25 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   }
                                   return null;
                                 },
-                                decoration: _dropdownDecoration(),
+                                decoration: InputDecoration(
+                                  filled: false,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFDDDDDD),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFDDDDDD),
+                                    ),
+                                  ),
+                                ),
                                 hint: const Text(
                                   'Select the type of exercise',
                                   style: TextStyle(
@@ -1251,79 +892,26 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items: [
-                                  ...state.exerciseTypes
-                                      .map(
-                                        (t) => DropdownMenuItem(
-                                          value: t.id,
-                                          child: Text(
-                                            t.name,
-                                            style: const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 15,
-                                              height: 1.0,
-                                              letterSpacing: -0.3,
-                                              color: AppColors.button,
+                                items:
+                                    state.exerciseTypes
+                                        .map(
+                                          (t) => DropdownMenuItem(
+                                            value: t.id,
+                                            child: Text(
+                                              t.name,
+                                              style: const TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 15,
+                                                height: 1.0,
+                                                letterSpacing: -0.3,
+                                                color: AppColors.button,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  DropdownMenuItem(
-                                    value: '__add_new__',
-                                    child: Row(
-                                      children: const [
-                                        Icon(
-                                          Icons.add_circle_outline,
-                                          size: 18,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Add New Type',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 15,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                        )
+                                        .toList(),
                                 onChanged: (val) {
-                                  if (val == '__add_new__') {
-                                    _showAddNewDialog(
-                                      context: sheetContext,
-                                      title: 'Add New Type',
-                                      hintText: 'Enter exercise type name',
-                                      onSave: (name) {
-                                        final newType = ExerciseTypeModel(
-                                          id: name.toLowerCase().replaceAll(
-                                            ' ',
-                                            '_',
-                                          ),
-                                          name: name,
-                                        );
-                                        _cubit.addExerciseType(newType);
-                                        setDialogState(() {
-                                          selectedTypeCode = newType.id;
-                                        });
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          SnackBar(
-                                            content: Text(
-                                              '"$name" type added!',
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                    return;
-                                  }
                                   setDialogState(() {
                                     selectedTypeCode = val;
                                   });
@@ -1352,7 +940,25 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   }
                                   return null;
                                 },
-                                decoration: _dropdownDecoration(),
+                                decoration: InputDecoration(
+                                  filled: false,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFDDDDDD),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFDDDDDD),
+                                    ),
+                                  ),
+                                ),
                                 hint: const Text(
                                   'Select the equipment used',
                                   style: TextStyle(
@@ -1368,157 +974,29 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   Icons.keyboard_arrow_down,
                                   color: Color(0xFF9E9E9E),
                                 ),
-                                items: [
-                                  ...state.equipment
-                                      .map(
-                                        (e) => DropdownMenuItem(
-                                          value: e.id,
-                                          child: Text(
-                                            e.name,
-                                            style: const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 15,
-                                              height: 1.0,
-                                              letterSpacing: -0.3,
-                                              color: AppColors.button,
+                                items:
+                                    state.equipment
+                                        .map(
+                                          (e) => DropdownMenuItem(
+                                            value: e.id,
+                                            child: Text(
+                                              e.name,
+                                              style: const TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontWeight: FontWeight.w400,
+                                                fontSize: 15,
+                                                height: 1.0,
+                                                letterSpacing: -0.3,
+                                                color: AppColors.button,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  DropdownMenuItem(
-                                    value: -1,
-                                    child: Row(
-                                      children: const [
-                                        Icon(
-                                          Icons.add_circle_outline,
-                                          size: 18,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Add New Equipment',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 15,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                        )
+                                        .toList(),
                                 onChanged: (val) {
-                                  if (val == -1) {
-                                    _showAddNewDialog(
-                                      context: sheetContext,
-                                      title: 'Add New Equipment',
-                                      hintText: 'Enter equipment name',
-                                      onSave: (name) async {
-                                        final result = await WorkoutRepository()
-                                            .createEquipment(name: name);
-                                        result.fold(
-                                          (error) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Failed to create: ${error.msg}',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          (newEquip) {
-                                            _cubit.addEquipment(newEquip);
-                                            _cubit.loadLookups();
-                                            setDialogState(() {
-                                              selectedEquipmentId = newEquip.id;
-                                            });
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  '"${newEquip.name}" added!',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                    return;
-                                  }
                                   setDialogState(() {
                                     selectedEquipmentId = val;
                                   });
-                                },
-                              ),
-                              const SizedBox(height: 20),
-
-                              // Track by
-                              const Text(
-                                'Track by',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 14,
-                                  height: 1.0,
-                                  letterSpacing: -0.3,
-                                  color: AppColors.button,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              DropdownButtonFormField<String>(
-                                value: selectedTrackBy,
-                                decoration: _dropdownDecoration(),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'rep',
-                                    child: Text(
-                                      'Reps',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 15,
-                                        color: AppColors.button,
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'time',
-                                    child: Text(
-                                      'Time',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 15,
-                                        color: AppColors.button,
-                                      ),
-                                    ),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'distance',
-                                    child: Text(
-                                      'Distance',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 15,
-                                        color: AppColors.button,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setDialogState(() {
-                                      selectedTrackBy = val;
-                                    });
-                                  }
                                 },
                               ),
                               const SizedBox(height: 20),
@@ -1631,9 +1109,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                               muscleGroupId: selectedMuscleId!,
                                               equipmentId: selectedEquipmentId!,
                                               type: selectedTypeCode!,
-                                              trackBy: selectedTrackBy,
-                                              secondaryMuscleGroupIds:
-                                                  selectedSecondaryMuscleIds,
                                               videoUrl:
                                                   youtubeLinkController.text
                                                       .trim(),
@@ -1831,8 +1306,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
         if (_titleController.text != state.sessionTitle &&
             !_titleFocusNode.hasFocus) {
           if ((widget.isNewSession &&
-                  (state.sessionTitle == 'My Execise' ||
-                      state.sessionTitle == 'My Session') &&
+                  state.sessionTitle == 'My Execise' &&
                   _titleController.text.isEmpty) ||
               (widget.isPresetCreation &&
                   state.sessionTitle == 'New Preset' &&
@@ -1898,40 +1372,50 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             // Title
                             if (totalExercises > 0)
                               Expanded(
-                                child: TextFormField(
-                                  controller: _titleController,
-                                  focusNode: _titleFocusNode,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 18,
-                                    color: Color(0xFF212121),
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        widget.isPresetCreation
-                                            ? 'Enter preset name'
-                                            : 'Enter session name',
-                                    hintStyle: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 18,
-                                      color: Color(0xFFCCCCCC),
-                                    ),
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
-                                  ),
-                                  onChanged: (v) {
-                                    EasyDebounce.debounce(
-                                      'workout_title_debouncer',
-                                      const Duration(milliseconds: 600),
-                                      () {
-                                        _cubit.updateSessionTitle(v);
-                                      },
-                                    );
-                                  },
-                                ),
+                                child:
+                                    widget.isPresetCreation
+                                        ? TextFormField(
+                                          controller: _titleController,
+                                          focusNode: _titleFocusNode,
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 18,
+                                            color: Color(0xFF212121),
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText: 'Enter preset name',
+                                            hintStyle: const TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 18,
+                                              color: Color(0xFFCCCCCC),
+                                            ),
+                                            border: InputBorder.none,
+                                            isDense: true,
+                                            contentPadding: EdgeInsets.zero,
+                                          ),
+                                          onChanged: (v) {
+                                            EasyDebounce.debounce(
+                                              'workout_title_debouncer',
+                                              const Duration(milliseconds: 600),
+                                              () {
+                                                _cubit.updateSessionTitle(v);
+                                              },
+                                            );
+                                          },
+                                        )
+                                        : Text(
+                                          state.sessionTitle.isNotEmpty
+                                              ? state.sessionTitle
+                                              : 'My Session',
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 18,
+                                            color: Color(0xFF212121),
+                                          ),
+                                        ),
                               ),
                           ],
                         ),
@@ -2079,10 +1563,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       child: PrimaryPillButton(
                         text:
                             widget.isPresetCreation ? 'Save Preset' : 'Finish',
-                        onTap: () {
-                          if (_isFinishing) return;
-                          _showFinishDialog(context, state);
-                        },
+                        onTap: () => _showFinishDialog(context, state),
                       ),
                     ),
                   ],
@@ -2099,6 +1580,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     BuildContext context,
     WorkoutState state,
   ) async {
+    if (widget.isPresetCreation && state.exercises.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please add at least 1 exercise before saving this preset.'),
+          backgroundColor: Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     final dialogTitleController = TextEditingController(
       text:
           _titleController.text.trim().isNotEmpty
@@ -2106,406 +1598,205 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
               : (widget.isPresetCreation ? '' : state.sessionTitle),
     );
     final formKey = GlobalKey<FormState>();
-    bool isSubmitting = false;
-    String? errorMessage;
 
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return PopScope(
-              canPop: !isSubmitting,
-              child: AlertDialog(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                title: Text(
-                  widget.isPresetCreation ? 'Save Preset' : 'Finish Workout',
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
-                    color: Color(0xFF212121),
-                  ),
-                ),
-                content: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.isPresetCreation
-                            ? 'Enter a name for this preset:'
-                            : 'Enter a name for this workout session:',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          color: Color(0xFF666666),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: dialogTitleController,
-                        enabled: !isSubmitting,
-                        autofocus: true,
-                        onChanged: (val) {
-                          if (errorMessage != null) {
-                            setDialogState(() {
-                              errorMessage = null;
-                            });
-                          }
-                        },
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                          color: Color(0xFF212121),
-                        ),
-                        decoration: InputDecoration(
-                          hintText:
-                              widget.isPresetCreation
-                                  ? 'e.g., Leg Day'
-                                  : 'e.g., Chest Day',
-                          hintStyle: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 15,
-                            color: Color(0xFFCCCCCC),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFDDDDDD),
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: AppColors.primary),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Colors.red),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Colors.red),
-                          ),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'Name is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      if (errorMessage != null) ...[
-                        const SizedBox(height: 10),
-                        Text(
-                          errorMessage!,
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            color: Colors.red,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-                actions: [
-                  TextButton(
-                    onPressed:
-                        isSubmitting
-                            ? null
-                            : () => Navigator.pop(dialogContext),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    onPressed:
-                        isSubmitting
-                            ? null
-                            : () async {
-                              if (!formKey.currentState!.validate()) {
-                                return;
-                              }
-                              final enteredTitle =
-                                  dialogTitleController.text.trim();
-
-                              setDialogState(() {
-                                isSubmitting = true;
-                              });
-
-                              try {
-                                if (widget.isPresetCreation) {
-                                  // Format exercises for Preset API
-                                  final exercisesList =
-                                      <Map<String, dynamic>>[];
-                                  for (
-                                    var i = 0;
-                                    i < state.exercises.length;
-                                    i++
-                                  ) {
-                                    final ex = state.exercises[i];
-                                    final setsList = <Map<String, dynamic>>[];
-                                    final rawSets = ex['sets'] as List? ?? [];
-                                    for (var j = 0; j < rawSets.length; j++) {
-                                      final s =
-                                          rawSets[j] as Map<String, dynamic>;
-                                      setsList.add({
-                                        'set_number': s['setNum'] ?? (j + 1),
-                                        'reps':
-                                            double.tryParse(
-                                              s['reps']?.toString() ?? '',
-                                            )?.round() ??
-                                            15,
-                                        'weight':
-                                            double.tryParse(
-                                              s['kg']?.toString() ?? '',
-                                            ) ??
-                                            10.0,
-                                      });
-                                    }
-                                    exercisesList.add({
-                                      'workout_id':
-                                          int.tryParse(
-                                            ex['id']?.toString() ?? '',
-                                          ) ??
-                                          0,
-                                      'name': ex['title']?.toString() ?? '',
-                                      'muscle_group':
-                                          ex['subtitle']
-                                              ?.toString()
-                                              .split('/')
-                                              .first
-                                              .trim() ??
-                                          '',
-                                      'order_index': i,
-                                      'sets': setsList,
-                                    });
-                                  }
-
-                                  final cubit =
-                                      widget.presetCubit ??
-                                      context.read<PresetCubit>();
-                                  bool success = false;
-                                  if (widget.presetToEdit != null) {
-                                    success = await cubit.updatePreset(
-                                      presetId: widget.presetToEdit!.id,
-                                      title: enteredTitle,
-                                      exercises: exercisesList,
-                                    );
-                                  } else {
-                                    success = await cubit.createPreset(
-                                      title: enteredTitle,
-                                      exercises: exercisesList,
-                                    );
-                                  }
-
-                                  if (success && context.mounted) {
-                                    setState(() {
-                                      _isFinishing = true;
-                                    });
-                                    Navigator.pop(
-                                      dialogContext,
-                                    ); // close dialog
-                                    Navigator.pop(context); // close screen
-                                  } else if (!success && context.mounted) {
-                                    setDialogState(() {
-                                      isSubmitting = false;
-                                      errorMessage =
-                                          cubit.state.errorMessage ??
-                                          'Failed to save preset. Please try again.';
-                                    });
-                                  }
-                                } else {
-                                  setState(() {
-                                    _isFinishing = true;
-                                  });
-                                  final res = await _cubit.finishSession(
-                                    title: enteredTitle,
-                                  );
-                                  res.fold(
-                                    (error) {
-                                      if (context.mounted) {
-                                        setDialogState(() {
-                                          isSubmitting = false;
-                                          errorMessage = error.msg;
-                                        });
-                                        setState(() {
-                                          _isFinishing = false;
-                                        });
-                                      }
-                                    },
-                                    (success) {
-                                      if (context.mounted) {
-                                        Navigator.pop(
-                                          dialogContext,
-                                        ); // close dialog
-                                        final Map<String, dynamic> sessionMap =
-                                            success is Map<String, dynamic>
-                                                ? success
-                                                : <String, dynamic>{};
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute<bool>(
-                                            builder:
-                                                (context) =>
-                                                    WorkoutAchievementScreen(
-                                                      sessionData: sessionMap,
-                                                      fallbackTitle:
-                                                          enteredTitle,
-                                                    ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  setDialogState(() {
-                                    isSubmitting = false;
-                                  });
-                                  setState(() {
-                                    _isFinishing = false;
-                                  });
-                                }
-                              }
-                            },
-                    child:
-                        isSubmitting
-                            ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                            : Text(
-                              widget.isPresetCreation ? 'Save' : 'Finish',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showSwapDialog(int currentIndex, Map<String, dynamic> currentExercise) {
-    final allExercises = _cubit.state.exercises;
-    if (allExercises.length < 2) return;
-
-    if (allExercises.length == 2) {
-      final otherIndex = currentIndex == 0 ? 1 : 0;
-      _cubit.swapExercises(currentIndex, otherIndex);
-      return;
-    }
-
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (bottomSheetContext) {
-        return SafeArea(
-          child: Container(
-            padding: const EdgeInsets.only(bottom: 16),
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            widget.isPresetCreation ? 'Save Preset' : 'Finish Workout',
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              color: Color(0xFF212121),
+            ),
+          ),
+          content: Form(
+            key: formKey,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Text(
-                    'Swap "${currentExercise['title']}" with:',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: Color(0xFF212121),
-                    ),
+                Text(
+                  widget.isPresetCreation
+                      ? 'Enter a name for this preset:'
+                      : 'Enter a name for this workout session:',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    color: Color(0xFF666666),
                   ),
                 ),
-                const Divider(height: 1),
-                Flexible(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: allExercises.length,
-                    itemBuilder: (context, index) {
-                      if (index == currentIndex) return const SizedBox.shrink();
-                      final exercise = allExercises[index];
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 4,
-                        ),
-                        title: Text(
-                          '${index + 1}. ${exercise['title']}',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w500,
-                            fontSize: 14,
-                          ),
-                        ),
-                        subtitle: Text(
-                          exercise['subtitle'] as String? ?? '',
-                          style: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _cubit.swapExercises(currentIndex, index);
-                        },
-                      );
-                    },
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: dialogTitleController,
+                  autofocus: true,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                    color: Color(0xFF212121),
                   ),
+                  decoration: InputDecoration(
+                    hintText:
+                        widget.isPresetCreation
+                            ? 'e.g., Leg Day'
+                            : 'e.g., Chest Day',
+                    hintStyle: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 15,
+                      color: Color(0xFFCCCCCC),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFDDDDDD)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide(color: AppColors.primary),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Colors.red),
+                    ),
+                  ),
+                  validator: (val) {
+                    if (val == null || val.trim().isEmpty) {
+                      return 'Name is required';
+                    }
+                    return null;
+                  },
                 ),
               ],
             ),
           ),
+          actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  color: Color(0xFF888888),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
+              ),
+              onPressed: () async {
+                if (!formKey.currentState!.validate()) {
+                  return;
+                }
+                final enteredTitle = dialogTitleController.text.trim();
+
+                // Close dialog
+                Navigator.pop(dialogContext);
+
+                if (widget.isPresetCreation) {
+                  // Format exercises for Preset API
+                  final exercisesList = <Map<String, dynamic>>[];
+                  for (var i = 0; i < state.exercises.length; i++) {
+                    final ex = state.exercises[i];
+                    final setsList = <Map<String, dynamic>>[];
+                    final rawSets = ex['sets'] as List? ?? [];
+                    for (var j = 0; j < rawSets.length; j++) {
+                      final s = rawSets[j] as Map<String, dynamic>;
+                      setsList.add({
+                        'set_number': s['setNum'] ?? (j + 1),
+                        'reps': int.tryParse(s['reps']?.toString() ?? '') ?? 15,
+                        'weight':
+                            double.tryParse(s['kg']?.toString() ?? '') ?? 10.0,
+                      });
+                    }
+                    exercisesList.add({
+                      'workout_id':
+                          int.tryParse(ex['id']?.toString() ?? '') ?? 0,
+                      'name': ex['title']?.toString() ?? '',
+                      'muscle_group':
+                          ex['subtitle']?.toString().split('/').first.trim() ??
+                          '',
+                      'order_index': i,
+                      'sets': setsList,
+                    });
+                  }
+
+                  final cubit =
+                      widget.presetCubit ?? context.read<PresetCubit>();
+                  bool success = false;
+                  if (widget.presetToEdit != null) {
+                    success = await cubit.updatePreset(
+                      presetId: widget.presetToEdit!.id,
+                      title: enteredTitle,
+                      exercises: exercisesList,
+                    );
+                  } else {
+                    success = await cubit.createPreset(
+                      title: enteredTitle,
+                      exercises: exercisesList,
+                    );
+                  }
+
+                  if (success && context.mounted) {
+                    setState(() {
+                      _isFinishing = true;
+                    });
+                    Navigator.pop(context);
+                  } else if (!success && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(cubit.state.errorMessage ?? 'Failed to save preset. Please try again.'),
+                        backgroundColor: Colors.red.shade600,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                } else {
+                  setState(() {
+                    _isFinishing = true;
+                  });
+                  await _cubit.finishSession(title: enteredTitle);
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: Text(
+                widget.isPresetCreation ? 'Save' : 'Finish',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -2513,16 +1804,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
   Widget _buildExerciseCard(Map<String, dynamic> exercise, int exerciseIndex) {
     final sets = exercise['sets'] as List<Map<String, dynamic>>;
-    final subtitle = (exercise['subtitle']?.toString() ?? '').toLowerCase();
-    final trackBy = (exercise['track_by']?.toString() ?? 'rep').toLowerCase();
-    final isTimeBased =
-        trackBy == 'time' ||
-        subtitle.contains('cardio') ||
-        subtitle.contains('flexibility') ||
-        subtitle.contains('hiit') ||
-        sets.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
-    final isDistanceBased = trackBy == 'distance';
-    final repsHeader = isTimeBased ? 'Sec' : (isDistanceBased ? 'Km' : 'Rep');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -2550,90 +1831,20 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              '${exerciseIndex + 1}. ${exercise['title']}',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF212121),
-                                height: 1.0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          // Play button icon (custom miniature YouTube icon)
-                          GestureDetector(
-                            onTap: () async {
-                              final videoUrlStr =
-                                  exercise['video_url']?.toString() ?? '';
-                              if (videoUrlStr.isNotEmpty) {
-                                final uri = Uri.parse(videoUrlStr);
-                                if (await canLaunchUrl(uri)) {
-                                  await launchUrl(
-                                    uri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                } else {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text(
-                                          'Could not launch video URL.',
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                }
-                              } else {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'No video link available for this exercise.',
-                                      ),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFFF0F1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Container(
-                                  width: 12,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFD30C15),
-                                    borderRadius: BorderRadius.circular(2),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.play_arrow_rounded,
-                                      color: Colors.white,
-                                      size: 8,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text(
+                        '${exerciseIndex + 1}. ${exercise['title']}',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF212121),
+                          height: 1.0,
+                        ),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -2649,82 +1860,63 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_cubit.state.exercises.length > 1) ...[
-                      GestureDetector(
-                        onTap: () => _showSwapDialog(exerciseIndex, exercise),
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF1F3F5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Center(
-                            child: SvgPicture.asset(
-                              'assets/images/svg/icons/swap_icon.svg',
-                              width: 16,
-                              height: 16,
-                              colorFilter: const ColorFilter.mode(
-                                Color(0xFF666666),
-                                BlendMode.srcIn,
-                              ),
+                // Play button icon (custom miniature YouTube icon)
+                GestureDetector(
+                  onTap: () async {
+                    final videoUrlStr = exercise['video_url']?.toString() ?? '';
+                    if (videoUrlStr.isNotEmpty) {
+                      final uri = Uri.parse(videoUrlStr);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
+                      } else {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Could not launch video URL.'),
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'No video link available for this exercise.',
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    GestureDetector(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (dialogContext) {
-                            return AlertDialog(
-                              title: const Text('Delete Exercise'),
-                              content: Text(
-                                'Are you sure you want to delete ${exercise['title']} from this workout session?',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(dialogContext),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.pop(dialogContext);
-                                    _cubit.deleteExercise(exerciseIndex);
-                                  },
-                                  child: const Text(
-                                    'Delete',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
                         );
-                      },
+                      }
+                    }
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFF0F1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
                       child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFFFF0F1),
-                          shape: BoxShape.circle,
+                        width: 18,
+                        height: 13,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD30C15),
+                          borderRadius: BorderRadius.circular(3),
                         ),
                         child: const Center(
                           child: Icon(
-                            Icons.delete_outline_rounded,
-                            color: Color(0xFFD30C15),
-                            size: 20,
+                            Icons.play_arrow_rounded,
+                            color: Colors.white,
+                            size: 11,
                           ),
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -2768,55 +1960,26 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ),
                   ),
                 ),
-                Expanded(
+                const Expanded(
                   flex: 2,
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: () {
-                        final val = exercise['weight_type']?.toString();
-                        if (val == null) return 'kg';
-                        if (val.toLowerCase() == 'bw') return 'BW';
-                        if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
-                        return val;
-                      }(),
-                      isDense: true,
-                      isExpanded: true,
-                      alignment: Alignment.center,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF212121),
-                      ),
-                      icon: const Icon(Icons.arrow_drop_down, size: 16),
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'kg',
-                          child: Center(child: Text('kg')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'BW',
-                          child: Center(child: Text('BW')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'kg+BW',
-                          child: Center(child: Text('kg+BW')),
-                        ),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) {
-                          _cubit.updateWorkoutLogWeightType(exerciseIndex, val);
-                        }
-                      },
+                  child: Text(
+                    'kg',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF212121),
+                      height: 1.0,
                     ),
                   ),
                 ),
-                Expanded(
+                const Expanded(
                   flex: 2,
                   child: Text(
-                    repsHeader,
+                    'Rep',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
@@ -2827,32 +1990,25 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                 ),
                 Expanded(
                   flex: 2,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (!widget.isPresetCreation) ...[
-                        Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(
-                              color: const Color(0xFFCCCCCC),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.check,
-                            size: 14,
-                            color: Color(0xFF212121),
-                          ),
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: const Color(0xFFCCCCCC),
+                          width: 1.5,
                         ),
-                        const SizedBox(width: 28),
-                      ] else ...[
-                        const SizedBox(width: 20),
-                      ],
-                    ],
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        size: 14,
+                        color: Color(0xFF212121),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -2864,11 +2020,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
           // Sets list rows
           ...List.generate(sets.length, (setIndex) {
             final set = sets[setIndex];
-            final focusKey = '${exerciseIndex}_${setIndex}_kg';
-            final focusNode = _setKgFocusNodes.putIfAbsent(
-              focusKey,
-              () => FocusNode(),
-            );
             return Column(
               children: [
                 Padding(
@@ -2911,107 +2062,40 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         flex: 2,
                         child: Align(
                           alignment: Alignment.center,
-                          child:
-                              (exercise['weight_type']
-                                          ?.toString()
-                                          .toUpperCase() ==
-                                      'BW')
-                                  ? Container(
-                                    width: 60,
-                                    height: 34,
-                                    alignment: Alignment.center,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEEEEEE),
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: const Color(0xFFE0E0E0),
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      'BW',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF666666),
-                                      ),
-                                    ),
-                                  )
-                                  : SizedBox(
-                                    width: 60,
-                                    child: TextFormField(
-                                      key: ValueKey(
-                                        '${exerciseIndex}_${setIndex}_kg',
-                                      ),
-                                      initialValue: set['kg'] as String?,
-                                      focusNode: focusNode,
-                                      autofocus: false,
-                                      keyboardType:
-                                          const TextInputType.numberWithOptions(
-                                            decimal: true,
-                                          ),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w400,
-                                        color: Color(0xFF212121),
-                                        height: 1.0,
-                                      ),
-                                      decoration: InputDecoration(
-                                        isDense: true,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              vertical: 8,
-                                              horizontal: 4,
-                                            ),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: Color(0xFFE0E0E0),
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: Color(0xFFE0E0E0),
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                          borderSide: const BorderSide(
-                                            color: AppColors.primary,
-                                            width: 1.0,
-                                          ),
-                                        ),
-                                        filled: true,
-                                        fillColor: const Color(0xFFFAFAFA),
-                                        hintText: '-',
-                                        hintStyle: const TextStyle(
-                                          color: Color(0xFFCCCCCC),
-                                        ),
-                                      ),
-                                      onChanged: (val) {
-                                        _cubit.updateSetKg(
-                                          exerciseIndex,
-                                          setIndex,
-                                          val,
-                                        );
-                                        if (val.length == 6) {
-                                          FocusScope.of(context).nextFocus();
-                                        }
-                                      },
-                                    ),
+                          child: SizedBox(
+                            width: 60,
+                            child: TextFormField(
+                              key: ValueKey('${exerciseIndex}_${setIndex}_kg'),
+                              initialValue: set['kg'] as String?,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
                                   ),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: Color(0xFF212121),
+                                height: 1.0,
+                              ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: 4,
+                                ),
+                                border: InputBorder.none,
+                                filled: false,
+                              ),
+                              onChanged: (val) {
+                                _cubit.updateSetKg(
+                                  exerciseIndex,
+                                  setIndex,
+                                  val,
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ),
                       // Rep Input Box
@@ -3035,39 +2119,13 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 color: Color(0xFF212121),
                                 height: 1.0,
                               ),
-                              decoration: InputDecoration(
+                              decoration: const InputDecoration(
                                 isDense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 8,
-                                  horizontal: 4,
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: 4,
                                 ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE0E0E0),
-                                    width: 1.0,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFE0E0E0),
-                                    width: 1.0,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: const BorderSide(
-                                    color: AppColors.primary,
-                                    width: 1.0,
-                                  ),
-                                ),
-                                filled: true,
-                                fillColor: const Color(0xFFFAFAFA),
-                                hintText: '-',
-                                hintStyle: const TextStyle(
-                                  color: Color(0xFFCCCCCC),
-                                ),
+                                border: InputBorder.none,
+                                filled: false,
                               ),
                               onChanged: (val) {
                                 _cubit.updateSetReps(
@@ -3083,121 +2141,39 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       // Check checkbox button
                       Expanded(
                         flex: 2,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (!widget.isPresetCreation) ...[
-                              GestureDetector(
-                                onTap: () async {
-                                  final setLogId = set['id'] as int?;
-                                  if (setLogId != null) {
-                                    if (_completingSetIds.contains(setLogId))
-                                      return;
-                                    setState(() {
-                                      _completingSetIds.add(setLogId);
-                                    });
-                                    await _cubit.toggleSetChecked(
-                                      exerciseIndex,
-                                      setIndex,
-                                      onError: (errorMsg) {
-                                        if (context.mounted) {
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            SnackBar(
-                                              content: Text(errorMsg),
-                                              backgroundColor: Colors.red,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    );
-                                    if (mounted) {
-                                      setState(() {
-                                        _completingSetIds.remove(setLogId);
-                                      });
-                                    }
-                                  }
-                                },
-                                child: Container(
-                                  width: 22,
-                                  height: 22,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        (set['checked'] as bool? ?? false)
-                                            ? AppColors.primary
-                                            : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color:
-                                          (set['checked'] as bool? ?? false)
-                                              ? AppColors.primary
-                                              : const Color(0xFFCCCCCC),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child:
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: () {
+                              _cubit.toggleSetChecked(exerciseIndex, setIndex);
+                            },
+                            child: Container(
+                              width: 22,
+                              height: 22,
+                              decoration: BoxDecoration(
+                                color:
+                                    (set['checked'] as bool? ?? false)
+                                        ? AppColors.primary
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(
+                                  color:
                                       (set['checked'] as bool? ?? false)
-                                          ? const Icon(
-                                            Icons.check,
-                                            size: 14,
-                                            color: Colors.white,
-                                          )
-                                          : null,
+                                          ? AppColors.primary
+                                          : const Color(0xFFCCCCCC),
+                                  width: 1.5,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                            ],
-                            if (setIndex > 0)
-                              GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (dialogContext) {
-                                      return AlertDialog(
-                                        title: const Text('Delete Set'),
-                                        content: Text(
-                                          'Are you sure you want to delete Set ${set['setNum']}?',
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            onPressed:
-                                                () => Navigator.pop(
-                                                  dialogContext,
-                                                ),
-                                            child: const Text('Cancel'),
-                                          ),
-                                          TextButton(
-                                            onPressed: () {
-                                              Navigator.pop(dialogContext);
-                                              _cubit.deleteSet(
-                                                exerciseIndex,
-                                                setIndex,
-                                              );
-                                            },
-                                            child: const Text(
-                                              'Delete',
-                                              style: TextStyle(
-                                                color: Colors.red,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  );
-                                },
-                                child: const Icon(
-                                  Icons.remove_circle_outline_rounded,
-                                  color: Color(0xFFD30C15),
-                                  size: 20,
-                                ),
-                              )
-                            else if (!widget.isPresetCreation)
-                              const SizedBox(
-                                width: 20,
-                              ), // Placeholder to keep checkbox aligned!
-                          ],
+                              child:
+                                  (set['checked'] as bool? ?? false)
+                                      ? const Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: Colors.white,
+                                      )
+                                      : null,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -3216,7 +2192,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
             child: _buildOutlineRedButton(
               text: '+ Add a Set',
               onTap: () => _addSet(exerciseIndex),
-              isLoading: _addingSetExerciseIndices.contains(exerciseIndex),
             ),
           ),
         ],
@@ -3227,10 +2202,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   Widget _buildOutlineRedButton({
     required String text,
     required VoidCallback onTap,
-    bool isLoading = false,
   }) {
     return GestureDetector(
-      onTap: isLoading ? null : onTap,
+      onTap: onTap,
       child: Container(
         width: double.infinity,
         height: 34,
@@ -3247,386 +2221,13 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
           ],
         ),
         child: Center(
-          child:
-              isLoading
-                  ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                    ),
-                  )
-                  : Text(
-                    text,
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                    ),
-                  ),
-        ),
-      ),
-    );
-  }
-}
-
-class SecondaryMuscleDropdown extends StatefulWidget {
-  final List<MuscleGroupModel> allMuscleGroups;
-  final int? selectedPrimaryMuscleId;
-  final List<int> selectedIds;
-  final ValueChanged<List<int>> onChanged;
-  final InputDecoration decoration;
-
-  const SecondaryMuscleDropdown({
-    super.key,
-    required this.allMuscleGroups,
-    required this.selectedPrimaryMuscleId,
-    required this.selectedIds,
-    required this.onChanged,
-    required this.decoration,
-  });
-
-  @override
-  State<SecondaryMuscleDropdown> createState() => _SecondaryMuscleDropdownState();
-}
-
-class _SecondaryMuscleDropdownState extends State<SecondaryMuscleDropdown> {
-  final LayerLink _layerLink = LayerLink();
-  OverlayEntry? _overlayEntry;
-  bool _isOpen = false;
-  final GlobalKey<_DropdownOverlayContentState> _overlayKey = GlobalKey<_DropdownOverlayContentState>();
-
-  void _toggleDropdown() {
-    if (_isOpen) {
-      _overlayKey.currentState?._handleClose();
-    } else {
-      _openDropdown();
-    }
-  }
-
-  void _openDropdown() {
-    if (_isOpen) return;
-
-    final overlay = Overlay.of(context);
-    RenderBox renderBox = context.findRenderObject() as RenderBox;
-    var size = renderBox.size;
-
-    _overlayEntry = OverlayEntry(
-      builder: (context) {
-        return Stack(
-          children: [
-            GestureDetector(
-              behavior: HitTestBehavior.translucent,
-              onTap: () {
-                _overlayKey.currentState?._handleClose();
-              },
-            ),
-            CompositedTransformFollower(
-              link: _layerLink,
-              showWhenUnlinked: false,
-              offset: Offset(0, size.height + 4),
-              child: Material(
-                color: Colors.transparent,
-                child: _DropdownOverlayContent(
-                  key: _overlayKey,
-                  allMuscleGroups: widget.allMuscleGroups,
-                  selectedPrimaryMuscleId: widget.selectedPrimaryMuscleId,
-                  initialSelectedIds: widget.selectedIds,
-                  width: size.width,
-                  onDone: (newIds) {
-                    widget.onChanged(newIds);
-                  },
-                  onClose: () {
-                    _overlayEntry?.remove();
-                    _overlayEntry = null;
-                    setState(() {
-                      _isOpen = false;
-                    });
-                  },
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-
-    overlay.insert(_overlayEntry!);
-    setState(() {
-      _isOpen = true;
-    });
-  }
-
-  @override
-  void dispose() {
-    if (_isOpen) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
-    }
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return CompositedTransformTarget(
-      link: _layerLink,
-      child: GestureDetector(
-        onTap: _toggleDropdown,
-        child: InputDecorator(
-          decoration: widget.decoration,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Expanded(
-                child: Text(
-                  'Select secondary muscle groups',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w400,
-                    fontSize: 15,
-                    height: 1.0,
-                    letterSpacing: -0.3,
-                    color: Color(0xFF888888),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Icon(
-                _isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                color: const Color(0xFF9E9E9E),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DropdownOverlayContent extends StatefulWidget {
-  final List<MuscleGroupModel> allMuscleGroups;
-  final int? selectedPrimaryMuscleId;
-  final List<int> initialSelectedIds;
-  final ValueChanged<List<int>> onDone;
-  final VoidCallback onClose;
-  final double width;
-
-  const _DropdownOverlayContent({
-    super.key,
-    required this.allMuscleGroups,
-    required this.selectedPrimaryMuscleId,
-    required this.initialSelectedIds,
-    required this.onDone,
-    required this.onClose,
-    required this.width,
-  });
-
-  @override
-  State<_DropdownOverlayContent> createState() => _DropdownOverlayContentState();
-}
-
-class _DropdownOverlayContentState extends State<_DropdownOverlayContent> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _expandAnimation;
-  late Animation<double> _fadeAnimation;
-  
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-  String _searchQuery = '';
-  late List<int> _tempSelectedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _tempSelectedIds = List<int>.from(widget.initialSelectedIds);
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-    _expandAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    );
-    _animationController.forward();
-    
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.requestFocus();
-    });
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _handleDone() {
-    widget.onDone(_tempSelectedIds);
-    _handleClose();
-  }
-
-  void _handleClose() {
-    if (_animationController.isAnimating && _animationController.status == AnimationStatus.reverse) {
-      return;
-    }
-    _animationController.reverse().then((_) {
-      widget.onClose();
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final filteredMuscles = widget.allMuscleGroups
-        .where((m) =>
-            m.id != widget.selectedPrimaryMuscleId &&
-            m.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
-
-    return SizeTransition(
-      sizeFactor: _expandAnimation,
-      axisAlignment: -1.0,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: GestureDetector(
-          onTap: () {}, // Absorb taps
-          child: Container(
-            width: widget.width,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Search field
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: TextField(
-                    controller: _searchController,
-                    focusNode: _searchFocusNode,
-                    onChanged: (val) {
-                      setState(() {
-                        _searchQuery = val;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      isDense: true,
-                      hintText: 'Search muscle groups',
-                      hintStyle: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 14,
-                        color: Color(0xFF888888),
-                      ),
-                      prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF888888)),
-                      filled: true,
-                      fillColor: const Color(0xFFF5F5F5),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                // Muscle groups list
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: filteredMuscles.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Text(
-                            'No muscle groups found',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Poppins',
-                              fontSize: 13,
-                              color: Color(0xFF888888),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          padding: EdgeInsets.zero,
-                          itemCount: filteredMuscles.length,
-                          itemBuilder: (context, index) {
-                            final m = filteredMuscles[index];
-                            final isSelected = _tempSelectedIds.contains(m.id);
-                            return ListTile(
-                              dense: true,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              title: Text(
-                                m.name,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Color(0xFF212121),
-                                ),
-                              ),
-                              trailing: isSelected
-                                  ? const Icon(
-                                      Icons.check,
-                                      color: AppColors.primary,
-                                      size: 18,
-                                    )
-                                  : null,
-                              onTap: () {
-                                setState(() {
-                                  if (isSelected) {
-                                    _tempSelectedIds.remove(m.id);
-                                  } else {
-                                    _tempSelectedIds.add(m.id);
-                                  }
-                                });
-                              },
-                            );
-                          },
-                        ),
-                ),
-                const Divider(height: 1, color: Color(0xFFEEEEEE)),
-                // Done button
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: ElevatedButton(
-                    onPressed: _handleDone,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      elevation: 0,
-                    ),
-                    child: const Text(
-                      'Done',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+          child: Text(
+            text,
+            style: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
             ),
           ),
         ),

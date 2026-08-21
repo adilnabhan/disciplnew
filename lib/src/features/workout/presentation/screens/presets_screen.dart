@@ -372,6 +372,45 @@ class _PresetsScreenState extends State<PresetsScreen> {
             size: const Size(double.infinity, 35),
             raduis: 12,
             ontap: () async {
+              if (preset.exercises.isEmpty) {
+                final addNow = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('Empty Preset'),
+                    content: Text('"${preset.title}" has no exercises yet. Would you like to edit it and add exercises?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () => Navigator.pop(ctx, true),
+                        child: const Text('Add Exercises'),
+                      ),
+                    ],
+                  ),
+                );
+                if (addNow == true && context.mounted) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (context) => OwnWorkoutScreen(
+                        isPresetCreation: true,
+                        presetToEdit: preset,
+                        presetCubit: _presetCubit,
+                      ),
+                    ),
+                  );
+                }
+                return;
+              }
+
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute<void>(
