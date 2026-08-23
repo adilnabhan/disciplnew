@@ -1,3 +1,4 @@
+import 'package:customer_mobile_app/src/features/marathon/presentation/screens/marathon_ticket_scanner_screen.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -967,13 +968,25 @@ class _HomeScreenState extends State<HomeScreen> {
     final items = [
       {
         'title': 'Marathon 2026',
-        'sub': '18 Oct • ₹500 Entry',
+        'sub': '18 Oct • ₹50 Entry',
         'icon': Icons.directions_run_rounded,
         'color': const Color(0xFFFF5722),
         'onTap': () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const MarathonRegistrationScreen()),
+          );
+        },
+      },
+      {
+        'title': 'Venue Scanner',
+        'sub': 'Verify Ticket QR',
+        'icon': Icons.qr_code_scanner_rounded,
+        'color': const Color(0xFF00E676),
+        'onTap': () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const MarathonTicketScannerScreen()),
           );
         },
       },
