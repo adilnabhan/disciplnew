@@ -1380,7 +1380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
-                    '₹500 / PERSON',
+                    '₹50 / PERSON',
                     style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900),
                   ),
                 ),
