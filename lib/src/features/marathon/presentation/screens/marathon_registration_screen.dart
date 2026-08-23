@@ -256,8 +256,10 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
           final qrId = qrPayload['qr_id'] ?? 'qr_${_pendingRegistrationId}';
           final regNum = data['registration_number'] ?? 'MR-2026-00001';
 
+          final qrImageUrl = qrPayload['qr_image_url'];
           _showRazorpayQrModal(
             qrString: qrString,
+            qrImageUrl: qrImageUrl,
             registrationId: _pendingRegistrationId!,
             registrationNumber: regNum,
             amount: payable,
@@ -276,6 +278,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
           // Also show status checking / UTR confirmation modal
           _showRazorpayQrModal(
             qrString: upiUriStr,
+            qrImageUrl: null,
             registrationId: _pendingRegistrationId!,
             registrationNumber: data['registration_number'] ?? 'MR-2026-00001',
             amount: payable,
@@ -391,6 +394,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
   // --------------------------------------------------------------------------
   void _showRazorpayQrModal({
     required String qrString,
+    String? qrImageUrl,
     required int registrationId,
     required String registrationNumber,
     required double amount,
@@ -403,6 +407,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
       builder: (modalCtx) {
         return _RazorpayQrSheet(
           qrString: qrString,
+          qrImageUrl: qrImageUrl,
           registrationId: registrationId,
           registrationNumber: registrationNumber,
           amount: amount,
@@ -1411,6 +1416,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
 // ----------------------------------------------------------------------------
 class _RazorpayQrSheet extends StatefulWidget {
   final String qrString;
+  final String? qrImageUrl;
   final int registrationId;
   final String registrationNumber;
   final double amount;
@@ -1419,6 +1425,7 @@ class _RazorpayQrSheet extends StatefulWidget {
 
   const _RazorpayQrSheet({
     required this.qrString,
+    this.qrImageUrl,
     required this.registrationId,
     required this.registrationNumber,
     required this.amount,
@@ -1574,9 +1581,9 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
           ),
           const SizedBox(height: 20),
 
-          // QR Code Display Card
+          // QR Code Display Card (Official Razorpay Merchant QR Card or High-Res QrImageView)
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
@@ -1590,8 +1597,8 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
             ),
             child: isExpired
                 ? SizedBox(
-                    width: 200,
-                    height: 200,
+                    width: 220,
+                    height: 220,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -1609,13 +1616,40 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
                       ],
                     ),
                   )
-                : QrImageView(
-                    data: widget.qrString,
-                    version: QrVersions.auto,
-                    size: 200.0,
-                    backgroundColor: Colors.white,
-                    padding: const EdgeInsets.all(8),
-                  ),
+                : (widget.qrImageUrl != null && widget.qrImageUrl!.isNotEmpty)
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.network(
+                          widget.qrImageUrl!,
+                          width: 220,
+                          height: 300,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (context, child, progress) {
+                            if (progress == null) return child;
+                            return const SizedBox(
+                              width: 220,
+                              height: 220,
+                              child: Center(
+                                child: CircularProgressIndicator(color: CyberWorkoutTheme.goldPrimary),
+                              ),
+                            );
+                          },
+                          errorBuilder: (_, __, ___) => QrImageView(
+                            data: widget.qrString,
+                            version: QrVersions.auto,
+                            size: 200.0,
+                            backgroundColor: Colors.white,
+                            padding: const EdgeInsets.all(8),
+                          ),
+                        ),
+                      )
+                    : QrImageView(
+                        data: widget.qrString,
+                        version: QrVersions.auto,
+                        size: 200.0,
+                        backgroundColor: Colors.white,
+                        padding: const EdgeInsets.all(8),
+                      ),
           ),
           const SizedBox(height: 16),
 
