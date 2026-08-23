@@ -197,13 +197,12 @@ class Question extends StatelessWidget {
                  activeColor: activeColor ?? AppColors.primary,
                  value: isChecked,
                  onChanged: (bool? val) {
-                   final newSelected = List<String>.from(selectedValues);
                    if (val == true) {
-                     newSelected.add(key.toString());
+                     selectedValues.add(key.toString());
                    } else {
-                     newSelected.remove(key.toString());
+                     selectedValues.remove(key.toString());
                    }
-                   onChanged(newSelected);
+                   onChanged(List<String>.from(selectedValues));
                  },
                  visualDensity: const VisualDensity(horizontal: -4),
                ),

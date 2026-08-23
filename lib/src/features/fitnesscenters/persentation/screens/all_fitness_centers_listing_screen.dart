@@ -97,15 +97,7 @@ class _AllFitnessCentersListingScreenState
             preferredSize: const Size.fromHeight(66),
             child: Padding(
               padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16),
-              child: BlocBuilder<ListFitnessCentersCubit, ListFitnessCentersState>(
-                builder: (context, state) {
-                  final hasError = state.categories.fold(() => false, (either) => either.isLeft()) ||
-                      state.listFitnessCenters.data.fold(() => false, (either) => either.isLeft());
-                  final isInitialLoading = !hasError &&
-                      (state.categories.isNone() || state.listFitnessCenters.data.isNone());
-                  return _searchBar(isLoading: isInitialLoading);
-                },
-              ),
+              child: _searchBar(),
             ),
           ),
         ),
@@ -119,218 +111,62 @@ class _AllFitnessCentersListingScreenState
             FocusManager.instance.primaryFocus?.unfocus();
           },
           builder: (context, state) {
-            final hasError = state.categories.fold(
-                  () => false,
-                  (either) => either.isLeft(),
-                ) ||
-                state.listFitnessCenters.data.fold(
-                  () => false,
-                  (either) => either.isLeft(),
-                );
-
-            final isInitialLoading = !hasError &&
-                (state.categories.isNone() || state.listFitnessCenters.data.isNone());
-
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 350),
-              child: isInitialLoading
-                  ? _buildExploreShimmer(key: const ValueKey('explore_all_shimmer'))
-                  : hasError
-                      ? _buildErrorUi(state)
-                      : _buildLoadedContent(state),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadedContent(ListFitnessCentersState state) {
-    return state.categories.fold(
-      () => const SizedBox.shrink(),
-      (eitherCats) => eitherCats.fold(
-        (error) => const SizedBox.shrink(),
-        (categories) => state.listFitnessCenters.data.fold(
-          () => const SizedBox.shrink(),
-          (eitherGyms) => eitherGyms.fold(
-            (error) => const SizedBox.shrink(),
-            (fitnessCenters) {
-              return Column(
-                key: const ValueKey('explore_all_loaded'),
-                children: [
-                  const SizedBox(height: 16),
-                  _categoriesBuild(categories, state),
-                  const SizedBox(height: 16),
-                  Expanded(
-                    child: ColoredBox(
-                      color: const Color(0xffF7F7F7),
-                      child: _fitnessCentersListViewBuild(fitnessCenters),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorUi(ListFitnessCentersState state) {
-    return Center(
-      key: const ValueKey('explore_all_error'),
-      child: state.categories.fold(
-        () => const SizedBox.shrink(),
-        (eitherCats) => eitherCats.fold(
-          (error) => error.maybeWhen(
-            network: (e) => ErrorUi.network(onTap: _fetchCategories),
-            notFound: (e) => ErrorUi.notFound(onTap: _fetchCategories),
-            orElse: () => ErrorUi.server(onTap: _fetchCategories),
-          ),
-          (_) => state.listFitnessCenters.data.fold(
-            () => const SizedBox.shrink(),
-            (eitherGyms) => eitherGyms.fold(
-              (error) => error.maybeWhen(
-                network: (e) => ErrorUi.network(onTap: _fetchListFitnessCenters),
-                notFound: (e) => ErrorUi.notFound(onTap: _fetchListFitnessCenters),
-                orElse: () => ErrorUi.server(onTap: _fetchListFitnessCenters),
-              ),
-              (_) => const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildExploreShimmer({Key? key}) {
-    return SingleChildScrollView(
-      key: key,
-      physics: const NeverScrollableScrollPhysics(),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            // Category chips placeholder
-            SizedBox(
-              height: 32,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 5,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, __) => const KShimmer(
-                  width: 70,
-                  height: 32,
-                  radius: 16,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 5-6 gym card placeholders
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: 6,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (context, index) {
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(5),
-                        blurRadius: 12,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            return state.categories.fold(
+              () => const Center(child: CircularProgressIndicator()),
+              (either) => either.fold(
+                (error) {
+                  return error
+                      .maybeWhen(
+                        network:
+                            (e) => ErrorUi.network(onTap: _fetchCategories),
+                        notFound:
+                            (e) => ErrorUi.notFound(onTap: _fetchCategories),
+                        orElse: () => ErrorUi.server(onTap: _fetchCategories),
+                      )
+                      .center;
+                },
+                (categories) {
+                  return Column(
                     children: [
-                      // Image placeholder
-                      const KShimmer(
-                        width: 126,
-                        height: 126,
-                        radius: 16,
-                      ),
-                      const SizedBox(width: 16),
-                      // Content Column
+                      const SizedBox(height: 16),
+                      // Categories as horizontal tile list
+                      _categoriesBuild(categories, state),
+                      const SizedBox(height: 16),
+                      // Fitness centers as vertical tile list
                       Expanded(
-                        child: SizedBox(
-                          height: 126,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Gym name placeholder
-                                  const KShimmer(
-                                    width: 140,
-                                    height: 16,
-                                    radius: 4,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Category chips placeholder
-                                  Row(
-                                    children: [
-                                      const KShimmer(
-                                        width: 60,
-                                        height: 22,
-                                        radius: 8,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      const KShimmer(
-                                        width: 60,
-                                        height: 22,
-                                        radius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  // Location placeholder
-                                  Row(
-                                    children: const [
-                                      KShimmer(
-                                        width: 16,
-                                        height: 16,
-                                        radius: 8,
-                                      ),
-                                      SizedBox(width: 6),
-                                      Expanded(
-                                        child: KShimmer(
-                                          height: 14,
-                                          radius: 4,
+                        child: ColoredBox(
+                          color: const Color(0xffF7F7F7),
+                          child: state.listFitnessCenters.data.fold(
+                            () => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                            (either) => either.fold((error) {
+                              return error
+                                  .maybeWhen(
+                                    network:
+                                        (e) => ErrorUi.network(
+                                          onTap: _fetchListFitnessCenters,
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              // Enquire button placeholder
-                              const KShimmer(
-                                width: 90,
-                                height: 32,
-                                radius: 10,
-                              ),
-                            ],
+                                    notFound:
+                                        (e) => ErrorUi.notFound(
+                                          onTap: _fetchListFitnessCenters,
+                                        ),
+                                    orElse:
+                                        () => ErrorUi.server(
+                                          onTap: _fetchListFitnessCenters,
+                                        ),
+                                  )
+                                  .center;
+                            }, _fitnessCentersListViewBuild),
                           ),
                         ),
                       ),
                     ],
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 96),
-          ],
+                  );
+                },
+              ),
+            );
+          },
         ),
       ),
     );
@@ -422,37 +258,7 @@ class _AllFitnessCentersListingScreenState
   );
 }
 
-  Widget _searchBar({bool isLoading = false}) {
-    if (isLoading) {
-      return Container(
-        height: 50,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: const Color(0xFFE5E5EA),
-            width: 1,
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            const KShimmer(
-              width: 22,
-              height: 22,
-              radius: 11,
-            ),
-            const SizedBox(width: 12),
-            const KShimmer(
-              width: 180,
-              height: 16,
-              radius: 4,
-            ),
-          ],
-        ),
-      );
-    }
+  Widget _searchBar() {
     return Container(
       height: 50,
       width: double.infinity,

@@ -7,9 +7,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit() : super(const ProfileState());
 
   Future<void> fetchCustomerDetails() async {
-    if (state.customerDetails.isNone()) {
-      emit(state.copyWith(customerDetails: none()));
-    }
+    emit(state.copyWith(customerDetails: none()));
     final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
     if (id == null) {
       emit(
@@ -146,7 +144,6 @@ class ProfileCubit extends Cubit<ProfileState> {
     required String bloodGroup,
     required String height,
     required String weight,
-    Map<String, dynamic>? extraBody,
   }) async {
     if (state.updateProfileDetails?.isNone() ?? false) {
       return;
@@ -161,7 +158,7 @@ class ProfileCubit extends Cubit<ProfileState> {
       );
       return;
     }
-    final body = extraBody ?? <String, dynamic>{
+    final body = <String, dynamic>{
       'blood_group': bloodGroup,
       'height': height,
       'weight': weight,
@@ -180,9 +177,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   }
 
   Future<void> fetchConstChoices() async {
-    if (state.constChoice?.isNone() ?? true) {
-      emit(state.copyWith(constChoice: none()));
-    }
+    emit(state.copyWith(constChoice: none()));
     final response = await AuthRepository().fetchConstChoices();
     emit(state.copyWith(constChoice: some(response)));
     print(state.constChoice);

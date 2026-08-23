@@ -6,17 +6,12 @@ import 'package:customer_mobile_app/src/features/workout/presentation/screens/pr
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_execution_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/preset_model.dart';
-import 'package:customer_mobile_app/core/widgets/image_network.dart';
 
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_preview_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
-
-  static DateTime? selectedDateOverride;
-  static int? autoOpenSessionId;
 
   @override
   State<WorkoutLogScreen> createState() => _WorkoutLogScreenState();
@@ -28,12 +23,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   late final ScrollController _scrollController;
   late final List<DateTime> _scrollableDays;
   bool _showWorkoutCard = false;
-  Map<String, dynamic>? _activeSessionData;
   bool _isLoadingDateLog = true;
   List<Map<String, dynamic>> _selectedDateWorkouts = [];
   List<PresetModel> _myPlans = [];
   ApiException? _activeError;
-  CustomerDetailsModel? _customerDetails;
 
   Future<void> _retryLoading() async {
     await Future.wait([
@@ -45,23 +38,22 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   Future<void> _loadMyPlans() async {
     final response = await WorkoutRepository().getPresets();
-    response.fold(
-      (error) {
-        debugPrint('Error loading my plans: $error');
-        if (mounted) {
-          setState(() {
-            _activeError = error;
-          });
-        }
-      },
-      (list) {
-        if (mounted) {
-          setState(() {
-            _myPlans = list;
-          });
-        }
-      },
-    );
+    response.fold((error) {
+      debugPrint('Error loading my plans: $error');
+      if (mounted) {
+        setState(() {
+          _activeError = error;
+        });
+      }
+    }, (
+      list,
+    ) {
+      if (mounted) {
+        setState(() {
+          _myPlans = list;
+        });
+      }
+    });
   }
 
   @override
@@ -69,14 +61,14 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     super.initState();
     _scrollController = ScrollController();
 
-    // Generate 180 days before today, today itself, and 2 upcoming days (total 183 days)
+    // Generate 90 days before today, today itself, and 30 upcoming days (total 121 days)
     final today = DateTime.now();
-    _scrollableDays = List.generate(183, (index) {
+    _scrollableDays = List.generate(121, (index) {
       return DateTime(
         today.year,
         today.month,
         today.day,
-      ).subtract(Duration(days: 180 - index));
+      ).subtract(Duration(days: 90 - index));
     });
 
     // Center the selected date on layout finish
@@ -93,19 +85,6 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       setState(() {
         _isLoadingDateLog = true;
         _activeError = null;
-      });
-    }
-
-    final customerId = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
-    if (customerId != null && _customerDetails == null) {
-      CustomerDetailsRepository().customerDetails(id: customerId).then((res) {
-        res.fold((error) => null, (details) {
-          if (mounted) {
-            setState(() {
-              _customerDetails = details;
-            });
-          }
-        });
       });
     }
 
@@ -133,81 +112,25 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final enrichedList = <Map<String, dynamic>>[];
         for (final item in list) {
           final map = Map<String, dynamic>.from(item as Map<String, dynamic>);
-
-          final isCompleted =
-              ((map['is_completed'] as bool?) ?? false) ||
-              (map['status']?.toString().toLowerCase() == 'completed');
-          final trainerName = map['trainer_name']?.toString() ?? '';
-          final isMentorGiven = trainerName.isNotEmpty;
-
-          // Skip user's own/preset workouts that are not completed (drafts / in-progress)
-          if (!isMentorGiven && !isCompleted) {
-            continue;
-          }
-
           final sessionId = map['session_id'] ?? map['id'];
           if (sessionId != null) {
             try {
               final idInt = int.parse(sessionId.toString());
-              final detailsRes = await WorkoutRepository().getSessionDetails(
-                sessionId: idInt,
+              final detailsRes = await WorkoutRepository().getSessionDetails(sessionId: idInt);
+              detailsRes.fold(
+                (_) => null,
+                (details) {
+                  if (details['started_at'] != null) map['started_at'] = details['started_at'];
+                  if (details['completed_at'] != null) map['completed_at'] = details['completed_at'];
+                  if (details['duration'] != null) map['duration'] = details['duration'];
+                }
               );
-              detailsRes.fold((_) => null, (details) {
-                if (details['started_at'] != null)
-                  map['started_at'] = details['started_at'];
-                if (details['completed_at'] != null)
-                  map['completed_at'] = details['completed_at'];
-                if (details['duration'] != null)
-                  map['duration'] = details['duration'];
-              });
             } catch (e) {
               debugPrint('Error fetching session details: $e');
             }
           }
           enrichedList.add(map);
         }
-        // Sort: trainer-assigned first, within trainer → not-completed before completed
-        enrichedList.sort((a, b) {
-          final aTrainer = a['trainer_name']?.toString() ?? '';
-          final bTrainer = b['trainer_name']?.toString() ?? '';
-          final aIsTrainer = aTrainer.isNotEmpty;
-          final bIsTrainer = bTrainer.isNotEmpty;
-
-          // Trainer vs non-trainer
-          if (aIsTrainer && !bIsTrainer) return -1;
-          if (!aIsTrainer && bIsTrainer) return 1;
-
-          // Both trainer-assigned: not-completed before completed
-          if (aIsTrainer && bIsTrainer) {
-            final aCompleted =
-                ((a['is_completed'] as bool?) ?? false) ||
-                (a['status']?.toString().toLowerCase() == 'completed');
-            final bCompleted =
-                ((b['is_completed'] as bool?) ?? false) ||
-                (b['status']?.toString().toLowerCase() == 'completed');
-            if (!aCompleted && bCompleted) return -1;
-            if (aCompleted && !bCompleted) return 1;
-          }
-
-          // Both user-created: last created on top
-          if (!aIsTrainer && !bIsTrainer) {
-            final aStart = DateTime.tryParse(a['started_at']?.toString() ?? '');
-            final bStart = DateTime.tryParse(b['started_at']?.toString() ?? '');
-            if (aStart != null && bStart != null) {
-              final cmp = bStart.compareTo(aStart);
-              if (cmp != 0) return cmp;
-            }
-            final aId =
-                int.tryParse((a['session_id'] ?? a['id'] ?? '').toString()) ??
-                0;
-            final bId =
-                int.tryParse((b['session_id'] ?? b['id'] ?? '').toString()) ??
-                0;
-            return bId.compareTo(aId);
-          }
-
-          return 0;
-        });
         if (mounted) {
           setState(() {
             _selectedDateWorkouts = enrichedList;
@@ -227,25 +150,24 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         if (mounted) {
           setState(() {
             _showWorkoutCard = false;
-            _activeSessionData = null;
           });
         }
       },
       (data) {
         if (mounted) {
           setState(() {
-            bool hasActiveSession = false;
+            bool hasExercises = false;
             if (data is Map<String, dynamic>) {
-              if (data['id'] != null) {
-                hasActiveSession = true;
-                _activeSessionData = data;
-              } else {
-                _activeSessionData = null;
+              final exercisesData =
+                  data['logs'] ??
+                  data['exercises'] ??
+                  data['session_exercises'] ??
+                  data['results'];
+              if (exercisesData is List && exercisesData.isNotEmpty) {
+                hasExercises = true;
               }
-            } else {
-              _activeSessionData = null;
             }
-            _showWorkoutCard = hasActiveSession;
+            _showWorkoutCard = hasExercises;
           });
         }
       },
@@ -290,25 +212,16 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   void _changeMonth(int delta) {
     final today = DateTime.now();
-
-    if (delta > 0) {
-      setState(() {
-        _selectedDate = today;
-      });
-      _centerSelectedDate();
-      _loadWorkoutLogForSelectedDate();
-      return;
-    }
-
+    final maxFutureDate = today.add(const Duration(days: 35));
     final targetDate = DateTime(
       _selectedDate.year,
       _selectedDate.month + delta,
       1,
     );
 
-    // Block transitioning if the target month is in the future relative to the current month/year
-    if (targetDate.year > today.year ||
-        (targetDate.year == today.year && targetDate.month > today.month)) {
+    // Block transitioning if target month is further ahead than our future schedule range
+    if (targetDate.year > maxFutureDate.year ||
+        (targetDate.year == maxFutureDate.year && targetDate.month > maxFutureDate.month)) {
       return;
     }
 
@@ -402,27 +315,17 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           if (s is Map<String, dynamic>) {
             final targetWeight = s['target_weight'] ?? s['targetWeight'];
             final targetReps = s['target_reps'] ?? s['targetReps'];
-            final kgVal =
-                s['weight_kg'] ??
-                s['weight'] ??
-                s['kg'] ??
-                targetWeight ??
-                '10';
+            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight ?? '10';
             final repsVal = s['reps'] ?? targetReps ?? '15';
             final prevRaw = s['previous'];
             final prevWeightRaw = s['previous_weight_kg'];
             String prevStr;
-            if (prevRaw != null &&
-                prevRaw.toString().isNotEmpty &&
-                prevRaw.toString() != 'no data') {
+            if (prevRaw != null && prevRaw.toString().isNotEmpty && prevRaw.toString() != 'no data') {
               prevStr = prevRaw.toString();
             } else if (prevWeightRaw != null) {
               final w = double.tryParse(prevWeightRaw.toString());
               if (w != null) {
-                final wStr =
-                    w == w.truncateToDouble()
-                        ? w.toInt().toString()
-                        : w.toString();
+                final wStr = w == w.truncateToDouble() ? w.toInt().toString() : w.toString();
                 prevStr = '${wStr}kg';
               } else {
                 prevStr = 'no data';
@@ -494,7 +397,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   Widget _buildActiveWorkoutBanner() {
     return GestureDetector(
       onTap: () async {
-        final finished = await Navigator.push<dynamic>(
+        await Navigator.push(
           context,
           MaterialPageRoute<void>(
             builder: (context) => const OwnWorkoutScreen(),
@@ -503,9 +406,6 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         await _loadMyPlans();
         await _loadActiveSessionTitle();
         await _loadWorkoutLogForSelectedDate();
-        if (finished == true && context.mounted) {
-          // Stay on Workout Log screen
-        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -593,35 +493,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     }
   }
 
-  @override
   Widget build(BuildContext context) {
-    if (WorkoutLogScreen.selectedDateOverride != null) {
-      final date = WorkoutLogScreen.selectedDateOverride!;
-      final autoSessionId = WorkoutLogScreen.autoOpenSessionId;
-      WorkoutLogScreen.selectedDateOverride = null;
-      WorkoutLogScreen.autoOpenSessionId = null;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _selectDate(date);
-        if (autoSessionId != null) {
-          Navigator.push<dynamic>(
-            context,
-            MaterialPageRoute<dynamic>(
-              builder:
-                  (context) => WorkoutDetailsScreen(
-                    sessionId: autoSessionId,
-                    fallbackTitle: 'Workout',
-                    onRefresh: _loadWorkoutLogForSelectedDate,
-                  ),
-            ),
-          ).then((refresh) {
-            if (refresh == true) {
-              _loadWorkoutLogForSelectedDate();
-            }
-          });
-        }
-      });
-    }
-
     final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
     debugPrint('DEBUG BUILD: isCustomer: $isCustomer, date: $_selectedDate');
 
@@ -655,8 +527,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         }
 
         final rawTitle = workoutItem['title']?.toString() ?? '';
-        final hasRawTitle =
-            rawTitle.isNotEmpty && rawTitle != 'My Workout Plan';
+        final hasRawTitle = rawTitle.isNotEmpty && rawTitle != 'My Workout Plan';
 
         final backendPlanName = workoutItem['plan_name']?.toString() ?? '';
         final hasBackendPlanName =
@@ -680,23 +551,13 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final isCompleted =
             ((workoutItem['is_completed'] as bool?) ?? false) ||
             (workoutItem['status']?.toString().toLowerCase() == 'completed');
-        final isVerified = (workoutItem['is_verified'] as bool?) ?? false;
-        final startedAt =
-            workoutItem['started_at']?.toString() ??
-            workoutItem['created_at']?.toString() ??
-            workoutItem['start_time']?.toString();
-        final completedAt =
-            workoutItem['completed_at']?.toString() ??
-            workoutItem['updated_at']?.toString() ??
-            workoutItem['end_time']?.toString();
-
+        final startedAt = workoutItem['started_at']?.toString() ?? workoutItem['created_at']?.toString() ?? workoutItem['start_time']?.toString();
+        final completedAt = workoutItem['completed_at']?.toString() ?? workoutItem['updated_at']?.toString() ?? workoutItem['end_time']?.toString();
+        
         String durationStr = _formatDuration(startedAt, completedAt);
         if (durationStr == '--:--' && workoutItem['duration'] != null) {
           durationStr = workoutItem['duration'].toString();
         }
-        final bool isExpired =
-            workoutItem['membership_status']?.toString().toLowerCase() ==
-            'expired';
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -706,19 +567,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               badge: badge,
               hasImage: true,
               isCompleted: isCompleted,
-              isVerified: isVerified,
               duration: durationStr,
               trainerName: workoutItem['trainer_name']?.toString(),
-              isMembershipExpired: isExpired,
-              gymLogo:
-                  _customerDetails?.assignedFitnessCenter?['logo']?.toString(),
-              isLoadingGymLogo: _customerDetails == null,
-              trainerProfileImage:
-                  _customerDetails?.assignedTrainer?['profile_image']
-                      ?.toString(),
-              verificationStatus:
-                  workoutItem['verification_status']?.toString() ??
-                  workoutItem['verification']?.toString(),
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -727,29 +577,14 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                   'DEBUG: Tapped completed workout log card. ID value: $idVal, parsed sessionId: $sessionId',
                 );
                 if (sessionId != null) {
-                  final isMentor =
-                      workoutItem['trainer_name']?.toString().isNotEmpty ??
-                      false;
                   final refresh = await Navigator.push<dynamic>(
                     context,
                     MaterialPageRoute<dynamic>(
-                      builder: (context) {
-                        if (isMentor && !isCompleted) {
-                          return WorkoutPreviewScreen(
+                      builder:
+                          (context) => WorkoutDetailsScreen(
                             sessionId: sessionId,
                             fallbackTitle: title,
-                            trainerName:
-                                workoutItem['trainer_name']?.toString(),
-                            onRefresh: _loadWorkoutLogForSelectedDate,
-                          );
-                        } else {
-                          return WorkoutDetailsScreen(
-                            sessionId: sessionId,
-                            fallbackTitle: title,
-                            onRefresh: _loadWorkoutLogForSelectedDate,
-                          );
-                        }
-                      },
+                          ),
                     ),
                   );
                   if (refresh == true) {
@@ -816,9 +651,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                 child: RefreshIndicator(
                   onRefresh: _retryLoading,
                   child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
+                    physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
                     clipBehavior: Clip.none,
                     child: Column(
                       children: [
@@ -830,50 +663,37 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                           const SizedBox(height: 21),
                         ],
                         _buildMonthNav(),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 34),
                         _buildWeekStrip(),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 28),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const SizedBox(height: 12),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child:
-                                    _isLoadingDateLog
-                                        ? _buildShimmerWorkoutLogs(
-                                          key: const ValueKey('shimmer'),
-                                        )
-                                        : _activeError != null
-                                        ? Padding(
-                                          key: const ValueKey('error'),
-                                          padding: const EdgeInsets.only(
-                                            top: 20,
-                                          ),
-                                          child: _activeError!.maybeWhen(
-                                            network:
-                                                (e) => ErrorUi.network(
-                                                  onTap: _retryLoading,
-                                                ),
-                                            notFound:
-                                                (e) => ErrorUi.notFound(
-                                                  onTap: _retryLoading,
-                                                ),
-                                            orElse:
-                                                () => ErrorUi.server(
-                                                  onTap: _retryLoading,
-                                                ),
-                                          ),
-                                        )
-                                        : Column(
-                                          key: const ValueKey('content'),
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.stretch,
-                                          children: logCards,
-                                        ),
-                              ),
+                              if (_isLoadingDateLog)
+                                const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.only(top: 40),
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        AppColors.primary,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              else if (_activeError != null)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 20),
+                                  child: _activeError!.maybeWhen(
+                                    network: (e) => ErrorUi.network(onTap: _retryLoading),
+                                    notFound: (e) => ErrorUi.notFound(onTap: _retryLoading),
+                                    orElse: () => ErrorUi.server(onTap: _retryLoading),
+                                  ),
+                                )
+                              else
+                                ...logCards,
                             ],
                           ),
                         ),
@@ -889,71 +709,17 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     );
   }
 
-  Widget _buildShimmerWorkoutLogs({Key? key}) {
-    return Column(
-      key: key,
-      children: List.generate(
-        2,
-        (index) => Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Container(
-            height: 140,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Shimmer.fromColors(
-              baseColor: Colors.grey.shade300,
-              highlightColor: Colors.grey.shade100,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 68,
-                      height: 68,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 140,
-                            height: 18,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(height: 8),
-                          Container(width: 80, height: 14, color: Colors.white),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ── Month navigation ──────────────────────────────────────────────────────
   Widget _buildMonthNav() {
     final monthLabel =
         '${_selectedDate.day} ${_monthName(_selectedDate.month)} ${_selectedDate.year}';
 
     final today = DateTime.now();
-    final isCurrentOrFutureMonth =
-        _selectedDate.year > today.year ||
-        (_selectedDate.year == today.year &&
-            _selectedDate.month >= today.month);
+    final maxFutureDate = today.add(const Duration(days: 35));
+    final isBeyondAllowedFuture =
+        _selectedDate.year > maxFutureDate.year ||
+        (_selectedDate.year == maxFutureDate.year &&
+            _selectedDate.month >= maxFutureDate.month);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -973,7 +739,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           const SizedBox(width: 14),
           _NavArrow(
             icon: Icons.chevron_right,
-            onTap: isCurrentOrFutureMonth ? null : () => _changeMonth(1),
+            onTap: isBeyondAllowedFuture ? null : () => _changeMonth(1),
           ),
         ],
       ),
@@ -984,8 +750,6 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   Widget _buildWeekStrip() {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double slotWidth = (screenWidth - 32.0) / 5.0;
-    final today = DateTime.now();
-    final todayMidnight = DateTime(today.year, today.month, today.day);
 
     return SizedBox(
       height: 85,
@@ -996,14 +760,13 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         itemCount: _scrollableDays.length,
         itemBuilder: (context, index) {
           final d = _scrollableDays[index];
-          final isFutureDay = d.isAfter(todayMidnight);
           return SizedBox(
             width: slotWidth,
             child: Center(
               child: _DayTile(
                 date: d,
                 selected: _isSameDay(d, _selectedDate),
-                onTap: isFutureDay ? null : () => _selectDate(d),
+                onTap: () => _selectDate(d),
               ),
             ),
           );
@@ -1028,11 +791,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             icon: const Icon(Icons.add, color: Colors.white, size: 20),
             raduis: 12,
             ontap: () async {
-              if (_activeSessionData != null) {
-                _showResumeOrNewDialog(context, isPreset: false);
-                return;
-              }
-              final finished = await Navigator.push<dynamic>(
+              await Navigator.push(
                 context,
                 MaterialPageRoute<void>(
                   builder:
@@ -1042,9 +801,6 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadMyPlans();
               await _loadActiveSessionTitle();
               await _loadWorkoutLogForSelectedDate();
-              if (finished == true && context.mounted) {
-                // Stay on Workout Log screen
-              }
             },
           ),
           const SizedBox(height: 12),
@@ -1067,11 +823,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
             ),
             raduis: 12,
             ontap: () async {
-              if (_activeSessionData != null) {
-                _showResumeOrNewDialog(context, isPreset: true);
-                return;
-              }
-              final finished = await Navigator.push<dynamic>(
+              await Navigator.push(
                 context,
                 MaterialPageRoute<void>(
                   builder: (context) => const PresetsScreen(),
@@ -1080,294 +832,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               await _loadMyPlans();
               await _loadActiveSessionTitle();
               await _loadWorkoutLogForSelectedDate();
-              if (finished == true && context.mounted) {
-                // Stay on Workout Log screen
-              }
             },
           ),
         ],
       ),
-    );
-  }
-
-  void _showResumeOrNewDialog(BuildContext context, {required bool isPreset}) {
-    final data = _activeSessionData;
-    if (data == null) return;
-
-    // Parse active draft title
-    final title =
-        data['plan_name']?.toString() ??
-        data['plan_day_title']?.toString() ??
-        data['title']?.toString() ??
-        data['name']?.toString() ??
-        'Active Workout';
-
-    // Parse elapsed time
-    String elapsedText = '';
-    final startedAtStr = data['started_at'] ?? data['created_at'];
-    if (startedAtStr != null) {
-      final startedAt = DateTime.tryParse(startedAtStr.toString());
-      if (startedAt != null) {
-        final diff = DateTime.now().difference(startedAt.toLocal());
-        if (diff.inMinutes < 60) {
-          elapsedText = 'Started ${diff.inMinutes} minutes ago';
-        } else if (diff.inHours < 24) {
-          elapsedText = 'Started ${diff.inHours} hours ago';
-        } else {
-          elapsedText = 'Started ${diff.inDays} days ago';
-        }
-      }
-    }
-    if (elapsedText.isEmpty) {
-      elapsedText = 'Active draft session';
-    }
-
-    // Parse completion status (exercise logs)
-    int completedSets = 0;
-    int totalSets = 0;
-    final rawLogs =
-        data['logs'] ??
-        data['exercises'] ??
-        data['session_exercises'] ??
-        data['results'];
-    if (rawLogs is List) {
-      for (final log in rawLogs) {
-        if (log is Map<String, dynamic>) {
-          final sets = log['set_logs'] ?? log['sets'];
-          if (sets is List) {
-            for (final s in sets) {
-              if (s is Map<String, dynamic>) {
-                totalSets++;
-                final isCompleted = s['is_completed'] ?? s['checked'] ?? false;
-                if (isCompleted == true) {
-                  completedSets++;
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-
-    showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          contentPadding: const EdgeInsets.only(
-            top: 24,
-            left: 20,
-            right: 20,
-            bottom: 16,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // Blue circle 🏋️ icon
-              Container(
-                width: 56,
-                height: 56,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE3F2FD),
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: const Text('🏋️', style: TextStyle(fontSize: 28)),
-              ),
-              const SizedBox(height: 16),
-              // Title
-              Text(
-                'Continue Existing Workout?',
-                textAlign: TextAlign.center,
-                style: AppStyles.text18Px.poppins.w600.copyWith(
-                  color: const Color(0xFF222222),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Subtitle
-              Text(
-                'You already have an unfinished workout.',
-                textAlign: TextAlign.center,
-                style: AppStyles.text14Px.poppins.w500.copyWith(
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Starting a new workout will automatically delete your current draft. This action cannot be undone.',
-                textAlign: TextAlign.center,
-                style: AppStyles.text12Px.poppins.w400.copyWith(
-                  color: Colors.grey[500],
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: 16),
-              // Current Draft card
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8F9FA),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE9ECEF)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Current Draft',
-                      style: AppStyles.text12Px.poppins.w500.copyWith(
-                        color: Colors.grey[500],
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Text('💪', style: TextStyle(fontSize: 16)),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppStyles.text15Px.poppins.w600.copyWith(
-                              color: const Color(0xFF222222),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      elapsedText,
-                      style: AppStyles.text13Px.poppins.w500.copyWith(
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$completedSets/$totalSets sets completed',
-                      style: AppStyles.text12Px.poppins.w500.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              // Resume Draft Button
-              GestureDetector(
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  final finished = await Navigator.push<dynamic>(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder:
-                          (context) =>
-                              const OwnWorkoutScreen(isNewSession: false),
-                    ),
-                  );
-                  await _loadMyPlans();
-                  await _loadActiveSessionTitle();
-                  await _loadWorkoutLogForSelectedDate();
-                  if (finished == true && context.mounted) {
-                    // Stay on Workout Log screen
-                  }
-                },
-                child: Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Resume Draft',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // Start New Workout Button
-              GestureDetector(
-                onTap: () async {
-                  Navigator.pop(dialogContext);
-                  final finished = await Navigator.push<dynamic>(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder:
-                          (context) =>
-                              isPreset
-                                  ? const PresetsScreen()
-                                  : const OwnWorkoutScreen(isNewSession: true),
-                    ),
-                  );
-                  await _loadMyPlans();
-                  await _loadActiveSessionTitle();
-                  await _loadWorkoutLogForSelectedDate();
-                  if (finished == true && context.mounted) {
-                    // Stay on Workout Log screen
-                  }
-                },
-                child: Container(
-                  width: double.infinity,
-                  height: 45,
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.2),
-                      width: 1.5,
-                    ),
-                  ),
-                  alignment: Alignment.center,
-                  child: Text(
-                    isPreset ? '+ Start a Preset' : '+ Start New Workout',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Cancel Button
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(dialogContext);
-                },
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(100, 36),
-                  padding: EdgeInsets.zero,
-                ),
-                child: Text(
-                  'Cancel',
-                  style: AppStyles.text14Px.poppins.w500.copyWith(
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 
@@ -1541,15 +1009,9 @@ class _WorkoutCard extends StatelessWidget {
     required this.badge,
     required this.hasImage,
     required this.isCompleted,
-    this.isVerified = false,
     this.duration,
     this.onTap,
     this.trainerName,
-    this.isMembershipExpired = false,
-    this.gymLogo,
-    this.isLoadingGymLogo = false,
-    this.trainerProfileImage,
-    this.verificationStatus,
   });
 
   final int index;
@@ -1557,15 +1019,9 @@ class _WorkoutCard extends StatelessWidget {
   final String? badge;
   final bool hasImage;
   final bool isCompleted;
-  final bool isVerified;
   final String? duration;
   final VoidCallback? onTap;
   final String? trainerName;
-  final bool isMembershipExpired;
-  final String? gymLogo;
-  final bool isLoadingGymLogo;
-  final String? trainerProfileImage;
-  final String? verificationStatus;
 
   @override
   Widget build(BuildContext context) {
@@ -1578,8 +1034,6 @@ class _WorkoutCard extends StatelessWidget {
             '${parts.sublist(0, middle).join(' ')}\n${parts.sublist(middle).join(' ')}';
       }
     }
-
-    final bool isMentorGiven = trainerName != null && trainerName!.isNotEmpty;
 
     final Gradient cardGradient =
         isCompleted
@@ -1606,21 +1060,14 @@ class _WorkoutCard extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: Container(
-            height: isCompleted ? 140 : 100,
+            height: 140,
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              gradient:
-                  isMentorGiven
-                      ? const LinearGradient(
-                        colors: [Color(0xffFFD5D5), Color(0xffFFD5D5)],
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                      )
-                      : cardGradient,
+              gradient: cardGradient,
               borderRadius: BorderRadius.circular(20),
               image:
-                  (hasImage && !isMentorGiven)
+                  hasImage
                       ? const DecorationImage(
                         image: AssetImage(
                           'assets/images/png/vectors/workout_plan_creation_image.png',
@@ -1637,356 +1084,130 @@ class _WorkoutCard extends StatelessWidget {
                 ),
               ],
             ),
-            child:
-                isMentorGiven
-                    ? Stack(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(
-                            left: 16,
-                            right: 68,
-                            top: 16,
-                            bottom: 16,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment:
-                                isCompleted
-                                    ? MainAxisAlignment.start
-                                    : MainAxisAlignment.center,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  // Gym Profile Logo
-                                  isLoadingGymLogo
-                                      ? const KShimmer(
-                                        width: 68,
-                                        height: 68,
-                                        radius: 12,
-                                      )
-                                      : Container(
-                                        width: 68,
-                                        height: 68,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                          child: ImageNetwork(
-                                            gymLogo,
-                                            fit: BoxFit.cover,
-                                            errorWidget: const Center(
-                                              child: Icon(
-                                                Icons.fitness_center,
-                                                color: Colors.grey,
-                                                size: 28,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                  const SizedBox(width: 16),
-                                  // Middle: Workout title and Trainer Name
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          title,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF222222),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Row(
-                                          children: [
-                                            if (trainerProfileImage != null &&
-                                                trainerProfileImage!
-                                                    .isNotEmpty) ...[
-                                              ClipRRect(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                child: ImageNetwork(
-                                                  trainerProfileImage,
-                                                  width: 20,
-                                                  height: 20,
-                                                  fit: BoxFit.cover,
-                                                  errorWidget: const Icon(
-                                                    Icons.account_circle,
-                                                    size: 20,
-                                                    color: Colors.grey,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 6),
-                                            ],
-                                            Expanded(
-                                              child: Text(
-                                                '$trainerName',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                  fontFamily: 'Poppins',
-                                                  fontSize: 14,
-                                                  color: Color(0xFF222222),
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (isCompleted) ...[
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Text(
-                                      'Duration: ${duration ?? '--'}',
-                                      style: const TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF222222),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      isVerified ? '• Verified' : '• Pending',
-                                      style: TextStyle(
-                                        fontFamily: 'Poppins',
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color:
-                                            isVerified
-                                                ? const Color(0xFF019C37)
-                                                : const Color(0xFFA9AF00),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
+            child: Stack(
+              children: [
+                // Top left: Title
+                Positioned(
+                  left: 24,
+                  top: 20,
+                  width: 160,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formattedTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF222222),
+                          height: 1.15,
                         ),
-                        // Right: Chevron Button (always show, vertically centered)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 16),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFC84A4A),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.06),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(
-                                Icons.chevron_right,
-                                size: 24,
-                                color: Colors.white,
-                              ),
+                      ),
+                      if (trainerName != null && trainerName!.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.person_outline_rounded,
+                              size: 12,
+                              color: Color(0xFF666666),
                             ),
-                          ),
-                        ),
-                      ],
-                    )
-                    : Stack(
-                      children: [
-                        // Top left: Title
-                        Positioned(
-                          left: 24,
-                          top: 20,
-                          width: 160,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                formattedTitle,
-                                maxLines: 2,
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                trainerName!,
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   fontFamily: 'Poppins',
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF222222),
-                                  height: 1.15,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xFF555555),
                                 ),
                               ),
-                              if (trainerName != null &&
-                                  trainerName!.isNotEmpty) ...[
-                                const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.person_outline_rounded,
-                                      size: 12,
-                                      color: Color(0xFF666666),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        trainerName!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: Color(0xFF555555),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
+                      ],
+                    ],
+                  ),
+                ),
 
-                        // Bottom left: Duration
-                        Positioned(
-                          left: 24,
-                          bottom: 20,
-                          width: 135,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.timer_outlined,
-                                    color: Color(0xFFF0B5B7),
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Text(
-                                    'Duration',
-                                    style: TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF94A3B8),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                duration ?? '--:--',
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF4A4A4A),
-                                ),
-                              ),
-                            ],
+                // Bottom left: Duration
+                Positioned(
+                  left: 24,
+                  bottom: 20,
+                  width: 135,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.timer_outlined, color: Color(0xFFF0B5B7), size: 14),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Duration',
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF94A3B8),
+                            ),
                           ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        duration ?? '--:--',
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF4A4A4A),
                         ),
-                        // Bottom right: Circular white/red button
-                        Positioned(
-                          right: 16,
-                          bottom: 16,
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF4F5F7),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.chevron_right,
-                              size: 24,
-                              color: Color(0xFF020202),
-                            ),
-                          ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Bottom right: Circular white button
+                Positioned(
+                  right: 16,
+                  bottom: 16,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F7),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
+                    child: const Icon(
+                      Icons.chevron_right,
+                      size: 24,
+                      color: Color(0xFF020202),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
 
         // CompletedBadge overlay at top right of the card
         if (isCompleted)
-          Positioned(
-            top: -7.0,
-            right: -5.35,
-            child:
-                (trainerName == null || trainerName!.isEmpty)
-                    ? SvgPicture.asset(
-                      'assets/images/svg/icons/user_completed_tick.svg',
-                      width: 28,
-                      height: 27,
-                    )
-                    : isVerified
-                    ? SvgPicture.asset(
-                      'assets/images/svg/icons/trainer_verified_tick.svg',
-                      width: 28,
-                      height: 27,
-                    )
-                    : SvgPicture.asset(
-                      'assets/images/svg/icons/not_verified_tick.svg',
-                      width: 28,
-                      height: 27,
-                    ),
-          ),
-        if (isMembershipExpired)
-          Positioned(
-            top: -7.0,
-            right: isCompleted ? 32.0 : -5.35,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD30C15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: const Text(
-                'Expired',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
+          const Positioned(top: -7.0, right: -5.35, child: CompletedBadge()),
       ],
     );
   }
@@ -2000,11 +1221,22 @@ class _RestDayCard extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(top: 60),
-        child: Text(
-          'No workout created on this day .',
-          style: AppStyles.text14Px.poppins.w500.copyWith(
-            color: const Color(0xFF94A3B8),
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.bedtime_outlined,
+              size: 46,
+              color: Color(0xFF94A3B8),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No workout scheduled on this day.',
+              style: AppStyles.text14Px.poppins.w500.copyWith(
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
         ),
       ),
     );

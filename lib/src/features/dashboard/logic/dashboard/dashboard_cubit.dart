@@ -24,9 +24,7 @@ class DashboardCubit extends Cubit<DashboardState> {
     }
     // print('isss---$isCustomer');
     if (isCustomer) {
-      if (state.activeMembershipData.isNone()) {
-        emit(state.copyWith(activeMembershipData: none()));
-      }
+      emit(state.copyWith(activeMembershipData: none()));
       final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
       if (id == null) {
         print('ere-----');

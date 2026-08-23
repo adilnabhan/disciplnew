@@ -25,7 +25,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
   String _selectedCategory = '10k';
   String _selectedTshirtSize = 'L';
   int _personsCount = 1;
-  static const double _pricePerPerson = 500.0;
+  static const double _pricePerPerson = 50.0;
 
   bool _isValidatingPromo = false;
   bool _isCreatingOrder = false;
@@ -245,6 +245,17 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
             'name': _nameController.text.trim(),
           },
           'theme': {'color': '#E50914'},
+          'send_sms_hash': true,
+          'retry': {'enabled': true, 'max_count': 3},
+          'method': {
+            'netbanking': true,
+            'card': true,
+            'upi': true,
+            'wallet': true,
+          },
+          'external': {
+            'wallets': ['paytm', 'phonepe', 'google_pay']
+          }
         };
 
         _razorpay.open(options);
@@ -649,7 +660,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
-                  '₹500 / PERSON',
+                  '₹50 / PERSON',
                   style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.w900),
                 ),
               ),
@@ -771,7 +782,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
                   ),
                 ),
                 Text(
-                  '₹500',
+                  '₹50',
                   style: TextStyle(
                     color: isSelected ? catColor : Colors.white70,
                     fontSize: 14,
@@ -806,7 +817,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
               ),
               const SizedBox(height: 4),
               Text(
-                '₹500 × $_personsCount = ₹${_totalBaseAmount.toStringAsFixed(0)}',
+                '₹50 × $_personsCount = ₹${_totalBaseAmount.toStringAsFixed(0)}',
                 style: const TextStyle(
                   color: CyberWorkoutTheme.goldPrimary,
                   fontSize: 12,
@@ -1121,7 +1132,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
       child: Column(
         children: [
           _buildSummaryRow(
-            'Base Registration ($_personsCount × ₹500)',
+            'Base Registration ($_personsCount × ₹50)',
             '₹${_totalBaseAmount.toStringAsFixed(2)}',
           ),
           if (_discountAmount > 0) ...[

@@ -14,13 +14,7 @@ class FitnessCenterTile extends StatelessWidget {
     String locationText = 'Location N/A';
     if (fitnessCenter.location != null) {
       final loc = fitnessCenter.location!;
-      // Street first (fall back to building name), then city/district
-      final streetOrBuilding = (loc.street != null && loc.street!.isNotEmpty)
-          ? loc.street
-          : (loc.buildingName != null && loc.buildingName!.isNotEmpty)
-              ? loc.buildingName
-              : null;
-      final parts = [streetOrBuilding, loc.city];
+      final parts = [loc.street, loc.city];
       final validParts = parts.where((e) => e != null && e.toString().isNotEmpty).toList();
       if (validParts.isNotEmpty) {
         locationText = validParts.join(', ');
@@ -29,6 +23,7 @@ class FitnessCenterTile extends StatelessWidget {
 
     final gymLat = fitnessCenter.gymLatitude;
     final gymLon = fitnessCenter.gymLongitude;
+    final hasCoordinates = gymLat != null && gymLon != null;
 
     double? displayDistance;
     if (fitnessCenter.distanceKm != null) {
@@ -68,11 +63,7 @@ class FitnessCenterTile extends StatelessWidget {
           return;
         }
         if (fitnessCenter.id != null) {
-          context.push(FitnessCenterDetailsScreen(
-            fitnessCenterId: fitnessCenter.id ?? 0,
-            activeMembership: activeMembership,
-            previewData: fitnessCenter,
-          ));
+          context.push(FitnessCenterDetailsScreen(fitnessCenterId: fitnessCenter.id ?? 0, activeMembership: activeMembership));
         } else {
           Dialogs.showSnack(msg: 'Fitness center not found');
         }
@@ -265,6 +256,51 @@ class FitnessCenterTile extends StatelessWidget {
                             ),
                           ),
                         ),
+                        if (hasCoordinates) ...[
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () async {
+                              final mapsUrl = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=$gymLat,$gymLon');
+                              try {
+                                if (await canLaunchUrl(mapsUrl)) {
+                                  await launchUrl(mapsUrl, mode: LaunchMode.externalApplication);
+                                } else {
+                                  await Dialogs.showSnack(msg: 'Could not launch maps');
+                                }
+                              } catch (e) {
+                                await Dialogs.showSnack(msg: 'Could not open maps');
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.primary, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.navigation_rounded,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Navigate',
+                                    style: TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ],

@@ -1,6 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 
-class ImagePickerDialog extends StatefulWidget {
+class ImagePickerDialog extends StatelessWidget {
   const ImagePickerDialog({
     super.key,
     this.onPickedImage,
@@ -9,7 +9,6 @@ class ImagePickerDialog extends StatefulWidget {
 
   final void Function(XFile? image)? onPickedImage;
   final bool hasImage;
-
   Future<void> show(BuildContext context) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -19,57 +18,75 @@ class ImagePickerDialog extends StatefulWidget {
   }
 
   @override
-  State<ImagePickerDialog> createState() => _ImagePickerDialogState();
-}
-
-class _ImagePickerDialogState extends State<ImagePickerDialog> {
-  bool _isPicking = false;
-
-  void _handlePick(ImageSource source) {
-    if (_isPicking) return;
-    setState(() {
-      _isPicking = true;
-    });
-
-    final navigator = Navigator.of(context);
-    navigator.pop();
-
-    ImagePicker().pickImage(source: source).then((xFile) {
-      widget.onPickedImage?.call(xFile);
-    }).catchError((e) {
-      debugPrint('Error picking image: $e');
-    }).whenComplete(() {
-      if (mounted) {
-        setState(() {
-          _isPicking = false;
-        });
-      }
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
     final contents = [
       (
         label: 'Take Photo',
-        onTap: () => _handlePick(ImageSource.camera),
+        onTap: () {
+          ImagePicker().pickImage(source: ImageSource.camera).then((xFile) {
+            if (xFile != null) {
+              if (context.mounted) {
+                onPickedImage?.call(xFile);
+                context.pop();
+              }
+            }
+          });
+        },
+      // onTap: () async {
+      //   Navigator.of(context).pop();
+      //
+      //   await Future<void>.delayed(const Duration(milliseconds: 300));
+      //
+      //   final xFile = await ImagePicker().pickImage(
+      //     source: ImageSource.camera,
+      //   );
+      //
+      //   if (xFile != null) {
+      //     onPickedImage?.call(xFile);
+      //   }
+      // },
+
       ),
       (
         label: 'Choose from Gallery',
-        onTap: () => _handlePick(ImageSource.gallery),
+        onTap: () {
+          ImagePicker().pickImage(source: ImageSource.gallery).then((xFile) {
+            if (xFile != null) {
+              if (context.mounted) {
+                onPickedImage?.call(xFile);
+                context.pop();
+              }
+            }
+          });
+        },
+      // onTap: () async {
+      //   Navigator.of(context).pop();
+      //
+      //   await Future<void>.delayed(const Duration(milliseconds: 300));
+      //
+      //   final xFile = await ImagePicker().pickImage(
+      //     source: ImageSource.gallery,
+      //   );
+      //
+      //   if (xFile != null) {
+      //     onPickedImage?.call(xFile);
+      //   }
+      // },
       ),
-      if (widget.hasImage)
+      if (hasImage)
         (
           label: 'Remove Photo',
           onTap: () {
-            widget.onPickedImage?.call(null);
-            Navigator.of(context).pop();
+            if (context.mounted) {
+              onPickedImage?.call(null);
+              context.pop();
+            }
           },
         ),
       (
         label: 'Cancel',
         onTap: () {
-          Navigator.of(context).pop();
+          context.pop();
         },
       ),
     ];
@@ -94,7 +111,7 @@ class _ImagePickerDialogState extends State<ImagePickerDialog> {
           );
         },
         separatorBuilder: (BuildContext context, int index) {
-          return Divider(
+          return const Divider(
             color: AppColors.borderGrey,
             height: 1,
             thickness: 1,

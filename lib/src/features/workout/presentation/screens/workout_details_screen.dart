@@ -1,25 +1,16 @@
 import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
     required this.sessionId,
     required this.fallbackTitle,
-    this.startTimer = false,
-    this.trainerName,
-    this.isVerified,
-    this.onRefresh,
     super.key,
   });
 
   final int sessionId;
   final String fallbackTitle;
-  final bool startTimer;
-  final String? trainerName;
-  final bool? isVerified;
-  final VoidCallback? onRefresh;
 
   @override
   State<WorkoutDetailsScreen> createState() => _WorkoutDetailsScreenState();
@@ -31,10 +22,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   bool _isFinishing = false;
   Map<String, dynamic>? _sessionData;
   final Map<int, Timer> _debounceTimers = {};
-  final Set<int> _addingSetLogIds = {};
-  final Set<int> _completingSetIds = {};
-  Timer? _detailsTimer;
-  int _elapsedSeconds = 0;
 
   @override
   void initState() {
@@ -45,164 +32,96 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   void dispose() {
-    _detailsTimer?.cancel();
     for (final timer in _debounceTimers.values) {
       timer.cancel();
     }
     super.dispose();
   }
 
-  void _startTimer() {
-    if (_detailsTimer != null) return;
-    _detailsTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          _elapsedSeconds++;
-        });
-      }
-    });
-  }
-
-  void _syncTimer(Map<String, dynamic> data) {
-    if (_detailsTimer != null) return;
-    final startedAtStr = data['started_at']?.toString();
-    if (startedAtStr != null) {
-      final start = DateTime.tryParse(startedAtStr);
-      if (start != null) {
-        final now = DateTime.now();
-        final startLocal = start.isUtc ? start.toLocal() : start;
-        final diff = now.difference(startLocal);
-        final elapsed = diff.inSeconds;
-        if (elapsed >= 0) {
-          setState(() {
-            _elapsedSeconds = elapsed;
-          });
-          _startTimer();
-          return;
-        }
-      }
-    }
-    _startTimer();
-  }
-
-  String _formatTimer(int totalSeconds) {
-    final int hours = totalSeconds ~/ 3600;
-    final int minutes = (totalSeconds % 3600) ~/ 60;
-    final int seconds = totalSeconds % 60;
-
-    final String minutesStr = minutes.toString().padLeft(2, '0');
-    final String secondsStr = seconds.toString().padLeft(2, '0');
-
-    if (hours > 0) {
-      final String hoursStr = hours.toString().padLeft(2, '0');
-      return '$hoursStr:$minutesStr:$secondsStr';
-    } else {
-      return '$minutesStr:$secondsStr';
-    }
-  }
-
   void _loadDetails() {
     setState(() {
       _sessionData = null;
-      _detailsFuture = WorkoutRepository()
-          .getSessionDetails(sessionId: widget.sessionId)
-          .then((res) {
-            res.fold((_) => null, (data) {
-              if (mounted) {
-                setState(() {
-                  _sessionData = data;
-                });
-              }
-            });
-            return res;
-          });
+      _detailsFuture = WorkoutRepository().getSessionDetails(
+        sessionId: widget.sessionId,
+      ).then((res) {
+        res.fold(
+          (_) => null,
+          (data) {
+            if (mounted) {
+              setState(() {
+                _sessionData = data;
+              });
+            }
+          },
+        );
+        return res;
+      });
     });
   }
 
   void _debounceUpdateSet(int setLogId, {int? reps, double? weightKg}) {
     _debounceTimers[setLogId]?.cancel();
-    _debounceTimers[setLogId] = Timer(
-      const Duration(milliseconds: 600),
-      () async {
-        final res = await WorkoutRepository().updateSetLog(
-          setLogId: setLogId,
-          reps: reps,
-          weightKg: weightKg,
-        );
-        res.fold((error) {
+    _debounceTimers[setLogId] = Timer(const Duration(milliseconds: 600), () async {
+      final res = await WorkoutRepository().updateSetLog(
+        setLogId: setLogId,
+        reps: reps,
+        weightKg: weightKg,
+      );
+      res.fold(
+        (error) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text('Failed to update set: ${error.msg}')),
             );
           }
-        }, (_) => null);
-      },
-    );
+        },
+        (_) => null,
+      );
+    });
   }
 
   void _addSet(Map<String, dynamic> log) async {
+    final setLogs = List<Map<String, dynamic>>.from(log['set_logs'] as List? ?? []);
+    final lastSet = setLogs.isNotEmpty ? setLogs.last : null;
+    
+    final int defaultReps = lastSet != null
+        ? (int.tryParse(lastSet['reps']?.toString() ?? '') ?? 10)
+        : (int.tryParse(log['target_reps']?.toString() ?? '') ?? 10);
+        
+    final double defaultWeight = lastSet != null
+        ? (double.tryParse(lastSet['weight_kg']?.toString() ?? '') ?? 0.0)
+        : (double.tryParse(log['target_weight']?.toString() ?? '') ?? 0.0);
+
     final exerciseLogId = log['id'] as int?;
     if (exerciseLogId == null) return;
-    if (_addingSetLogIds.contains(exerciseLogId)) return;
 
-    setState(() {
-      _addingSetLogIds.add(exerciseLogId);
-    });
-
-    final setLogs = List<Map<String, dynamic>>.from(
-      log['set_logs'] as List? ?? [],
+    final res = await WorkoutRepository().addSetToExerciseLog(
+      logId: exerciseLogId,
+      reps: defaultReps,
+      weightKg: defaultWeight,
+      isCompleted: false,
     );
-    final lastSet = setLogs.isNotEmpty ? setLogs.last : null;
 
-    final int defaultReps =
-        lastSet != null
-            ? (int.tryParse(lastSet['reps']?.toString() ?? '') ?? 10)
-            : (int.tryParse(log['target_reps']?.toString() ?? '') ?? 10);
-
-    final double defaultWeight =
-        lastSet != null
-            ? (double.tryParse(lastSet['weight_kg']?.toString() ?? '') ?? 0.0)
-            : (double.tryParse(log['target_weight']?.toString() ?? '') ?? 0.0);
-
-    try {
-      final res = await WorkoutRepository().addSetToExerciseLog(
-        logId: exerciseLogId,
-        reps: defaultReps,
-        weightKg: defaultWeight,
-        isCompleted: false,
-      );
-
-      res.fold(
-        (error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to add set: ${error.msg}')),
-            );
-          }
-        },
-        (newLogData) {
-          if (mounted && _sessionData != null) {
-            setState(() {
-              final logsList = _sessionData!['logs'] as List;
-              final targetLogIndex = logsList.indexWhere(
-                (l) => l['id'] == exerciseLogId,
-              );
-              if (targetLogIndex != -1) {
-                logsList[targetLogIndex] = Map<String, dynamic>.from(
-                  newLogData as Map,
-                );
-              }
-            });
-          }
-        },
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _addingSetLogIds.remove(exerciseLogId);
-        });
-      }
-    }
+    res.fold(
+      (error) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add set: ${error.msg}')),
+          );
+        }
+      },
+      (newLogData) {
+        if (mounted && _sessionData != null) {
+          setState(() {
+            final logsList = _sessionData!['logs'] as List;
+            final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
+            if (targetLogIndex != -1) {
+              logsList[targetLogIndex] = Map<String, dynamic>.from(newLogData as Map);
+            }
+          });
+        }
+      },
+    );
   }
 
   void _deleteSet(int exerciseLogId, int setLogId) async {
@@ -219,16 +138,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         if (mounted && _sessionData != null) {
           setState(() {
             final logsList = _sessionData!['logs'] as List;
-            final targetLogIndex = logsList.indexWhere(
-              (l) => l['id'] == exerciseLogId,
-            );
+            final targetLogIndex = logsList.indexWhere((l) => l['id'] == exerciseLogId);
             if (targetLogIndex != -1) {
-              final targetLog = Map<String, dynamic>.from(
-                logsList[targetLogIndex] as Map,
-              );
-              final targetSets = List<Map<String, dynamic>>.from(
-                targetLog['set_logs'] as Iterable? ?? [],
-              );
+              final targetLog = Map<String, dynamic>.from(logsList[targetLogIndex]);
+              final targetSets = List<Map<String, dynamic>>.from(targetLog['set_logs'] ?? []);
               targetSets.removeWhere((s) => s['id'] == setLogId);
               for (var i = 0; i < targetSets.length; i++) {
                 targetSets[i]['set_number'] = i + 1;
@@ -245,10 +158,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   Widget _buildOutlineRedButton({
     required String text,
     required VoidCallback onTap,
-    bool isLoading = false,
   }) {
     return GestureDetector(
-      onTap: isLoading ? null : onTap,
+      onTap: onTap,
       child: Container(
         width: double.infinity,
         height: 36,
@@ -258,24 +170,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           border: Border.all(color: const Color(0xFFF0B5B7), width: 1.0),
         ),
         child: Center(
-          child:
-              isLoading
-                  ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                    ),
-                  )
-                  : Text(
-                    text,
-                    style: AppStyles.text14Px.poppins.w600.copyWith(
-                      color: AppColors.primary,
-                    ),
-                  ),
+          child: Text(
+            text,
+            style: AppStyles.text14Px.poppins.w600.copyWith(
+              color: AppColors.primary,
+            ),
+          ),
         ),
       ),
     );
@@ -283,14 +183,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   void _loadExercises() async {
     final libRes = await WorkoutRepository().getExerciseLibrary();
-    final custRes = await WorkoutRepository().getExerciseLibrary(
-      queryParameters: {'custom_only': true},
-    );
-
+    final custRes = await WorkoutRepository().getExerciseLibrary(queryParameters: {'custom_only': true});
+    
     final List<ExerciseLibraryModel> allEx = [];
     libRes.fold((_) => null, (list) => allEx.addAll(list));
     custRes.fold((_) => null, (list) => allEx.addAll(list));
-
+    
     if (mounted) {
       setState(() {
         _exercises = allEx;
@@ -333,269 +231,74 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
-      future: _detailsFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            _sessionData == null) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF8F9FA),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: false,
-              leadingWidth: 56,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEEEEE),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Color(0xFF444444),
-                        size: 24,
-                      ),
-                    ),
-                  ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Center(
+            child: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEEEEEE),
+                  shape: BoxShape.circle,
                 ),
-              ),
-              title: Text(
-                'Workout Details',
-                style: AppStyles.text18Px.poppins.w600.copyWith(
-                  color: const Color(0xFF212121),
+                child: const Icon(
+                  Icons.chevron_left,
+                  color: Color(0xFF444444),
+                  size: 24,
                 ),
               ),
             ),
-            body: const Center(
+          ),
+        ),
+        title: Text(
+          'Workout Details',
+          style: AppStyles.text18Px.poppins.w600.copyWith(
+            color: const Color(0xFF212121),
+          ),
+        ),
+      ),
+      body: FutureBuilder<Either<ApiException, Map<String, dynamic>>>(
+        future: _detailsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting && _sessionData == null) {
+            return const Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
-            ),
-          );
-        }
-
-        if (snapshot.hasError && _sessionData == null) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF8F9FA),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: false,
-              leadingWidth: 56,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEEEEE),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Color(0xFF444444),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              title: Text(
-                'Workout Details',
-                style: AppStyles.text18Px.poppins.w600.copyWith(
-                  color: const Color(0xFF212121),
-                ),
-              ),
-            ),
-            body: _buildErrorState('An unexpected error occurred.'),
-          );
-        }
-
-        final result = snapshot.data;
-        if (result == null && _sessionData == null) {
-          return Scaffold(
-            backgroundColor: const Color(0xFFF8F9FA),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: false,
-              leadingWidth: 56,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEEEEE),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Color(0xFF444444),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              title: Text(
-                'Workout Details',
-                style: AppStyles.text18Px.poppins.w600.copyWith(
-                  color: const Color(0xFF212121),
-                ),
-              ),
-            ),
-            body: _buildErrorState('No details found for this session.'),
-          );
-        }
-
-        if (_sessionData != null) {
-          if (widget.startTimer) {
-            _syncTimer(_sessionData!);
-          }
-          final status =
-              _sessionData!['status']?.toString().toUpperCase() ?? 'COMPLETED';
-          return Scaffold(
-            backgroundColor: const Color(0xFFF8F9FA),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: false,
-              leadingWidth: 56,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEEEEE),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Color(0xFF444444),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              title: Text(
-                'Workout Details',
-                style: AppStyles.text18Px.poppins.w600.copyWith(
-                  color: const Color(0xFF212121),
-                ),
-              ),
-            ),
-            body: _buildContent(_sessionData!),
-            bottomNavigationBar:
-                status != 'COMPLETED' ? _buildFinishButton() : null,
-          );
-        }
-
-        return result!.fold(
-          (error) => Scaffold(
-            backgroundColor: const Color(0xFFF8F9FA),
-            appBar: AppBar(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              centerTitle: false,
-              leadingWidth: 56,
-              leading: Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFEEEEEE),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.chevron_left,
-                        color: Color(0xFF444444),
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              title: Text(
-                'Workout Details',
-                style: AppStyles.text18Px.poppins.w600.copyWith(
-                  color: const Color(0xFF212121),
-                ),
-              ),
-            ),
-            body: _buildErrorState('Error loading details: ${error.msg}'),
-          ),
-          (data) {
-            _sessionData = data;
-            if (widget.startTimer) {
-              _syncTimer(data);
-            }
-            final status =
-                data['status']?.toString().toUpperCase() ?? 'COMPLETED';
-            return Scaffold(
-              backgroundColor: const Color(0xFFF8F9FA),
-              appBar: AppBar(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                centerTitle: false,
-                leadingWidth: 56,
-                leading: Padding(
-                  padding: const EdgeInsets.only(left: 16),
-                  child: Center(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFEEEEEE),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.chevron_left,
-                          color: Color(0xFF444444),
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'Workout Details',
-                  style: AppStyles.text18Px.poppins.w600.copyWith(
-                    color: const Color(0xFF212121),
-                  ),
-                ),
-              ),
-              body: _buildContent(data),
-              bottomNavigationBar:
-                  status != 'COMPLETED' ? _buildFinishButton() : null,
             );
-          },
-        );
-      },
+          }
+
+          if (snapshot.hasError && _sessionData == null) {
+            return _buildErrorState('An unexpected error occurred.');
+          }
+
+          final result = snapshot.data;
+          if (result == null && _sessionData == null) {
+            return _buildErrorState('No details found for this session.');
+          }
+
+          if (_sessionData != null) {
+            return _buildContent(_sessionData!);
+          }
+
+          return result!.fold(
+            (error) => _buildErrorState('Error loading details: ${error.msg}'),
+            (data) {
+              _sessionData = data;
+              return _buildContent(data);
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -654,77 +357,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final logs = data['logs'] as List? ?? [];
     final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
 
-    final bool isVerified =
-        widget.isVerified ?? (data['is_verified'] as bool?) ?? false;
-
-    bool isEditable = status != 'COMPLETED';
-    if (!isEditable && completedAt != null && !isVerified) {
-      try {
-        final completedTime = DateTime.parse(completedAt).toLocal();
-        final difference = DateTime.now().difference(completedTime);
-        if (difference.inMinutes.abs() < 60) {
-          isEditable = true;
-        }
-      } catch (_) {}
-    }
-
-    final duration =
-        widget.startTimer
-            ? _formatTimer(_elapsedSeconds)
-            : _formatDuration(startedAt, completedAt);
+    final duration = _formatDuration(startedAt, completedAt);
     final formattedDate = _formatDate(dateStr);
-
-    final trainerName = widget.trainerName ?? data['trainer_name']?.toString();
-    final isMentor = trainerName != null && trainerName.trim().isNotEmpty;
 
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        if (status == 'COMPLETED' && !isVerified && isEditable) ...[
-          Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF9E6),
-              border: Border.all(color: const Color(0xFFFFE0B2), width: 1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(
-                  Icons.info_outline_rounded,
-                  color: Color(0xFFE65100),
-                  size: 20,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isMentor
-                            ? 'Trainer Assigned Workout'
-                            : 'Completed Workout',
-                        style: AppStyles.text12Px.poppins.w600.copyWith(
-                          color: const Color(0xFFE65100),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'This workout has been successfully completed. Editing is available for 1 hour after completion.',
-                        style: AppStyles.text12Px.poppins.w400.copyWith(
-                          color: const Color(0xFFE65100),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-
         // Premium Summary Header Card
         Container(
           width: double.infinity,
@@ -854,8 +492,13 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         else
           ...List.generate(logs.length, (index) {
             final log = logs[index] as Map<String, dynamic>;
-            return _buildExerciseCard(log, index, isEditable);
+            return _buildExerciseCard(log, index, status);
           }),
+
+        if (status != 'COMPLETED') ...[
+          const SizedBox(height: 24),
+          _buildFinishButton(),
+        ],
 
         const SizedBox(height: 40),
       ],
@@ -867,24 +510,17 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     required String label,
     required String value,
   }) {
-    final isTimerActive = label == 'Duration' && widget.startTimer;
     return Column(
       children: [
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              color:
-                  isTimerActive ? AppColors.primary : const Color(0xFFF0B5B7),
-              size: 16,
-            ),
+            Icon(icon, color: const Color(0xFFF0B5B7), size: 16),
             const SizedBox(width: 6),
             Text(
               label,
               style: AppStyles.text12Px.poppins.w500.copyWith(
-                color:
-                    isTimerActive ? AppColors.primary : const Color(0xFF94A3B8),
+                color: const Color(0xFF94A3B8),
               ),
             ),
           ],
@@ -893,29 +529,20 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         Text(
           value,
           style: AppStyles.text16Px.poppins.w600.copyWith(
-            color:
-                isTimerActive
-                    ? AppColors.primary
-                    : AppColors.dark.withValues(alpha: 0.7),
+            color: AppColors.dark.withValues(alpha: 0.7),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildExerciseCard(
-    Map<String, dynamic> log,
-    int index,
-    bool isEditable,
-  ) {
+  Widget _buildExerciseCard(Map<String, dynamic> log, int index, String status) {
     final workoutName = log['workout_name']?.toString() ?? 'Exercise';
-    final workoutId = log['workout_id'] ?? log['plan_exercise'] ?? log['id'];
+    final planExerciseId = log['plan_exercise'] ?? log['workout_id'] ?? log['id'];
     final muscle = log['muscle']?.toString() ?? '';
     final equipment = log['equipment']?.toString() ?? '';
     final videoUrl = log['effective_video_url']?.toString() ?? '';
-    final setLogs = List<Map<String, dynamic>>.from(
-      log['set_logs'] as List? ?? [],
-    );
+    final setLogs = List<Map<String, dynamic>>.from(log['set_logs'] as List? ?? []);
     setLogs.sort((a, b) {
       final aNum = int.tryParse(a['set_number']?.toString() ?? '') ?? 0;
       final bNum = int.tryParse(b['set_number']?.toString() ?? '') ?? 0;
@@ -924,18 +551,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
     // Resolve type
     String? type;
-    if (workoutId != null) {
+    if (planExerciseId != null) {
       final match = _exercises.firstWhere(
-        (e) => e.id?.toString() == workoutId.toString(),
-        orElse:
-            () => ExerciseLibraryModel(
-              id: -1,
-              name: '',
-              type: '',
-              muscleGroup: '',
-              equipment: '',
-              videoUrl: null,
-            ),
+        (e) => e.id?.toString() == planExerciseId.toString(),
+        orElse: () => ExerciseLibraryModel(id: -1, name: '', type: '', muscleGroup: '', equipment: '', videoUrl: null),
       );
       if (match.id != -1 && match.type != null && match.type!.isNotEmpty) {
         type = match.type;
@@ -944,15 +563,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     if (type == null && workoutName.isNotEmpty) {
       final match = _exercises.firstWhere(
         (e) => e.name?.toLowerCase().trim() == workoutName.toLowerCase().trim(),
-        orElse:
-            () => ExerciseLibraryModel(
-              id: -1,
-              name: '',
-              type: '',
-              muscleGroup: '',
-              equipment: '',
-              videoUrl: null,
-            ),
+        orElse: () => ExerciseLibraryModel(id: -1, name: '', type: '', muscleGroup: '', equipment: '', videoUrl: null),
       );
       if (match.id != -1 && match.type != null && match.type!.isNotEmpty) {
         type = match.type;
@@ -964,57 +575,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     if (equipment.isNotEmpty) tags.add(equipment);
     if (type != null && type.isNotEmpty) tags.add(type);
     final subtitle = tags.join(' / ');
-
-    String? trackBy = log['track_by']?.toString();
-    if (trackBy == null || trackBy.isEmpty) {
-      if (workoutId != null) {
-        final match = _exercises.firstWhere(
-          (e) => e.id?.toString() == workoutId.toString(),
-          orElse:
-              () => ExerciseLibraryModel(
-                id: -1,
-                name: '',
-                type: '',
-                muscleGroup: '',
-                equipment: '',
-                videoUrl: null,
-              ),
-        );
-        if (match.id != -1) {
-          trackBy = match.trackBy;
-        }
-      }
-    }
-    if (trackBy == null || trackBy.isEmpty) {
-      final match = _exercises.firstWhere(
-        (e) => e.name?.toLowerCase().trim() == workoutName.toLowerCase().trim(),
-        orElse:
-            () => ExerciseLibraryModel(
-              id: -1,
-              name: '',
-              type: '',
-              muscleGroup: '',
-              equipment: '',
-              videoUrl: null,
-            ),
-      );
-      if (match.id != -1) {
-        trackBy = match.trackBy;
-      }
-    }
-
-    final isTimeBased =
-        trackBy?.toLowerCase() == 'time' ||
-        subtitle.toLowerCase().contains('cardio') ||
-        subtitle.toLowerCase().contains('flexibility') ||
-        subtitle.toLowerCase().contains('hiit') ||
-        setLogs.any(
-          (s) => s['input_type']?.toString().toLowerCase() == 'seconds',
-        );
-    final isDistanceBased = trackBy?.toLowerCase() == 'distance';
-
-    final String repsHeader =
-        isTimeBased ? 'Secs' : (isDistanceBased ? 'Km' : 'Reps');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1065,10 +625,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     onTap: () async {
                       final uri = Uri.parse(videoUrl);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -1131,7 +688,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                   ),
                 ),
-                if (isEditable)
+                if (status != 'COMPLETED')
                   Expanded(
                     flex: 3,
                     child: Text(
@@ -1143,80 +700,18 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   ),
                 Expanded(
                   flex: 3,
-                  child:
-                      isEditable
-                          ? Center(
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: () {
-                                  final val = log['weight_type']?.toString();
-                                  if (val == null) return 'kg';
-                                  if (val.toLowerCase() == 'bw') return 'BW';
-                                  if (val.toLowerCase() == 'kg+bw')
-                                    return 'kg+BW';
-                                  return val;
-                                }(),
-                                isDense: true,
-                                isExpanded: true,
-                                style: AppStyles.text12Px.poppins.w500.copyWith(
-                                  color: const Color(0xFF212121),
-                                ),
-                                icon: const Icon(
-                                  Icons.arrow_drop_down,
-                                  size: 14,
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'kg',
-                                    child: Text('kg'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'BW',
-                                    child: Text('BW'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'kg+BW',
-                                    child: Text('kg+BW'),
-                                  ),
-                                ],
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    final logId = int.tryParse(
-                                      log['id']?.toString() ?? '',
-                                    );
-                                    if (logId != null) {
-                                      setState(() {
-                                        log['weight_type'] = val;
-                                      });
-                                      WorkoutRepository()
-                                          .updateWorkoutLogWeightType(
-                                            logId: logId,
-                                            weightType: val,
-                                          );
-                                    }
-                                  }
-                                },
-                              ),
-                            ),
-                          )
-                          : Text(
-                            'Weight (${() {
-                              final val = log['weight_type']?.toString();
-                              if (val == null) return 'kg';
-                              if (val.toLowerCase() == 'bw') return 'BW';
-                              if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
-                              return val;
-                            }()})',
-                            textAlign: TextAlign.left,
-                            style: AppStyles.text12Px.poppins.w500.copyWith(
-                              color: const Color(0xFF212121),
-                            ),
-                          ),
+                  child: Text(
+                    status == 'COMPLETED' ? 'Weight' : 'Weight (kg)',
+                    textAlign: status == 'COMPLETED' ? TextAlign.left : TextAlign.center,
+                    style: AppStyles.text12Px.poppins.w500.copyWith(
+                      color: const Color(0xFF212121),
+                    ),
+                  ),
                 ),
                 Expanded(
                   flex: 3,
                   child: Text(
-                    repsHeader,
+                    'Reps',
                     textAlign: TextAlign.center,
                     style: AppStyles.text12Px.poppins.w500.copyWith(
                       color: const Color(0xFF212121),
@@ -1269,7 +764,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                     ),
                     child: Row(
                       children: [
-                        if (!isEditable) ...[
+                        if (status == 'COMPLETED') ...[
                           Expanded(
                             flex: 2,
                             child: Text(
@@ -1282,10 +777,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           Expanded(
                             flex: 3,
                             child: Text(
-                              (log['weight_type']?.toString().toUpperCase() ==
-                                      'BW')
-                                  ? 'BW'
-                                  : '$weight kg',
+                              '$weight kg',
                               style: AppStyles.text14Px.poppins.w400.copyWith(
                                 color: const Color(0xFF212121),
                               ),
@@ -1309,10 +801,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 isCompleted
                                     ? Icons.check_circle_rounded
                                     : Icons.radio_button_unchecked_rounded,
-                                color:
-                                    isCompleted
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFCCCCCC),
+                                color: isCompleted
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFFCCCCCC),
                                 size: 20,
                               ),
                             ),
@@ -1330,42 +821,21 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                     if (setLogId != null) {
                                       final confirm = await showDialog<bool>(
                                         context: context,
-                                        builder:
-                                            (context) => AlertDialog(
-                                              backgroundColor: Colors.white,
-                                              title: const Text('Delete Set'),
-                                              content: Text(
-                                                'Are you sure you want to delete set $setNum?',
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        context,
-                                                        false,
-                                                      ),
-                                                  child: const Text(
-                                                    'Cancel',
-                                                    style: TextStyle(
-                                                      color: Colors.grey,
-                                                    ),
-                                                  ),
-                                                ),
-                                                TextButton(
-                                                  onPressed:
-                                                      () => Navigator.pop(
-                                                        context,
-                                                        true,
-                                                      ),
-                                                  child: const Text(
-                                                    'Delete',
-                                                    style: TextStyle(
-                                                      color: Colors.red,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
+                                        builder: (context) => AlertDialog(
+                                          backgroundColor: Colors.white,
+                                          title: const Text('Delete Set'),
+                                          content: Text('Are you sure you want to delete set $setNum?'),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, false),
+                                              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
                                             ),
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(context, true),
+                                              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                                            ),
+                                          ],
+                                        ),
                                       );
                                       if (confirm == true) {
                                         _deleteSet(log['id'] as int, setLogId);
@@ -1381,8 +851,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 const SizedBox(width: 6),
                                 Text(
                                   '$setNum',
-                                  style: AppStyles.text14Px.poppins.w400
-                                      .copyWith(color: const Color(0xFF212121)),
+                                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                                    color: const Color(0xFF212121),
+                                  ),
                                 ),
                               ],
                             ),
@@ -1391,10 +862,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           Expanded(
                             flex: 3,
                             child: Text(
-                              (set['previous'] == 'no data' ||
-                                      set['previous'] == null)
-                                  ? '-'
-                                  : set['previous'].toString(),
+                              (set['previous'] == 'no data' || set['previous'] == null) ? '-' : set['previous'].toString(),
                               style: AppStyles.text12Px.poppins.w400.copyWith(
                                 color: const Color(0xFF666666),
                               ),
@@ -1405,91 +873,39 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                             flex: 3,
                             child: Align(
                               alignment: Alignment.center,
-                              child:
-                                  (log['weight_type']
-                                              ?.toString()
-                                              .toUpperCase() ==
-                                          'BW')
-                                      ? Container(
-                                        width: 65,
-                                        height: 34,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F3F9),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'BW',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF666666),
-                                          ),
-                                        ),
-                                      )
-                                      : SizedBox(
-                                        width: 65,
-                                        child: TextFormField(
-                                          key: ValueKey('weight_${set['id']}'),
-                                          initialValue:
-                                              set['weight_kg'] != null &&
-                                                      set['weight_kg']
-                                                              .toString() !=
-                                                          'null'
-                                                  ? set['weight_kg'].toString()
-                                                  : '',
-                                          keyboardType:
-                                              const TextInputType.numberWithOptions(
-                                                decimal: true,
-                                              ),
-                                          textAlign: TextAlign.center,
-                                          style: AppStyles.text14Px.poppins.w400
-                                              .copyWith(
-                                                color: const Color(0xFF212121),
-                                              ),
-                                          decoration: InputDecoration(
-                                            isDense: true,
-                                            contentPadding:
-                                                const EdgeInsets.symmetric(
-                                                  vertical: 8,
-                                                  horizontal: 4,
-                                                ),
-                                            filled: true,
-                                            fillColor: const Color(0xFFF1F3F9),
-                                            border: OutlineInputBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              borderSide: BorderSide.none,
-                                            ),
-                                            hintText:
-                                                set['target_weight'] != null
-                                                    ? '${set['target_weight']}'
-                                                    : '-',
-                                            hintStyle: const TextStyle(
-                                              color: Color(0xFF94A3B8),
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                          onChanged: (val) {
-                                            final double? parsedWeight =
-                                                double.tryParse(val);
-                                            set['weight_kg'] = parsedWeight;
-                                            _debounceUpdateSet(
-                                              set['id'] as int,
-                                              reps:
-                                                  set['reps'] != null
-                                                      ? int.tryParse(
-                                                        set['reps'].toString(),
-                                                      )
-                                                      : null,
-                                              weightKg: parsedWeight,
-                                            );
-                                          },
-                                        ),
-                                      ),
+                              child: SizedBox(
+                                width: 65,
+                                child: TextFormField(
+                                  key: ValueKey('weight_${set['id']}'),
+                                  initialValue: set['weight_kg'] != null && set['weight_kg'].toString() != 'null' ? set['weight_kg'].toString() : '',
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  textAlign: TextAlign.center,
+                                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                                    color: const Color(0xFF212121),
+                                  ),
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                                    filled: true,
+                                    fillColor: const Color(0xFFF1F3F9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    hintText: set['target_weight'] != null ? '${set['target_weight']}' : '-',
+                                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                                  ),
+                                  onChanged: (val) {
+                                    final double? parsedWeight = double.tryParse(val);
+                                    set['weight_kg'] = parsedWeight;
+                                    _debounceUpdateSet(
+                                      set['id'] as int,
+                                      reps: set['reps'] != null ? int.tryParse(set['reps'].toString()) : null,
+                                      weightKg: parsedWeight,
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
                           ),
                           // Reps input field
@@ -1501,49 +917,31 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 width: 60,
                                 child: TextFormField(
                                   key: ValueKey('reps_${set['id']}'),
-                                  initialValue:
-                                      set['reps'] != null &&
-                                              set['reps'].toString() != 'null'
-                                          ? set['reps'].toString()
-                                          : '',
+                                  initialValue: set['reps'] != null && set['reps'].toString() != 'null' ? set['reps'].toString() : '',
                                   keyboardType: TextInputType.number,
                                   textAlign: TextAlign.center,
-                                  style: AppStyles.text14Px.poppins.w400
-                                      .copyWith(color: const Color(0xFF212121)),
+                                  style: AppStyles.text14Px.poppins.w400.copyWith(
+                                    color: const Color(0xFF212121),
+                                  ),
                                   decoration: InputDecoration(
                                     isDense: true,
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 4,
-                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                                     filled: true,
                                     fillColor: const Color(0xFFF1F3F9),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(8),
                                       borderSide: BorderSide.none,
                                     ),
-                                    hintText:
-                                        set['target_reps'] != null
-                                            ? '${set['target_reps']}'
-                                            : '-',
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFF94A3B8),
-                                      fontSize: 12,
-                                    ),
+                                    hintText: set['target_reps'] != null ? '${set['target_reps']}' : '-',
+                                    hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                                   ),
                                   onChanged: (val) {
-                                    final int? parsedReps =
-                                        double.tryParse(val)?.round();
+                                    final int? parsedReps = int.tryParse(val);
                                     set['reps'] = parsedReps;
                                     _debounceUpdateSet(
                                       set['id'] as int,
                                       reps: parsedReps,
-                                      weightKg:
-                                          set['weight_kg'] != null
-                                              ? double.tryParse(
-                                                set['weight_kg'].toString(),
-                                              )
-                                              : null,
+                                      weightKg: set['weight_kg'] != null ? double.tryParse(set['weight_kg'].toString()) : null,
                                     );
                                   },
                                 ),
@@ -1559,46 +957,33 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 onTap: () async {
                                   final setLogId = set['id'] as int?;
                                   if (setLogId != null) {
-                                    if (_completingSetIds.contains(setLogId))
-                                      return;
                                     setState(() {
-                                      _completingSetIds.add(setLogId);
                                       set['is_completed'] = !isCompleted;
                                     });
-                                    final res = await WorkoutRepository()
-                                        .updateSetLog(
-                                          setLogId: setLogId,
-                                          isCompleted: !isCompleted,
+                                    final res = await WorkoutRepository().updateSetLog(
+                                      setLogId: setLogId,
+                                      isCompleted: !isCompleted,
+                                    );
+                                    res.fold(
+                                      (error) {
+                                        setState(() {
+                                          set['is_completed'] = isCompleted;
+                                        });
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Failed to update set: ${error.msg}')),
                                         );
-                                    res.fold((error) {
-                                      setState(() {
-                                        set['is_completed'] = isCompleted;
-                                      });
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Failed to update set: ${error.msg}',
-                                          ),
-                                        ),
-                                      );
-                                    }, (_) => null);
-                                    if (mounted) {
-                                      setState(() {
-                                        _completingSetIds.remove(setLogId);
-                                      });
-                                    }
+                                      },
+                                      (_) => null,
+                                    );
                                   }
                                 },
                                 child: Icon(
                                   isCompleted
                                       ? Icons.check_circle_rounded
                                       : Icons.radio_button_unchecked_rounded,
-                                  color:
-                                      isCompleted
-                                          ? const Color(0xFF10B981)
-                                          : const Color(0xFFCCCCCC),
+                                  color: isCompleted
+                                      ? const Color(0xFF10B981)
+                                      : const Color(0xFFCCCCCC),
                                   size: 22,
                                 ),
                               ),
@@ -1614,14 +999,13 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               );
             }),
 
-          if (isEditable) ...[
+          if (status != 'COMPLETED') ...[
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               child: _buildOutlineRedButton(
                 text: '+ Add Set',
                 onTap: () => _addSet(log),
-                isLoading: _addingSetLogIds.contains(log['id']),
               ),
             ),
           ],
@@ -1633,100 +1017,42 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   }
 
   Widget _buildFinishButton() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
-      child: SafeArea(
-        top: false,
-        child: Button.filled(
-          isLoading: _isFinishing,
-          size: const Size(double.infinity, 48),
-          title: 'Finish Workout',
-          style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
-          icon: const Icon(Icons.check, color: Colors.white, size: 20),
-          raduis: 12,
-          ontap: () async {
-            if (_isFinishing) return;
-            setState(() {
-              _isFinishing = true;
-            });
-            final res = await WorkoutRepository().finishSession(
-              sessionId: widget.sessionId,
-              title: widget.fallbackTitle,
-            );
-            res.fold(
-              (error) {
+    return _isFinishing
+        ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary)))
+        : Padding(
+            padding: const EdgeInsets.only(bottom: 20),
+            child: Button.filled(
+              size: const Size(double.infinity, 48),
+              title: 'Finish Workout',
+              style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
+              icon: const Icon(Icons.check, color: Colors.white, size: 20),
+              raduis: 12,
+              ontap: () async {
                 setState(() {
-                  _isFinishing = false;
+                  _isFinishing = true;
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to finish workout: ${error.msg}'),
-                  ),
+                final res = await WorkoutRepository().finishSession(
+                  sessionId: widget.sessionId,
+                  title: widget.fallbackTitle,
+                );
+                res.fold(
+                  (error) {
+                    setState(() {
+                      _isFinishing = false;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Failed to finish workout: ${error.msg}')),
+                    );
+                  },
+                  (_) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Workout finished successfully!')),
+                    );
+                    Navigator.pop(context, true);
+                  },
                 );
               },
-              (data) {
-                final dateStr =
-                    _sessionData?['session_date']?.toString() ??
-                    _sessionData?['started_at']?.toString();
-                if (dateStr != null) {
-                  try {
-                    final date = DateTime.parse(dateStr);
-                    WorkoutRepository().invalidateCalendarMonth(
-                      date.year,
-                      date.month,
-                    );
-                  } catch (_) {
-                    final now = DateTime.now();
-                    WorkoutRepository().invalidateCalendarMonth(
-                      now.year,
-                      now.month,
-                    );
-                  }
-                } else {
-                  final now = DateTime.now();
-                  WorkoutRepository().invalidateCalendarMonth(
-                    now.year,
-                    now.month,
-                  );
-                }
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Workout finished successfully!'),
-                  ),
-                );
-                final Map<String, dynamic> sessionMap =
-                    data is Map<String, dynamic>
-                        ? Map<String, dynamic>.from(data)
-                        : <String, dynamic>{};
-                sessionMap['id'] ??= widget.sessionId;
-                sessionMap['session_id'] ??= widget.sessionId;
-                widget.onRefresh?.call();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute<bool>(
-                    builder:
-                        (context) => WorkoutAchievementScreen(
-                          sessionData: sessionMap,
-                          fallbackTitle: widget.fallbackTitle,
-                        ),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
+            ),
+          );
   }
 }

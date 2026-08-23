@@ -1,7 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/profile_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/profile_details_screen.dart';
-import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/fitness_details_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/contact_support_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/faq_screen.dart';
 import 'package:url_launcher/url_launcher.dart';

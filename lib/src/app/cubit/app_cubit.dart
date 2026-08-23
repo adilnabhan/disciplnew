@@ -125,7 +125,6 @@ class AppCubit extends HydratedCubit<AppState> {
   // ---------------- USER ----------------
 
   void addUser(LoginSuccessModel user) {
-    print('DEBUG LOG: Login success. User ID: ${user.customer?.id}, Access Token: ${user.access}');
     LocalStorageService().saveUser(user);
     emit(state.copyWith(currentUser: user));
   }
@@ -141,9 +140,7 @@ class AppCubit extends HydratedCubit<AppState> {
   }
 
   void removeUser() {
-    print('DEBUG LOG: removeUser() called.');
     LocalStorageService().clearUser();
-    WorkoutRepository().clearCalendarCache();
     emit(state.copyWith(currentUser: null));
   }
 
@@ -244,15 +241,16 @@ class AppCubit extends HydratedCubit<AppState> {
       }
     }
 
-    if (currentUser != null) {
-      print('DEBUG LOG: Tokens restored on app startup. Access: ${currentUser.access}, Refresh: ${currentUser.refresh}');
-    }
-
     return AppState(
       themeMode:
           json['theme_mode'] == 'dark' ? ThemeMode.dark : ThemeMode.light,
       locale: Locale(json['language_code'] as String),
-      currentUser: currentUser,
+      currentUser:
+          json['currentUser'] != null
+              ? LoginSuccessModel.fromJson(
+                json['currentUser'] as Map<String, dynamic>,
+              )
+              : null,
     );
   }
 
@@ -282,7 +280,7 @@ class AppCubit extends HydratedCubit<AppState> {
       if (refreshToken == null || refreshToken.isEmpty) {
         print('❌ AppCubit: No refresh token found. Logging out.');
         if (state.currentUser != null) {
-          removeUser();
+          emit(state.copyWith(currentUser: null));
         }
         return;
       }
@@ -306,7 +304,7 @@ class AppCubit extends HydratedCubit<AppState> {
                 '🚫 AppCubit: Token refresh failed (Invalid token). Logging out.',
               );
               if (state.currentUser != null) {
-                removeUser();
+                emit(state.copyWith(currentUser: null));
                 Feggy.pushAndRemoveUntil(const SentOtpScreen());
               }
             },
@@ -323,11 +321,9 @@ class AppCubit extends HydratedCubit<AppState> {
           // ❌ Invalid response → logout
           if (access == null) {
             print('❌ AppCubit: New access token is null. Logging out.');
-            removeUser();
+            emit(state.copyWith(currentUser: null));
             return;
           }
-
-          print('DEBUG LOG: Token refresh success. Access Token: $access');
 
           // ✅ Update tokens
           print('✅ AppCubit: Updating user with new tokens.');

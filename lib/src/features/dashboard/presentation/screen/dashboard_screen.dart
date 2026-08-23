@@ -1,10 +1,14 @@
 import 'dart:ui';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/fitness_centers_listing_screen.dart';
-import 'package:customer_mobile_app/src/features/nutrition/presentation/screens/nutrition_screen.dart';
-import 'package:customer_mobile_app/src/features/social/presentation/screens/social_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/screens/nutrition_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/screens/scoreboard_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/screens/partner_qr_pass_screen.dart';
 
+///* This class contains dashbpard screen
+///*eg : Pages manager , bottom nav ...
 class DashboardScreen extends StatefulWidget {
+  ///*
   const DashboardScreen({this.navIndex, super.key});
 
   final int? navIndex;
@@ -15,12 +19,32 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   late final DashboardCubit _cubit;
+  late final List<String> _icons;
+  late final List<String> _labels;
+  late final PageController _pageController;
 
   @override
   void initState() {
-    super.initState();
+    final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+
+    _pageController = PageController(initialPage: widget.navIndex ?? 0);
     _cubit = DashboardCubit(navIndex: widget.navIndex);
-    _cubit.fetchActiveMembership();
+    _icons = [
+      'assets/images/svg/icons/new_home_notselected.svg',
+      'assets/images/svg/icons/workout_notseleted.svg',
+      'assets/images/svg/icons/new_home_notselected.svg',
+      'assets/images/svg/icons/not selected_explore.svg',
+      'assets/images/svg/icons/person.svg',
+    ];
+
+    _labels = [
+      'Home',
+      'Workouts',
+      'Nutrition',
+      'Score Card',
+      'Profile',
+    ];
+    super.initState();
   }
 
   Widget _buildProfileTabIcon(bool isSelected) {
@@ -28,8 +52,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final String? profilePicUrl = currentUser?.profilePicture as String?;
 
     return Container(
-      width: 24,
-      height: 24,
+      width: 26,
+      height: 26,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(
@@ -40,102 +64,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
       padding: const EdgeInsets.all(1.5),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(100),
-        child:
-            (profilePicUrl != null && profilePicUrl.isNotEmpty)
-                ? ImageNetwork(
-                  profilePicUrl,
-                  fit: BoxFit.cover,
-                  errorWidget: SvgPicture.asset(
-                    'assets/images/svg/icons/person.svg',
-                    colorFilter: ColorFilter.mode(
-                      isSelected ? AppColors.primary : AppColors.textGrey,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                )
-                : SvgPicture.asset(
+        child: (profilePicUrl != null && profilePicUrl.isNotEmpty)
+            ? ImageNetwork(
+                profilePicUrl,
+                fit: BoxFit.cover,
+                errorWidget: SvgPicture.asset(
                   'assets/images/svg/icons/person.svg',
                   colorFilter: ColorFilter.mode(
                     isSelected ? AppColors.primary : AppColors.textGrey,
                     BlendMode.srcIn,
                   ),
                 ),
+              )
+            : SvgPicture.asset(
+                'assets/images/svg/icons/person.svg',
+                colorFilter: ColorFilter.mode(
+                  isSelected ? AppColors.primary : AppColors.textGrey,
+                  BlendMode.srcIn,
+                ),
+              ),
       ),
     );
   }
 
+
+
   @override
   void dispose() {
     _cubit.close();
+    _pageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    bool isCustomer;
+    if (Feggy.read<AppCubit>()?.state.currentUser == null) {
+      isCustomer = false;
+    } else {
+      isCustomer = true;
+    }
     return BlocProvider.value(
       value: _cubit,
-      child: BlocBuilder<DashboardCubit, DashboardState>(
-        builder: (context, state) {
-          final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
-
-          // Check if customer is a Gym-Assigned Member
-          bool isGymMember = false;
-          if (currentUser != null) {
-            // Check active membership state
-            state.activeMembershipData.fold(() {}, (either) {
-              either.fold((_) {}, (activeMembership) {
-                if (activeMembership != null) {
-                  isGymMember = true;
-                }
-              });
-            });
-
-            // Default logged-in users with customer profile to Gym Member view
-            if (!isGymMember && currentUser.customer != null) {
-              isGymMember = true;
-            }
+      child: BlocConsumer<DashboardCubit, DashboardState>(
+        listenWhen: (p, c) => p.navIndex != c.navIndex,
+        listener: (context, state) {
+          if (_pageController.hasClients) {
+            _pageController.jumpToPage(state.navIndex);
           }
-
-          // Gym Members get 5 Tabs (Home, Workouts, Nutrition, Score Card, Profile - NO Explore)
-          // Individual/Guest Members get 4 Standard Tabs (Home, Workouts, Explore, Profile)
-          final List<Widget> pages = isGymMember
-              ? const [
-                  HomeScreen(),
-                  WorkoutLogScreen(),
-                  NutritionScreen(),
-                  SocialScreen(),
-                  ProfileScreen(),
-                ]
-              : const [
-                  HomeScreen(),
-                  WorkoutLogScreen(),
-                  FitnessCentersListingScreen(),
-                  ProfileScreen(),
-                ];
-
-          final List<String> labels = isGymMember
-              ? ['Home', 'Workouts', 'Nutrition', 'Score Card', 'Profile']
-              : ['Home', 'Workouts', 'Explore', 'Profile'];
-
-          final List<String> icons = isGymMember
-              ? [
-                  'assets/images/svg/icons/new_home_notselected.svg',
-                  'assets/images/svg/icons/workout_notseleted.svg',
-                  'nutrition',
-                  'social',
-                  'assets/images/svg/icons/person.svg',
-                ]
-              : [
-                  'assets/images/svg/icons/new_home_notselected.svg',
-                  'assets/images/svg/icons/workout_notseleted.svg',
-                  'assets/images/svg/icons/not selected_explore.svg',
-                  'assets/images/svg/icons/person.svg',
-                ];
-
-          final currentIndex = state.navIndex.clamp(0, pages.length - 1);
-
+        },
+        builder: (context, state) {
           return Scaffold(
-            appBar: currentIndex == 0
+            appBar: state.navIndex == 0
                 ? AppBar(
                     title: Image.asset(
                       'assets/images/png/vectors/discipl_spell.png',
@@ -143,6 +123,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     centerTitle: false,
                     actions: [
+                      GestureDetector(
+                        onTap: () {
+                          context.push(const PartnerQrPassScreen());
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFFE50914), Color(0xFFB81D24)],
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x4DE50914), blurRadius: 8, offset: Offset(0, 2)),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.qr_code_2, color: Colors.white, size: 18),
+                              SizedBox(width: 4),
+                              Text(
+                                'QR PASS',
+                                style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w800, letterSpacing: 0.5),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
                       GestureDetector(
                         onTap: () {
                           context.push(const NotificationsScreen());
@@ -153,7 +162,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           height: 22,
                         ),
                       ),
-                      const SizedBox(width: 20),
+                      const SizedBox(width: 16),
                       GestureDetector(
                         onTap: () {
                           context.push(const SettingsScreen());
@@ -164,160 +173,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           height: 22,
                         ),
                       ),
-                      const SizedBox(width: 20),
+                      const SizedBox(width: 16),
                     ],
                   )
                 : null,
-            body: LazyIndexedStack(
-              index: currentIndex,
-              children: pages,
+            body: PageView(
+              controller: _pageController,
+              onPageChanged:
+                  (index) => context
+                      .read<DashboardCubit>()
+                      .changeNav(index: index),
+              children: const [
+                HomeScreen(),
+                WorkoutLogScreen(),
+                NutritionScreen(),
+                ScoreboardScreen(),
+                ProfileScreen(),
+              ],
             ),
             extendBody: false,
             bottomNavigationBar: Container(
-              height: 72,
+              height: 84,
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: Color(0xFFFDFBF7),
                 border: Border(
-                  top: BorderSide(color: AppColors.borderGrey, width: 0.5),
+                  top: BorderSide(color: Color(0xFFF59E0B), width: 1.5),
                 ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(
-                  labels.length,
-                  (i) {
-                    final isSelected = currentIndex == i;
-                    final isProfile = isGymMember ? i == 4 : i == 3;
-                    final isNutrition = isGymMember && i == 2;
-                    final isScoreCard = isGymMember && i == 3;
-
-                    return Expanded(
-                      child: InkWell(
-                        onTap: () => context.read<DashboardCubit>().changeNav(index: i),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (isProfile)
-                              _buildProfileTabIcon(isSelected)
-                            else if (isNutrition)
-                              Icon(
-                                Icons.restaurant_menu_rounded,
-                                size: 22,
-                                color: isSelected ? const Color(0xFF10B981) : AppColors.textGrey,
-                              )
-                            else if (isScoreCard)
-                              Icon(
-                                Icons.emoji_events_rounded,
-                                size: 22,
-                                color: isSelected ? const Color(0xFFF59E0B) : AppColors.textGrey,
-                              )
-                            else
-                              SvgPicture.asset(
-                                (i == 0 && isSelected)
-                                    ? 'assets/images/svg/icons/new_home_selected.svg'
-                                    : (i == 1 && isSelected)
-                                        ? 'assets/images/svg/icons/workout_selected.svg'
-                                        : (!isGymMember && i == 2 && isSelected)
-                                            ? 'assets/images/svg/icons/selected_explore.svg'
-                                            : icons[i],
-                                width: 22,
-                                height: 22,
-                                color: (i == 0 && isSelected) || (!isGymMember && i == 2 && isSelected)
-                                    ? null
-                                    : isSelected
-                                        ? AppColors.primary
-                                        : AppColors.textGrey,
-                              ),
-                            const SizedBox(height: 4),
-                            Text(
-                              labels[i],
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppStyles.text10Px.poppins.copyWith(
-                                color: isSelected
-                                    ? (isNutrition
-                                        ? const Color(0xFF10B981)
-                                        : isScoreCard
-                                            ? const Color(0xFFF59E0B)
-                                            : AppColors.primary)
-                                    : AppColors.textGrey,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              child: Column(
+                children: [
+                  // Top Marigold Floral Garland Trim Line
+                  Container(
+                    height: 16,
+                    color: const Color(0xFFFEF3C7),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: const [
+                        Text('🌼 🌸 🌿 🌼 🌸 🌿 🌼 🌸 🌿 🌼', style: TextStyle(fontSize: 8)),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: List.generate(
+                        _icons.length,
+                        (i) {
+                          final isSelected = state.navIndex == i;
+                          final Color activeCol = (i == 0) ? const Color(0xFFDC2626) : const Color(0xFF0D3B2E);
+                          return Expanded(
+                            child: InkWell(
+                              onTap: () => context.read<DashboardCubit>().changeNav(index: i),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (i == 4)
+                                    _buildProfileTabIcon(isSelected)
+                                  else
+                                    Icon(
+                                      i == 0
+                                          ? Icons.home_rounded
+                                          : i == 1
+                                              ? Icons.fitness_center_rounded
+                                              : i == 2
+                                                  ? Icons.restaurant_menu_rounded
+                                                  : Icons.emoji_events_rounded,
+                                      size: 22,
+                                      color: isSelected ? activeCol : const Color(0xFF94A3B8),
+                                    ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _labels[i],
+                                    style: AppStyles.text10Px.poppins.copyWith(
+                                      color: isSelected ? activeCol : const Color(0xFF64748B),
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           );
         },
       ),
-    );
-  }
-}
-
-class LazyIndexedStack extends StatefulWidget {
-  const LazyIndexedStack({
-    super.key,
-    required this.index,
-    required this.children,
-    this.alignment = AlignmentDirectional.topStart,
-    this.textDirection,
-    this.sizing = StackFit.loose,
-  });
-
-  final int index;
-  final List<Widget> children;
-  final AlignmentGeometry alignment;
-  final TextDirection? textDirection;
-  final StackFit sizing;
-
-  @override
-  State<LazyIndexedStack> createState() => _LazyIndexedStackState();
-}
-
-class _LazyIndexedStackState extends State<LazyIndexedStack> {
-  late List<bool> _activated;
-
-  @override
-  void initState() {
-    super.initState();
-    _activated = List<bool>.generate(
-      widget.children.length,
-      (i) => i == widget.index,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant LazyIndexedStack oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (_activated.length != widget.children.length) {
-      _activated = List<bool>.generate(
-        widget.children.length,
-        (i) => i < _activated.length ? _activated[i] : false,
-      );
-    }
-    if (!_activated[widget.index]) {
-      setState(() {
-        _activated[widget.index] = true;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return IndexedStack(
-      index: widget.index,
-      alignment: widget.alignment,
-      textDirection: widget.textDirection,
-      sizing: widget.sizing,
-      children: List<Widget>.generate(widget.children.length, (i) {
-        return _activated[i] ? widget.children[i] : const SizedBox.shrink();
-      }),
     );
   }
 }

@@ -13,12 +13,8 @@ class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     final token = _appCubit.state.currentUser?.access;
-    final isPublicPath = options.path.contains('token/refresh') ||
-        options.path.contains('login') ||
-        options.path.contains('otp') ||
-        options.path.contains('register');
 
-    if (token != null && !isPublicPath) {
+    if (token != null) {
       options.headers['Authorization'] = 'JWT $token';
     }
 

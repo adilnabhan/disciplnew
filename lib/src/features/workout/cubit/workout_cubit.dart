@@ -90,26 +90,10 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           sessionId: activeSessionId!,
           title: activeTitle,
         );
-        
-        bool finishSuccess = false;
         finishRes.fold(
-          (error) {
-            print('DEBUG: finishSession failed with error: $error');
-          },
-          (data) {
-            print('DEBUG: finishSession succeeded with data: $data');
-            finishSuccess = true;
-          },
+          (error) => print('DEBUG: finishSession failed with error: $error'),
+          (data) => print('DEBUG: finishSession succeeded with data: $data'),
         );
-
-        if (!finishSuccess) {
-          print('DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...');
-          final deleteRes = await WorkoutRepository().deleteActiveSession();
-          deleteRes.fold(
-            (error) => print('DEBUG: Failed to delete active session: $error'),
-            (_) => print('DEBUG: Successfully deleted active session.'),
-          );
-        }
       }
 
       // 3. Now start a brand new session!
@@ -173,26 +157,10 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           sessionId: activeSessionId!,
           title: activeTitle,
         );
-        
-        bool finishSuccess = false;
         finishRes.fold(
-          (error) {
-            print('DEBUG: finishSession failed with error: $error');
-          },
-          (data) {
-            print('DEBUG: finishSession succeeded with data: $data');
-            finishSuccess = true;
-          },
+          (error) => print('DEBUG: finishSession failed with error: $error'),
+          (data) => print('DEBUG: finishSession succeeded with data: $data'),
         );
-
-        if (!finishSuccess) {
-          print('DEBUG: Finishing failed (possibly 0 completed sets). Deleting/discarding active session...');
-          final deleteRes = await WorkoutRepository().deleteActiveSession();
-          deleteRes.fold(
-            (error) => print('DEBUG: Failed to delete active session: $error'),
-            (_) => print('DEBUG: Successfully deleted active session.'),
-          );
-        }
       }
 
       // 3. Now start a brand new session!
@@ -222,7 +190,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
   }
 
-  Future<Either<ApiException, dynamic>> finishSession({required String title}) async {
+  Future<void> finishSession({required String title}) async {
     await flushPendingUpdates();
     final activeRes = await WorkoutRepository().getActiveSession();
     int? activeSessionId;
@@ -276,37 +244,16 @@ class WorkoutCubit extends Cubit<WorkoutState> {
         sessionId: activeSessionId!,
         title: titleToUse,
       );
-      return result.fold(
+      result.fold(
         (error) {
           print('DEBUG: Error finishing session: $error');
-          return left(error);
         },
         (data) {
           print('DEBUG: Successfully finished session!');
-          final dateStr = startedAt;
-          if (dateStr != null) {
-            try {
-              final date = DateTime.parse(dateStr);
-              WorkoutRepository().invalidateCalendarMonth(date.year, date.month);
-            } catch (_) {
-              final now = DateTime.now();
-              WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
-            }
-          } else {
-            final now = DateTime.now();
-            WorkoutRepository().invalidateCalendarMonth(now.year, now.month);
-          }
-          final Map<String, dynamic> responseMap = data is Map<String, dynamic>
-              ? Map<String, dynamic>.from(data)
-              : <String, dynamic>{};
-          responseMap['id'] ??= activeSessionId;
-          responseMap['session_id'] ??= activeSessionId;
           emit(state.copyWith(exercises: [], sessionTitle: ''));
-          return right(responseMap);
         },
       );
     }
-    return left(const ApiException.unknown());
   }
 
   Future<void> saveDraftSession(String title) async {
@@ -332,48 +279,13 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     final equipResult = await WorkoutRepository().getEquipment();
     final typeResult = await WorkoutRepository().getExerciseTypes();
 
-    List<MuscleGroupModel> muscles = List<MuscleGroupModel>.from(state.muscleGroups);
-    List<EquipmentModel> equipment = List<EquipmentModel>.from(state.equipment);
-    List<ExerciseTypeModel> types = List<ExerciseTypeModel>.from(state.exerciseTypes);
+    List<MuscleGroupModel> muscles = [];
+    List<EquipmentModel> equipment = [];
+    List<ExerciseTypeModel> types = [];
 
-    muscleResult.fold(
-      (error) => null,
-      (list) {
-        final merged = List<MuscleGroupModel>.from(list);
-        for (final m in state.muscleGroups) {
-          if (!merged.any((item) => item.id == m.id)) {
-            merged.add(m);
-          }
-        }
-        muscles = merged;
-      },
-    );
-
-    equipResult.fold(
-      (error) => null,
-      (list) {
-        final merged = List<EquipmentModel>.from(list);
-        for (final e in state.equipment) {
-          if (!merged.any((item) => item.id == e.id)) {
-            merged.add(e);
-          }
-        }
-        equipment = merged;
-      },
-    );
-
-    typeResult.fold(
-      (error) => null,
-      (list) {
-        final merged = List<ExerciseTypeModel>.from(list);
-        for (final t in state.exerciseTypes) {
-          if (!merged.any((item) => item.id == t.id)) {
-            merged.add(t);
-          }
-        }
-        types = merged;
-      },
-    );
+    muscleResult.fold((error) => null, (list) => muscles = list);
+    equipResult.fold((error) => null, (list) => equipment = list);
+    typeResult.fold((error) => null, (list) => types = list);
 
     emit(
       state.copyWith(
@@ -385,7 +297,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
   }
 
-  Future<void> addSet(int exerciseIndex) async {
+  void addSet(int exerciseIndex) {
     if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
     if (isPresetCreation) {
@@ -396,14 +308,18 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
       final lastSet = sets.isNotEmpty ? sets.last : null;
 
-      final reps = lastSet != null ? lastSet['reps']?.toString() ?? '' : '';
-      final weight = lastSet != null ? lastSet['kg']?.toString() ?? '' : '';
+      final reps = lastSet != null
+          ? int.tryParse(lastSet['reps']?.toString() ?? '15') ?? 15
+          : 15;
+      final weight = lastSet != null
+          ? double.tryParse(lastSet['kg']?.toString() ?? '10.0') ?? 10.0
+          : 10.0;
 
       sets.add({
         'setNum': sets.length + 1,
         'previous': 'no data',
-        'kg': weight,
-        'reps': reps,
+        'kg': weight.toString(),
+        'reps': reps.toString(),
         'checked': false,
       });
       exercise['sets'] = sets;
@@ -412,7 +328,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
 
     final exercise = state.exercises[exerciseIndex];
-    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
+    final logIdStr = exercise['id']?.toString();
     final logId = int.tryParse(logIdStr ?? '');
 
     if (logId != null) {
@@ -420,48 +336,26 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       final lastSet = sets.isNotEmpty ? sets.last : null;
 
       final reps = lastSet != null
-          ? int.tryParse(lastSet['reps']?.toString() ?? '') ?? 0
-          : 0;
+          ? int.tryParse(lastSet['reps']?.toString() ?? '15') ?? 15
+          : 15;
       final weight = lastSet != null
-          ? double.tryParse(lastSet['kg']?.toString() ?? '') ?? 0.0
-          : 0.0;
+          ? double.tryParse(lastSet['kg']?.toString() ?? '10.0') ?? 10.0
+          : 10.0;
 
-      final result = await WorkoutRepository()
-          .addSetToExerciseLog(logId: logId, reps: reps, weightKg: weight);
-      await result.fold(
-        (error) async {
-          print('DEBUG: Error adding set to backend: $error');
-          await loadActiveSession();
-        },
-        (successData) async {
-          print('DEBUG: Successfully added set to backend: $successData');
-          await loadActiveSession();
-        },
-      );
-    }
-  }
-
-  Future<void> updateWorkoutLogWeightType(int exerciseIndex, String weightType) async {
-    final updatedExercises = List<Map<String, dynamic>>.from(
-      state.exercises.map((e) => Map<String, dynamic>.from(e)),
-    );
-    final exercise = updatedExercises[exerciseIndex];
-    exercise['weight_type'] = weightType;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
-    final logId = int.tryParse(logIdStr ?? '');
-    if (logId != null) {
-      final result = await WorkoutRepository().updateWorkoutLogWeightType(
-        logId: logId,
-        weightType: weightType,
-      );
-      result.fold(
-        (error) => print('DEBUG: Error updating workout log weight type: $error'),
-        (success) => print('DEBUG: Successfully updated workout log weight type'),
-      );
+      WorkoutRepository()
+          .addSetToExerciseLog(logId: logId, reps: reps, weightKg: weight)
+          .then((result) {
+            result.fold(
+              (error) {
+                print('DEBUG: Error adding set to backend: $error');
+                loadActiveSession();
+              },
+              (successData) {
+                print('DEBUG: Successfully added set to backend: $successData');
+                loadActiveSession();
+              },
+            );
+          });
     }
   }
 
@@ -484,8 +378,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           {
             'setNum': 1,
             'previous': 'no data',
-            'kg': '',
-            'reps': '',
+            'kg': '10.0',
+            'reps': '15',
             'checked': false,
           }
         ],
@@ -511,58 +405,12 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
   }
 
-  void swapExercises(int indexA, int indexB) {
-    if (indexA < 0 || indexA >= state.exercises.length) return;
-    if (indexB < 0 || indexB >= state.exercises.length) return;
-
-    final updatedExercises = List<Map<String, dynamic>>.from(
-      state.exercises.map((e) => Map<String, dynamic>.from(e)),
-    );
-    final temp = updatedExercises[indexA];
-    updatedExercises[indexA] = updatedExercises[indexB];
-    updatedExercises[indexB] = temp;
-    emit(state.copyWith(exercises: updatedExercises));
-  }
-
-  Future<void> deleteExercise(int exerciseIndex) async {
-    if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
-
-    final exercise = state.exercises[exerciseIndex];
-
-    // Perform optimistic local removal first so the UI updates instantly
-    final updatedExercises = List<Map<String, dynamic>>.from(
-      state.exercises.map((e) => Map<String, dynamic>.from(e)),
-    );
-    updatedExercises.removeAt(exerciseIndex);
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final logIdStr = exercise['workout_log_id']?.toString() ?? exercise['id']?.toString();
-    final logId = int.tryParse(logIdStr ?? '');
-    if (logId != null) {
-      final res = await WorkoutRepository().deleteWorkoutLog(logId: logId);
-      res.fold(
-        (error) {
-          print('DEBUG: Error deleting workout log $logId: $error');
-          loadActiveSession();
-        },
-        (_) {
-          print('DEBUG: Successfully deleted workout log $logId');
-          loadActiveSession();
-        },
-      );
-    }
-  }
-
   Future<void> createCustomExercise({
     required String name,
     required int muscleGroupId,
     required int equipmentId,
     required String type,
-    String? trackBy,
     String? videoUrl,
-    List<int>? secondaryMuscleGroupIds,
     required void Function(bool success, String message) onComplete,
   }) async {
     emit(state.copyWith(isCreatingExercise: true));
@@ -573,9 +421,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       'primary_muscle_group': muscleGroupId,
       'equipment': equipmentId,
       'video_url': videoUrl ?? '',
-      'track_by': trackBy ?? 'rep',
-      if (secondaryMuscleGroupIds != null && secondaryMuscleGroupIds.isNotEmpty)
-        'secondary_muscle_groups': secondaryMuscleGroupIds,
     };
 
     final result = await WorkoutRepository().createCustomExercise(body: body);
@@ -595,7 +440,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           'id': (newExercise.id ?? '').toString(),
           'title': newExercise.name ?? '',
           'subtitle': formattedSub,
-          'track_by': newExercise.trackBy ?? 'rep',
         });
 
         emit(
@@ -648,7 +492,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     }
 
     if (currentSet != null) {
-      final reps = double.tryParse(currentSet['reps']?.toString() ?? '')?.round();
+      final reps = int.tryParse(currentSet['reps']?.toString() ?? '');
       final weightKg = double.tryParse(currentSet['kg']?.toString() ?? '');
       final isCompleted = currentSet['checked'] as bool?;
 
@@ -679,7 +523,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     await Future.wait(futures);
   }
 
-  Future<void> toggleSetChecked(int exerciseIndex, int setIndex, {void Function(String errorMessage)? onError}) async {
+  void toggleSetChecked(int exerciseIndex, int setIndex) {
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
@@ -700,78 +544,24 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       _updateDebouncers[setLogId]?.cancel();
       _updateDebouncers.remove(setLogId);
 
-      final reps = double.tryParse(set['reps']?.toString() ?? '')?.round();
+      final reps = int.tryParse(set['reps']?.toString() ?? '');
       final weightKg = double.tryParse(set['kg']?.toString() ?? '');
-      final result = await WorkoutRepository().updateSetLog(
-        setLogId: setLogId,
-        reps: reps,
-        weightKg: weightKg,
-        isCompleted: newChecked,
-      );
-      result.fold(
-        (error) {
-          print('DEBUG: Error updating set checked state: $error');
-          // Optimistic Rollback
-          final rollbackExercises = List<Map<String, dynamic>>.from(
-            state.exercises.map((e) => Map<String, dynamic>.from(e)),
-          );
-          if (exerciseIndex >= 0 && exerciseIndex < rollbackExercises.length) {
-            final rSets = List<Map<String, dynamic>>.from(
-              rollbackExercises[exerciseIndex]['sets'] as List,
+      WorkoutRepository()
+          .updateSetLog(
+            setLogId: setLogId,
+            reps: reps,
+            weightKg: weightKg,
+            isCompleted: newChecked,
+          )
+          .then((result) {
+            result.fold(
+              (error) =>
+                  print('DEBUG: Error updating set checked state: $error'),
+              (success) => print(
+                'DEBUG: Successfully updated set checked state to $newChecked',
+              ),
             );
-            if (setIndex >= 0 && setIndex < rSets.length) {
-              final rSet = Map<String, dynamic>.from(rSets[setIndex]);
-              rSet['checked'] = !newChecked;
-              rSets[setIndex] = rSet;
-              rollbackExercises[exerciseIndex]['sets'] = rSets;
-              emit(state.copyWith(exercises: rollbackExercises));
-            }
-          }
-          if (onError != null) {
-            onError(error.msg);
-          }
-        },
-        (success) {
-          print('DEBUG: Successfully updated set checked state to $newChecked');
-        },
-      );
-    }
-  }
-
-  Future<void> deleteSet(int exerciseIndex, int setIndex) async {
-    final exercise = state.exercises[exerciseIndex];
-    final sets = List<Map<String, dynamic>>.from(exercise['sets'] as List? ?? []);
-    if (setIndex < 0 || setIndex >= sets.length) return;
-
-    final setLog = sets[setIndex];
-
-    // Perform optimistic local removal first so the UI updates instantly
-    sets.removeAt(setIndex);
-    // Reorder set numbers
-    for (int i = 0; i < sets.length; i++) {
-      sets[i]['setNum'] = i + 1;
-    }
-    final updatedExercises = List<Map<String, dynamic>>.from(
-      state.exercises.map((e) => Map<String, dynamic>.from(e)),
-    );
-    updatedExercises[exerciseIndex]['sets'] = sets;
-    emit(state.copyWith(exercises: updatedExercises));
-
-    if (isPresetCreation) return;
-
-    final setLogId = setLog['id'] as int?;
-    if (setLogId != null) {
-      final res = await WorkoutRepository().deleteSetLog(setLogId: setLogId);
-      res.fold(
-        (error) {
-          print('DEBUG: Error deleting set log $setLogId: $error');
-          loadActiveSession();
-        },
-        (_) {
-          print('DEBUG: Successfully deleted set log $setLogId');
-          loadActiveSession();
-        },
-      );
+          });
     }
   }
 
@@ -784,13 +574,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
     final set = Map<String, dynamic>.from(sets[setIndex]);
     set['kg'] = val;
-
-    // Check if the weight is invalid, if so, automatically uncheck
-    final kgVal = double.tryParse(val.trim()) ?? 0.0;
-    if (val.trim().isEmpty || kgVal < 0.0) {
-      set['checked'] = false;
-    }
-
     sets[setIndex] = set;
     updatedExercises[exerciseIndex]['sets'] = sets;
     emit(state.copyWith(exercises: updatedExercises));
@@ -812,13 +595,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
     final set = Map<String, dynamic>.from(sets[setIndex]);
     set['reps'] = val;
-
-    // Check if the reps are invalid, if so, automatically uncheck
-    final repsVal = double.tryParse(val.trim()) ?? 0.0;
-    if (val.trim().isEmpty || repsVal < 0.0) {
-      set['checked'] = false;
-    }
-
     sets[setIndex] = set;
     updatedExercises[exerciseIndex]['sets'] = sets;
     emit(state.copyWith(exercises: updatedExercises));
@@ -879,7 +655,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
                 'subtitle':
                     '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}',
                 'video_url': model.videoUrl?.toString() ?? '',
-                'track_by': model.trackBy ?? 'rep',
               };
             }).toList();
         if (!isSearching) {
@@ -921,7 +696,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
                 'subtitle':
                     '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}',
                 'video_url': model.videoUrl?.toString() ?? '',
-                'track_by': model.trackBy ?? 'rep',
               };
             }).toList();
         final isSearching = search != null && search.trim().isNotEmpty;
@@ -1004,7 +778,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       String? subtitle;
       int? exerciseId;
       String? videoUrl;
-      String? resolvedTrackBy;
 
       String? rawMuscle;
       String? rawEquip;
@@ -1022,7 +795,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             workout['equipment'] as String?;
         rawType = workout['type'] as String?;
         videoUrl = workout['video_url']?.toString();
-        resolvedTrackBy = workout['track_by'] as String?;
       } else if (item['exercise'] is Map<String, dynamic>) {
         final exercise = item['exercise'] as Map<String, dynamic>;
         title = exercise['name'] as String?;
@@ -1035,7 +807,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             exercise['equipment'] as String?;
         rawType = exercise['type'] as String?;
         videoUrl = exercise['video_url']?.toString();
-        resolvedTrackBy = exercise['track_by'] as String?;
       } else {
         title =
             item['workout_name']?.toString() ??
@@ -1053,7 +824,6 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             item['equipment_name']?.toString() ?? item['equipment']?.toString();
         rawType = item['type']?.toString();
         videoUrl = item['video_url']?.toString();
-        resolvedTrackBy = item['track_by']?.toString();
       }
 
       if (title == null || title.isEmpty) return;
@@ -1080,17 +850,12 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             }
           }
         }
-        if (foundEx != null) {
-          if (foundEx['subtitle'] != null) {
-            final parts = foundEx['subtitle']!.split('/');
-            if (parts.length >= 3) {
-              resolvedMuscle = parts[0].trim();
-              resolvedEquip = parts[1].trim();
-              resolvedType = parts[2].trim();
-            }
-          }
-          if (resolvedTrackBy == null || resolvedTrackBy.isEmpty) {
-            resolvedTrackBy = foundEx['track_by'];
+        if (foundEx != null && foundEx['subtitle'] != null) {
+          final parts = foundEx['subtitle']!.split('/');
+          if (parts.length >= 3) {
+            resolvedMuscle = parts[0].trim();
+            resolvedEquip = parts[1].trim();
+            resolvedType = parts[2].trim();
           }
         }
       }
@@ -1112,17 +877,12 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             }
           }
         }
-        if (foundEx != null) {
-          if (foundEx['subtitle'] != null) {
-            final parts = foundEx['subtitle']!.split('/');
-            if (parts.length >= 3) {
-              resolvedMuscle = parts[0].trim();
-              resolvedEquip = parts[1].trim();
-              resolvedType = parts[2].trim();
-            }
-          }
-          if (resolvedTrackBy == null || resolvedTrackBy.isEmpty) {
-            resolvedTrackBy = foundEx['track_by'];
+        if (foundEx != null && foundEx['subtitle'] != null) {
+          final parts = foundEx['subtitle']!.split('/');
+          if (parts.length >= 3) {
+            resolvedMuscle = parts[0].trim();
+            resolvedEquip = parts[1].trim();
+            resolvedType = parts[2].trim();
           }
         }
       }
@@ -1151,25 +911,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           if (s is Map<String, dynamic>) {
             final targetWeight = s['target_weight'] ?? s['targetWeight'];
             final targetReps = s['target_reps'] ?? s['targetReps'];
-            final rawKg = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight;
-            final rawReps = s['reps'] ?? targetReps;
-
-            String kgVal = '';
-            if (rawKg != null) {
-              final val = double.tryParse(rawKg.toString());
-              if (val != null && val != 0.0) {
-                kgVal = val == val.truncateToDouble() ? val.toInt().toString() : val.toString();
-              }
-            }
-
-            String repsVal = '';
-            if (rawReps != null) {
-              final val = int.tryParse(rawReps.toString());
-              if (val != null && val != 0) {
-                repsVal = val.toString();
-              }
-            }
-
+            final kgVal = s['weight_kg'] ?? s['weight'] ?? s['kg'] ?? targetWeight ?? '10';
+            final repsVal = s['reps'] ?? targetReps ?? '15';
             final prevRaw = s['previous'];
             final prevWeightRaw = s['previous_weight_kg'];
             String prevStr;
@@ -1193,8 +936,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
               'setNum':
                   s['set_number'] ?? s['set_num'] ?? s['setNum'] ?? (i + 1),
               'previous': prevStr,
-              'kg': kgVal,
-              'reps': repsVal,
+              'kg': kgVal.toString(),
+              'reps': repsVal.toString(),
               'checked': s['is_completed'] ?? s['checked'] ?? false,
             });
           }
@@ -1219,18 +962,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
 
       result.add({
         'id': exerciseId?.toString() ?? '',
-        'workout_log_id': item['id']?.toString() ?? '',
         'title': title,
         'subtitle': subtitle ?? '',
         'video_url': videoUrl ?? '',
-        'track_by': resolvedTrackBy ?? 'rep',
-        'weight_type': () {
-          final type = item['weight_type']?.toString();
-          if (type == null) return 'kg';
-          if (type.toLowerCase() == 'bw') return 'BW';
-          if (type.toLowerCase() == 'kg+bw') return 'kg+BW';
-          return type;
-        }(),
         'sets': sets,
       });
     }
@@ -1282,29 +1016,5 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           };
         }).toList();
     emit(state.copyWith(exercises: exercises, sessionTitle: preset.title));
-  }
-
-  void addMuscleGroup(MuscleGroupModel item) {
-    final updated = List<MuscleGroupModel>.from(state.muscleGroups);
-    if (!updated.any((m) => m.id == item.id)) {
-      updated.add(item);
-      emit(state.copyWith(muscleGroups: updated));
-    }
-  }
-
-  void addEquipment(EquipmentModel item) {
-    final updated = List<EquipmentModel>.from(state.equipment);
-    if (!updated.any((e) => e.id == item.id)) {
-      updated.add(item);
-      emit(state.copyWith(equipment: updated));
-    }
-  }
-
-  void addExerciseType(ExerciseTypeModel item) {
-    final updated = List<ExerciseTypeModel>.from(state.exerciseTypes);
-    if (!updated.any((t) => t.id == item.id)) {
-      updated.add(item);
-      emit(state.copyWith(exerciseTypes: updated));
-    }
   }
 }

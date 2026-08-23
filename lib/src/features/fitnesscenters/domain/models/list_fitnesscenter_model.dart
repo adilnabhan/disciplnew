@@ -34,7 +34,6 @@ class SingleFItnessCenterModel with _$SingleFItnessCenterModel {
     @JsonKey(name: 'categories') List<Category>? categories,
     @JsonKey(name: 'category') List<Category>? category,
     @JsonKey(name: 'location') Location? location,
-    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
     @JsonKey(name: 'mentor_name') String? mentorName,
     @JsonKey(name: 'review_count') int? reviewCount,
     @JsonKey(name: 'average_rating') double? averageRating,

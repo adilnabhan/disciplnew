@@ -12,15 +12,12 @@ class FitnessGoalStep extends StatefulWidget {
   final ConstantChoicesModel? choices;
   final bool isLoading;
   final CustomerDetailsModel? customerDetailsModel;
-  final bool hideButton;
   const FitnessGoalStep({
-    super.key,
     required this.onFinish,
     this.choices,
     this.isLoading = false,
     this.sentOtpEntity,
     this.customerDetailsModel,
-    this.hideButton = false,
   });
 
   @override
@@ -30,10 +27,6 @@ class FitnessGoalStep extends StatefulWidget {
 class FitnessGoalStepState extends State<FitnessGoalStep> {
   List<String> selectedGoals = [];
   final TextEditingController _other = TextEditingController();
-
-  void submit() {
-    _onFinish();
-  }
 
   void _onFinish() {
     if (selectedGoals.isEmpty) {
@@ -131,20 +124,20 @@ class FitnessGoalStepState extends State<FitnessGoalStep> {
 
         const SizedBox(height: 32),
 
-        if (!widget.hideButton) ...[
-          Button.filled(
-            isLoading: widget.isLoading,
-            title:
-                widget.customerDetailsModel == null ? 'Finish Setup' : 'Update',
-            ontap: _onFinish,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            textAlign: TextAlign.center,
-            'You’re defining your ‘why’ — and that’s \npowerful',
-            style: AppStyles.text15Px.poppins.w400.textGrey,
-          ),
-        ],
+        // 🟢 Finish button
+        Button.filled(
+          isLoading: widget.isLoading,
+          title:
+              widget.customerDetailsModel == null ? 'Finish Setup' : 'Update',
+          ontap: _onFinish,
+        ),
+
+        const SizedBox(height: 10),
+        Text(
+          textAlign: TextAlign.center,
+          'You’re defining your ‘why’ — and that’s \npowerful',
+          style: AppStyles.text15Px.poppins.w400.textGrey,
+        ),
       ],
     );
   }

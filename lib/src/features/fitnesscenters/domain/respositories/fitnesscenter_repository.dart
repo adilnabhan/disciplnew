@@ -2,6 +2,7 @@ import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:dio/dio.dart';
 
+@immutable
 final class FitnesscenterRepository {
   ///* This constructor body for creating singleton widget
   factory FitnesscenterRepository() {
@@ -14,23 +15,6 @@ final class FitnesscenterRepository {
 
   //* This variable for store this class object globally
   static FitnesscenterRepository? _instance;
-
-  // Caching variables
-  FitnesscenterCategoriesModel? _cachedCategories;
-  ListFitnesscenterModel? _cachedListFitnesscenter;
-  
-  FitnesscenterCategoriesModel? get cachedCategories => _cachedCategories;
-  ListFitnesscenterModel? get cachedListFitnesscenter => _cachedListFitnesscenter;
-
-  final Map<int, List<FitnesscenterMembershipPlansModel>> _cachedMembershipPlans = {};
-  final Map<int, FitnesscenterDetailsModel> _cachedDetails = {};
-  final Map<int, FitnessCenterReviewsModel> _cachedReviews = {};
-
-  FitnesscenterDetailsModel? getCachedDetails(int id) => _cachedDetails[id];
-  void cacheDetails(int id, FitnesscenterDetailsModel details) => _cachedDetails[id] = details;
-
-  FitnessCenterReviewsModel? getCachedReviews(int id) => _cachedReviews[id];
-  void cacheReviews(int id, FitnessCenterReviewsModel reviews) => _cachedReviews[id] = reviews;
 
   final Dio _dio = DioClient().dio;
 
@@ -106,11 +90,8 @@ final class FitnesscenterRepository {
   /// @apiSuccess {List<FitnesscenterMembershipPlansModel>} response Success response
   Future<Either<ApiException, List<FitnesscenterMembershipPlansModel>>>
   fitnesscenterMembershipPlans({required int id}) async {
-    if (_cachedMembershipPlans.containsKey(id)) {
-      return right(_cachedMembershipPlans[id]!);
-    }
     try {
-      final response = await Feggy.async(
+      return await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterMembershipPlans(id),
           options: _options,
@@ -121,11 +102,6 @@ final class FitnesscenterRepository {
               FitnesscenterMembershipPlansModel.fromJson,
             ),
       );
-      response.fold(
-        (_) => null,
-        (plans) => _cachedMembershipPlans[id] = plans,
-      );
-      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -146,11 +122,8 @@ final class FitnesscenterRepository {
   /// @apiSuccess {FitnesscenterCategoriesModel} response Success response
   Future<Either<ApiException, FitnesscenterCategoriesModel>>
   fitnesscenterCategories({Map<String, dynamic>? queryParameters}) async {
-    if (_cachedCategories != null && (queryParameters == null || queryParameters.isEmpty)) {
-      return right(_cachedCategories!);
-    }
     try {
-      final response = await Feggy.async(
+      return await Feggy.async(
         call: _dio.get<dynamic>(
           ApiUris.fitnesscenterCategories,
           options: _options,
@@ -160,15 +133,6 @@ final class FitnesscenterRepository {
             (res) =>
                 _handleMapResponse(res, FitnesscenterCategoriesModel.fromJson),
       );
-      response.fold(
-        (_) => null,
-        (categories) {
-          if (queryParameters == null || queryParameters.isEmpty) {
-            _cachedCategories = categories;
-          }
-        },
-      );
-      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {
@@ -193,7 +157,7 @@ final class FitnesscenterRepository {
     bool allGyms = false,
   }) async {
     try {
-      final response = await Feggy.async(
+      return await Feggy.async(
         call: _dio.get<dynamic>(
           nextUrl ?? (allGyms ? ApiUris.listAllFitnesscenter : ApiUris.listFitnesscenter),
           options: _options,
@@ -202,18 +166,6 @@ final class FitnesscenterRepository {
         onSuccess:
             (res) => _handleMapResponse(res, ListFitnesscenterModel.fromJson),
       );
-
-      // Cache initial load (no pagination, no active search query, no specific category filtered)
-      if (nextUrl == null &&
-          (queryParameters['search'] == null || (queryParameters['search'] as String).isEmpty) &&
-          queryParameters['category_id'] == null) {
-        response.fold(
-          (_) => null,
-          (r) => _cachedListFitnesscenter = r,
-        );
-      }
-
-      return response;
     } on ApiException catch (e) {
       return left(e);
     } catch (e) {

@@ -110,15 +110,8 @@ class ImageNetwork extends StatelessWidget {
 
     print(imageUrl);
 
-    String? cacheKey;
-    try {
-      final uri = Uri.parse(imageUrl!);
-      cacheKey = uri.replace(queryParameters: {}).toString();
-    } catch (_) {}
-
     return CachedNetworkImage(
       imageUrl: imageUrl!,
-      cacheKey: cacheKey,
       width: width,
       height: height,
       fit: fit,
@@ -126,9 +119,9 @@ class ImageNetwork extends StatelessWidget {
       // ❌ NO resizing → keeps full clarity
       // memCacheWidth / memCacheHeight REMOVED
 
-      // Faster appearance with premium subtle fade
-      fadeInDuration: const Duration(milliseconds: 250),
-      fadeOutDuration: const Duration(milliseconds: 250),
+      // Faster appearance
+      fadeInDuration: Duration.zero,
+      fadeOutDuration: Duration.zero,
 
       // Keep shimmer
       placeholder: (_, __) {

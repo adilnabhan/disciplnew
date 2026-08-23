@@ -26,12 +26,9 @@ final class ApiUris {
   ///============================= Customer =============================\\\
   static String customerDetails(int id) => '${_v1}customer/manage/$id/';
   static final updateCustomerProfile = '${_v1}customer/manage/profile/health/';
-  static String get healthReport => '${_v1}customer/bmi-bmr/';
 
   ///============================= Home =============================\\\
   static final home = '${_v1}customer/customer-homepage/';
-  static String gymBanners(int organizationId) => '${_v1}fitnesscenter/gym-banners/?organization_id=$organizationId';
-  static final globalBanners = '${_v1}fitnesscenter/global-banners/';
 
   ///============================= Payment =============================\\\
   static final paymentHistory = '${_v1}customer/payment-history/';
@@ -41,7 +38,6 @@ final class ApiUris {
   static String activeMembership(int id) =>
       '${_v1}customer/manage/$id/active-membership/';
   static final allMemberships = '${_v1}customer/membership-org/';
-  static final createMembershipRequest = '${_v1}customer/membership-request/create/';
 
   ///============================= Subscription =============================\\\
   static final initiateRazorpayOrder =
@@ -68,12 +64,6 @@ final class ApiUris {
   static String fitnessCenterReviews(int id) =>
       '${_v1}fitnesscenter/organization/$id/reviews/';
 
-  static String trainerReviews(int trainerId) =>
-      '${_v1}trainer/trainers/$trainerId/reviews/';
-
-  static String allTrainerReviews(int trainerId) =>
-      '${_v1}trainer/trainers/$trainerId/reviews/all/';
-
   ///============================= Workout =============================\\\
   static final exercises = '${_v1}customer/exercises/';
   static final exerciseDetail = '${_v1}customer/exercises/detail/';
@@ -81,8 +71,6 @@ final class ApiUris {
   static final muscleGroups = '${_v1}trainer/muscle-groups/';
   static final equipment = '${_v1}trainer/equipment/';
   static final exerciseTypes = '${_v1}trainer/exercise-types/';
-  static final customerMuscleGroups = '${_v1}customer/muscle-groups/';
-  static final customerEquipment = '${_v1}customer/equipment/';
   static final activeSession = '${_v1}customer/sessions/active/';
   static final activeSessionExercises =
       '${_v1}customer/sessions/active/exercises/';
@@ -90,10 +78,6 @@ final class ApiUris {
   static String sessionDetails(int id) => '${_v1}customer/sessions/$id/';
   static String addSetToLog(int logId) =>
       '${_v1}customer/workout-logs/$logId/sets/';
-  static String updateWorkoutLogSetsBulk(int logId) =>
-      '${_v1}customer/workout-logs/$logId/sets/bulk/';
-  static String deleteWorkoutLog(int logId) =>
-      '${_v1}customer/workout-logs/$logId/';
   static String updateSetLog(int setLogId) =>
       '${_v1}customer/set-logs/$setLogId/';
   static final workoutLog = '${_v1}customer/workout-log/';
@@ -101,26 +85,32 @@ final class ApiUris {
   static final presets = '${_v1}customer/presets/';
   static String presetDetail(int id) => '${_v1}customer/presets/$id/';
 
-  static final workoutCalendar = '${_v1}customer/workout-calendar/';
   static final loginAsGuest = '${_v1}user/login/guest/';
 
-  ///============================= Notifications =============================\\\
-  static final notifications = '${_v1}customer/notifications/';
-  static final notificationsUnreadCount = '${_v1}customer/notifications/unread-count/';
-  static String markNotificationRead(int id) => '${_v1}customer/notifications/$id/read/';
-  static final markAllNotificationsRead = '${_v1}customer/notifications/read-all/';
-
-  ///============================= Nutrition =============================\\\
-  static final calorieSummary = '${_v1}customer/calorie-summary/';
+  ///============================= Nutrition & Social =============================\\\
+  static final nutritionGoals = '${_v1}customer/calorie-summary/';
   static final foodSearch = '${_v1}customer/nutrition/foods/search/';
-  static final foodBulkUpload = '${_v1}customer/nutrition/foods/bulk-upload/';
   static final foodLog = '${_v1}customer/food-log/';
   static String foodLogDelete(int id) => '${_v1}customer/food-log/$id/';
   static final waterLog = '${_v1}customer/water-log/';
+  static final scoreboard = '${_v1}social/scoreboard/';
+  static final socialDashboard = '${_v1}social/dashboard/';
+  static final notifications = '${_v1}customer/notifications/';
 
-  ///============================= Social & Leaderboard =============================\\\
-  static final leaderboard = '${_v1}social/scoreboard/';
-  static final dailyWinner = '${_v1}social/winners/today/';
-  static final communityFeed = '${_v1}customer/community/feed/';
-  static final achievementsSummary = '${_v1}customer/achievements/';
+  ///============================= Partners & QR Perks =============================\\\
+  static final partnerMyQr = '${_v1}partners/my-qr/';
+  static final partnerMerchants = '${_v1}partners/';
+  static String partnerMerchantDetail(int id) => '${_v1}partners/$id/';
+  static final partnerMyTransactions = '${_v1}partners/my-transactions/';
+  static final partnerRedeemPoints = '${_v1}partners/redeem-points/';
+  static final partnerMyVouchers = '${_v1}partners/my-vouchers/';
+
+  ///============================= Marathon & Events =============================\\\
+  static final marathonInfo = '${_v1}customer/marathon/info/';
+  static final marathonValidateCoupon = '${_v1}customer/marathon/validate-coupon/';
+  static final marathonCreateOrder = '${_v1}customer/marathon/create-order/';
+  static final marathonVerifyPayment = '${_v1}customer/marathon/verify-payment/';
+  static final marathonMyRegistrations = '${_v1}customer/marathon/my-registrations/';
 }
+
+

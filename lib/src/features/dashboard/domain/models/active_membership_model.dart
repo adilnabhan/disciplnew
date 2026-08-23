@@ -54,7 +54,6 @@ class Location with _$Location {
     @JsonKey(name: 'pin_code') String? pinCode,
     @JsonKey(name: 'latitude') dynamic latitude,
     @JsonKey(name: 'longitude') dynamic longitude,
-    @JsonKey(name: 'google_maps_url') String? googleMapsUrl,
   }) = _Location;
 
   factory Location.fromJson(Map<String, dynamic> json) => _$LocationFromJson(json);

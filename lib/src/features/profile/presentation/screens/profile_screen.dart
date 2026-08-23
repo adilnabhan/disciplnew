@@ -1,8 +1,7 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
-import 'package:intl/intl.dart';
-import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
-import 'pages/pages.dart';
-import 'body_matrix_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/components/logout_sheet.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/contact_support_screen.dart';
+import 'package:customer_mobile_app/src/features/home/persentation/screens/partner_qr_pass_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -43,564 +42,266 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
       child: BlocBuilder<AppCubit, AppState>(
         builder: (context, appState) {
-          final bool isCustomer =
-              Feggy.read<AppCubit>()?.state.currentUser != null;
+          final bool isCustomer = Feggy.read<AppCubit>()?.state.currentUser != null;
+          final user = appState.currentUser;
+          final firstName = user?.firstName ?? '';
+          final lastName = user?.lastName ?? '';
+          final fullName = '$firstName $lastName'.trim();
+          final userName = fullName.isNotEmpty ? fullName : 'John D';
+          final profilePic = user?.profilePicture as String?;
+
           return BlocProvider.value(
             value: _cubit,
             child: Scaffold(
-              backgroundColor: AppColors.bgcolorgrey,
+              backgroundColor: const Color(0xFFFDFBF7),
               appBar: AppBar(
-                automaticallyImplyLeading: false,
-                centerTitle: false,
-                title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
+                backgroundColor: Colors.white,
+                elevation: 0.5,
+                title: Text('Profile', style: AppStyles.text18Px.poppins.w600.copyWith(color: const Color(0xFF0F172A))),
                 actions: [
-                  GestureDetector(
-                    onTap: () {
-                      context.push(const SettingsScreen());
-                    },
-                    child: SvgPicture.asset(
-                      'assets/images/svg/icons/settings _icon.svg',
-                      width: 22,
-                      height: 22,
-                    ),
-                  ).pOnly(right: 20),
+                  IconButton(
+                    icon: const Icon(Icons.settings_outlined, color: Color(0xFF64748B)),
+                    onPressed: () => context.push(const SettingsScreen()),
+                  ),
                 ],
               ),
-              body:
-                  !isCustomer
-                      ? _GuestProfileView(
-                        onLoginTap: () {
-                          context.push(const SentOtpScreen());
-                        },
-                      )
-                      : BlocBuilder<ProfileCubit, ProfileState>(
-                        builder: (context, state) {
-                          ConstantChoicesModel? choicesModel;
-                          state.constChoice?.fold(
-                            () {},
-                            (either) => either.fold(
-                              (l) => null, // ApiException
-                              (r) => choicesModel = r, // Success model
+              body: !isCustomer
+                  ? _GuestProfileView(
+                      onLoginTap: () => context.push(const SentOtpScreen()),
+                    )
+                  : SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top Marigold Floral Garland Banner
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          );
-                          return state.customerDetails.fold(
-                            () => const Center(
-                              child: CircularProgressIndicator(),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: const [
+                                Text('🌼 🌸 🌿 🌼 🌸 🌿 🌼 🌸 🌿 🌼', style: TextStyle(fontSize: 10)),
+                              ],
                             ),
-                            (either) {
-                              return either.fold(
-                                (error) =>
-                                    error
-                                        .maybeWhen(
-                                          network:
-                                              (e) => ErrorUi.network(
-                                                onTap: _fetch,
+                          ),
+                          const SizedBox(height: 16),
+
+                          // User Info Card (1:1 with Reference Photo Screen 5)
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x1F000000),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                // Avatar with Level Badge
+                                Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(40),
+                                      child: Container(
+                                        width: 64,
+                                        height: 64,
+                                        color: const Color(0xFF0D3B2E),
+                                        child: profilePic != null && profilePic.isNotEmpty
+                                            ? ImageNetwork(profilePic, fit: BoxFit.cover)
+                                            : const Center(
+                                                child: Text('D', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
                                               ),
-                                          notFound:
-                                              (e) => ErrorUi.notFound(
-                                                onTap: _fetch,
-                                              ),
-                                          orElse:
-                                              () =>
-                                                  ErrorUi.server(onTap: _fetch),
-                                        )
-                                        .center,
-                                (customerDetails) {
-                                  debugPrint(
-                                    "DEBUG: assignedTrainer = ${customerDetails.assignedTrainer}",
-                                  );
-                                  debugPrint(
-                                    "DEBUG: assignedFitnessCenter = ${customerDetails.assignedFitnessCenter}",
-                                  );
-                                  debugPrint(
-                                    "DEBUG: trainerNotes = ${customerDetails.trainerNotes}",
-                                  );
-                                  return RefreshIndicator(
-                                    onRefresh: _fetch,
-                                    child: ListView(
-                                      padding: const EdgeInsets.all(16),
-                                      children: [
-                                        Container(
-                                          width: 320,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 14,
-                                            vertical: 8,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.light,
-                                            borderRadius: BorderRadius.circular(
-                                              16,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              userName,
+                                              style: AppStyles.text16Px.poppins.w700.copyWith(color: const Color(0xFF0F172A)),
                                             ),
                                           ),
-                                          child: Stack(
-                                            children: [
-                                              Row(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  InkWell(
-                                                    onTap: () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute<void>(
-                                                          builder:
-                                                              (
-                                                                _,
-                                                              ) => BlocProvider.value(
-                                                                value: _cubit,
-                                                                child: ProfileDetailsScreen(
-                                                                  customerDetailsModel:
-                                                                      customerDetails,
-                                                                ),
-                                                              ),
-                                                        ),
-                                                      ).then((_) {
-                                                        _fetch();
-                                                      });
-                                                    },
-                                                    child: AbsorbPointer(
-                                                      child: ProfileImage(
-                                                        isEdit: false,
-                                                        onChanged: (image) {},
-                                                        radius: 110,
-                                                        url:
-                                                            '${customerDetails.profilePicture}',
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 20),
-                                                  Expanded(
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                            8,
-                                                          ),
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            customerDetails
-                                                                    .fullName ??
-                                                                '${customerDetails.firstName ?? ''} ${customerDetails.lastName ?? ''}'
-                                                                    .trim(),
-                                                            style:
-                                                                AppStyles
-                                                                    .text16Px
-                                                                    .poppins
-                                                                    .w600,
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 8,
-                                                          ),
-                                                          if (customerDetails
-                                                                  .mobileNumber !=
-                                                              null)
-                                                            Text(
-                                                              customerDetails
-                                                                  .mobileNumber!,
-                                                              style: AppStyles
-                                                                  .text14Px
-                                                                  .poppins
-                                                                  .w600
-                                                                  .copyWith(
-                                                                    color:
-                                                                        AppColors
-                                                                            .textGrey,
-                                                                  ),
-                                                            ),
-                                                          Text(
-                                                            customerDetails
-                                                                    .email ??
-                                                                '-',
-                                                            style: AppStyles
-                                                                .text14Px
-                                                                .poppins
-                                                                .w600
-                                                                .copyWith(
-                                                                  color:
-                                                                      AppColors
-                                                                          .textGrey,
-                                                                ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 14,
-                                                          ),
-                                                          Wrap(
-                                                            spacing: 8,
-                                                            runSpacing: 6,
-                                                            crossAxisAlignment:
-                                                                WrapCrossAlignment
-                                                                    .center,
-                                                            children: [
-                                                              Container(
-                                                                padding:
-                                                                    const EdgeInsets.symmetric(
-                                                                      horizontal:
-                                                                          10,
-                                                                      vertical:
-                                                                          4,
-                                                                    ),
-                                                                decoration: BoxDecoration(
-                                                                  color: const Color(
-                                                                    0xFFEBFBEE,
-                                                                  ),
-                                                                  borderRadius:
-                                                                      BorderRadius.circular(
-                                                                        16,
-                                                                      ),
-                                                                ),
-                                                                child: Row(
-                                                                  mainAxisSize:
-                                                                      MainAxisSize
-                                                                          .min,
-                                                                  children: [
-                                                                    const Icon(
-                                                                      Icons
-                                                                          .circle,
-                                                                      size: 8,
-                                                                      color: Color(
-                                                                        0xFF40C057,
-                                                                      ),
-                                                                    ),
-                                                                    const SizedBox(
-                                                                      width: 6,
-                                                                    ),
-                                                                    Text(
-                                                                      'Active',
-                                                                      style: AppStyles
-                                                                          .text13Px
-                                                                          .poppins
-                                                                          .w600
-                                                                          .copyWith(
-                                                                            color: const Color(
-                                                                              0xFF2B8A3E,
-                                                                            ),
-                                                                          ),
-                                                                    ),
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                              if (customerDetails
-                                                                          .gender !=
-                                                                      null &&
-                                                                  customerDetails
-                                                                      .gender!
-                                                                      .isNotEmpty)
-                                                                Container(
-                                                                  padding:
-                                                                      const EdgeInsets.symmetric(
-                                                                        horizontal:
-                                                                            12,
-                                                                        vertical:
-                                                                            4,
-                                                                      ),
-                                                                  decoration: BoxDecoration(
-                                                                    color:
-                                                                        AppColors
-                                                                            .iconBackground,
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          16,
-                                                                        ),
-                                                                  ),
-                                                                  child: Text(
-                                                                    '${customerDetails.gender![0].toUpperCase()}${customerDetails.gender!.substring(1).toLowerCase()}',
-                                                                    style: AppStyles
-                                                                        .text13Px
-                                                                        .poppins
-                                                                        .w500
-                                                                        .copyWith(
-                                                                          color:
-                                                                              AppColors.textDark,
-                                                                        ),
-                                                                  ),
-                                                                ),
-                                                              if (customerDetails
-                                                                          .bloodGroup !=
-                                                                      null &&
-                                                                  customerDetails
-                                                                      .bloodGroup!
-                                                                      .isNotEmpty &&
-                                                                  customerDetails
-                                                                          .bloodGroup!
-                                                                          .toLowerCase() !=
-                                                                      'unknown')
-                                                                Container(
-                                                                  padding:
-                                                                      const EdgeInsets.symmetric(
-                                                                        horizontal:
-                                                                            12,
-                                                                        vertical:
-                                                                            4,
-                                                                      ),
-                                                                  decoration: BoxDecoration(
-                                                                    color:
-                                                                        AppColors
-                                                                            .iconBackground,
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          16,
-                                                                        ),
-                                                                  ),
-                                                                  child: Text(
-                                                                    customerDetails
-                                                                        .bloodGroup!,
-                                                                    style: AppStyles
-                                                                        .text13Px
-                                                                        .poppins
-                                                                        .w500
-                                                                        .copyWith(
-                                                                          color:
-                                                                              AppColors.textDark,
-                                                                        ),
-                                                                  ),
-                                                                ),
-                                                            ],
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                              Positioned(
-                                                top: 8,
-                                                right: 8,
-                                                child: GestureDetector(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute<void>(
-                                                        builder:
-                                                            (
-                                                              _,
-                                                            ) => BlocProvider.value(
-                                                              value: _cubit,
-                                                              child: ProfileDetailsScreen(
-                                                                customerDetailsModel:
-                                                                    customerDetails,
-                                                              ),
-                                                            ),
-                                                      ),
-                                                    ).then((_) {
-                                                      _fetch();
-                                                    });
-                                                  },
-                                                  child: Container(
-                                                    width: 30,
-                                                    height: 30,
-                                                    decoration:
-                                                        const BoxDecoration(
-                                                          color: Color(
-                                                            0xFFF1F3F5,
-                                                          ),
-                                                          shape:
-                                                              BoxShape.circle,
-                                                        ),
-                                                    child: const Icon(
-                                                      Icons.edit,
-                                                      size: 14,
-                                                      color: Color(0xFF495057),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0D3B2E),
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            child: Text(
+                                              'Level 12',
+                                              style: AppStyles.text10Px.poppins.w600.copyWith(color: Colors.white),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 16),
-                                        if (customerDetails.targetGoal !=
-                                                null &&
-                                            customerDetails
-                                                .targetGoal!
-                                                .isNotEmpty) ...[
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                'Target Goal',
-                                                style: AppStyles
-                                                    .text16Px
-                                                    .poppins
-                                                    .w600
-                                                    .copyWith(
-                                                      color: AppColors.textDark,
-                                                    ),
-                                              ),
-                                              GestureDetector(
-                                                onTap: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute<void>(
-                                                      builder:
-                                                          (
-                                                            _,
-                                                          ) => BlocProvider.value(
-                                                            value: _cubit,
-                                                            child: EditTargetGoals(
-                                                              customerDetailsModel:
-                                                                  customerDetails,
-                                                              choicesModel:
-                                                                  choicesModel,
-                                                            ),
-                                                          ),
-                                                    ),
-                                                  ).then((_) {
-                                                    _cubit
-                                                        .fetchCustomerDetails();
-                                                  });
-                                                },
-                                                child: Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 10,
-                                                        vertical: 4,
-                                                      ),
-                                                  decoration: BoxDecoration(
-                                                    color: AppColors.primary
-                                                        .withOpacity(0.08),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          20,
-                                                        ),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(
-                                                        Icons.edit,
-                                                        size: 14,
-                                                        color:
-                                                            AppColors.primary,
-                                                      ),
-                                                      const SizedBox(width: 4),
-                                                      Text(
-                                                        'Edit',
-                                                        style: AppStyles
-                                                            .text12Px
-                                                            .poppins
-                                                            .w600
-                                                            .copyWith(
-                                                              color:
-                                                                  AppColors
-                                                                      .primary,
-                                                            ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 10),
-                                          Wrap(
-                                            spacing: 8,
-                                            runSpacing: 8,
-                                            children:
-                                                customerDetails.targetGoal!
-                                                    .map(
-                                                      (goal) => Container(
-                                                        padding:
-                                                            const EdgeInsets.symmetric(
-                                                              horizontal: 12,
-                                                              vertical: 6,
-                                                            ),
-                                                        decoration: BoxDecoration(
-                                                          color: AppColors
-                                                              .lightPrimary
-                                                              .withValues(
-                                                                alpha: .2,
-                                                              ),
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                16,
-                                                              ),
-                                                          border: Border.all(
-                                                            color:
-                                                                AppColors
-                                                                    .lightPrimary,
-                                                          ),
-                                                        ),
-                                                        child: Text(
-                                                          (goal.toLowerCase() ==
-                                                                      "other" &&
-                                                                  customerDetails
-                                                                          .targetGoalOther !=
-                                                                      null &&
-                                                                  customerDetails
-                                                                      .targetGoalOther!
-                                                                      .isNotEmpty)
-                                                              ? customerDetails
-                                                                  .targetGoalOther!
-                                                              : goal
-                                                                  .split("_")
-                                                                  .map(
-                                                                    (e) =>
-                                                                        e.isNotEmpty
-                                                                            ? "${e[0].toUpperCase()}${e.substring(1).toLowerCase()}"
-                                                                            : "",
-                                                                  )
-                                                                  .join(" "),
-                                                          style: AppStyles
-                                                              .text12Px
-                                                              .poppins
-                                                              .w500
-                                                              .copyWith(
-                                                                color:
-                                                                    AppColors
-                                                                        .primary,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                    )
-                                                    .toList(),
-                                          ),
-                                          const SizedBox(height: 16),
                                         ],
-                                        _buildFitnessAnalyticsCard(
-                                          customerDetails,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Fitness Enthusiast',
+                                        style: AppStyles.text12Px.poppins.w500.copyWith(color: const Color(0xFF64748B)),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Discipl Member Since Jan 2024',
+                                        style: AppStyles.text10Px.poppins.w400.copyWith(color: const Color(0xFF94A3B8)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // VIP Partner QR Pass Banner Card (Prominent & Eye-Catching)
+                          GestureDetector(
+                            onTap: () => context.push(const PartnerQrPassScreen()),
+                            child: Container(
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1E242C), Color(0xFF15191E)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0x66E50914), width: 1.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x22000000),
+                                    blurRadius: 12,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0x22E50914),
+                                      borderRadius: BorderRadius.circular(14),
+                                      border: Border.all(color: const Color(0xFFE50914)),
+                                    ),
+                                    child: const Center(
+                                      child: Icon(Icons.qr_code_2, color: Color(0xFFFF4D4F), size: 28),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'My VIP Partner Pass',
+                                              style: AppStyles.text15Px.poppins.w700.copyWith(color: Colors.white),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0x2200E676),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                '10-20% OFF',
+                                                style: AppStyles.text10Px.poppins.w800.copyWith(color: const Color(0xFF00E676)),
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        () {
-                                          Membership? activeMembership;
-                                          if (customerDetails.memberships !=
-                                                  null &&
-                                              customerDetails
-                                                  .memberships!
-                                                  .isNotEmpty) {
-                                            for (final m
-                                                in customerDetails
-                                                    .memberships!) {
-                                              if (m.isActive == true ||
-                                                  m.status?.toLowerCase() ==
-                                                      'active') {
-                                                activeMembership = m;
-                                                break;
-                                              }
-                                            }
-                                            activeMembership ??=
-                                                customerDetails
-                                                    .memberships!
-                                                    .first;
-                                          }
-                                          return _buildMembershipCard(
-                                            activeMembership,
-                                          );
-                                        }(),
-                                        _buildOtherDetailsSection(
-                                          customerDetails,
-                                          choicesModel,
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'Tap to view your QR code for partner discounts & XP',
+                                          style: AppStyles.text12Px.poppins.w400.copyWith(color: Colors.white70),
                                         ),
                                       ],
                                     ),
-                                  );
-                                },
+                                  ),
+                                  const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 14),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Profile Menu Items List (1:1 Match with Reference Photo)
+                          _buildProfileMenuItem(
+                            icon: Icons.qr_code_scanner,
+                            title: 'My VIP Partner Pass & QR Code',
+                            onTap: () => context.push(const PartnerQrPassScreen()),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.track_changes_outlined,
+                            title: 'My Goals',
+                            onTap: () {},
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.show_chart,
+                            title: 'My Progress',
+                            onTap: () => context.read<DashboardCubit>().changeNav(index: 3),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.fitness_center,
+                            title: 'My Workouts',
+                            onTap: () => context.read<DashboardCubit>().changeNav(index: 1),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.restaurant_menu,
+                            title: 'My Nutrition',
+                            onTap: () => context.read<DashboardCubit>().changeNav(index: 2),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.emoji_events_outlined,
+                            title: 'My Achievements',
+                            onTap: () => context.read<DashboardCubit>().changeNav(index: 3),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.settings_outlined,
+                            title: 'Settings',
+                            onTap: () => context.push(const SettingsScreen()),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.help_outline,
+                            title: 'Help & Support',
+                            onTap: () => context.push(const ContactSupportScreen()),
+                          ),
+                          _buildProfileMenuItem(
+                            icon: Icons.logout,
+                            title: 'Logout',
+                            isDestructive: true,
+                            onTap: () {
+                              showModalBottomSheet(
+                                context: context,
+                                builder: (_) => const LogoutSheet(),
                               );
                             },
-                          );
-                        },
+                          ),
+                        ],
                       ),
+                    ),
             ),
           );
         },
@@ -608,1754 +309,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildProfileListItem(String label, VoidCallback onTap) {
-    return Column(
-      children: [
-        _ProfileListItem(label: label, onTap: onTap),
-        const Divider(
-          height: 1,
-          thickness: 1,
-          color: AppColors.grey, // Light grey color for the divider
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOtherDetailsSection(
-    CustomerDetailsModel customerDetails,
-    ConstantChoicesModel? choicesModel,
-  ) {
-    int age = 0;
-    if (customerDetails.dateOfBirth != null) {
-      age = DateTime.now().year - customerDetails.dateOfBirth!.year;
-    }
-
-    String healthIssues = 'NO';
-    if (customerDetails.healthConditions != null &&
-        customerDetails.healthConditions!.isNotEmpty) {
-      healthIssues = 'YES';
-    } else if (customerDetails.isHealthy == false) {
-      healthIssues = 'YES';
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ── Assigned Gym & Trainer section ──
-        if (customerDetails.assignedFitnessCenter != null ||
-            customerDetails.assignedTrainer != null) ...[
-          const SizedBox(height: 12),
-          Text(
-            'Assigned Gym ',
-            style: AppStyles.text16Px.poppins.w600.copyWith(
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (customerDetails.assignedFitnessCenter != null) ...[
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.iconBackground,
-                        ),
-                        child: ClipOval(
-                          child:
-                              customerDetails.assignedFitnessCenter!['logo'] !=
-                                      null
-                                  ? Image.network(
-                                    customerDetails
-                                            .assignedFitnessCenter!['logo']
-                                        as String,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (_, __, ___) => const Icon(
-                                          Icons.fitness_center,
-                                          color: AppColors.primary,
-                                        ),
-                                  )
-                                  : const Icon(
-                                    Icons.fitness_center,
-                                    color: AppColors.primary,
-                                  ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Fitness Center',
-                              style: AppStyles.text12Px.poppins.w500.copyWith(
-                                color: AppColors.textGrey,
-                              ),
-                            ),
-                            Text(
-                              customerDetails.assignedFitnessCenter!['name']
-                                      as String? ??
-                                  '-',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (customerDetails.assignedTrainer != null)
-                    const Divider(height: 24, thickness: 0.5),
-                ],
-                if (customerDetails.assignedTrainer != null) ...[
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.iconBackground,
-                        ),
-                        child: ClipOval(
-                          child:
-                              customerDetails
-                                          .assignedTrainer!['profile_image'] !=
-                                      null
-                                  ? Image.network(
-                                    customerDetails
-                                            .assignedTrainer!['profile_image']
-                                        as String,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (_, __, ___) => const Icon(
-                                          Icons.person,
-                                          color: AppColors.primary,
-                                        ),
-                                  )
-                                  : const Icon(
-                                    Icons.person,
-                                    color: AppColors.primary,
-                                  ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Personal Trainer',
-                              style: AppStyles.text12Px.poppins.w500.copyWith(
-                                color: AppColors.textGrey,
-                              ),
-                            ),
-                            Text(
-                              customerDetails.assignedTrainer!['name']
-                                      as String? ??
-                                  '-',
-                              style: AppStyles.text14Px.poppins.w600.copyWith(
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (customerDetails.trainerNotes != null &&
-                    customerDetails.trainerNotes!.isNotEmpty) ...[
-                  const Divider(height: 24, thickness: 0.5),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Trainer's Feedback & Notes",
-                        style: AppStyles.text12Px.poppins.w500.copyWith(
-                          color: AppColors.textGrey,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        customerDetails.trainerNotes!,
-                        style: AppStyles.text13Px.poppins.w500.copyWith(
-                          color: AppColors.textDark,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Health Status',
-              style: AppStyles.text16Px.poppins.w600.copyWith(
-                color: AppColors.textDark,
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder:
-                        (_) => BlocProvider.value(
-                          value: _cubit,
-                          child: FitnessDetailsScreen(
-                            customerDetailsModel: customerDetails,
-                          ),
-                        ),
-                  ),
-                ).then((_) {
-                  _cubit.fetchCustomerDetails();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.edit, size: 14, color: AppColors.primary),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Edit',
-                      style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.06),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow('Age', age > 0 ? '$age' : '-'),
-              const SizedBox(height: 14),
-              _buildDetailRow(
-                'Blood Group',
-                (customerDetails.bloodGroup == null ||
-                        customerDetails.bloodGroup!.toLowerCase() == 'unknown')
-                    ? '-'
-                    : customerDetails.bloodGroup!,
-              ),
-              const SizedBox(height: 14),
-              _buildDetailRow('Health Issues', healthIssues),
-              const SizedBox(height: 14),
-              _buildDetailRow(
-                'Health Status',
-                customerDetails.isHealthy ?? false ? 'Healthy' : 'Not Healthy',
-              ),
-              const SizedBox(height: 14),
-              _buildDetailRow(
-                'Active Scale',
-                '${customerDetails.activeScale ?? 'N/A'}/5',
-              ),
-            ],
-          ),
-        ),
-
-        // ── Health Report Card ──
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute<bool>(
-                builder: (_) => BlocProvider.value(
-                  value: _cubit,
-                  child: const HealthReportScreen(),
-                ),
-              ),
-            ).then((shouldEditMeasurements) {
-              if (shouldEditMeasurements == true) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => BlocProvider.value(
-                      value: _cubit,
-                      child: FitnessDetailsScreen(customerDetailsModel: customerDetails),
-                    ),
-                  ),
-                ).then((_) {
-                  _cubit.fetchCustomerDetails();
-                });
-              }
-            });
-          },
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppColors.primary.withOpacity(0.08),
-                  AppColors.primary.withOpacity(0.03),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.2),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.assessment,
-                    color: AppColors.primary,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Health Report',
-                        style: AppStyles.text16Px.poppins.w600.copyWith(
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'View detailed BMI, BMR, TDEE & more',
-                        style: AppStyles.text12Px.poppins.w400.copyWith(
-                          color: AppColors.textGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppColors.primary,
-                  size: 24,
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        if (choicesModel != null) ...[
-          const SizedBox(height: 20),
-          // ── Lifestyle section ──
-          Text(
-            'Lifestyle',
-            style: AppStyles.text16Px.poppins.w600.copyWith(
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow(
-                  'Profession',
-                  choicesModel.data.professions
-                      .firstWhere(
-                        (e) => e.value == customerDetails.profession,
-                        orElse: () => const Profession(label: '-', value: ''),
-                      )
-                      .label,
-                ),
-                const SizedBox(height: 14),
-                _buildEmojiRatingRow(
-                  'Work Condition',
-                  int.tryParse(
-                    customerDetails.jobSatisfaction.toString() ?? '',
-                  ),
-                ),
-                const SizedBox(height: 14),
-                _buildDetailRow(
-                  'Working Hour (avg)',
-                  choicesModel.data.workingHours
-                      .firstWhere(
-                        (e) => e.value == customerDetails.averageWorkingHours,
-                        orElse: () => const Profession(label: 'N/A', value: ''),
-                      )
-                      .label,
-                ),
-                const SizedBox(height: 14),
-                _buildDetailRow(
-                  'Sleeping Hour (avg)',
-                  choicesModel.data.sleepHours
-                      .firstWhere(
-                        (e) => e.value == customerDetails.averageSleepingHours,
-                        orElse: () => const Profession(label: 'N/A', value: ''),
-                      )
-                      .label,
-                ),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 40),
-      ],
-    );
-  }
-
-  Widget _buildEmojiRatingRow(String label, int? rating) {
-    const emojiMap = {5: '😄', 4: '🙂', 3: '😐', 2: '☹️', 1: '😔'};
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: AppStyles.text14Px.poppins.w500.copyWith(
-            color: Colors.black87,
-          ),
-        ),
-        Row(
-          children: List.generate(5, (index) {
-            final value = 5 - index;
-            final isSelected = rating == value;
-            return Container(
-              margin: const EdgeInsets.only(left: 4),
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected ? Colors.red.shade50 : Colors.transparent,
-                border: Border.all(
-                  color: isSelected ? Colors.red : Colors.grey.shade300,
-                  width: 1.5,
-                ),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                emojiMap[value]!,
-                style: const TextStyle(fontSize: 16),
-              ),
-            );
-          }),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: AppStyles.text14Px.poppins.w500.copyWith(
-            color: Colors.black87,
-          ),
-        ),
-        Text(
-          value,
-          style: AppStyles.text14Px.poppins.w500.copyWith(
-            color: Colors.black87,
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showBodyMetricsBottomSheet(
-    BuildContext context, {
-    required CustomerDetailsModel customerDetails,
-  }) {
-    // Pre-fill with existing values, store only the numeric part
-    final existingHeight = double.tryParse(customerDetails.height ?? '');
-    final existingWeight = double.tryParse(customerDetails.weight ?? '');
-
-    final heightController = TextEditingController(
-      text: existingHeight != null
-          ? (existingHeight == existingHeight.toInt().toDouble()
-              ? '${existingHeight.toInt()}'
-              : existingHeight.toStringAsFixed(1))
-          : '',
-    );
-    final weightController = TextEditingController(
-      text: existingWeight != null
-          ? (existingWeight == existingWeight.toInt().toDouble()
-              ? '${existingWeight.toInt()}'
-              : existingWeight.toStringAsFixed(1))
-          : '',
-    );
-
-    // Unit state
-    String heightUnit = 'cm';
-    String weightUnit = 'kg';
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) {
-        return BlocProvider.value(
-          value: _cubit,
-          child: StatefulBuilder(
-            builder: (ctx, setSheetState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Handle bar
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        margin: const EdgeInsets.only(bottom: 20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDEE2E6),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    // Title row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Update Body Metrics',
-                          style: AppStyles.text18Px.poppins.w600.copyWith(
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.of(sheetContext).pop(),
-                          child: Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F3F5),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.close,
-                              size: 18,
-                              color: Color(0xFF495057),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    // Height field
-                    Text(
-                      'Height',
-                      style: AppStyles.text13Px.poppins.w600.copyWith(
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildMetricInputField(
-                      controller: heightController,
-                      hint: 'e.g. 170',
-                      selectedUnit: heightUnit,
-                      units: const ['cm', 'ft'],
-                      onUnitChanged: (val) {
-                        setSheetState(() => heightUnit = val);
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    // Weight field
-                    Text(
-                      'Weight',
-                      style: AppStyles.text13Px.poppins.w600.copyWith(
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildMetricInputField(
-                      controller: weightController,
-                      hint: 'e.g. 65',
-                      selectedUnit: weightUnit,
-                      units: const ['kg', 'lbs'],
-                      onUnitChanged: (val) {
-                        setSheetState(() => weightUnit = val);
-                      },
-                    ),
-                    const SizedBox(height: 32),
-                    // Save button
-                    BlocConsumer<ProfileCubit, ProfileState>(
-                      listener: (ctx, state) {
-                        state.updateProfileDetails?.fold(
-                          () => null,
-                          (either) => either.fold(
-                            (error) {
-                              Navigator.of(sheetContext).pop();
-                              Dialogs.showSnack(
-                                msg: 'Failed to update metrics. Try again.',
-                              );
-                            },
-                            (_) {
-                              Navigator.of(sheetContext).pop();
-                              Dialogs.showSnack(
-                                msg: 'Body metrics updated successfully!',
-                              );
-                            },
-                          ),
-                        );
-                      },
-                      builder: (ctx, state) {
-                        final isLoading =
-                            state.updateProfileDetails?.isNone() ?? false;
-                        return SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              elevation: 0,
-                            ),
-                            onPressed: isLoading
-                                ? null
-                                : () async {
-                                    final heightText =
-                                        heightController.text.trim();
-                                    final weightText =
-                                        weightController.text.trim();
-                                    if (heightText.isEmpty ||
-                                        weightText.isEmpty) {
-                                      Dialogs.showSnack(
-                                        msg: 'Please enter both height and weight.',
-                                      );
-                                      return;
-                                    }
-                                    double? heightVal =
-                                        double.tryParse(heightText);
-                                    double? weightVal =
-                                        double.tryParse(weightText);
-                                    if (heightVal == null ||
-                                        weightVal == null) {
-                                      Dialogs.showSnack(
-                                        msg: 'Please enter valid numbers.',
-                                      );
-                                      return;
-                                    }
-                                    // Convert to cm if needed
-                                    if (heightUnit == 'ft') {
-                                      heightVal = heightVal * 30.48;
-                                    }
-                                    // Convert to kg if needed
-                                    if (weightUnit == 'lbs') {
-                                      weightVal = weightVal * 0.453592;
-                                    }
-                                    await _cubit.updateHealthProfile(
-                                      bloodGroup:
-                                          customerDetails.bloodGroup ?? '',
-                                      height: heightVal.toStringAsFixed(2),
-                                      weight: weightVal.toStringAsFixed(2),
-                                    );
-                                  },
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : Text(
-                                    'Save Changes',
-                                    style: AppStyles.text16Px.poppins.w600
-                                        .copyWith(color: Colors.white),
-                                  ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    // Cancel
-                    Center(
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(sheetContext).pop(),
-                        child: Text(
-                          'Cancel',
-                          style: AppStyles.text14Px.poppins.w600.copyWith(
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMetricInputField({
-    required TextEditingController controller,
-    required String hint,
-    required String selectedUnit,
-    required List<String> units,
-    required void Function(String) onUnitChanged,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDEE2E6), width: 1.2),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              style: AppStyles.text16Px.poppins.w500.copyWith(
-                color: AppColors.textDark,
-              ),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: AppStyles.text14Px.poppins.w400.copyWith(
-                  color: const Color(0xFFADB5BD),
-                ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-              ),
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 28,
-            color: const Color(0xFFDEE2E6),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: selectedUnit,
-                onChanged: (v) => onUnitChanged(v!),
-                style: AppStyles.text14Px.poppins.w600.copyWith(
-                  color: AppColors.textDark,
-                ),
-                icon: const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 18,
-                  color: Color(0xFF868E96),
-                ),
-                items: units
-                    .map(
-                      (u) => DropdownMenuItem(
-                        value: u,
-                        child: Text(u),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-    );
-  }
-
-  String _formatDoubleString(String? val) {
-    if (val == null || val.isEmpty) return '';
-    final d = double.tryParse(val);
-    if (d == null) return val;
-    if (d == d.toInt().toDouble()) {
-      return '${d.toInt()}';
-    }
-    return d.toStringAsFixed(1);
-  }
-
-  String _formatDynamicValue(dynamic val) {
-    if (val == null) return '';
-    if (val is num) {
-      if (val == val.toInt().toDouble()) {
-        return '${val.toInt()}';
-      }
-      return val.toStringAsFixed(1);
-    }
-    final d = double.tryParse(val.toString());
-    if (d == null) return val.toString();
-    if (d == d.toInt().toDouble()) {
-      return '${d.toInt()}';
-    }
-    return d.toStringAsFixed(1);
-  }
-
-  String _formatHeight(String? val) {
-    if (val == null || val.isEmpty) return '-';
-    final d = double.tryParse(val);
-    if (d == null) return val;
-    return '${d.toStringAsFixed(2)} CM';
-  }
-
-  String _formatWeight(String? val) {
-    if (val == null || val.isEmpty) return '-';
-    final d = double.tryParse(val);
-    if (d == null) return val;
-    if (d == d.toInt().toDouble()) {
-      return '${d.toInt()} KG';
-    }
-    return '${d.toStringAsFixed(1)} KG';
-  }
-
-  String formatWithCommas(num value) {
-    final str = value.toStringAsFixed(0);
-    return str.replaceAllMapped(
-      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]},',
-    );
-  }
-
-  Widget _buildFitnessAnalyticsCard(CustomerDetailsModel customerDetails) {
-    int age = 0;
-    if (customerDetails.dateOfBirth != null) {
-      age = DateTime.now().year - customerDetails.dateOfBirth!.year;
-    }
-
-    double? bmi;
-    double? bmr;
-    String bmiCategory = '-';
-    Color categoryColor = Colors.grey;
-
-    final heightVal = double.tryParse(customerDetails.height ?? '');
-    final weightVal = double.tryParse(customerDetails.weight ?? '');
-
-    if (heightVal != null && weightVal != null && heightVal > 0) {
-      final heightInMeters = heightVal / 100;
-      bmi = weightVal / (heightInMeters * heightInMeters);
-
-      if (bmi < 18.5) {
-        bmiCategory = 'Underweight';
-        categoryColor = Colors.orange;
-      } else if (bmi < 25.0) {
-        bmiCategory = 'Normal';
-        categoryColor = const Color(0xFF40C057);
-      } else if (bmi < 30.0) {
-        bmiCategory = 'Overweight';
-        categoryColor = Colors.orange.shade700;
-      } else {
-        bmiCategory = 'Obese';
-        categoryColor = Colors.red;
-      }
-
-      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
-      if (age > 0) {
-        if (gender.startsWith('f')) {
-          bmr =
-              447.593 +
-              (9.247 * weightVal) +
-              (3.098 * heightVal) -
-              (4.330 * age);
-        } else {
-          bmr =
-              88.362 +
-              (13.397 * weightVal) +
-              (4.799 * heightVal) -
-              (5.677 * age);
-        }
-      }
-    }
-
-    // Fallbacks from model if calculation didn't run but model has it
-    if (bmi == null && customerDetails.bmi != null) {
-      bmi = double.tryParse(customerDetails.bmi.toString());
-      if (bmi != null) {
-        if (bmi < 18.5) {
-          bmiCategory = 'Underweight';
-          categoryColor = Colors.orange;
-        } else if (bmi < 25.0) {
-          bmiCategory = 'Normal';
-          categoryColor = const Color(0xFF40C057);
-        } else if (bmi < 30.0) {
-          bmiCategory = 'Overweight';
-          categoryColor = Colors.orange.shade700;
-        } else {
-          bmiCategory = 'Obese';
-          categoryColor = Colors.red;
-        }
-      }
-    }
-    if (bmr == null && customerDetails.bmr != null) {
-      bmr = double.tryParse(customerDetails.bmr.toString());
-    }
-
-    final bmiStr = bmi != null ? bmi.toStringAsFixed(1) : '-';
-    final bmrStr = bmr != null ? formatWithCommas(bmr) : '-';
-
-    final heightStr = _formatHeight(customerDetails.height);
-    final weightStr = _formatWeight(customerDetails.weight);
-
-    String updatedDateStr = '-';
-    if (customerDetails.modified != null) {
-      updatedDateStr = DateFormat(
-        'dd MMM yyyy',
-      ).format(customerDetails.modified!.toLocal());
-    }
-
-    // "Update" link → bottom sheet
-    final void Function() onUpdateTap = () {
-      _showBodyMetricsBottomSheet(
-        context,
-        customerDetails: customerDetails,
-      );
-    };
-
-    final void Function() onChevronTap = () {
-      Navigator.push(
-        context,
-        MaterialPageRoute<void>(
-          builder: (_) => BlocProvider.value(
-            value: _cubit,
-            child: BodyMatrixScreen(customerDetails: customerDetails),
-          ),
-        ),
-      );
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Text(
-          'Health Matrix',
-          style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.textDark,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        // BMI
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'BMI',
-                                style: AppStyles.text12Px.poppins.w600.copyWith(
-                                  color: const Color(0xFF868E96),
-                                ),
-                              ),
-                              Text(
-                                bmiStr,
-                                style: AppStyles.text20Px.poppins.w700.copyWith(
-                                  fontSize: 20,
-                                  color: const Color(0xFF212529),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  if (bmi != null) ...[
-                                    Icon(
-                                      Icons.circle,
-                                      color: categoryColor,
-                                      size: 7,
-                                    ),
-                                    const SizedBox(width: 4),
-                                  ],
-                                  Text(
-                                    bmiCategory,
-                                    style: AppStyles.text12Px.poppins.w500
-                                        .copyWith(
-                                          color: const Color(0xFF212529),
-                                        ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Middle divider and Heart Badge
-                        Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                            Positioned(
-                              top: -25,
-                              bottom: -25,
-                              child: Container(
-                                width: 1.5,
-                                color: const Color(0xFFD9D9D9),
-                              ),
-                            ),
-                            Container(
-                              width: 32,
-                              height: 32,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: const Color(0xFFD9D9D9),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Center(
-                                child: SvgPicture.asset(
-                                  'assets/images/svg/icons/heart_icon.svg',
-                                  width: 14,
-                                  height: 13,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // BMR
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'BMR',
-                                style: AppStyles.text12Px.poppins.w600.copyWith(
-                                  color: const Color(0xFF868E96),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                bmrStr,
-                                style: AppStyles.text20Px.poppins.w700.copyWith(
-                                  fontSize: 20,
-                                  color: const Color(0xFF212529),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'kcal/day',
-                                style: AppStyles.text12Px.poppins.w500.copyWith(
-                                  color: const Color(0xFF868E96),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    // Inner metrics container
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: const Color(0xFFE9ECEF),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          // Height
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.height,
-                                  color: Color(0xFFFA5252),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Height',
-                                  style: AppStyles.text13Px.poppins.w500
-                                      .copyWith(color: const Color(0xFF212529)),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  heightStr,
-                                  style: AppStyles.text13Px.poppins.w600
-                                      .copyWith(color: const Color(0xFF212529)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(
-                            height: 10,
-                            thickness: 1,
-                            color: Color(0xFFF1F3F5),
-                          ),
-                          // Weight
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.monitor_weight_outlined,
-                                  color: Color(0xFFFA5252),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Weight',
-                                  style: AppStyles.text13Px.poppins.w500
-                                      .copyWith(color: const Color(0xFF212529)),
-                                ),
-                                const Spacer(),
-                                Text(
-                                  weightStr,
-                                  style: AppStyles.text13Px.poppins.w600
-                                      .copyWith(color: const Color(0xFF212529)),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Divider(
-                            height: 10,
-                            thickness: 1,
-                            color: Color(0xFFF1F3F5),
-                          ),
-                          // Last Updated
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 2),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.history,
-                                  color: Color(0xFF868E96),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Last Updated',
-                                  style: AppStyles.text13Px.poppins.w500
-                                      .copyWith(color: const Color(0xFF212529)),
-                                ),
-                                const Spacer(),
-                                GestureDetector(
-                                  onTap: onUpdateTap,
-                                  child: RichText(
-                                    text: TextSpan(
-                                      style: AppStyles.text13Px.poppins.w500
-                                          .copyWith(
-                                            color: const Color(0xFF212529),
-                                          ),
-                                      children: [
-                                        TextSpan(text: '$updatedDateStr '),
-                                        TextSpan(
-                                          text: 'Update',
-                                          style: TextStyle(
-                                            color: AppColors.primary,
-                                            decoration:
-                                                TextDecoration.underline,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: 10,
-                right: 10,
-                child: GestureDetector(
-                  onTap: onChevronTap,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF1F3F5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.chevron_right,
-                      color: Color(0xFF495057),
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricItem(String label, String value) {
-    return RichText(
-      text: TextSpan(
-        text: '$label : ',
-        style: AppStyles.text13Px.poppins.w600.copyWith(
-          color: AppColors.textGrey,
-        ),
-        children: [
-          TextSpan(
-            text: value,
-            style: AppStyles.text13Px.poppins.w500.copyWith(
-              color: AppColors.textDark,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMembershipCard(Membership? membership) {
-    if (membership == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-          Text(
-            'Membership',
-            style: AppStyles.text16Px.poppins.w600.copyWith(
-              color: AppColors.textDark,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200, width: 1.5),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade400,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.fitness_center,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'No Active Membership',
-                        style: AppStyles.text16Px.poppins.w600.copyWith(
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Please contact your gym to activate.',
-                        style: AppStyles.text12Px.poppins.w500.copyWith(
-                          color: AppColors.textGrey,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      );
-    }
-
-    final String statusStr = membership.status ?? 'Pending';
-    final bool isActive = membership.isActive ?? false;
-    final bool isPending = statusStr.toLowerCase() == 'pending';
-    final localEndDate = membership.endDate?.toLocal();
-    final bool isExpired =
-        !isPending &&
-        (statusStr.toLowerCase() == 'expired' ||
-            (localEndDate != null &&
-                localEndDate.difference(DateTime.now()).inDays < 0));
-    final bool actualIsActive = isActive && !isExpired && !isPending;
-
-    // Remaining days calculation
-    var remainingDays = 0;
-    if (localEndDate != null) {
-      remainingDays = localEndDate.difference(DateTime.now()).inDays;
-      if (remainingDays < 0) remainingDays = 0;
-    }
-
-    // Progress calculation
-    var progress = 0.0;
-    if (membership.startDate != null && membership.endDate != null) {
-      final totalSec =
-          membership.endDate!.difference(membership.startDate!).inSeconds;
-      final elapsedSec =
-          DateTime.now().difference(membership.startDate!).inSeconds;
-      if (totalSec > 0) {
-        progress = elapsedSec / totalSec;
-        if (progress > 1.0) progress = 1.0;
-        if (progress < 0.0) progress = 0.0;
-      }
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 12),
-        Text(
-          'Membership',
-          style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: AppColors.textDark,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color:
-                  actualIsActive
-                      ? Colors.green.withValues(alpha: 0.3)
-                      : isExpired
-                      ? Colors.red.withValues(alpha: 0.3)
-                      : Colors.orange.withValues(alpha: 0.3),
-              width: 1.5,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Card Header
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors:
-                        actualIsActive
-                            ? [Colors.green.shade50, Colors.green.shade100]
-                            : isExpired
-                            ? [Colors.red.shade50, Colors.red.shade100]
-                            : [Colors.orange.shade50, Colors.orange.shade100],
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color:
-                            actualIsActive
-                                ? Colors.green
-                                : isExpired
-                                ? Colors.red
-                                : Colors.orange,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        actualIsActive
-                            ? Icons.fitness_center
-                            : isExpired
-                            ? Icons.cancel
-                            : Icons.pending,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            membership.membershipName ?? 'Standard Plan',
-                            style: AppStyles.text16Px.poppins.w600.copyWith(
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                actualIsActive
-                                    ? Icons.check_circle
-                                    : isExpired
-                                    ? Icons.cancel
-                                    : Icons.schedule,
-                                size: 14,
-                                color:
-                                    actualIsActive
-                                        ? Colors.green
-                                        : isExpired
-                                        ? Colors.red
-                                        : Colors.orange,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                actualIsActive
-                                    ? 'Active'
-                                    : isExpired
-                                    ? 'Expired'
-                                    : 'Pending',
-                                style: AppStyles.text12Px.poppins.w600.copyWith(
-                                  color:
-                                      actualIsActive
-                                          ? Colors.green
-                                          : isExpired
-                                          ? Colors.red
-                                          : Colors.orange,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Card Content
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Progress bar (only for active/expired)
-                    if (membership.startDate != null &&
-                        membership.endDate != null) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Membership Progress',
-                            style: AppStyles.text13Px.poppins.w600.copyWith(
-                              color: AppColors.textDark,
-                            ),
-                          ),
-                          Text(
-                            '${(progress * 100).toInt()}%',
-                            style: AppStyles.text13Px.poppins.w600.copyWith(
-                              color: actualIsActive ? Colors.green : Colors.red,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: progress,
-                        backgroundColor: Colors.grey.shade100,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          actualIsActive ? Colors.green : Colors.red,
-                        ),
-                        minHeight: 6,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        !isExpired
-                            ? '🕒 $remainingDays days remaining'
-                            : '✅ Membership completed',
-                        style: AppStyles.text12Px.poppins.w500.copyWith(
-                          color:
-                              !isExpired ? Colors.orange.shade800 : Colors.red,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-
-                    // Details Grid
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMembershipDetailItem(
-                            icon: Icons.calendar_today,
-                            label: 'Start Date',
-                            value:
-                                membership.startDate != null
-                                    ? DateFormat(
-                                      'dd MMM yyyy',
-                                    ).format(membership.startDate!.toLocal())
-                                    : '-',
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMembershipDetailItem(
-                            icon: Icons.event_busy,
-                            label: 'Expiry Date',
-                            value:
-                                membership.endDate != null
-                                    ? DateFormat(
-                                      'dd MMM yyyy',
-                                    ).format(membership.endDate!.toLocal())
-                                    : '-',
-                            color: Colors.red,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMembershipDetailItem(
-                            icon: Icons.currency_rupee,
-                            label: 'Amount Paid',
-                            value:
-                                membership.amount != null
-                                    ? '₹${membership.amount}'
-                                    : '-',
-                            color: Colors.green,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMembershipDetailItem(
-                            icon: Icons.payment,
-                            label: 'Payment Status',
-                            value:
-                                (membership.paymentStatus ?? '-').toUpperCase(),
-                            color:
-                                (membership.paymentStatus ?? '')
-                                            .toLowerCase() ==
-                                        'completed'
-                                    ? Colors.green
-                                    : Colors.orange,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    _buildMembershipDetailItem(
-                      icon: Icons.category,
-                      label: 'Membership Type',
-                      value: membership.isTrial == true ? 'Trial' : 'Regular',
-                      color: Colors.purple,
-                      fullWidth: true,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _buildMembershipDetailItem({
+  Widget _buildProfileMenuItem({
     required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    bool fullWidth = false,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
   }) {
     return Container(
-      width: fullWidth ? double.infinity : null,
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppStyles.text12Px.poppins.w500.copyWith(
-                    color: AppColors.textGrey,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
+      child: ListTile(
+        onTap: onTap,
+        leading: Icon(icon, color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF0F172A), size: 20),
+        title: Text(
+          title,
+          style: AppStyles.text14Px.poppins.w500.copyWith(
+            color: isDestructive ? const Color(0xFFEF4444) : const Color(0xFF0F172A),
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: AppStyles.text13Px.poppins.w600.copyWith(
-              color: AppColors.textDark,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8), size: 18),
       ),
-    );
-  }
-}
-
-class _ProfileListItem extends StatelessWidget {
-  const _ProfileListItem({
-    required this.label,
-    required this.onTap,
-    this.isLogout = false,
-  });
-  final String label;
-  final VoidCallback onTap;
-  final bool isLogout;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(
-        label,
-        style:
-            isLogout
-                ? AppStyles.text14Px.poppins.w500.copyWith(color: Colors.red)
-                : AppStyles.text14Px.poppins.w500,
-      ),
-      trailing:
-          isLogout
-              ? null
-              : const Icon(Icons.chevron_right, color: Colors.black),
-      onTap: onTap,
     );
   }
 }
 
 class _GuestProfileView extends StatelessWidget {
   const _GuestProfileView({required this.onLoginTap});
-
   final VoidCallback onLoginTap;
 
   @override
@@ -2364,28 +347,23 @@ class _GuestProfileView extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.person_outline, size: 80, color: Colors.grey.shade400),
+            const Icon(Icons.account_circle, size: 80, color: Color(0xFF0D3B2E)),
             const SizedBox(height: 16),
             Text(
-              'Guest Account',
-              style: AppStyles.text16Px.poppins.w500,
-              textAlign: TextAlign.center,
+              'Sign in to view your profile',
+              style: AppStyles.text16Px.poppins.w600.copyWith(color: const Color(0xFF0F172A)),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Please log in to view and manage your profile details.',
-              style: AppStyles.text12Px.poppins.w400,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: onLoginTap,
-                child: const Text('Log In'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0D3B2E),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
+              onPressed: onLoginTap,
+              child: const Text('Log In', style: TextStyle(color: Colors.white)),
             ),
           ],
         ),
