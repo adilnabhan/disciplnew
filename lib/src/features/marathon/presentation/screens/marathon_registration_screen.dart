@@ -1668,46 +1668,56 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
           ),
           const SizedBox(height: 12),
 
-          // Secondary Action Buttons (Copy Link & Open in App)
+          // Quick App Launchers Row (Google Pay, PhonePe, Paytm)
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF4285F4),
+                    side: const BorderSide(color: Color(0xFF4285F4)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.account_balance_wallet_rounded, size: 14),
+                  label: const Text('GPay / UPI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                  onPressed: () => _launchUpiIntent(context, widget.qrString),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF5F259F),
+                    side: const BorderSide(color: Color(0xFF5F259F)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  icon: const Icon(Icons.payment_rounded, size: 14),
+                  label: const Text('PhonePe', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                  onPressed: () => _launchUpiIntent(context, widget.qrString),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white70,
                     side: const BorderSide(color: Colors.white24),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
                   icon: const Icon(Icons.copy_rounded, size: 14),
-                  label: const Text('COPY LINK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                  label: const Text('COPY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: widget.qrString));
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('UPI Payment URI copied to clipboard!'),
                         duration: Duration(seconds: 2),
+                        backgroundColor: Color(0xFF00E676),
                       ),
                     );
-                  },
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFFFD700),
-                    side: const BorderSide(color: Color(0xFFFFD700)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 14),
-                  label: const Text('OPEN UPI APP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
-                  onPressed: () async {
-                    final uri = Uri.parse(widget.qrString);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
                   },
                 ),
               ),
