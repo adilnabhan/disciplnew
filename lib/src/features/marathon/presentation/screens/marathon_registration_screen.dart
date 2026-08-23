@@ -1157,120 +1157,86 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
     );
   }
 
-  Widget _buildPaymentMethodSelector() {
-    final methods = [
-      {
-        'id': 'razorpay_qr',
-        'title': 'Razorpay Dynamic QR (Scan & Pay)',
-        'subtitle': 'Scan with GPay, PhonePe, Paytm or ANY phone (5 Min Timer)',
-        'badge': 'RECOMMENDED',
-        'badgeColor': const Color(0xFF00E676),
-        'icon': Icons.qr_code_scanner_rounded,
-        'iconColor': const Color(0xFF00E676),
-      },
-      {
-        'id': 'google_pay',
-        'title': 'Google Pay (Direct UPI)',
-        'subtitle': 'Instant one-tap payment via UPI app',
-        'badge': 'INSTANT',
-        'badgeColor': const Color(0xFF3B82F6),
-        'icon': Icons.flash_on_rounded,
-        'iconColor': const Color(0xFF3B82F6),
-      },
-      {
-        'id': 'razorpay',
-        'title': 'Razorpay Checkout',
-        'subtitle': 'Debit / Credit Cards, NetBanking & All UPI Apps',
-        'badge': 'STANDARD',
-        'badgeColor': const Color(0xFF9CA3AF),
-        'icon': Icons.credit_card_rounded,
-        'iconColor': const Color(0xFFF59E0B),
-      },
-    ];
+  Widget _buildPaymentBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w900),
+      ),
+    );
+  }
 
-    return Column(
-      children: methods.map((m) {
-        final isSelected = _selectedPaymentMethod == m['id'];
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedPaymentMethod = m['id'] as String;
-            });
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: isSelected ? (m['iconColor'] as Color).withOpacity(0.12) : CyberWorkoutTheme.bgCardGlass,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isSelected ? (m['iconColor'] as Color) : Colors.white10,
-                width: isSelected ? 1.8 : 1,
+  Widget _buildPaymentMethodSelector() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: CyberWorkoutTheme.bgCardGlass,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00E676).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.verified_user_rounded, color: Color(0xFF00E676), size: 18),
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: (m['iconColor'] as Color).withOpacity(0.2),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(m['icon'] as IconData, color: m['iconColor'] as Color, size: 20),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'SECURE CHECKOUT',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 1.1),
+                    ),
+                    Text(
+                      'GPay • PhonePe • Paytm • Dynamic QR • Cards',
+                      style: TextStyle(color: Colors.white60, fontSize: 11),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              m['title'] as String,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: (m['badgeColor'] as Color).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              m['badge'] as String,
-                              style: TextStyle(
-                                color: m['badgeColor'] as Color,
-                                fontSize: 8,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        m['subtitle'] as String,
-                        style: const TextStyle(color: Colors.white54, fontSize: 11, fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3395FF).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                Icon(
-                  isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                  color: isSelected ? (m['iconColor'] as Color) : Colors.white30,
-                  size: 20,
+                child: const Text(
+                  'RAZORPAY',
+                  style: TextStyle(color: Color(0xFF3395FF), fontSize: 9, fontWeight: FontWeight.w900),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        );
-      }).toList(),
+          const SizedBox(height: 12),
+          const Divider(color: Colors.white10, height: 1),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildPaymentBadge('GPay', const Color(0xFF4285F4)),
+              _buildPaymentBadge('PhonePe', const Color(0xFF5F259F)),
+              _buildPaymentBadge('Paytm', const Color(0xFF00B9F5)),
+              _buildPaymentBadge('UPI QR', const Color(0xFF00E676)),
+              _buildPaymentBadge('Cards', const Color(0xFFFFD700)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1386,9 +1352,7 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    _selectedPaymentMethod == 'razorpay_qr'
-                        ? 'SHOW 5-MIN QR  ₹${_finalPayableAmount.toStringAsFixed(0)}'
-                        : 'PROCEED TO PAY  ₹${_finalPayableAmount.toStringAsFixed(0)}',
+                    'PROCEED TO PAY  ₹${_finalPayableAmount.toStringAsFixed(0)}',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
