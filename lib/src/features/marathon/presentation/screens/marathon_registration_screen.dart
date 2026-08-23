@@ -301,15 +301,6 @@ class _MarathonRegistrationScreenState extends State<MarathonRegistrationScreen>
             'theme': {'color': '#E50914'},
             'send_sms_hash': true,
             'retry': {'enabled': true, 'max_count': 3},
-            'method': {
-              'netbanking': true,
-              'card': true,
-              'upi': true,
-              'wallet': true,
-            },
-            'external': {
-              'wallets': ['paytm', 'phonepe', 'google_pay']
-            }
           };
 
           _razorpay.open(options);
@@ -1689,7 +1680,31 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
           ),
           const SizedBox(height: 20),
 
-          // Action Buttons
+          // Primary 'I HAVE PAID' Submit Button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00E676),
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 6,
+                shadowColor: const Color(0xFF00E676).withOpacity(0.4),
+              ),
+              icon: const Icon(Icons.check_circle_rounded, size: 20, color: Colors.black),
+              label: const Text(
+                '✅ I HAVE PAID — SUBMIT REGISTRATION',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+              ),
+              onPressed: () {
+                _promptManualUtr(context);
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Secondary Action Buttons (Copy Link & Open in App)
           Row(
             children: [
               Expanded(
@@ -1697,11 +1712,11 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
                     side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  icon: const Icon(Icons.copy_rounded, size: 16),
-                  label: const Text('COPY UPI LINK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
+                  icon: const Icon(Icons.copy_rounded, size: 14),
+                  label: const Text('COPY LINK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: widget.qrString));
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1715,15 +1730,15 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00E676),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFFFD700),
+                    side: const BorderSide(color: Color(0xFFFFD700)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                  label: const Text('OPEN IN UPI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                  icon: const Icon(Icons.open_in_new_rounded, size: 14),
+                  label: const Text('OPEN UPI APP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                   onPressed: () async {
                     final uri = Uri.parse(widget.qrString);
                     if (await canLaunchUrl(uri)) {
@@ -1733,16 +1748,6 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () {
-              _promptManualUtr(context);
-            },
-            child: const Text(
-              'Paid from another phone? Enter UTR / Txn ID',
-              style: TextStyle(color: Colors.white54, fontSize: 11, decoration: TextDecoration.underline),
-            ),
           ),
         ],
       ),
