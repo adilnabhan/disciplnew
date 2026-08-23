@@ -1376,7 +1376,7 @@ class _RazorpayQrSheet extends StatefulWidget {
   final String registrationNumber;
   final double amount;
   final ValueChanged<Map<String, dynamic>> onPaymentConfirmed;
-  final ValueChanged<String> onManualVerify;
+  final ValueChanged<String>? onManualVerify;
 
   const _RazorpayQrSheet({
     required this.qrString,
@@ -1385,7 +1385,7 @@ class _RazorpayQrSheet extends StatefulWidget {
     required this.registrationNumber,
     required this.amount,
     required this.onPaymentConfirmed,
-    required this.onManualVerify,
+    this.onManualVerify,
   });
 
   @override
@@ -1417,7 +1417,7 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
       });
     });
 
-    // Check payment status every 3 seconds
+    // Auto-poll payment status every 3 seconds
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       _checkPaymentStatus();
     });
@@ -1433,14 +1433,56 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
         queryParameters: {'registration_id': widget.registrationId},
       );
 
-      if (res.statusCode == 200 && res.data['paid'] == true) {
-        _countdownTimer?.cancel();
-        _pollingTimer?.cancel();
-        widget.onPaymentConfirmed(res.data);
+      if (res.statusCode == 200 && res.data != null) {
+        final data = res.data as Map<String, dynamic>;
+        if (data['paid'] == true) {
+          _countdownTimer?.cancel();
+          _pollingTimer?.cancel();
+          if (mounted) {
+            Navigator.of(context, rootNavigator: true).pop();
+            widget.onPaymentConfirmed(data);
+          }
+        }
       }
     } catch (_) {
+      // Keep polling silently
     } finally {
-      _isChecking = false;
+      if (mounted) {
+        _isChecking = false;
+      }
+    }
+  }
+
+  Future<void> _launchUpiIntent(BuildContext context, String upiString) async {
+    try {
+      final uri = Uri.parse(upiString);
+      bool launched = await launchUrl(uri, mode: LaunchMode.externalNonBrowserApplication);
+      if (!launched) {
+        launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+      if (!launched) {
+        Clipboard.setData(ClipboardData(text: upiString));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('UPI URI copied to clipboard! Paste in your UPI app.'),
+              backgroundColor: Color(0xFF3395FF),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      Clipboard.setData(ClipboardData(text: upiString));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('UPI URI copied to clipboard! Open your UPI app to pay.'),
+            backgroundColor: Color(0xFF3395FF),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -1536,7 +1578,7 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
           ),
           const SizedBox(height: 20),
 
-          // QR Code Display Card (Official Razorpay Merchant QR Card or High-Res QrImageView)
+          // Official Razorpay QR Card or High-Res QR
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1545,66 +1587,33 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.4),
-                  blurRadius: 20,
-                  spreadRadius: 2,
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: isExpired
-                ? SizedBox(
-                    width: 220,
-                    height: 220,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 48),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'QR Code Expired',
-                          style: TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w800),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Please close and regenerate',
-                          style: TextStyle(color: Colors.black54, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  )
-                : (widget.qrImageUrl != null && widget.qrImageUrl!.isNotEmpty)
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: Image.network(
-                          widget.qrImageUrl!,
-                          width: 220,
-                          height: 300,
-                          fit: BoxFit.contain,
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return const SizedBox(
-                              width: 220,
-                              height: 220,
-                              child: Center(
-                                child: CircularProgressIndicator(color: CyberWorkoutTheme.goldPrimary),
-                              ),
-                            );
-                          },
-                          errorBuilder: (_, __, ___) => QrImageView(
-                            data: widget.qrString,
-                            version: QrVersions.auto,
-                            size: 200.0,
-                            backgroundColor: Colors.white,
-                            padding: const EdgeInsets.all(8),
-                          ),
-                        ),
-                      )
-                    : QrImageView(
+            child: widget.qrImageUrl != null && widget.qrImageUrl!.isNotEmpty
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      widget.qrImageUrl!,
+                      width: 240,
+                      height: 280,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => QrImageView(
                         data: widget.qrString,
                         version: QrVersions.auto,
-                        size: 200.0,
+                        size: 220,
                         backgroundColor: Colors.white,
-                        padding: const EdgeInsets.all(8),
                       ),
+                    ),
+                  )
+                : QrImageView(
+                    data: widget.qrString,
+                    version: QrVersions.auto,
+                    size: 220,
+                    backgroundColor: Colors.white,
+                  ),
           ),
           const SizedBox(height: 16),
 
@@ -1615,10 +1624,10 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
               color: CyberWorkoutTheme.goldPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.1,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           const Text(
             'Scan with GPay, PhonePe, Paytm, BHIM, Cred, or any UPI app',
             style: TextStyle(color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w600),
@@ -1626,141 +1635,83 @@ class _RazorpayQrSheetState extends State<_RazorpayQrSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Live Polling Indicator
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E676)),
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Waiting for payment • Auto-detecting...',
-                style: TextStyle(color: Color(0xFF00E676), fontSize: 11, fontWeight: FontWeight.w700),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Primary 'I HAVE PAID' Submit Button
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00E676),
-                foregroundColor: Colors.black,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 6,
-                shadowColor: const Color(0xFF00E676).withOpacity(0.4),
-              ),
-              icon: const Icon(Icons.check_circle_rounded, size: 20, color: Colors.black),
-              label: const Text(
-                '✅ I HAVE PAID — SUBMIT REGISTRATION',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, letterSpacing: 0.8),
-              ),
-              onPressed: () {
-                _promptManualUtr(context);
-              },
+          // Live Auto-Detection Status Indicator
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF00E676).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF00E676).withOpacity(0.3)),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E676)),
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Waiting for payment • Auto-detecting...',
+                  style: TextStyle(color: Color(0xFF00E676), fontSize: 12, fontWeight: FontWeight.w800),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
-          // Quick App Launchers Row (Google Pay, PhonePe, Paytm)
+          // Quick App Launchers Row (GPay, PhonePe, Copy)
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF4285F4),
-                    side: const BorderSide(color: Color(0xFF4285F4)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4285F4),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(Icons.account_balance_wallet_rounded, size: 14),
-                  label: const Text('GPay / UPI', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                  icon: const Icon(Icons.account_balance_wallet_rounded, size: 16),
+                  label: const Text('GPAY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                   onPressed: () => _launchUpiIntent(context, widget.qrString),
                 ),
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF5F259F),
-                    side: const BorderSide(color: Color(0xFF5F259F)),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF5F259F),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  icon: const Icon(Icons.payment_rounded, size: 14),
-                  label: const Text('PhonePe', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                  icon: const Icon(Icons.payment_rounded, size: 16),
+                  label: const Text('PHONEPE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                   onPressed: () => _launchUpiIntent(context, widget.qrString),
                 ),
               ),
               const SizedBox(width: 8),
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.white70,
-                    side: const BorderSide(color: Colors.white24),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  icon: const Icon(Icons.copy_rounded, size: 14),
-                  label: const Text('COPY', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800)),
-                  onPressed: () {
-                    Clipboard.setData(ClipboardData(text: widget.qrString));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('UPI Payment URI copied to clipboard!'),
-                        duration: Duration(seconds: 2),
-                        backgroundColor: Color(0xFF00E676),
-                      ),
-                    );
-                  },
+              OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: widget.qrString));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('UPI Payment URI copied to clipboard!'),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Color(0xFF00E676),
+                    ),
+                  );
+                },
+                child: const Icon(Icons.copy_rounded, size: 16, color: Colors.white70),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _promptManualUtr(BuildContext context) {
-    final utrController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (dlgCtx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E2C),
-        title: const Text('Enter Payment Reference', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w900)),
-        content: TextField(
-          controller: utrController,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: '12-digit UTR / UPI Ref ID',
-            hintStyle: const TextStyle(color: Colors.white30, fontSize: 12),
-            filled: true,
-            fillColor: Colors.black38,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dlgCtx).pop(),
-            child: const Text('CANCEL', style: TextStyle(color: Colors.white54)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: CyberWorkoutTheme.crimsonRed),
-            onPressed: () {
-              final utr = utrController.text.trim();
-              if (utr.isNotEmpty) {
-                Navigator.of(dlgCtx).pop();
-                widget.onManualVerify(utr);
-              }
-            },
-            child: const Text('SUBMIT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
           ),
         ],
       ),
