@@ -137,6 +137,7 @@ dependencies:
   razorpay_flutter: ^1.4.0
   pretty_dio_logger: ^1.4.0
   syncfusion_flutter_pdfviewer: ^29.2.11
+  health: ^13.1.4
 
 dependency_overrides:
   web: any

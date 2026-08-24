@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
-import 'package:customer_mobile_app/core/api/clients/dio_client.dart';
-import 'package:customer_mobile_app/core/api/uris/api_uris.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/themes/cyber_workout_theme.dart';
+import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/core/network/dio_client.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/cyber_workout_theme.dart';
 
 class MarathonTicketScannerScreen extends StatefulWidget {
   const MarathonTicketScannerScreen({super.key});

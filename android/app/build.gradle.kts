@@ -20,7 +20,7 @@ android {
 
     defaultConfig {
         applicationId = "com.discipl.customer"
-        minSdkVersion(24)
+        minSdkVersion(26)
         targetSdkVersion(36)
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -72,4 +72,10 @@ dependencies {
 
 flutter {
     source = "../.."
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("androidx.health.connect:connect-client:1.1.0-alpha11")
+    }
 }

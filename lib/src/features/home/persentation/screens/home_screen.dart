@@ -1,3 +1,4 @@
+import 'package:customer_mobile_app/src/features/home/services/health_sync_service.dart';
 import 'package:customer_mobile_app/src/features/marathon/presentation/screens/marathon_ticket_scanner_screen.dart';
 import 'dart:async';
 import 'dart:ui';
@@ -32,8 +33,11 @@ class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
   late final HomeCubit _homeCubit;
   StreamSubscription<StepCount>? _stepSubscription;
+  StreamSubscription<HealthActivityData>? _healthSubscription;
+  HealthActivityData _healthData = HealthActivityData.initial();
   int _realSteps = 0;
   int _initialSteps = -1;
+  bool _isConnectingHealth = false;
 
   // Real Leaderboard data fetched from API
   List<Map<String, dynamic>> _leaderboardMembers = [];
@@ -365,7 +369,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _dashboardCubit = DashboardCubit();
     _homeCubit = HomeCubit();
-    _initPedometer();
+    _initHealthSync();
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
     if (!isGuest) {
       _fetchActiveMembership();
@@ -395,6 +399,41 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
+  void _initHealthSync() {
+    final healthService = HealthSyncService();
+    healthService.initialize();
+    _healthSubscription = healthService.activityStream.listen((data) {
+      if (mounted) {
+        setState(() {
+          _healthData = data;
+          if (data.steps > 0) {
+            _realSteps = data.steps;
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _handleConnectHealth() async {
+    setState(() => _isConnectingHealth = true);
+    final granted = await HealthSyncService().connectGoogleFitOrHealthConnect();
+    if (mounted) {
+      setState(() => _isConnectingHealth = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            granted
+                ? '✅ Google Fit / Health Connect connected successfully!'
+                : 'Granted permissions or using live hardware step sensor.',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          backgroundColor: granted ? const Color(0xFF00E676) : const Color(0xFF3395FF),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   void _initPedometer() async {
     try {
       if (await Permission.activityRecognition.request().isGranted) {
@@ -422,6 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _stepSubscription?.cancel();
+    _healthSubscription?.cancel();
     _homeCubit.close();
     super.dispose();
   }
@@ -1132,9 +1172,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHealthActivityWidget() {
-    final int displaySteps = _realSteps > 0 ? _realSteps : 8420;
-    final String distStr = (_realSteps > 0 ? (_realSteps * 0.00075) : 6.3).toStringAsFixed(1);
-    final int kcalVal = _realSteps > 0 ? (_realSteps * 0.04).round() : 480;
+    final int displaySteps = _healthData.steps > 0 ? _healthData.steps : (_realSteps > 0 ? _realSteps : 0);
+    final String distStr = _healthData.distanceKm > 0
+        ? _healthData.distanceKm.toStringAsFixed(1)
+        : (displaySteps > 0 ? (displaySteps * 0.00075).toStringAsFixed(1) : "0.0");
+    final int kcalVal = _healthData.calories > 0
+        ? _healthData.calories
+        : (displaySteps > 0 ? (displaySteps * 0.045).round() : 0);
+    final int heartRateVal = _healthData.heartRate > 0 ? _healthData.heartRate : 74;
+
+    final bool isGoogleFit = _healthData.sourceType == HealthSourceType.googleFitHealthConnect;
+    final bool isSensor = _healthData.sourceType == HealthSourceType.pedometerSensor;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -1151,7 +1199,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.directions_run, color: CyberWorkoutTheme.goldPrimary, size: 18),
+                  Icon(Icons.directions_run_rounded, color: CyberWorkoutTheme.goldPrimary, size: 18),
                   SizedBox(width: 8),
                   Text(
                     "TODAY'S ACTIVITY",
@@ -1164,15 +1212,63 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: CyberWorkoutTheme.crimsonRed.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  "LIVE TRACKING",
-                  style: TextStyle(color: CyberWorkoutTheme.crimsonRed, fontSize: 9, fontWeight: FontWeight.w900),
+              // Interactive Google Fit / Health Connect Status Button
+              InkWell(
+                onTap: _isConnectingHealth ? null : _handleConnectHealth,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: isGoogleFit
+                        ? const Color(0xFF4285F4).withOpacity(0.2)
+                        : (isSensor
+                            ? const Color(0xFF00E676).withOpacity(0.2)
+                            : CyberWorkoutTheme.goldPrimary.withOpacity(0.15)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isGoogleFit
+                          ? const Color(0xFF4285F4)
+                          : (isSensor ? const Color(0xFF00E676) : CyberWorkoutTheme.goldPrimary),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isConnectingHealth) ...[
+                        const SizedBox(
+                          width: 10,
+                          height: 10,
+                          child: CircularProgressIndicator(strokeWidth: 1.5, color: Colors.white),
+                        ),
+                        const SizedBox(width: 5),
+                      ] else ...[
+                        Icon(
+                          isGoogleFit
+                              ? Icons.health_and_safety_rounded
+                              : (isSensor ? Icons.sensors_rounded : Icons.sync_rounded),
+                          color: isGoogleFit
+                              ? const Color(0xFF4285F4)
+                              : (isSensor ? const Color(0xFF00E676) : CyberWorkoutTheme.goldPrimary),
+                          size: 12,
+                        ),
+                        const SizedBox(width: 5),
+                      ],
+                      Text(
+                        isGoogleFit
+                            ? "GOOGLE FIT"
+                            : (isSensor ? "LIVE SENSOR" : "CONNECT FIT"),
+                        style: TextStyle(
+                          color: isGoogleFit
+                              ? const Color(0xFF4285F4)
+                              : (isSensor ? const Color(0xFF00E676) : CyberWorkoutTheme.goldPrimary),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1187,7 +1283,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 85,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: CyberWorkoutTheme.goldPrimary, width: 5),
+                  border: Border.all(
+                    color: displaySteps >= 10000
+                        ? const Color(0xFF00E676)
+                        : (displaySteps > 0 ? CyberWorkoutTheme.goldPrimary : Colors.white24),
+                    width: 5,
+                  ),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1209,11 +1310,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildStatRow(Icons.local_fire_department, "Active Burn", "$kcalVal kcal", CyberWorkoutTheme.crimsonRed),
+                    _buildStatRow(Icons.local_fire_department_rounded, "Active Burn", "$kcalVal kcal", CyberWorkoutTheme.crimsonRed),
                     const SizedBox(height: 8),
-                    _buildStatRow(Icons.straighten, "Distance", "$distStr km", CyberWorkoutTheme.goldPrimary),
+                    _buildStatRow(Icons.straighten_rounded, "Distance", "$distStr km", CyberWorkoutTheme.goldPrimary),
                     const SizedBox(height: 8),
-                    _buildStatRow(Icons.favorite, "Heart Rate", "74 BPM", const Color(0xFFFF5252)),
+                    _buildStatRow(Icons.favorite_rounded, "Heart Rate", "$heartRateVal BPM", const Color(0xFFFF5252)),
                   ],
                 ),
               ),
