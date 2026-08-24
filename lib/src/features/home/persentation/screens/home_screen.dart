@@ -1,3 +1,4 @@
+import 'package:customer_mobile_app/src/features/home/persentation/screens/activity_detail_screen.dart';
 import 'package:customer_mobile_app/src/features/home/services/health_sync_service.dart';
 import 'package:customer_mobile_app/src/features/marathon/presentation/screens/marathon_ticket_scanner_screen.dart';
 import 'dart:async';
@@ -1184,7 +1185,17 @@ class _HomeScreenState extends State<HomeScreen> {
     final bool isGoogleFit = _healthData.sourceType == HealthSourceType.googleFitHealthConnect;
     final bool isSensor = _healthData.sourceType == HealthSourceType.pedometerSensor;
 
-    return Container(
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ActivityDetailScreen(initialHealthData: _healthData),
+          ),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: const Color(0xFF14141E),
@@ -1321,6 +1332,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ],
+      ),
       ),
     );
   }

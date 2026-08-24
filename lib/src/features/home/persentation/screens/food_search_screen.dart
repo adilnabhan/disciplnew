@@ -1,520 +1,312 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/core/network/dio_client.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/cyber_workout_theme.dart';
 
 class FoodSearchScreen extends StatefulWidget {
-  const FoodSearchScreen({super.key});
+  final String initialMeal;
+  final DateTime? targetDate;
+
+  const FoodSearchScreen({
+    super.key,
+    this.initialMeal = 'lunch',
+    this.targetDate,
+  });
 
   @override
   State<FoodSearchScreen> createState() => _FoodSearchScreenState();
 }
 
 class _FoodSearchScreenState extends State<FoodSearchScreen> {
-  String _selectedCategory = 'All';
-  String _selectedMeal = 'Lunch';
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+
+  String _selectedCategoryKey = 'all';
+  late String _selectedMeal;
+  late DateTime _targetDate;
   bool _isLoading = false;
 
-  List<Map<String, dynamic>> _foodItems = [
-    {
-      'id': 1,
-      'name': 'Aam Panna (250ml)',
-      'kcal': 120,
-      'protein': 0.5,
-      'carbs': 30.0,
-      'fat': 0.1,
-      'category': 'Kerala'
-    },
-    {
-      'id': 2,
-      'name': 'Achappam',
-      'kcal': 300,
-      'protein': 3.0,
-      'carbs': 38.0,
-      'fat': 15.0,
-      'category': 'Kerala'
-    },
-    {
-      'id': 3,
-      'name': 'Ackee and Saltfish (Jamaican)',
-      'kcal': 250,
-      'protein': 15.0,
-      'carbs': 10.0,
-      'fat': 14.0,
-      'category': 'South Indian'
-    },
-    {
-      'id': 4,
-      'name': 'Adai (Lentil Dosa)',
-      'kcal': 200,
-      'protein': 8.0,
-      'carbs': 32.0,
-      'fat': 4.0,
-      'category': 'South Indian'
-    },
-    {
-      'id': 5,
-      'name': 'Aglio Olio Pasta',
-      'kcal': 314,
-      'protein': 9.2,
-      'carbs': 45.0,
-      'fat': 10.0,
-      'category': 'North Indian'
-    },
-    {
-      'id': 6,
-      'name': 'Alappuzha Fish Curry',
-      'kcal': 178,
-      'protein': 16.0,
-      'carbs': 8.0,
-      'fat': 9.0,
-      'category': 'Kerala'
-    },
-    {
-      'id': 7,
-      'name': 'Amritsari Kulcha',
-      'kcal': 300,
-      'protein': 7.0,
-      'carbs': 48.0,
-      'fat': 9.0,
-      'category': 'Kerala'
-    },
-    {
-      'id': 8,
-      'name': 'Andhra Gongura Chicken',
-      'kcal': 250,
-      'protein': 20.0,
-      'carbs': 6.0,
-      'fat': 16.0,
-      'category': 'Kerala'
-    },
-    {
-      'id': 9,
-      'name': 'Andhra Pesarattu with Upma',
-      'kcal': 210,
-      'protein': 8.0,
-      'carbs': 35.0,
-      'fat': 5.0,
-      'category': 'Kerala'
-    },
-    {
-      'id': 10,
-      'name': 'Appam (plain)',
-      'kcal': 120,
-      'protein': 2.0,
-      'carbs': 24.0,
-      'fat': 1.5,
-      'category': 'Kerala'
-    },
-    {
-      'id': 11,
-      'name': 'Andhra Chicken Curry',
-      'kcal': 240,
-      'protein': 19.0,
-      'carbs': 5.0,
-      'fat': 15.0,
-      'category': 'South Indian'
-    },
-    {
-      'id': 12,
-      'name': 'Appam South Style',
-      'kcal': 120,
-      'protein': 2.0,
-      'carbs': 24.0,
-      'fat': 1.5,
-      'category': 'South Indian'
-    },
-    {
-      'id': 13,
-      'name': 'Bisibelebath',
-      'kcal': 230,
-      'protein': 7.0,
-      'carbs': 39.0,
-      'fat': 5.0,
-      'category': 'South Indian'
-    },
-    {
-      'id': 14,
-      'name': 'Cheese Dosa',
-      'kcal': 260,
-      'protein': 8.0,
-      'carbs': 30.0,
-      'fat': 12.0,
-      'category': 'South Indian'
-    },
-    {
-      'id': 15,
-      'name': 'Chettinad Chicken Curry',
-      'kcal': 280,
-      'protein': 22.0,
-      'carbs': 6.0,
-      'fat': 18.0,
-      'category': 'South Indian'
-    },
+  final List<Map<String, String>> _categories = [
+    {'key': 'all', 'label': 'All Foods'},
+    {'key': 'kerala', 'label': 'Kerala Cuisine 🌴'},
+    {'key': 'south_indian', 'label': 'South Indian 🍛'},
+    {'key': 'north_indian', 'label': 'North Indian 🥘'},
+    {'key': 'rice_grains', 'label': 'Rice & Grains 🍚'},
+    {'key': 'curries_dals', 'label': 'Curries & Dals 🍲'},
+    {'key': 'seafood', 'label': 'Fish & Seafood 🐟'},
+    {'key': 'poultry_meat', 'label': 'Poultry & Meat 🍗'},
+    {'key': 'vegetables', 'label': 'Vegetables 🥦'},
+    {'key': 'fruits', 'label': 'Fruits 🍎'},
+    {'key': 'snacks_street', 'label': 'Snacks & Street 🥨'},
+    {'key': 'beverages', 'label': 'Beverages & Juices 🥤'},
+    {'key': 'nuts_seeds', 'label': 'Nuts & Seeds 🥜'},
+    {'key': 'sweets_desserts', 'label': 'Sweets & Desserts 🍨'},
+    {'key': 'international', 'label': 'International 🌎'},
   ];
+
+  List<Map<String, dynamic>> _foodItems = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchBackendFoods();
+    _selectedMeal = widget.initialMeal.toLowerCase();
+    _targetDate = widget.targetDate ?? DateTime.now();
+    _searchFoods('');
   }
 
-  Future<void> _fetchBackendFoods([String? query]) async {
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      _searchFoods(query);
+    });
+  }
+
+  Future<void> _searchFoods(String query) async {
+    setState(() => _isLoading = true);
     try {
+      final Map<String, dynamic> params = {
+        'limit': 100,
+      };
+      if (query.trim().isNotEmpty) {
+        params['q'] = query.trim();
+      }
+      if (_selectedCategoryKey != 'all') {
+        params['category'] = _selectedCategoryKey;
+      }
+
       final res = await DioClient().dio.get(
         ApiUris.foodSearch,
-        queryParameters: {
-          if (query != null && query.isNotEmpty) 'query': query,
-        },
+        queryParameters: params,
       );
+
       if (res.statusCode == 200 && res.data != null) {
         final List results = res.data['results'] ?? res.data['data'] ?? [];
         if (results.isNotEmpty) {
           setState(() {
-            _foodItems = results.map((item) {
+            _foodItems = results.map<Map<String, dynamic>>((item) {
               return {
                 'id': item['id'] ?? 0,
-                'name': item['name'] ?? '',
-                'kcal': (item['calories'] ?? item['kcal'] ?? 100).round(),
-                'protein': (item['protein_g'] ?? item['protein'] ?? 0.0).toDouble(),
-                'carbs': (item['carbs_g'] ?? item['carbs'] ?? 0.0).toDouble(),
-                'fat': (item['fat_g'] ?? item['fat'] ?? 0.0).toDouble(),
-                'category': item['category'] ?? 'All',
+                'name': item['name'] ?? 'Food',
+                'malayalam_name': item['malayalam_name'] ?? '',
+                'english_name': item['english_name'] ?? '',
+                'calories': _toInt(item['calories'] ?? 100),
+                'protein': _toDouble(item['protein'] ?? 0.0),
+                'carbs': _toDouble(item['carbs'] ?? 0.0),
+                'fat': _toDouble(item['fat'] ?? 0.0),
+                'fiber': _toDouble(item['fiber'] ?? 0.0),
+                'category': item['category'] ?? 'kerala',
+                'serving_size': item['serving_size'] ?? '100g',
+                'units': item['units'] ?? ['100g', '1 Portion', '1 Plate'],
               };
             }).toList();
           });
+        } else {
+          setState(() => _foodItems = []);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint("Food search error: $e");
+    }
+    if (mounted) setState(() => _isLoading = false);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final filteredFoods = _foodItems.where((food) {
-      final matchesCat = _selectedCategory == 'All' || food['category'] == _selectedCategory;
-      final matchesQuery = _searchController.text.isEmpty ||
-          food['name'].toString().toLowerCase().contains(_searchController.text.toLowerCase());
-      return matchesCat && matchesQuery;
-    }).toList();
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0.5,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.black87, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          'Search Foods (1000+ Items)',
-          style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.black87),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Search Bar & Filter Options
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) {
-                    setState(() {});
-                    _fetchBackendFoods(val);
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Search Kerala & Indian foods (e.g. Puttu, Dosa)',
-                    hintStyle: AppStyles.text12Px.poppins.w400.copyWith(color: const Color(0xFF94A3B8)),
-                    prefixIcon: const Icon(Icons.search, color: Color(0xFF64748B)),
-                    filled: true,
-                    fillColor: const Color(0xFFF1F5F9),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Text('Log to: ', style: AppStyles.text12Px.poppins.w500.copyWith(color: const Color(0xFF64748B))),
-                        DropdownButton<String>(
-                          value: _selectedMeal,
-                          underline: const SizedBox(),
-                          items: ['Breakfast', 'Lunch', 'Dinner', 'Snack'].map((m) {
-                            return DropdownMenuItem(
-                              value: m,
-                              child: Text('☀️ $m', style: AppStyles.text12Px.poppins.w600.copyWith(color: const Color(0xFF10B981))),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedMeal = val);
-                          },
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        TextButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.description, size: 14, color: Color(0xFF2563EB)),
-                          label: Text('Import Excel', style: AppStyles.text12Px.poppins.w500.copyWith(color: const Color(0xFF2563EB))),
-                        ),
-                        TextButton.icon(
-                          onPressed: () => _showAddCustomFoodModal(context),
-                          icon: const Icon(Icons.add, size: 14, color: Color(0xFF10B981)),
-                          label: Text('Custom', style: AppStyles.text12Px.poppins.w600.copyWith(color: const Color(0xFF10B981))),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Category Filter Chips
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: ['All', 'Kerala', 'South Indian', 'North Indian'].map((cat) {
-                      final isSelected = _selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: ChoiceChip(
-                          label: Text(
-                            cat,
-                            style: AppStyles.text12Px.poppins.w500.copyWith(
-                              color: isSelected ? Colors.white : const Color(0xFF475569),
-                            ),
-                          ),
-                          selected: isSelected,
-                          selectedColor: const Color(0xFF10B981),
-                          backgroundColor: const Color(0xFFF1F5F9),
-                          onSelected: (val) {
-                            if (val) setState(() => _selectedCategory = cat);
-                          },
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-
-          // Food Items List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: filteredFoods.length,
-              itemBuilder: (context, index) {
-                final item = filteredFoods[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['name'],
-                              style: AppStyles.text14Px.poppins.w600.copyWith(color: const Color(0xFF1E293B)),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '${item['kcal']} kcal per 100g • ${item['protein']}g Protein',
-                              style: AppStyles.text12Px.poppins.w400.copyWith(color: const Color(0xFF64748B)),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => _showLogFoodModal(context, item),
-                        icon: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFECFDF5),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(Icons.add, color: Color(0xFF10B981), size: 18),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
+  int _toInt(dynamic val) {
+    if (val is int) return val;
+    if (val is double) return val.round();
+    if (val is String) return int.tryParse(val) ?? 0;
+    return 0;
   }
 
-  // Exact Modal matching User Images 1 & 5
-  void _showLogFoodModal(BuildContext context, Map<String, dynamic> item) {
-    String selectedServing = '100g';
-    double quantity = 1.0;
+  double _toDouble(dynamic val) {
+    if (val is double) return val;
+    if (val is int) return val.toDouble();
+    if (val is String) return double.tryParse(val) ?? 0.0;
+    return 0.0;
+  }
+
+  void _showFoodLogModal(Map<String, dynamic> food) {
+    double servings = 1.0;
+    String selectedMealType = _selectedMeal;
+    final int baseCals = food['calories'] as int;
+    final double baseProtein = food['protein'] as double;
+    final double baseCarbs = food['carbs'] as double;
+    final double baseFat = food['fat'] as double;
+    final String foodName = food['name'] as String;
+    final String servingSize = food['serving_size'] as String;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+      backgroundColor: const Color(0xFF141420),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            final int calculatedKcal = (item['kcal'] * quantity).round();
-            final double calculatedProt = (item['protein'] * quantity);
-            final double calculatedCarb = (item['carbs'] * quantity);
-            final double calculatedFat = (item['fat'] * quantity);
+            final int calcCals = (baseCals * servings).round();
+            final double calcProt = baseProtein * servings;
+            final double calcCarbs = baseCarbs * servings;
+            final double calcFat = baseFat * servings;
 
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFCBD5E1),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    item['name'],
-                    style: AppStyles.text18Px.poppins.w700.copyWith(color: const Color(0xFF0F172A)),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Macros Summary Row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildMacroStat('$calculatedKcal kcal', 'Calories', const Color(0xFF10B981)),
-                      _buildMacroStat('${calculatedProt.toStringAsFixed(1)}g', 'Protein', const Color(0xFF2563EB)),
-                      _buildMacroStat('${calculatedCarb.toStringAsFixed(1)}g', 'Carbs', const Color(0xFFD97706)),
-                      _buildMacroStat('${calculatedFat.toStringAsFixed(1)}g', 'Fat', const Color(0xFFEF4444)),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Serving Size & Quantity Row
-                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Serving Size', style: AppStyles.text12Px.poppins.w500.copyWith(color: const Color(0xFF64748B))),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(12),
+                            Text(
+                              foodName,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w900,
                               ),
-                              child: DropdownButton<String>(
-                                value: selectedServing,
-                                isExpanded: true,
-                                underline: const SizedBox(),
-                                items: ['100g', '1 Portion', '1 Bowl', '1 Piece', '1 Plate'].map((s) {
-                                  return DropdownMenuItem(value: s, child: Text(s, style: AppStyles.text14Px.poppins.w600));
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) setModalState(() => selectedServing = val);
-                                },
-                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Base: $servingSize • $baseCals kcal',
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white60),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Calculated Macro Snapshot Card
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1B1424),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: CyberWorkoutTheme.crimsonRed.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildMacroSnapshotItem('CALORIES', '$calcCals', 'kcal', CyberWorkoutTheme.crimsonRed),
+                        _buildMacroSnapshotItem('PROTEIN', calcProt.toStringAsFixed(1), 'g', const Color(0xFFFF334B)),
+                        _buildMacroSnapshotItem('CARBS', calcCarbs.toStringAsFixed(1), 'g', const Color(0xFFFFAA00)),
+                        _buildMacroSnapshotItem('FAT', calcFat.toStringAsFixed(1), 'g', const Color(0xFF00D2FF)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Servings Stepper
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Portion Multiplier',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      Row(
                         children: [
-                          Text('Quantity', style: AppStyles.text12Px.poppins.w500.copyWith(color: const Color(0xFF64748B))),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF64748B)),
-                                onPressed: () {
-                                  if (quantity > 0.5) setModalState(() => quantity -= 0.5);
-                                },
-                              ),
-                              Text(
-                                quantity.toStringAsFixed(1),
-                                style: AppStyles.text16Px.poppins.w700.copyWith(color: const Color(0xFF0F172A)),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.add_circle_outline, color: Color(0xFF10B981)),
-                                onPressed: () => setModalState(() => quantity += 0.5),
-                              ),
-                            ],
+                          IconButton(
+                            style: IconButton.styleFrom(backgroundColor: const Color(0xFF222230)),
+                            icon: const Icon(Icons.remove_rounded, color: Colors.white),
+                            onPressed: () {
+                              if (servings > 0.5) {
+                                setModalState(() => servings -= 0.5);
+                              }
+                            },
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF161622),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${servings}x',
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                            ),
+                          ),
+                          IconButton(
+                            style: IconButton.styleFrom(backgroundColor: const Color(0xFF222230)),
+                            icon: const Icon(Icons.add_rounded, color: Colors.white),
+                            onPressed: () {
+                              if (servings < 10.0) {
+                                setModalState(() => servings += 0.5);
+                              }
+                            },
                           ),
                         ],
                       ),
                     ],
                   ),
+                  const SizedBox(height: 18),
+
+                  // Meal Type Selector
+                  const Text(
+                    'Log to Meal',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _buildMealPill('breakfast', 'Breakfast', selectedMealType, (m) => setModalState(() => selectedMealType = m)),
+                      const SizedBox(width: 8),
+                      _buildMealPill('lunch', 'Lunch', selectedMealType, (m) => setModalState(() => selectedMealType = m)),
+                      const SizedBox(width: 8),
+                      _buildMealPill('dinner', 'Dinner', selectedMealType, (m) => setModalState(() => selectedMealType = m)),
+                      const SizedBox(width: 8),
+                      _buildMealPill('snack', 'Snack', selectedMealType, (m) => setModalState(() => selectedMealType = m)),
+                    ],
+                  ),
                   const SizedBox(height: 24),
 
-                  // Log Food Green Button
+                  // Submit Button
                   SizedBox(
                     width: double.infinity,
+                    height: 52,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        backgroundColor: CyberWorkoutTheme.crimsonRed,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 6,
+                        shadowColor: CyberWorkoutTheme.crimsonRed.withOpacity(0.5),
                       ),
                       onPressed: () async {
-                        try {
-                          await DioClient().dio.post(
-                            ApiUris.foodLog,
-                            data: {
-                              'food_id': item['id'],
-                              'meal_type': _selectedMeal.toLowerCase(),
-                              'serving_unit': selectedServing,
-                              'quantity': quantity,
-                              'calories': calculatedKcal,
-                            },
-                          );
-                        } catch (_) {}
-
-                        if (context.mounted) {
-                          Navigator.pop(ctx);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Logged ${item['name']} ($calculatedKcal kcal) to $_selectedMeal!'),
-                              backgroundColor: const Color(0xFF10B981),
-                            ),
-                          );
-                        }
+                        Navigator.pop(ctx);
+                        await _logMealItem(food['id'] as int, selectedMealType, servings);
                       },
                       child: Text(
-                        'Log Food ($calculatedKcal kcal)',
-                        style: AppStyles.text16Px.poppins.w700.copyWith(color: Colors.white),
+                        'LOG $calcCals KCAL TO ${selectedMealType.toUpperCase()}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                        ),
                       ),
                     ),
                   ),
@@ -527,160 +319,269 @@ class _FoodSearchScreenState extends State<FoodSearchScreen> {
     );
   }
 
-  Widget _buildMacroStat(String val, String label, Color col) {
+  Widget _buildMacroSnapshotItem(String label, String val, String unit, Color color) {
     return Column(
       children: [
-        Text(val, style: AppStyles.text16Px.poppins.w700.copyWith(color: col)),
-        const SizedBox(height: 2),
-        Text(label, style: AppStyles.text10Px.poppins.w400.copyWith(color: const Color(0xFF94A3B8))),
+        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 4),
+        Text(
+          val,
+          style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w900),
+        ),
+        Text(unit, style: const TextStyle(color: Colors.white38, fontSize: 9)),
       ],
     );
   }
 
-  void _showAddCustomFoodModal(BuildContext context) {
-    final nameCtrl = TextEditingController();
-    final kcalCtrl = TextEditingController();
-    final protCtrl = TextEditingController();
-    final carbCtrl = TextEditingController();
-    final fatCtrl = TextEditingController();
+  Widget _buildMealPill(String key, String label, String currentSelected, Function(String) onSelect) {
+    final bool isSelected = currentSelected == key;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onSelect(key),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? CyberWorkoutTheme.crimsonRed : const Color(0xFF1C1C28),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected ? CyberWorkoutTheme.crimsonRed : Colors.white12,
+            ),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.white60,
+              fontSize: 11,
+              fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return Container(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 20,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                '+ Add Custom Food to History',
-                style: AppStyles.text16Px.poppins.w700.copyWith(color: const Color(0xFF0F172A)),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Food Name (e.g. Oats Pancake)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: kcalCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Calories (kcal)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: protCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Protein (g)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: carbCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Carbs (g)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: fatCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'Fat (g)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () async {
-                    if (nameCtrl.text.isNotEmpty) {
-                      final customItem = {
-                        'id': DateTime.now().millisecondsSinceEpoch,
-                        'name': nameCtrl.text,
-                        'kcal': int.tryParse(kcalCtrl.text) ?? 150,
-                        'protein': double.tryParse(protCtrl.text) ?? 5.0,
-                        'carbs': double.tryParse(carbCtrl.text) ?? 20.0,
-                        'fat': double.tryParse(fatCtrl.text) ?? 3.0,
-                        'category': 'Custom',
-                      };
-                      setState(() {
-                        _foodItems.insert(0, customItem);
-                      });
-                    }
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Custom Food Saved & Added to List!'),
-                        backgroundColor: Color(0xFF10B981),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'Save & Log Food',
-                    style: AppStyles.text14Px.poppins.w600.copyWith(color: Colors.white),
-                  ),
-                ),
-              ),
-            ],
-          ),
+  Future<void> _logMealItem(int foodId, String mealType, double servings) async {
+    try {
+      final dateStr = DateFormat('yyyy-MM-dd').format(_targetDate);
+      final res = await DioClient().dio.post(
+        ApiUris.foodLog,
+        data: {
+          'food_id': foodId,
+          'meal_type': mealType,
+          'servings': servings,
+          'logged_at': dateStr,
+        },
+      );
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('✅ Food logged to ${mealType.toUpperCase()}!', style: const TextStyle(fontWeight: FontWeight.bold)),
+              backgroundColor: const Color(0xFF00E676),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          Navigator.pop(context, true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not log food item'), backgroundColor: Colors.redAccent),
         );
-      },
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0E),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF101018),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          '1,000+ Food Database',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          // Search Input Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            color: const Color(0xFF101018),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _onSearchChanged,
+              style: const TextStyle(color: Colors.white, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Search food, e.g. Appam, Chicken, Sadya, Oats...',
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 13),
+                prefixIcon: const Icon(Icons.search_rounded, color: CyberWorkoutTheme.crimsonRed, size: 20),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, color: Colors.white60, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          _searchFoods('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: const Color(0xFF161622),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+
+          // Categories Horizontal List
+          Container(
+            height: 48,
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _categories.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, idx) {
+                final cat = _categories[idx];
+                final bool isSelected = _selectedCategoryKey == cat['key'];
+
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedCategoryKey = cat['key']!);
+                    _searchFoods(_searchController.text);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? CyberWorkoutTheme.crimsonRed : const Color(0xFF141420),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isSelected ? CyberWorkoutTheme.crimsonRed : Colors.white10,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        cat['label']!,
+                        style: TextStyle(
+                          color: isSelected ? Colors.white : Colors.white60,
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Food List Roster
+          Expanded(
+            child: _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: CyberWorkoutTheme.crimsonRed),
+                  )
+                : _foodItems.isEmpty
+                    ? const Center(
+                        child: Text('No foods found matching your search', style: TextStyle(color: Colors.white38)),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        itemCount: _foodItems.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 8),
+                        itemBuilder: (context, idx) {
+                          final food = _foodItems[idx];
+                          final name = food['name'] as String;
+                          final cals = food['calories'] as int;
+                          final prot = food['protein'] as double;
+                          final carbs = food['carbs'] as double;
+                          final fat = food['fat'] as double;
+                          final servingSize = food['serving_size'] as String;
+
+                          return GestureDetector(
+                            onTap: () => _showFoodLogModal(food),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF141420),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withOpacity(0.06)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '$servingSize • ${prot.toStringAsFixed(1)}g P • ${carbs.toStringAsFixed(1)}g C • ${fat.toStringAsFixed(1)}g F',
+                                          style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: CyberWorkoutTheme.crimsonRed.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '$cals kcal',
+                                          style: const TextStyle(
+                                            color: CyberWorkoutTheme.crimsonRed,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Icon(Icons.add_circle_rounded, color: CyberWorkoutTheme.crimsonRed, size: 22),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
     );
   }
 }
