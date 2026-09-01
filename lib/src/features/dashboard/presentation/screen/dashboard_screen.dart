@@ -4,6 +4,7 @@ import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/scr
 import 'package:customer_mobile_app/src/features/home/persentation/screens/nutrition_screen.dart';
 import 'package:customer_mobile_app/src/features/home/persentation/screens/scoreboard_screen.dart';
 import 'package:customer_mobile_app/src/features/home/persentation/screens/partner_qr_pass_screen.dart';
+import 'package:customer_mobile_app/src/features/marketplace/presentation/screens/trainer_marketplace_screen.dart';
 
 ///* This class contains dashbpard screen
 ///*eg : Pages manager , bottom nav ...
@@ -32,6 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _icons = [
       'assets/images/svg/icons/new_home_notselected.svg',
       'assets/images/svg/icons/workout_notseleted.svg',
+      'assets/images/svg/icons/workout_notseleted.svg',
       'assets/images/svg/icons/new_home_notselected.svg',
       'assets/images/svg/icons/not selected_explore.svg',
       'assets/images/svg/icons/person.svg',
@@ -40,6 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _labels = [
       'Home',
       'Workouts',
+      'Trainers',
       'Nutrition',
       'Score Card',
       'Profile',
@@ -186,6 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: const [
                 HomeScreen(),
                 WorkoutLogScreen(),
+                TrainerMarketplaceScreen(),
                 NutritionScreen(),
                 ScoreboardScreen(),
                 ProfileScreen(),
@@ -228,7 +232,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (i == 4)
+                                  if (i == 5)
                                     _buildProfileTabIcon(isSelected)
                                   else
                                     Icon(
@@ -237,8 +241,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           : i == 1
                                               ? Icons.fitness_center_rounded
                                               : i == 2
-                                                  ? Icons.restaurant_menu_rounded
-                                                  : Icons.emoji_events_rounded,
+                                                  ? Icons.groups_rounded
+                                                  : i == 3
+                                                      ? Icons.restaurant_menu_rounded
+                                                      : Icons.emoji_events_rounded,
                                       size: 22,
                                       color: isSelected ? activeCol : const Color(0xFF94A3B8),
                                     ),

@@ -110,7 +110,12 @@ final class ApiUris {
   static final marathonValidateCoupon = '${_v1}customer/marathon/validate-coupon/';
   static final marathonCreateOrder = '${_v1}customer/marathon/create-order/';
   static final marathonVerifyPayment = '${_v1}customer/marathon/verify-payment/';
+  static final marathonCheckPaymentStatus = '${_v1}customer/marathon/check-payment-status/';
   static final marathonMyRegistrations = '${_v1}customer/marathon/my-registrations/';
+
+  ///============================= Marketplace =============================\\\
+  static final marketplaceTrainers = '${_v1}customer/marketplace/trainers/';
+  static String marketplaceTrainerDetail(int id) => '${_v1}customer/marketplace/trainers/$id/';
 }
 
 
