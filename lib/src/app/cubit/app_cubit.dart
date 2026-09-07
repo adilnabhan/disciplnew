@@ -110,6 +110,7 @@
 //
 // }
 
+import 'package:customer_mobile_app/core/services/notification/notification_services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 
 part 'app_cubit.freezed.dart';
@@ -127,6 +128,7 @@ class AppCubit extends HydratedCubit<AppState> {
   void addUser(LoginSuccessModel user) {
     LocalStorageService().saveUser(user);
     emit(state.copyWith(currentUser: user));
+    NotificationServices.registerDeviceToken();
   }
 
   void updateOrganizationId(int? organizationId) {

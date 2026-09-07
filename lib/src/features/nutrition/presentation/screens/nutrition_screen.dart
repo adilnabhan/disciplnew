@@ -85,6 +85,16 @@ class _NutritionScreenState extends State<NutritionScreen> {
 
           _waterMl = _parseInt(data['water_ml']);
           _mealLogs = (data['meal_logs'] as List<dynamic>?) ?? (data['all_logs'] as List<dynamic>?) ?? [];
+
+          final assignedDiet = data['assigned_diet_plan'] as Map<String, dynamic>?;
+          if (assignedDiet != null) {
+            _calorieGoal = _parseInt(assignedDiet['daily_calorie_target'], _calorieGoal);
+            _proteinGoal = _parseDouble(assignedDiet['protein_target_g'], _proteinGoal);
+            _carbsGoal = _parseDouble(assignedDiet['carbs_target_g'], _carbsGoal);
+            _fatGoal = _parseDouble(assignedDiet['fat_target_g'], _fatGoal);
+            _waterGoalMl = _parseInt(assignedDiet['water_target_ml'], _waterGoalMl);
+          }
+
           _isLoading = false;
         });
       } else {
@@ -152,6 +162,11 @@ class _NutritionScreenState extends State<NutritionScreen> {
                     // Calorie Summary Card
                     _buildCalorieCard(remaining),
                     const SizedBox(height: 16),
+
+                    if (_summaryData['assigned_diet_plan'] != null) ...[
+                      _buildAssignedDietPlanCard(_summaryData['assigned_diet_plan'] as Map<String, dynamic>),
+                      const SizedBox(height: 16),
+                    ],
 
                     // Macros Breakdown Card
                     _buildMacrosCard(),
@@ -533,4 +548,154 @@ class _NutritionScreenState extends State<NutritionScreen> {
       ),
     );
   }
+
+  Widget _buildAssignedDietPlanCard(Map<String, dynamic> diet) {
+    final trainerName = diet['trainer_name'] ?? 'Coach';
+    final title = diet['title'] ?? 'Custom Nutrition Plan';
+    final desc = diet['description'] as String?;
+    final meals = (diet['meals'] as List<dynamic>?) ?? [];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF10B981).withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.5)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.verified_rounded, color: Color(0xFF10B981), size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'ASSIGNED BY $trainerName'.toUpperCase(),
+                      style: const TextStyle(
+                        color: Color(0xFF10B981),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.restaurant_menu_rounded, color: Color(0xFF94A3B8), size: 18),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            style: AppStyles.text16Px.poppins.w700.copyWith(
+              color: const Color(0xFF1E293B),
+            ),
+          ),
+          if (desc != null && desc.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(
+              desc,
+              style: AppStyles.text12Px.poppins.w400.copyWith(
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+          if (meals.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Text(
+              'PRESCRIBED MEALS',
+              style: TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...meals.map((m) {
+              final mealMap = m is Map ? m : {};
+              final mType = (mealMap['meal_type'] ?? 'Meal').toString().toUpperCase();
+              final foods = (mealMap['recommended_foods'] ?? '').toString();
+              final portion = (mealMap['portion_size'] ?? '').toString();
+              final cal = mealMap['target_calories'];
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        mType,
+                        style: const TextStyle(
+                          color: Color(0xFF10B981),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            foods.isNotEmpty ? foods : (mealMap['meal_name'] ?? 'Meal'),
+                            style: const TextStyle(color: Color(0xFF1E293B), fontSize: 12, fontWeight: FontWeight.w600),
+                          ),
+                          if (portion.isNotEmpty)
+                            Text(
+                              'Portion: $portion',
+                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (cal != null)
+                      Text(
+                        '$cal kcal',
+                        style: const TextStyle(
+                          color: Color(0xFF0F172A),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
 }
+

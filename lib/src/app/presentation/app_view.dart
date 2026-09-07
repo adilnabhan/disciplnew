@@ -1,4 +1,5 @@
 import 'package:customer_mobile_app/core/network/dio_client.dart';
+import 'package:customer_mobile_app/core/services/notification/notification_services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/auth/account_creation/presentation/screens/create_options_screen.dart';
 import 'package:customer_mobile_app/src/features/auth/presentation/screens/cyber_splash_screen.dart';
@@ -23,7 +24,11 @@ class _AppViewState extends State<AppView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = _cubit.state.currentUser;
       if (user?.refresh?.isNotEmpty == true) {
-        _cubit.refreshToken();
+        _cubit.refreshToken().then((_) {
+          NotificationServices.registerDeviceToken();
+        });
+      } else if (user?.access?.isNotEmpty == true) {
+        NotificationServices.registerDeviceToken();
       }
     });
   }

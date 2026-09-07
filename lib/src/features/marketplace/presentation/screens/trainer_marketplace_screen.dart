@@ -4,6 +4,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/src/features/marketplace/domain/models/marketplace_trainer_model.dart';
 import 'package:customer_mobile_app/src/features/marketplace/presentation/screens/trainer_detail_screen.dart';
+import 'package:customer_mobile_app/src/features/chat/presentation/screens/customer_chat_screen.dart';
 
 class TrainerMarketplaceScreen extends StatefulWidget {
   const TrainerMarketplaceScreen({super.key});
@@ -372,6 +373,7 @@ class _TrainerMarketplaceScreenState extends State<TrainerMarketplaceScreen> {
             Row(
               children: [
                 Expanded(
+                  flex: 3,
                   child: OutlinedButton(
                     onPressed: () {
                       context.push(TrainerDetailScreen(
@@ -385,16 +387,42 @@ class _TrainerMarketplaceScreenState extends State<TrainerMarketplaceScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                     ),
                     child: const Text(
-                      'View Profile',
+                      'Profile',
                       style: TextStyle(color: Color(0xFF334155), fontWeight: FontWeight.w600, fontSize: 13),
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
+                  flex: 3,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      context.push(CustomerChatScreen(
+                        trainerId: trainer.id,
+                        trainerName: trainer.name,
+                        trainerPhoto: trainer.profileImage,
+                        trainerPhone: trainer.whatsappNumber,
+                      ));
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: Colors.white),
+                    label: const Text(
+                      'Chat',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  flex: 4,
                   child: ElevatedButton.icon(
                     onPressed: () => _openWhatsApp(trainer),
-                    icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: Colors.white),
+                    icon: const Icon(Icons.chat_bubble_rounded, size: 15, color: Colors.white),
                     label: const Text(
                       'WhatsApp',
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),

@@ -96,6 +96,7 @@ final class ApiUris {
   static final scoreboard = '${_v1}social/scoreboard/';
   static final socialDashboard = '${_v1}social/dashboard/';
   static final notifications = '${_v1}customer/notifications/';
+  static final registerDeviceToken = '${_v1}communication/device-token/register/';
 
   ///============================= Partners & QR Perks =============================\\\
   static final partnerMyQr = '${_v1}partners/my-qr/';
@@ -113,9 +114,18 @@ final class ApiUris {
   static final marathonCheckPaymentStatus = '${_v1}customer/marathon/check-payment-status/';
   static final marathonMyRegistrations = '${_v1}customer/marathon/my-registrations/';
 
+  ///============================= In-App Chat =============================\\\
+  static final chatConversations = '${_v1}chat/conversations/';
+  static final chatDirect = '${_v1}chat/direct/';
+  static String chatMessages(int conversationId) => '${_v1}chat/conversations/$conversationId/messages/';
+
   ///============================= Marketplace =============================\\\
   static final marketplaceTrainers = '${_v1}customer/marketplace/trainers/';
   static String marketplaceTrainerDetail(int id) => '${_v1}customer/marketplace/trainers/$id/';
+
+  ///============================= Assigned Diet Plan =============================\\\
+  static final calorieSummary = '${_v1}customer/calorie-summary/';
+  static final customerActiveDietPlan = '${_v1}customer/diet-plan/active/';
 }
 
 

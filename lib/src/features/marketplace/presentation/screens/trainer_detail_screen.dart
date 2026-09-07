@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/src/features/marketplace/domain/models/marketplace_trainer_model.dart';
+import 'package:customer_mobile_app/src/features/chat/presentation/screens/customer_chat_screen.dart';
 
 class TrainerDetailScreen extends StatefulWidget {
   final int trainerId;
@@ -429,7 +430,7 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
 
   Widget _buildWhatsAppBottomBar() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -441,28 +442,61 @@ class _TrainerDetailScreenState extends State<TrainerDetailScreen> {
         ],
       ),
       child: SafeArea(
-        child: ElevatedButton(
-          onPressed: _openWhatsApp,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            elevation: 2,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.chat_bubble_rounded, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Contact on WhatsApp',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        child: Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  final t = _trainer;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CustomerChatScreen(
+                        trainerId: widget.trainerId,
+                        trainerName: t?.name ?? 'Coach',
+                        trainerPhoto: t?.profileImage,
+                        trainerPhone: t?.whatsappNumber,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18),
+                label: const Text(
+                  'Chat in App',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _openWhatsApp,
+                icon: const Icon(Icons.chat_bubble_rounded, size: 18),
+                label: const Text(
+                  'WhatsApp',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
