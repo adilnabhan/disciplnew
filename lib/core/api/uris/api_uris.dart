@@ -119,9 +119,14 @@ final class ApiUris {
   static final chatDirect = '${_v1}chat/direct/';
   static String chatMessages(int conversationId) => '${_v1}chat/conversations/$conversationId/messages/';
 
-  ///============================= Marketplace =============================\\\
+  ///============================= Marketplace & Premium Trainers =============================\\\
   static final marketplaceTrainers = '${_v1}customer/marketplace/trainers/';
+  static final trainerPremiumList = '${_v1}customer/trainers/premium-list/';
   static String marketplaceTrainerDetail(int id) => '${_v1}customer/marketplace/trainers/$id/';
+
+  ///============================= Steps & Health Tracker =============================\\\
+  static final customerSteps = '${_v1}customer/steps/';
+  static String customerUserSteps(int userId) => '${_v1}customer/steps/$userId/';
 
   ///============================= Assigned Diet Plan =============================\\\
   static final calorieSummary = '${_v1}customer/calorie-summary/';
