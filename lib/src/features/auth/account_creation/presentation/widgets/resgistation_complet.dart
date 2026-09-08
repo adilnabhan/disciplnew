@@ -57,8 +57,12 @@ class SetupCompleteStep extends StatelessWidget {
               Button.filled(
                 title: 'Find my Fitness Center',
                 ontap: () {
-                  context.read<AppCubit>().addUser(login!);
-                  if (login?.customer?.organizationId == null) {
+                  final activeUser = login ?? context.read<AppCubit>().state.currentUser;
+                  if (activeUser != null) {
+                    context.read<AppCubit>().addUser(activeUser);
+                  }
+                  final orgId = activeUser?.customer?.organizationId;
+                  if (orgId == null) {
                     context.pushAndRemoveUntil(const DashboardScreen(navIndex: 2));
                   } else {
                     context.pushAndRemoveUntil(const DashboardScreen());

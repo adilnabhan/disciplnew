@@ -203,7 +203,7 @@ class CreateAccountCubit extends Cubit<CreateAccountState> {
             state.copyWith(
               isLoading: false,
               createOrUpdateOnboarding: some(right(r)),
-              // onboardingUser: some(right(r)),
+              onboardingUser: some(right(r)),
             ),
           );
         },
