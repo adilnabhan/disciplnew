@@ -935,14 +935,6 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                             ),
                           );
 
-                          state.createOrUpdateOnboarding?.fold(
-                            () {},
-                            (either) => either.fold(
-                              (l) => null,
-                              (r) => login = login ?? r,
-                            ),
-                          );
-
                           final resolvedLogin = login ??
                               widget.loginSuccessModel ??
                               context.read<AppCubit>().state.currentUser;
