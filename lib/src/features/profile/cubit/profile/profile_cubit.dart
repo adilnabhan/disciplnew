@@ -82,6 +82,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     required DateTime dateOfBirth,
     required String gender,
     required String profession,
+    String? currentEmail,
     String? otherProfession,
     String? emergencyContactNumber,
     String? bloodGroup,
@@ -106,6 +107,45 @@ class ProfileCubit extends Cubit<ProfileState> {
         (r) => r,
       ),
     );
+
+    // 1. Update email if changed
+    final trimmedEmail = email.trim();
+    final effectiveCurrentEmail =
+        (currentEmail ?? currentDetails?.email)?.trim() ?? '';
+
+    if (trimmedEmail.isNotEmpty &&
+        effectiveCurrentEmail.isNotEmpty &&
+        trimmedEmail != effectiveCurrentEmail) {
+      final emailRegex =
+          RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+      if (!emailRegex.hasMatch(trimmedEmail)) {
+        emit(
+          state.copyWith(
+            updateProfileDetails: some(
+              left(const ApiException.unknown(
+                  msg: 'Please enter a valid email address.')),
+            ),
+          ),
+        );
+        return;
+      }
+
+      final emailResponse =
+          await CustomerDetailsRepository().updateEmail(email: trimmedEmail);
+      if (emailResponse.isLeft()) {
+        emit(
+          state.copyWith(
+            updateProfileDetails: some(
+              left(emailResponse.fold(
+                  (l) => l, (r) => const ApiException.unknown())),
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    // 2. Update profession if changed
     final currentProfession = currentDetails?.profession;
     final currentOtherProfession = currentDetails?.otherProfession;
 
@@ -125,11 +165,11 @@ class ProfileCubit extends Cubit<ProfileState> {
       }
     }
 
-    // ✅ Create FormData
+    // 3. Send profile details (FormData)
     final formData = FormData.fromMap({
       'first_name': firstName,
       'last_name': lastName,
-      'email': email,
+      'email': trimmedEmail,
       'date_of_birth': dateOfBirth.toIso8601String().split('T').first,
       'gender': gender.toLowerCase(),
       'profession': profession,

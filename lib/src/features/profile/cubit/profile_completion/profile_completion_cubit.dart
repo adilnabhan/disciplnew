@@ -23,6 +23,7 @@ class ProfileCompletionCubit extends Cubit<ProfileCompletionState> {
     }
 
     final result = await _repository.getProfileCompletion();
+    if (isClosed) return;
     result.fold(
       (error) {
         // Fail silently on error without showing snackbar

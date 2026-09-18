@@ -3,6 +3,7 @@ import 'package:customer_mobile_app/src/features/challenges/domain/models/challe
 
 @immutable
 class ChallengeListState {
+  final List<ChallengeModel> allChallenges;
   final List<ChallengeModel> challenges;
   final bool isLoading;
   final bool isLoadingMore;
@@ -15,6 +16,7 @@ class ChallengeListState {
   final String searchQuery;
 
   const ChallengeListState({
+    this.allChallenges = const [],
     this.challenges = const [],
     this.isLoading = false,
     this.isLoadingMore = false,
@@ -28,6 +30,7 @@ class ChallengeListState {
   });
 
   ChallengeListState copyWith({
+    List<ChallengeModel>? allChallenges,
     List<ChallengeModel>? challenges,
     bool? isLoading,
     bool? isLoadingMore,
@@ -40,6 +43,7 @@ class ChallengeListState {
     String? searchQuery,
   }) {
     return ChallengeListState(
+      allChallenges: allChallenges ?? this.allChallenges,
       challenges: challenges ?? this.challenges,
       isLoading: isLoading ?? this.isLoading,
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,

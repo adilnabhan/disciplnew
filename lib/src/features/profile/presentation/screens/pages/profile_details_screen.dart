@@ -432,6 +432,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   }
 
   void _onContinue() {
+    if (_profileCubit.state.updateProfileDetails?.isNone() ?? false) {
+      return;
+    }
     if (_formKey.currentState?.validate() ?? false) {
       final firstName = _personalDetails[0].controller?.text;
       final lastName = _personalDetails[1].controller?.text;
@@ -455,24 +458,18 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
 
       final currentEmail = widget.customerDetailsModel.email?.trim() ?? '';
 
-      if (email != currentEmail) {
-        _profileCubit.updateEmail(
-          email: email,
-          currentEmail: currentEmail,
-        );
-      } else {
-        _profileCubit.updateProfileDetails(
-          firstName: firstName ?? '',
-          lastName: lastName ?? '',
-          email: email,
-          dateOfBirth: dob ?? widget.customerDetailsModel.dateOfBirth ?? DateTime.now(),
-          gender: (gender ?? '').toLowerCase(),
-          bloodGroup: bloodGroup,
-          profession: selectedProfessionValue,
-          otherProfession: _customProfession,
-          image: _pickedImage,
-        );
-      }
+      _profileCubit.updateProfileDetails(
+        firstName: firstName ?? '',
+        lastName: lastName ?? '',
+        email: email,
+        currentEmail: currentEmail,
+        dateOfBirth: dob ?? widget.customerDetailsModel.dateOfBirth ?? DateTime.now(),
+        gender: (gender ?? '').toLowerCase(),
+        bloodGroup: bloodGroup,
+        profession: selectedProfessionValue,
+        otherProfession: _customProfession,
+        image: _pickedImage,
+      );
     } else {
       Dialogs.showSnack(msg: 'Please check your inputs.');
     }
@@ -535,7 +532,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             return Button.filled(
               title: 'Update',
               ontap: _onContinue,
-              isLoading: false,
+              isLoading: state.updateProfileDetails?.isNone() ?? false,
             ).pad(16);
           },
         ),

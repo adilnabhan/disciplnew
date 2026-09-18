@@ -51,6 +51,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Scaffold(
               backgroundColor: AppColors.bgcolorgrey,
               appBar: AppBar(
+                backgroundColor: AppColors.light,
+                surfaceTintColor: Colors.transparent,
+                elevation: 0,
+                scrolledUnderElevation: 0,
                 automaticallyImplyLeading: false,
                 centerTitle: false,
                 title: Text('Profile', style: AppStyles.text20Px.poppins.w500),
@@ -59,12 +63,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onTap: () {
                       context.push(const SettingsScreen());
                     },
-                    child: SvgPicture.asset(
-                      'assets/images/svg/icons/settings _icon.svg',
-                      width: 22,
-                      height: 22,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: SvgPicture.asset(
+                        'assets/images/svg/icons/settings _icon.svg',
+                        width: 20,
+                        height: 20,
+                      ),
                     ),
-                  ).pOnly(right: 20),
+                  ),
+                  const SizedBox(width: 16),
                 ],
               ),
               body:

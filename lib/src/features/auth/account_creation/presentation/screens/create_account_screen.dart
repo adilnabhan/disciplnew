@@ -511,11 +511,14 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   @override
   void initState() {
     super.initState();
-    _currentStep = widget.loginSuccessModel?.customer?.profileCompleteness ?? 0;
+    final initialPage = currentPage(
+      step: widget.loginSuccessModel?.customer?.profileCompleteness,
+      firstName: widget.loginSuccessModel?.firstName,
+      process: widget.sentOtpEntity.process,
+    );
+    _currentStep = initialPage;
     _pageController = PageController(
-      initialPage: currentPage(
-        step: widget.loginSuccessModel?.customer?.profileCompleteness,
-      ),
+      initialPage: initialPage,
     );
   }
 
@@ -590,7 +593,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               (success) {
                 _nextStep();
 
-                if (_currentStep == 3) {
+                if (_currentStep >= 3) {
                   LoginSuccessModel? login;
                   state.onboardingUser?.fold(
                     () {},
@@ -656,6 +659,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                           return FitnessPassportStep(
                             isLoading: state.isLoading,
                             sentOtpEntity: widget.sentOtpEntity,
+                            loginSuccessModel: widget.loginSuccessModel,
                             onNext: (fName, lName, mail, phone, image) {
                               context.read<CreateAccountCubit>().onboardUser(
                                 firstName: fName,
@@ -935,7 +939,9 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                             ),
                           );
 
-                          return SetupCompleteStep(login: login);
+                          return SetupCompleteStep(
+                            login: login ?? widget.loginSuccessModel,
+                          );
                         },
                       ),
                     ],
@@ -1007,7 +1013,27 @@ DecorationImage? _getStepImage(int step) {
   }
 }
 
-int currentPage({int? step}) {
+int currentPage({int? step, String? firstName, String? process}) {
+  // If user is registering, they must always start at step 0 (FitnessPassportStep)
+  if (process == 'registration') {
+    return 0;
+  }
+
+  // If first name is missing, empty, or string "null" / "none", user must start at step 0
+  final hasValidName = firstName != null &&
+      firstName.trim().isNotEmpty &&
+      firstName.trim().toLowerCase() != 'null' &&
+      firstName.trim().toLowerCase() != 'none';
+
+  if (!hasValidName) {
+    return 0;
+  }
+
+  // If name exists, check backend profile completeness:
+  // - completeness 0: Step 0 done, resume at Step 1 (LifestyleStep)
+  // - completeness 1: Step 1 done, resume at Step 2 (HealthStep)
+  // - completeness 2: Step 2 done, resume at Step 3 (FitnessGoalStep)
+  // - completeness >= 3: All steps done, resume at Step 4 (SetupCompleteStep)
   switch (step) {
     case 0:
       return 1;
@@ -1016,6 +1042,7 @@ int currentPage({int? step}) {
     case 2:
       return 3;
     case 3:
+    case 4:
       return 4;
     default:
       return 0;

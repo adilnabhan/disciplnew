@@ -189,7 +189,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     // Parse response rest_days if available to synchronize local state
                     if (data['rest_days'] is List) {
                       for (final item in (data['rest_days'] as List)) {
-                        if (item is Map<String, dynamic> && item['date'] != null) {
+                        if (item is Map<String, dynamic> &&
+                            item['date'] != null) {
                           final dStr = item['date'].toString();
                           final isRest = item['is_rest_day'] == true;
                           _isRestDayMap[dStr] = isRest;
@@ -198,7 +199,11 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                           } else {
                             final dObj = DateTime.tryParse(dStr);
                             if (dObj != null) {
-                              final dOnly = DateTime(dObj.year, dObj.month, dObj.day);
+                              final dOnly = DateTime(
+                                dObj.year,
+                                dObj.month,
+                                dObj.day,
+                              );
                               if (dOnly.isBefore(startDateOnly)) {
                                 _dayStates[dStr] = CalendarDayState.inactive;
                               } else if (dOnly.isAfter(todayOnly) ||
@@ -363,9 +368,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                   : null;
           final int? customerWorkoutPlanId =
               dayItem['customer_workout_plan_id'] != null
-                  ? int.tryParse(
-                    dayItem['customer_workout_plan_id'].toString(),
-                  )
+                  ? int.tryParse(dayItem['customer_workout_plan_id'].toString())
                   : null;
           final int? workoutId =
               dayItem['workout_id'] != null
@@ -438,7 +441,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         .getWorkoutCalendarForMonth(
           year: year,
           month: month,
-          forceRefresh: true, // Always fetch fresh data to update status (verified / completed)
+          forceRefresh:
+              true, // Always fetch fresh data to update status (verified / completed)
         )
         .then((result) {
           if (!mounted) return;
@@ -521,31 +525,33 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10.0),
+        padding: const EdgeInsets.symmetric(horizontal: 12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Section Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Workout Journey', style: AppStyles.text18Px.poppins.w600),
-              ],
+            Padding(
+              padding: const EdgeInsets.only(left: 4.0, bottom: 12.0),
+              child: Text(
+                'Consistency',
+                style: AppStyles.text18Px.poppins.w700.copyWith(
+                  color: const Color(0xFF1E1E1E),
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
 
             // Calendar Card
             Container(
               key: _calendarCardKey,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
               decoration: BoxDecoration(
-                color: AppColors.light,
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -553,10 +559,10 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                 children: [
                   if (_showLoginHint)
                     Container(
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
-                        vertical: 10,
+                        vertical: 8,
                       ),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.06),
@@ -575,7 +581,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Track your completed workouts, planned rest days, and overall progress. Tap "Edit Rest Day" to schedule your recovery days.',
+                              'Track your completed workouts, planned rest days, and overall progress.',
                               style: AppStyles.text12Px.poppins.w500.copyWith(
                                 color: AppColors.textDark,
                                 height: 1.3,
@@ -590,65 +596,39 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          IconButton(
-                            icon: Icon(
-                              Icons.chevron_left,
-                              size: 20,
-                              color:
-                                  canGoPrev
-                                      ? AppColors.primary
-                                      : Colors.grey.shade400,
-                            ),
-                            onPressed:
-                                canGoPrev
-                                    ? () {
-                                      setState(() {
-                                        _focusedDay = DateTime(
-                                          _focusedDay.year,
-                                          _focusedDay.month - 1,
-                                          1,
-                                        );
-                                      });
-                                      _prepopulateDefaultStates();
-                                      _loadMonthData();
-                                    }
-                                    : null,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                          const SizedBox(width: 4),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                DateFormat('yyyy').format(_focusedDay),
-                                style: AppStyles.text12Px.poppins.w500.copyWith(
-                                  fontSize: 11,
-                                  color: AppColors.primary.withValues(
-                                    alpha: .7,
-                                  ),
+                          if (canGoPrev)
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _focusedDay = DateTime(
+                                    _focusedDay.year,
+                                    _focusedDay.month - 1,
+                                    1,
+                                  );
+                                });
+                                _prepopulateDefaultStates();
+                                _loadMonthData();
+                              },
+                              child: const Padding(
+                                padding: EdgeInsets.only(right: 4.0),
+                                child: Icon(
+                                  Icons.chevron_left,
+                                  size: 22,
+                                  color: Color(0xFFE53935),
                                 ),
                               ),
-                              Text(
-                                DateFormat('MMMM').format(_focusedDay),
-                                style: AppStyles.text14Px.poppins.w600.copyWith(
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: Icon(
-                              Icons.chevron_right,
-                              size: 20,
-                              color:
-                                  canGoNext
-                                      ? AppColors.primary
-                                      : Colors.grey.shade400,
                             ),
-                            onPressed:
+                          Text(
+                            DateFormat('MMMM yyyy').format(_focusedDay),
+                            style: AppStyles.text18Px.poppins.w700.copyWith(
+                              color: const Color(0xFFE53935),
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          GestureDetector(
+                            onTap:
                                 canGoNext
                                     ? () {
                                       setState(() {
@@ -662,51 +642,51 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                                       _loadMonthData();
                                     }
                                     : null,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
+                            child: Icon(
+                              Icons.chevron_right,
+                              size: 24,
+                              color:
+                                  canGoNext
+                                      ? const Color(0xFFE53935)
+                                      : Colors.grey.shade400,
+                            ),
                           ),
                         ],
                       ),
                       InkWell(
                         onTap: _toggleEditMode,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
+                            horizontal: 12,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color:
                                 _isEditing
-                                    ? const Color(0xFFC60000)
-                                    : const Color.fromARGB(255, 238, 240, 245),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              if (!_isEditing)
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 4),
-                                ),
-                            ],
+                                    ? const Color(0xFFE53935)
+                                    : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(
-                                _isEditing ? Icons.save : Icons.edit,
-                                size: 14,
+                                _isEditing ? Icons.check : Icons.edit_outlined,
+                                size: 15,
                                 color:
-                                    _isEditing ? Colors.white : Colors.black54,
+                                    _isEditing
+                                        ? Colors.white
+                                        : const Color(0xFF1E293B),
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               Text(
-                                _isEditing ? 'Save' : 'Edit Rest day',
-                                style: AppStyles.text12Px.poppins.w500.copyWith(
+                                _isEditing ? 'Save' : 'Set Rest day',
+                                style: AppStyles.text12Px.poppins.w600.copyWith(
                                   color:
                                       _isEditing
                                           ? Colors.white
-                                          : Colors.black87,
+                                          : const Color(0xFF1E293B),
                                 ),
                               ),
                             ],
@@ -715,20 +695,17 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 22),
-
-                  // Loading indicator
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 14),
 
                   TableCalendar(
                     firstDay: DateTime.utc(2020, 1, 1),
                     lastDay: DateTime.utc(2030, 12, 31),
                     focusedDay: _focusedDay,
                     startingDayOfWeek: StartingDayOfWeek.monday,
-                    rowHeight: 60,
+                    rowHeight: 44,
                     headerVisible: false,
                     availableGestures: AvailableGestures.none,
-                    daysOfWeekHeight: 46,
+                    daysOfWeekHeight: 42,
                     onPageChanged: (focusedDay) {
                       setState(() {
                         _focusedDay = focusedDay;
@@ -773,13 +750,14 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
                     },
                     calendarBuilders: CalendarBuilders(
                       dowBuilder: (context, day) {
-                        final text = DateFormat.E().format(day).substring(0, 3);
+                        final text = DateFormat.E().format(day);
                         return Container(
                           alignment: Alignment.topCenter,
+                          padding: const EdgeInsets.only(top: 2),
                           child: Text(
                             text,
-                            style: AppStyles.text14Px.poppins.w500.copyWith(
-                              color: Colors.grey,
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
+                              color: const Color(0xFF6B7280),
                             ),
                           ),
                         );
@@ -806,137 +784,155 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
                   if (_isEditing)
                     Container(
-                      margin: const EdgeInsets.only(top: 16, left: 8, right: 8),
+                      margin: const EdgeInsets.only(top: 12, left: 4, right: 4),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
+                        horizontal: 14,
+                        vertical: 10,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color.fromRGBO(239, 243, 255, 1),
+                        color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         'Set your rest days by selecting on the dates and clicking the save button.',
                         style: AppStyles.text12Px.poppins.w400.copyWith(
-                          color: const Color.fromRGBO(95, 122, 197, 1),
+                          color: const Color(0xFF1D4ED8),
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
 
                   const SizedBox(height: 12),
+
+                  // Status Info Row
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Wrap(
-                      spacing: 12,
-                      runSpacing: 6,
-                      alignment: WrapAlignment.center,
-                      children: [
-                        _buildLegendItem(
-                          label: 'Verified',
-                          color: const Color(0xFFE8F5E9),
-                          icon: SvgPicture.asset(
-                            'assets/images/svg/icons/trainer_verified_tick.svg',
-                            width: 10,
-                            height: 10,
-                          ),
-                        ),
-                        _buildLegendItem(
-                          label: 'Completed',
-                          color: const Color(0xFFFFFDE7),
-                          icon: SvgPicture.asset(
-                            'assets/images/svg/icons/not_verified_tick.svg',
-                            width: 10,
-                            height: 10,
-                          ),
-                        ),
-                        _buildLegendItem(
-                          label: 'Rest',
-                          color: const Color.fromRGBO(239, 243, 255, 1),
-                          icon: Container(
-                            width: 6,
-                            height: 6,
-                            decoration: const BoxDecoration(
-                              color: Color.fromRGBO(95, 122, 197, 1),
-                              shape: BoxShape.circle,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _buildStatusChip(
+                            icon: SvgPicture.asset(
+                              'assets/images/svg/icons/trainer_verified_tick.svg',
+                              width: 9.5,
+                              height: 9.5,
                             ),
+                            label: 'Verified',
+                            bgColor: const Color(0xFFEAF8F0),
                           ),
-                        ),
-                        _buildLegendItem(
-                          label: 'Missed',
-                          color: const Color(0xFFFFEBEE),
-                          icon: Container(
-                            padding: const EdgeInsets.all(1.0),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFF5252),
-                              shape: BoxShape.circle,
+                          const SizedBox(width: 6),
+                          _buildStatusChip(
+                            icon: SvgPicture.asset(
+                              'assets/images/svg/icons/not_verified_tick.svg',
+                              width: 9.5,
+                              height: 9.5,
                             ),
-                            child: const Icon(
-                              Icons.close_rounded,
-                              color: Colors.white,
-                              size: 7,
-                            ),
+                            label: 'Completed',
+                            bgColor: const Color(0xFFFEFCE8),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 6),
+                          _buildStatusChip(
+                            icon: Container(
+                              width: 6.5,
+                              height: 6.5,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF5F7AC5),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            label: 'Rest',
+                            bgColor: const Color(0xFFEEF3FF),
+                          ),
+                          const SizedBox(width: 6),
+                          _buildStatusChip(
+                            icon: Container(
+                              width: 9.5,
+                              height: 9.5,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFF5252),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white,
+                                size: 7.5,
+                              ),
+                            ),
+                            label: 'Missed',
+                            bgColor: const Color(0xFFFEECEE),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
                   // Divider
                   Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Divider(color: Colors.grey.shade200, thickness: 1),
                   ),
 
                   // Progress Section
-                  Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Row(
-                      children: [
-                        CircularPercentIndicator(
-                          radius: 55.r,
-                          lineWidth: 12,
-                          percent: percent,
-                          circularStrokeCap: CircularStrokeCap.round,
-                          animation: true,
-                          center: Text(
-                            '$percentInt%\nTotal Done',
-                            textAlign: TextAlign.center,
-                            style: AppStyles.text13Px.poppins.w700,
-                          ),
-                          progressColor: AppColors.primary,
-                          backgroundColor: Colors.grey.shade200,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      CircularPercentIndicator(
+                        radius: 42.r,
+                        lineWidth: 10,
+                        percent: percent,
+                        circularStrokeCap: CircularStrokeCap.round,
+                        animation: true,
+                        center: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '$percentInt%',
+                              style: AppStyles.text18Px.poppins.w700.copyWith(
+                                color: const Color(0xFF111827),
+                                height: 1.1,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Total Done',
+                              style: AppStyles.text10Px.poppins.w500.copyWith(
+                                color: const Color(0xFF6B7280),
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(width: 10.w),
-                        Expanded(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              _summaryItem(
-                                'Completed Days',
-                                '$completedCount Days',
-                                Colors.green.shade100,
-                                AppColors.dark,
-                              ),
-                              const SizedBox(height: 8),
-                              _summaryItem(
-                                'Rest Days',
-                                '$restCount Days',
-                                Colors.blue.shade100,
-                                AppColors.dark,
-                              ),
-                              const SizedBox(height: 8),
-                              _summaryItem(
-                                'Missed Days',
-                                '$missedCount Days',
-                                Colors.red.shade100,
-                                AppColors.dark,
-                              ),
-                            ],
-                          ),
+                        progressColor: const Color(0xFFE53935),
+                        backgroundColor: const Color(0xFFF3F4F6),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          children: [
+                            _summaryPill(
+                              label: 'Completed Sessions',
+                              value: '$completedCount Days',
+                              bgColor: const Color(0xFFE6F4EA),
+                              valueColor: const Color(0xFF16A34A),
+                            ),
+                            const SizedBox(height: 8),
+                            _summaryPill(
+                              label: 'Rest Days',
+                              value: '$restCount Days',
+                              bgColor: const Color(0xFFE8F0FE),
+                              valueColor: const Color(0xFF1D4ED8),
+                            ),
+                            const SizedBox(height: 8),
+                            _summaryPill(
+                              label: 'Missed Sessions',
+                              value: '$missedCount Days',
+                              bgColor: const Color(0xFFFCE8E6),
+                              valueColor: const Color(0xFFDC2626),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -944,60 +940,64 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           ],
         ),
       ),
-    ); // RefreshIndicator
+    );
   }
 
-  Widget _summaryItem(
-    String title,
-    String value,
-    Color bgColor,
-    Color dotColor,
-  ) {
+  Widget _buildStatusChip({
+    required Widget icon,
+    required String label,
+    required Color bgColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: Text(title, style: AppStyles.text12Px.poppins.w500)),
+          icon,
+          const SizedBox(width: 3.5),
           Text(
-            value,
-            style: AppStyles.text12Px.poppins.w700.copyWith(color: dotColor),
+            label,
+            style: AppStyles.text10Px.poppins.w500.copyWith(
+              color: const Color(0xFF374151),
+              fontSize: 10,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLegendItem({
+  Widget _summaryPill({
     required String label,
-    required Color color,
-    required Widget icon,
+    required String value,
+    required Color bgColor,
+    required Color valueColor,
   }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 18,
-          height: 18,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(4),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: AppStyles.text12Px.poppins.w500.copyWith(
+              color: const Color(0xFF1F2937),
+            ),
           ),
-          alignment: Alignment.center,
-          child: icon,
-        ),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: AppStyles.text12Px.poppins.w500.copyWith(
-            fontSize: 10,
-            color: const Color(0xFF666666),
+          Text(
+            value,
+            style: AppStyles.text12Px.poppins.w700.copyWith(color: valueColor),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1042,16 +1042,14 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       startDate.day,
     );
 
-    final state =
-        _dayStates[DateFormat('yyyy-MM-dd').format(dateOnly)] ??
-        CalendarDayState.future;
+    final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
+    final state = _dayStates[dateKey] ?? CalendarDayState.future;
 
     if (_isEditing &&
         state != CalendarDayState.completed &&
         state != CalendarDayState.verified &&
         !dateOnly.isBefore(startDateOnly) &&
         !dateOnly.isBefore(todayOnly)) {
-      final dateKey = DateFormat('yyyy-MM-dd').format(dateOnly);
       final isSelected = _selectedRestDays.contains(dateKey);
       return GestureDetector(
         onTap: () {
@@ -1064,7 +1062,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           });
         },
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           decoration: BoxDecoration(
             color:
                 isSelected
@@ -1092,6 +1090,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     final isToday = (dateOnly == todayOnly);
 
+    // 1. Green Double Tick (Verified Workout)
     if (state == CalendarDayState.verified) {
       return _dayState(
         day: day,
@@ -1105,6 +1104,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       );
     }
 
+    // 2. Yellow Single Tick (Completed Workout - Pending Verification)
     if (state == CalendarDayState.completed) {
       return _dayState(
         day: day,
@@ -1117,6 +1117,8 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         ),
       );
     }
+
+    // 3. Red X Mark (Missed Session)
     if (state == CalendarDayState.missed) {
       return _dayState(
         day: day,
@@ -1129,13 +1131,12 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 1.5),
           ),
-          child: const Icon(Icons.close_rounded, color: Colors.white, size: 12),
+          child: const Icon(Icons.close_rounded, color: Colors.white, size: 11),
         ),
       );
     }
+
     final isRest = state == CalendarDayState.rest;
-    // Dates from startDate onwards (including today & future) → black text
-    // Dates strictly before startDate (user never had the app) → grey text
     final isBeforeStart = state == CalendarDayState.inactive;
     final dayTextColor =
         isRest
@@ -1145,7 +1146,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
             : const Color(0xFF212121);
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       decoration: BoxDecoration(
         color:
             isRest
@@ -1155,7 +1156,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
         border: Border.all(
           color:
               isToday
-                  ? (isRest ? const Color(0xFF1D9BF0) : Colors.grey)
+                  ? (isRest ? const Color(0xFF1D9BF0) : Colors.grey.shade600)
                   : Colors.transparent,
           width: 1.5,
         ),
@@ -1178,7 +1179,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           decoration: BoxDecoration(
             color: bgColor,
             borderRadius: BorderRadius.circular(8),
@@ -1193,7 +1194,7 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
           ),
         ),
         Positioned(
-          top: -5,
+          top: -3,
           left: 0,
           right: 0,
           child: Align(alignment: Alignment.topCenter, child: topIcon),

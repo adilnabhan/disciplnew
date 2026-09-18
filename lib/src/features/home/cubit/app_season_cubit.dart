@@ -36,8 +36,10 @@ class AppSeasonCubit extends Cubit<AppSeasonState> {
         );
 
   Future<void> fetchAppSeason() async {
+    if (isClosed) return;
     emit(state.copyWith(isLoading: true));
     final seasonModel = await HomeRepository().fetchAppSeason();
+    if (isClosed) return;
     emit(state.copyWith(isLoading: false, seasonModel: seasonModel));
   }
 }

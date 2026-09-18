@@ -160,6 +160,9 @@ class ChallengeModel {
   final String? shortDescription;
   final ChallengeBrand? brand;
   final String? bannerImage;
+  final String? thumbnailImage;
+  final String? category;
+  final String? categoryDisplay;
   final String? challengeType;
   final String? themeColor;
   final int? joinedMemberCount;
@@ -177,6 +180,9 @@ class ChallengeModel {
     this.shortDescription,
     this.brand,
     this.bannerImage,
+    this.thumbnailImage,
+    this.category,
+    this.categoryDisplay,
     this.challengeType,
     this.themeColor,
     this.joinedMemberCount,
@@ -189,6 +195,17 @@ class ChallengeModel {
     this.remainingSeconds,
   });
 
+  /// Best available image URL: thumbnail first, then banner.
+  String? get thumbnailUrl {
+    if (thumbnailImage != null && thumbnailImage!.trim().isNotEmpty) {
+      return thumbnailImage;
+    }
+    if (bannerImage != null && bannerImage!.trim().isNotEmpty) {
+      return bannerImage;
+    }
+    return null;
+  }
+
   factory ChallengeModel.fromJson(Map<String, dynamic> json) {
     return ChallengeModel(
       id: json['id'] as int?,
@@ -198,6 +215,12 @@ class ChallengeModel {
           ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
           : null,
       bannerImage: json['banner_image'] as String?,
+      thumbnailImage: (json['thumbnail_image'] ??
+          json['thumbnail'] ??
+          json['thumbnail_url'] ??
+          json['image']) as String?,
+      category: json['category'] as String?,
+      categoryDisplay: (json['category_display'] ?? json['category_name']) as String?,
       challengeType: json['challenge_type'] as String?,
       themeColor: json['theme_color'] as String?,
       joinedMemberCount: json['joined_member_count'] as int?,
@@ -207,7 +230,7 @@ class ChallengeModel {
       progress: json['progress'] is Map<String, dynamic>
           ? ChallengeProgress.fromJson(json['progress'] as Map<String, dynamic>)
           : null,
-      isJoined: json['is_joined'] as bool?,
+      isJoined: _parseBool(json['is_joined']),
       button: json['button'] is Map<String, dynamic>
           ? ChallengeButton.fromJson(json['button'] as Map<String, dynamic>)
           : null,
@@ -226,6 +249,9 @@ class ChallengeModel {
       'short_description': shortDescription,
       'brand': brand?.toJson(),
       'banner_image': bannerImage,
+      'thumbnail_image': thumbnailImage,
+      'category': category,
+      'category_display': categoryDisplay,
       'challenge_type': challengeType,
       'theme_color': themeColor,
       'joined_member_count': joinedMemberCount,
@@ -300,7 +326,7 @@ class JoinChallengeResponse {
       status: json['status'] as bool? ?? false,
       message: json['message'] as String?,
       error: json['error'] as String?,
-      isJoined: json['is_joined'] as bool?,
+      isJoined: _parseBool(json['is_joined']),
       joinedAt: json['joined_at'] as String?,
       challengeId: json['challenge_id'] as int?,
       button: json['button'] is Map<String, dynamic>
@@ -308,4 +334,16 @@ class JoinChallengeResponse {
           : null,
     );
   }
+}
+
+bool? _parseBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is num) return value == 1;
+  if (value is String) {
+    final lower = value.trim().toLowerCase();
+    if (lower == 'true' || lower == '1' || lower == 'yes') return true;
+    if (lower == 'false' || lower == '0' || lower == 'no') return false;
+  }
+  return null;
 }

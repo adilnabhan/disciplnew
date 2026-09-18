@@ -221,4 +221,66 @@ final class FitnesscenterRepository {
       return left(const ApiException.unknown());
     }
   }
+
+  /// GET /api/v1/customer/trainers/premium-list/
+  Future<Either<ApiException, List<GymTrainer>>> fetchPremiumTrainers({
+    String? search,
+    String? specialty,
+    String? sort,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (specialty != null && specialty.trim().isNotEmpty) {
+        queryParams['specialty'] = specialty.trim();
+      }
+      if (sort != null && sort.trim().isNotEmpty) {
+        queryParams['sort'] = sort.trim();
+      }
+
+      final response = await _dio.get<dynamic>(
+        ApiUris.trainerPremiumList,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        options: _options,
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        List<dynamic> results = [];
+        if (response.data is Map && (response.data as Map).containsKey('results')) {
+          results = (response.data as Map)['results'] as List? ?? [];
+        } else if (response.data is List) {
+          results = response.data as List;
+        }
+
+        final trainers = results.map((item) {
+          final map = Map<String, dynamic>.from(item as Map);
+          return GymTrainer.fromApiJson({
+            'id': map['id'] ?? map['trainer_id'] ?? map['user_id'],
+            'full_name': map['name'] ?? '${map['first_name'] ?? ''} ${map['last_name'] ?? ''}'.trim(),
+            'user_type': 'Trainer',
+            'bio': map['bio'],
+            'profile_image': map['profile_image'] ?? map['profile_picture'],
+            'experience_years': (map['experience_years'] as num?)?.toInt(),
+            'specializations': map['specialties'] ?? map['specializations'],
+            'gender': map['gender'],
+            'email': map['email'],
+            'mobile': map['mobile_number'] ?? map['phone_number'] ?? map['whatsapp_number'],
+            'place': (map['gym_affiliations'] is List && (map['gym_affiliations'] as List).isNotEmpty)
+                ? (map['gym_affiliations'] as List).first.toString()
+                : null,
+          });
+        }).toList();
+
+        return right(trainers);
+      }
+      return left(const ApiException.unknown());
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint('Error fetching premium trainers: $e');
+      return left(const ApiException.unknown());
+    }
+  }
 }

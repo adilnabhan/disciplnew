@@ -4,24 +4,26 @@ import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_details_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/challenge_filter_bar.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/challenge_item_card.dart';
-import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_winners_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
 import 'package:shimmer/shimmer.dart';
 
 class AllChallengesScreen extends StatelessWidget {
-  const AllChallengesScreen({super.key});
+  final bool isFromBottomNav;
+  const AllChallengesScreen({this.isFromBottomNav = false, super.key});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => ChallengeListCubit()..loadChallenges(),
-      child: const _AllChallengesScreenContent(),
+      child: _AllChallengesScreenContent(isFromBottomNav: isFromBottomNav),
     );
   }
 }
 
 class _AllChallengesScreenContent extends StatefulWidget {
-  const _AllChallengesScreenContent();
+  final bool isFromBottomNav;
+  const _AllChallengesScreenContent({this.isFromBottomNav = false});
 
   @override
   State<_AllChallengesScreenContent> createState() =>
@@ -75,7 +77,12 @@ class __AllChallengesScreenContentState
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, ChallengeListState state) {
+    final hasActiveFilter = (state.selectedStatus != 'all') ||
+        (state.selectedChallengeType != null &&
+            state.selectedChallengeType!.isNotEmpty) ||
+        state.searchQuery.trim().isNotEmpty;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -83,20 +90,27 @@ class __AllChallengesScreenContentState
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.emoji_events_outlined,
+              hasActiveFilter
+                  ? Icons.filter_alt_off_outlined
+                  : Icons.emoji_events_outlined,
               size: 64,
               color: Colors.grey.shade400,
             ),
             const SizedBox(height: 16),
             Text(
-              'No challenges available.',
+              hasActiveFilter
+                  ? 'No matching challenges found'
+                  : 'No challenges available.',
+              textAlign: TextAlign.center,
               style: AppStyles.text16Px.poppins.w600.copyWith(
                 color: const Color(0xFF4B5563),
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Check back later for new fitness challenges!',
+              hasActiveFilter
+                  ? 'Try selecting a different filter or clear all to see available challenges.'
+                  : 'Check back later for new fitness challenges!',
               textAlign: TextAlign.center,
               style: AppStyles.text13Px.poppins.w400.copyWith(
                 color: Colors.grey.shade600,
@@ -105,7 +119,11 @@ class __AllChallengesScreenContentState
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                context.read<ChallengeListCubit>().refreshChallenges();
+                if (hasActiveFilter) {
+                  context.read<ChallengeListCubit>().clearFilters();
+                } else {
+                  context.read<ChallengeListCubit>().refreshChallenges();
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFD71920),
@@ -118,7 +136,7 @@ class __AllChallengesScreenContentState
                 ),
               ),
               child: Text(
-                'Refresh',
+                hasActiveFilter ? 'Clear Filters' : 'Refresh',
                 style: AppStyles.text14Px.poppins.w600.copyWith(
                   color: Colors.white,
                 ),
@@ -279,7 +297,32 @@ class __AllChallengesScreenContentState
         elevation: 0,
         scrolledUnderElevation: 0,
         automaticallyImplyLeading: false,
+        leadingWidth: widget.isFromBottomNav ? null : 64,
+        leading: widget.isFromBottomNav
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Center(
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEEEEEE),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.chevron_left,
+                        color: Color(0xFF444444),
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
         centerTitle: false,
+        titleSpacing: widget.isFromBottomNav ? 16 : 8,
         title: Text(
           'Challenges',
           style: AppStyles.text20Px.poppins.w500.copyWith(
@@ -291,12 +334,22 @@ class __AllChallengesScreenContentState
             onTap: () {
               context.push(const SettingsScreen());
             },
-            child: SvgPicture.asset(
-              'assets/images/svg/icons/settings _icon.svg',
-              width: 22,
-              height: 22,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEEEEEE),
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: SvgPicture.asset(
+                'assets/images/svg/icons/settings _icon.svg',
+                width: 20,
+                height: 20,
+              ),
             ),
-          ).pOnly(right: 20),
+          ),
+          const SizedBox(width: 16),
         ],
       ),
       body: Column(
@@ -310,15 +363,71 @@ class __AllChallengesScreenContentState
           _buildChampionsBanner(context),
           const SizedBox(height: 16),
 
-          // Active Challenges Section Header
+          // Challenges Section Header (Dynamic title reflecting current filter)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Text(
-              'Active Challenges',
-              style: AppStyles.text16Px.poppins.w700.copyWith(
-                fontSize: 17,
-                color: const Color(0xFF1F1F1F),
-              ),
+            child: BlocBuilder<ChallengeListCubit, ChallengeListState>(
+              buildWhen: (prev, curr) =>
+                  prev.selectedStatus != curr.selectedStatus ||
+                  prev.selectedChallengeType != curr.selectedChallengeType ||
+                  prev.challenges.length != curr.challenges.length,
+              builder: (context, state) {
+                String title;
+                switch (state.selectedStatus) {
+                  case 'ongoing':
+                    title = 'Ongoing Challenges';
+                  case 'ending_soon':
+                    title = 'Ending Soon';
+                  case 'upcoming':
+                    title = 'Upcoming Challenges';
+                  case 'completed':
+                    title = 'Completed Challenges';
+                  default:
+                    title = 'All Challenges';
+                }
+
+                if (state.selectedChallengeType != null &&
+                    state.selectedChallengeType!.isNotEmpty) {
+                  final typeName = state.selectedChallengeType == 'lucky_draw'
+                      ? 'Lucky Draw'
+                      : state.selectedChallengeType == 'performance'
+                          ? 'Performance'
+                          : state.selectedChallengeType == 'community'
+                              ? 'Community'
+                              : state.selectedChallengeType!;
+                  title = '$title • $typeName';
+                }
+
+                final hasActiveFilter = (state.selectedStatus != 'all') ||
+                    (state.selectedChallengeType != null &&
+                        state.selectedChallengeType!.isNotEmpty);
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      title,
+                      style: AppStyles.text16Px.poppins.w700.copyWith(
+                        fontSize: 17,
+                        color: const Color(0xFF1F1F1F),
+                      ),
+                    ),
+                    if (hasActiveFilter)
+                      GestureDetector(
+                        onTap: () {
+                          context.read<ChallengeListCubit>().clearFilters();
+                        },
+                        child: Text(
+                          'Clear All',
+                          style: AppStyles.text13Px.poppins.w600.copyWith(
+                            color: const Color(0xFFD71920),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
             ),
           ),
           const SizedBox(height: 10),
@@ -334,7 +443,7 @@ class __AllChallengesScreenContentState
                 }
 
                 if (state.challenges.isEmpty) {
-                  return _buildEmptyState(context);
+                  return _buildEmptyState(context, state);
                 }
 
                 return RefreshIndicator(

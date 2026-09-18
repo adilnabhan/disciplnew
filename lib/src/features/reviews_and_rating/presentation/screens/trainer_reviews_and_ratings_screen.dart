@@ -25,7 +25,10 @@ class _TrainerReviewsAndRatingsScreenState
   @override
   void initState() {
     super.initState();
-    _avgRating = (widget.trainer.averageRating as num?)?.toDouble() ?? 4.5;
+    final rawRating = widget.trainer.averageRating;
+    _avgRating = rawRating is num
+        ? rawRating.toDouble()
+        : (rawRating is String ? (double.tryParse(rawRating) ?? 4.5) : 4.5);
     _reviewCount = widget.trainer.reviewCount ?? 0;
     _scrollController = ScrollController();
     _scrollController.addListener(_onScroll);

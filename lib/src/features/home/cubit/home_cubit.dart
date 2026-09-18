@@ -12,6 +12,7 @@ class HomeCubit extends Cubit<HomeState> {
       emit(state.copyWith(homeData: none()));
     }
     final response = await HomeRepository().home();
+    if (isClosed) return;
     emit(state.copyWith(homeData: some(response)));
   }
 }

@@ -36,6 +36,7 @@ final class ApiUris {
   static final profileCompletionDismiss =
       '${_v1}customer/profile/completion/dismiss/';
   static final assignedGymTrainers = '${_v1}customer/gym-trainers/';
+  static final trainerPremiumList = '${_v1}customer/trainers/premium-list/';
   static final scoreCard = '${_v1}customer/score-card/';
   static String gymScoreCard(int gymId) => '${_v1}customer/gyms/$gymId/score-card/';
 
@@ -52,6 +53,12 @@ final class ApiUris {
   static final markWinnerPopupSeen = '${_v1}customer/challenges/winner-popup/seen/';
   static final allChallengeWinners = '${_v1}customer/challenges/all-winners/';
   static final challengeWinners = '${_v1}customer/challenges/winners/';
+
+  ///============================= Partners & Rewards =============================\\\
+  static final myPartnerQr = '${_v1}partners/my-qr/';
+  static final partnerQrShops = '${_v1}partners/qr-shops/';
+  static final partnerMyTransactions = '${_v1}partners/my-transactions/';
+  static final partnerQrHistory = '${_v1}partners/qr-history/';
 
   ///============================= Notifications =============================\\\
   static final notificationsList = '${_v1}customer/notifications/';

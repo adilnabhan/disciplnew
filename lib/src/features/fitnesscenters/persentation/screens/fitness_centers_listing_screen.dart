@@ -1,6 +1,9 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'trainer_details_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:customer_mobile_app/src/features/fitnesscenters/domain/respositories/fitnesscenter_repository.dart';
 
 class FitnessCentersListingScreen extends StatefulWidget {
   const FitnessCentersListingScreen({
@@ -24,6 +27,71 @@ class _FitnessCentersListingScreenState
   final TextEditingController _searchController = TextEditingController();
   final ValueNotifier<bool> _showClearButton = ValueNotifier<bool>(false);
   bool _isLocationFlowRunning = false;
+  int _selectedTabIndex = 0; // 0: Fitness Center, 1: Trainer
+  bool _isLoadingTrainers = false;
+  List<GymTrainer>? _trainersList;
+  String? _trainersError;
+
+  Future<void> _fetchTrainers({String? search}) async {
+    setState(() {
+      _isLoadingTrainers = true;
+      _trainersError = null;
+    });
+
+    final res = await FitnesscenterRepository().fetchPremiumTrainers(
+      search: search ?? _searchController.text,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoadingTrainers = false;
+      res.fold(
+        (error) {
+          _trainersError = 'Failed to load trainers. Please try again.';
+        },
+        (trainers) {
+          _trainersList = trainers;
+        },
+      );
+    });
+  }
+
+  Future<void> _openWhatsAppEnquiry(GymTrainer trainer) async {
+    final currentUser = context.read<AppCubit>().state.currentUser;
+    if (currentUser == null) {
+      GuestLoginSheet.show(
+        context,
+        message: 'Log in to enquire with certified trainers and personal coaches.',
+      );
+      return;
+    }
+
+    final rawPhone = trainer.mobile ?? '';
+    String cleanPhone = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (cleanPhone.length == 10) {
+      cleanPhone = '91$cleanPhone';
+    }
+
+    if (cleanPhone.isNotEmpty) {
+      final trainerName = trainer.fullName ?? 'Trainer';
+      final message = Uri.encodeComponent(
+        'Hi $trainerName,\n\n'
+        'I would like to enquire about your personal training sessions and fitness coaching.\n\n'
+        'Thank you.\n\n'
+        '—\n'
+        'This enquiry was initiated through the Discipl App.',
+      );
+      final waUrl = Uri.parse('https://wa.me/$cleanPhone?text=$message');
+      if (await canLaunchUrl(waUrl)) {
+        await launchUrl(waUrl, mode: LaunchMode.externalApplication);
+      } else {
+        await Dialogs.showSnack(msg: 'Could not open WhatsApp');
+      }
+    } else {
+      await Dialogs.showSnack(msg: 'WhatsApp contact not available for this trainer');
+    }
+  }
 
   @override
   void initState() {
@@ -319,53 +387,62 @@ class _FitnessCentersListingScreenState
                     ),
                   ],
             bottom: PreferredSize(
-              preferredSize: const Size.fromHeight(66),
-              child: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 16),
-                child: BlocBuilder<ListFitnessCentersCubit, ListFitnessCentersState>(
-                  builder: (context, state) {
-                    final hasError = state.categories.fold(() => false, (either) => either.isLeft()) ||
-                        state.listFitnessCenters.data.fold(() => false, (either) => either.isLeft());
-                    final isInitialLoading = !hasError &&
-                        (state.categories.isNone() || state.listFitnessCenters.data.isNone());
-                    return _searchBar(isLoading: isInitialLoading);
-                  },
-                ),
+              preferredSize: const Size.fromHeight(116),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 20, right: 20, bottom: 12),
+                    child: BlocBuilder<ListFitnessCentersCubit, ListFitnessCentersState>(
+                      builder: (context, state) {
+                        final hasError = state.categories.fold(() => false, (either) => either.isLeft()) ||
+                            state.listFitnessCenters.data.fold(() => false, (either) => either.isLeft());
+                        final isInitialLoading = !hasError &&
+                            (state.categories.isNone() || state.listFitnessCenters.data.isNone());
+                        return _searchBar(isLoading: isInitialLoading);
+                      },
+                    ),
+                  ),
+                  _buildTabBar(),
+                  const SizedBox(height: 12),
+                ],
               ),
             ),
           ),
-          body: BlocConsumer<ListFitnessCentersCubit, ListFitnessCentersState>(
-            listenWhen: (previous, current) {
-              final wasLoading = previous.listFitnessCenters.data.fold(() => true, (_) => false);
-              final isLoaded = current.listFitnessCenters.data.fold(() => false, (_) => true);
-              return wasLoading && isLoaded;
-            },
-            listener: (context, state) {
-              FocusManager.instance.primaryFocus?.unfocus();
-            },
-            builder: (context, state) {
-              final hasError = state.categories.fold(
-                    () => false,
-                    (either) => either.isLeft(),
-                  ) ||
-                  state.listFitnessCenters.data.fold(
-                    () => false,
-                    (either) => either.isLeft(),
-                  );
-  
-              final isInitialLoading = !hasError &&
-                  (state.categories.isNone() || state.listFitnessCenters.data.isNone());
-  
-              return AnimatedSwitcher(
-                duration: const Duration(milliseconds: 350),
-                child: isInitialLoading
-                    ? _buildExploreShimmer(key: const ValueKey('explore_shimmer'))
-                    : hasError
-                        ? _buildErrorUi(state)
-                        : _buildLoadedContent(state),
-              );
-            },
-          ),
+          body: _selectedTabIndex == 0
+              ? BlocConsumer<ListFitnessCentersCubit, ListFitnessCentersState>(
+                  listenWhen: (previous, current) {
+                    final wasLoading = previous.listFitnessCenters.data.fold(() => true, (_) => false);
+                    final isLoaded = current.listFitnessCenters.data.fold(() => false, (_) => true);
+                    return wasLoading && isLoaded;
+                  },
+                  listener: (context, state) {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                  },
+                  builder: (context, state) {
+                    final hasError = state.categories.fold(
+                          () => false,
+                          (either) => either.isLeft(),
+                        ) ||
+                        state.listFitnessCenters.data.fold(
+                          () => false,
+                          (either) => either.isLeft(),
+                        );
+
+                    final isInitialLoading = !hasError &&
+                        (state.categories.isNone() || state.listFitnessCenters.data.isNone());
+
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 350),
+                      child: isInitialLoading
+                          ? _buildExploreShimmer(key: const ValueKey('explore_shimmer'))
+                          : hasError
+                              ? _buildErrorUi(state)
+                              : _buildLoadedContent(state),
+                    );
+                  },
+                )
+              : _buildTrainersView(),
         ),
       );
 
@@ -853,16 +930,24 @@ class _FitnessCentersListingScreenState
                 controller: _searchController,
                 textAlignVertical: TextAlignVertical.center,
                 onChanged: (value) {
-                  EasyDebounce.debounce(
-                    'search-fitness-center',
-                    const Duration(milliseconds: 500),
-                    () => _cubit.search(value),
-                  );
+                  if (_selectedTabIndex == 0) {
+                    EasyDebounce.debounce(
+                      'search-fitness-center',
+                      const Duration(milliseconds: 500),
+                      () => _cubit.search(value),
+                    );
+                  } else {
+                    EasyDebounce.debounce(
+                      'search-trainers',
+                      const Duration(milliseconds: 500),
+                      () => _fetchTrainers(search: value),
+                    );
+                  }
                 },
                 decoration: InputDecoration(
                   filled: false,
                   fillColor: Colors.transparent,
-                  hintText: 'Search by name,place,...',
+                  hintText: _selectedTabIndex == 0 ? 'Search by name,place,...' : 'Search trainer by name, specialty,...',
                   hintStyle: const TextStyle(
                     color: Color(0xFF8E8E93),
                     fontSize: 16,
@@ -879,8 +964,13 @@ class _FitnessCentersListingScreenState
                         padding: EdgeInsets.zero,
                         onPressed: () {
                           _searchController.clear();
-                          EasyDebounce.cancel('search-fitness-center');
-                          _cubit.search('');
+                          if (_selectedTabIndex == 0) {
+                            EasyDebounce.cancel('search-fitness-center');
+                            _cubit.search('');
+                          } else {
+                            EasyDebounce.cancel('search-trainers');
+                            _fetchTrainers(search: '');
+                          }
                         },
                       );
                     },
@@ -890,6 +980,407 @@ class _FitnessCentersListingScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildTabPill(
+              title: 'Fitness Center',
+              isSelected: _selectedTabIndex == 0,
+              onTap: () {
+                if (_selectedTabIndex != 0) {
+                  setState(() {
+                    _selectedTabIndex = 0;
+                  });
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildTabPill(
+              title: 'Trainer',
+              isSelected: _selectedTabIndex == 1,
+              onTap: () {
+                if (_selectedTabIndex != 1) {
+                  setState(() {
+                    _selectedTabIndex = 1;
+                  });
+                  if (_trainersList == null) {
+                    _fetchTrainers();
+                  }
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabPill({
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFFFFF0F1) : Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: isSelected ? const Color(0xFFFFCDD2) : const Color(0xFFE5E7EB),
+            width: 1.0,
+          ),
+          boxShadow: isSelected
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+        ),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppStyles.text14Px.poppins.w500.copyWith(
+            color: isSelected ? const Color(0xFFD32F2F) : const Color(0xFF1F2937),
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTrainersView() {
+    if (_isLoadingTrainers && (_trainersList == null || _trainersList!.isEmpty)) {
+      return const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFE53935)),
+        ),
+      );
+    }
+
+    if (_trainersError != null && (_trainersList == null || _trainersList!.isEmpty)) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, size: 48, color: Colors.grey),
+              const SizedBox(height: 12),
+              Text(
+                _trainersError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _fetchTrainers(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Retry', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_trainersList == null || _trainersList!.isEmpty) {
+      return _buildNoTrainersView();
+    }
+
+    return RefreshIndicator(
+      color: const Color(0xFFE53935),
+      onRefresh: () => _fetchTrainers(),
+      child: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        itemCount: _trainersList!.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final trainer = _trainersList![index];
+          return _buildTrainerCard(trainer);
+        },
+      ),
+    );
+  }
+
+  Widget _buildTrainerCard(GymTrainer trainer) {
+    String specialtyText = 'Body Building';
+    if (trainer.specializations != null && trainer.specializations!.isNotEmpty) {
+      specialtyText = trainer.specializations!.first;
+    } else if (trainer.bio != null && trainer.bio!.trim().isNotEmpty) {
+      specialtyText = trainer.bio!.trim();
+    }
+
+    final locationText = trainer.place ??
+        trainer.location?.place ??
+        trainer.location?.city ??
+        trainer.location?.area ??
+        '';
+
+    return GestureDetector(
+      onTap: () {
+        context.push(TrainerDetailsScreen(trainer: trainer));
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0).withOpacity(0.8)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Circular Avatar
+            ClipOval(
+              child: SizedBox(
+                width: 66,
+                height: 66,
+                child: trainer.profileImage != null && trainer.profileImage!.trim().isNotEmpty
+                    ? ImageNetwork(
+                        trainer.profileImage!,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        color: const Color(0xFFF1F5F9),
+                        child: const Icon(
+                          Icons.person,
+                          color: Color(0xFF94A3B8),
+                          size: 34,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // Middle Info Column
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    trainer.fullName ?? 'Trainer Name',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1E293B),
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      specialtyText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ),
+                  if (locationText.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_rounded,
+                          size: 14,
+                          color: Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            locationText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF334155),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+
+            // Red Rounded WhatsApp Enquire Button
+            GestureDetector(
+              onTap: () => _openWhatsAppEnquiry(trainer),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD32F2F),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD32F2F).withOpacity(0.28),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/svg/icons/whatsapp_logo.svg',
+                      width: 18,
+                      height: 18,
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Enquire',
+                      style: TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoTrainersView() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFFF1F2),
+                border: Border.all(
+                  color: const Color(0xFFFFCDD2),
+                  width: 1.5,
+                ),
+              ),
+              child: const Center(
+                child: Icon(
+                  Icons.person_search_rounded,
+                  size: 44,
+                  color: Color(0xFFD32F2F),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Trainers Available Yet',
+              style: AppStyles.text18Px.poppins.w600.copyWith(
+                color: const Color(0xFF1E293B),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'We are currently onboarding certified fitness trainers and personal coaches in your area.\nPlease check back soon or explore partnered fitness centers.',
+              style: AppStyles.text13Px.poppins.w400.copyWith(
+                color: const Color(0xFF64748B),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            InkWell(
+              onTap: () {
+                setState(() {
+                  _selectedTabIndex = 0;
+                });
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.fitness_center_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Explore Fitness Centers',
+                      style: AppStyles.text13Px.poppins.w600.copyWith(
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

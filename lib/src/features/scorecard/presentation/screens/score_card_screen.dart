@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/fitness_centers_listing_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
 import 'package:customer_mobile_app/src/features/scorecard/domain/models/score_card_model.dart';
 import 'package:customer_mobile_app/src/features/scorecard/logic/score_card_cubit.dart';
 import 'package:customer_mobile_app/src/features/scorecard/logic/score_card_state.dart';
+import 'package:customer_mobile_app/src/features/scorecard/presentation/widgets/score_card_how_it_works_sheet.dart';
 
 class ScoreCardScreen extends StatefulWidget {
   const ScoreCardScreen({super.key});
@@ -79,7 +81,8 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                       opt['label']!,
                       style: AppStyles.text14Px.poppins.copyWith(
                         color: isSelected ? AppColors.primary : Colors.black87,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight:
+                            isSelected ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
                     trailing: isSelected
@@ -100,48 +103,12 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     );
   }
 
-  void _showInfoDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            const Icon(Icons.emoji_events_rounded, color: AppColors.primary),
-            const SizedBox(width: 8),
-            Text('Score Card Rules', style: AppStyles.text16Px.poppins.w600),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildRuleItem('💪 Workouts Logged', 'Earn 10 points for every completed workout.'),
-            const SizedBox(height: 8),
-            _buildRuleItem('🔥 Consistency Streak', 'Maintain daily workout streaks to boost your rank.'),
-            const SizedBox(height: 8),
-            _buildRuleItem('🏆 Gym Leaderboard', 'Compete with active members of your gym in real-time.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Got It', style: AppStyles.text14Px.poppins.w600.copyWith(color: AppColors.primary)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRuleItem(String title, String desc) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(title, style: AppStyles.text14Px.poppins.w600.copyWith(fontSize: 13)),
-        const SizedBox(height: 2),
-        Text(desc, style: AppStyles.text12Px.poppins.w400.copyWith(color: Colors.grey.shade600)),
-      ],
-    );
+  void _showHowItWorksSheet(BuildContext context) {
+    final currentScore = _cubit.state.data?.myPosition?.points ??
+        _cubit.state.data?.myPosition?.currentPoints ??
+        _cubit.state.data?.me?.points ??
+        0;
+    ScoreCardHowItWorksSheet.show(context, currentScore: currentScore);
   }
 
   @override
@@ -149,13 +116,14 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     return BlocProvider.value(
       value: _cubit,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF9F9FB),
+        backgroundColor: const Color(0xFFF8F9FA),
         appBar: AppBar(
-          backgroundColor: Colors.white,
+          backgroundColor: const Color(0xFFF8F9FA),
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false,
           centerTitle: false,
+          titleSpacing: 16,
           title: Text(
             'Score Card',
             style: AppStyles.text20Px.poppins.w500.copyWith(
@@ -163,16 +131,33 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             ),
           ),
           actions: [
-            GestureDetector(
-              onTap: () {
-                context.push(const SettingsScreen());
-              },
-              child: SvgPicture.asset(
-                'assets/images/svg/icons/settings _icon.svg',
-                width: 22,
-                height: 22,
+            Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  context.push(const SettingsScreen());
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEFF1F4),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: SvgPicture.asset(
+                    'assets/images/svg/icons/settings _icon.svg',
+                    width: 20,
+                    height: 20,
+                    colorFilter: const ColorFilter.mode(
+                      Color(0xFF1F2937),
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                ),
               ),
-            ).pOnly(right: 20),
+            ),
+            const SizedBox(width: 16),
           ],
         ),
         body: BlocBuilder<ScoreCardCubit, ScoreCardState>(
@@ -202,52 +187,25 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Active Gym Card
-                    if (data.gym != null) ...[
-                      _buildActiveGymCard(data.gym!),
-                      const SizedBox(height: 14),
-                    ],
-
-                    // Leaderboard Period Selector Card
-                    _buildPeriodSelectorCard(
-                      context,
-                      data.period,
-                      state.timeframe,
-                    ),
+                    // Centered capsule period selector with right info button
+                    _buildHeaderControls(state),
                     const SizedBox(height: 16),
 
-                    // Top 3 Podium
-                    if (data.podium.isNotEmpty) ...[
-                      _buildTop3Podium(data.podium),
-                      const SizedBox(height: 16),
-                    ],
+                    // 3D Isometric Podium
+                    _build3DPodium(data.podium),
+                    const SizedBox(height: 16),
 
-                    // Current User / My Position Card
-                    if (data.myPosition != null || data.me != null) ...[
-                      _buildMyPositionCard(
-                        data.myPosition ??
-                            MyPositionModel(
-                              rank: data.me?.rank,
-                              points: data.me?.points,
-                              streak: data.me?.streak,
-                              rankChange: data.me?.rankChange,
-                              rankChangeType: data.me?.rankChangeType,
-                            ),
-                        data.me,
-                      ),
-                      const SizedBox(height: 20),
-                    ],
+                    // My Position Card
+                    _buildMyPositionCard(data),
+                    const SizedBox(height: 16),
 
-                    // Leaderboard Section
-                    _buildLeaderboardSection(state),
-                    const SizedBox(height: 20),
-
-                    // Summary Metric Cards Footer
-                    _buildSummaryFooter(data),
+                    // Leaderboard Card
+                    _buildLeaderboardCard(state, data),
                     const SizedBox(height: 30),
                   ],
                 ),
@@ -259,236 +217,74 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     );
   }
 
-  // ==================== ACTIVE GYM CARD ====================
-  Widget _buildActiveGymCard(GymScoreCardModel gym) {
-    final currentUserCustomer =
-        Feggy.read<AppCubit>()?.state.currentUser?.customer;
-    final assignedCenter = currentUserCustomer?.assignedFitnessCenter;
-
-    String? fallbackLocation;
-    if (assignedCenter != null) {
-      if (assignedCenter['location'] is String) {
-        fallbackLocation = assignedCenter['location'] as String;
-      } else if (assignedCenter['location'] is Map) {
-        final locMap = assignedCenter['location'] as Map;
-        final city = locMap['city'] ?? locMap['place'] ?? locMap['area'] ?? locMap['address'];
-        final state = locMap['state'];
-        fallbackLocation = [city, state].where((e) => e != null && e.toString().isNotEmpty).join(', ');
-      }
-      fallbackLocation ??= assignedCenter['address']?.toString() ??
-          assignedCenter['city']?.toString() ??
-          assignedCenter['place']?.toString() ??
-          assignedCenter['area']?.toString();
-    }
-
-    final String locationText = (gym.location != null && gym.location!.trim().isNotEmpty)
-        ? gym.location!
-        : ((gym.place != null && gym.place!.trim().isNotEmpty)
-            ? gym.place!
-            : ((fallbackLocation != null && fallbackLocation.trim().isNotEmpty)
-                ? fallbackLocation
-                : 'Active Member'));
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Gym Logo Avatar
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.shade200, width: 1),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(100),
-              child: (gym.logo != null && gym.logo!.isNotEmpty)
-                  ? ImageNetwork(
-                      gym.logo!,
-                      fit: BoxFit.cover,
-                      errorWidget: const Icon(
-                        Icons.fitness_center_rounded,
-                        color: AppColors.primary,
-                        size: 22,
-                      ),
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.fitness_center_rounded,
-                        color: AppColors.primary,
-                        size: 22,
-                      ),
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Gym Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Active Gym',
-                  style: AppStyles.text12Px.poppins.w600.copyWith(
-                    color: AppColors.primary,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  gym.name ?? 'Gym Member',
-                  style: AppStyles.text14Px.poppins.w700.copyWith(
-                    color: const Color(0xFF212121),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      color: AppColors.primary,
-                      size: 13,
-                    ),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(
-                        locationText,
-                        style: AppStyles.text12Px.poppins.w400.copyWith(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: Color(0xFF9E9E9E),
-            size: 22,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== PERIOD SELECTOR CARD ====================
-  Widget _buildPeriodSelectorCard(
-    BuildContext context,
-    ScoreCardPeriodModel? period,
-    String currentSelection,
-  ) {
-    final String rangeStr = period?.formattedRange.isNotEmpty == true
-        ? period!.formattedRange
-        : '01 Aug - 31 Aug 2026';
-
+  // ==================== HEADER CONTROLS ====================
+  Widget _buildHeaderControls(ScoreCardState state) {
     final timeframeLabels = {
       'daily': 'Daily',
       'weekly': 'Weekly',
       'monthly': 'Monthly',
       'all_time': 'All Time',
     };
+    final String selectedLabel = timeframeLabels[state.timeframe] ?? 'Monthly';
 
-    final String selectedLabel = timeframeLabels[currentSelection] ?? 'Monthly';
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          // Red Calendar Container Icon
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.calendar_month_rounded,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Period Dates
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Leaderboard Period',
-                  style: AppStyles.text12Px.poppins.w500.copyWith(
-                    color: Colors.grey.shade600,
-                    fontSize: 11,
-                  ),
+          // Centered Timeframe Capsule Button
+          Center(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _showTimeframePicker(context, state.timeframe),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 38, vertical: 11),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF1F4),
+                  borderRadius: BorderRadius.circular(30),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  rangeStr,
-                  style: AppStyles.text14Px.poppins.w700.copyWith(
-                    color: const Color(0xFF212121),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Timeframe Dropdown Button
-          GestureDetector(
-            onTap: () => _showTimeframePicker(context, currentSelection),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    selectedLabel,
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                      color: AppColors.primary,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      selectedLabel,
+                      style: AppStyles.text15Px.poppins.w700.copyWith(
+                        color: const Color(0xFF0F172A),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.primary,
-                    size: 18,
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 22,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Right-aligned Circular Info Button
+          Positioned(
+            right: 0,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _showHowItWorksSheet(context),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEFF1F4),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.info_outline_rounded,
+                  size: 22,
+                  color: Color(0xFF0F172A),
+                ),
               ),
             ),
           ),
@@ -497,8 +293,8 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     );
   }
 
-  // ==================== TOP 3 PODIUM ====================
-  Widget _buildTop3Podium(List<PodiumMemberModel> podium) {
+  // ==================== 3D ISOMETRIC PODIUM ====================
+  Widget _build3DPodium(List<PodiumMemberModel> podium) {
     PodiumMemberModel? rank1;
     PodiumMemberModel? rank2;
     PodiumMemberModel? rank3;
@@ -509,187 +305,196 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
       if (member.rank == 3) rank3 = member;
     }
 
-    // Fallbacks if podium list doesn't explicitly flag rank == 1, 2, 3
     if (rank1 == null && podium.isNotEmpty) rank1 = podium[0];
     if (rank2 == null && podium.length > 1) rank2 = podium[1];
     if (rank3 == null && podium.length > 2) rank3 = podium[2];
 
-    return Container(
+    rank1 ??= const PodiumMemberModel(rank: 1, name: '—', points: 0);
+    rank2 ??= const PodiumMemberModel(rank: 2, name: '—', points: 0);
+    rank3 ??= const PodiumMemberModel(rank: 3, name: '—', points: 0);
+
+    return SizedBox(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(10, 16, 10, 0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          // Background Confetti Specks
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _PodiumConfettiPainter(),
-            ),
+          // Rank 2 (Left - Silver)
+          Expanded(
+            flex: 10,
+            child: _buildPodiumRank2(rank2),
           ),
 
-          // Podium Slots Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // #2 Rank (Left)
-              Expanded(
-                child: rank2 != null
-                    ? _buildPodiumSlot(
-                        member: rank2,
-                        rankNumber: 2,
-                        borderColor: const Color(0xFFB0BEC5),
-                        badgeColor: const Color(0xFF90A4AE),
-                        podiumHeight: 58,
-                        starColor: const Color(0xFF90A4AE),
-                        capColor: const Color(0xFFCFD8DC),
-                      )
-                    : const SizedBox.shrink(),
-              ),
+          // Rank 1 (Center - Gold)
+          Expanded(
+            flex: 13,
+            child: _buildPodiumRank1(rank1),
+          ),
 
-              // #1 Rank (Center, Elevated & Largest)
-              Expanded(
-                child: rank1 != null
-                    ? _buildPodiumSlot(
-                        member: rank1,
-                        rankNumber: 1,
-                        borderColor: const Color(0xFFFFB300),
-                        badgeColor: const Color(0xFFFFB300),
-                        podiumHeight: 82,
-                        starColor: const Color(0xFFE53935),
-                        capColor: const Color(0xFFD32F2F),
-                        isWinner: true,
-                      )
-                    : const SizedBox.shrink(),
-              ),
-
-              // #3 Rank (Right)
-              Expanded(
-                child: rank3 != null
-                    ? _buildPodiumSlot(
-                        member: rank3,
-                        rankNumber: 3,
-                        borderColor: const Color(0xFFCD7F32),
-                        badgeColor: const Color(0xFFCD7F32),
-                        podiumHeight: 44,
-                        starColor: const Color(0xFFCD7F32),
-                        capColor: const Color(0xFFE0A96D),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
+          // Rank 3 (Right - Bronze)
+          Expanded(
+            flex: 10,
+            child: _buildPodiumRank3(rank3),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPodiumSlot({
-    required PodiumMemberModel member,
-    required int rankNumber,
-    required Color borderColor,
-    required Color badgeColor,
-    required double podiumHeight,
-    required Color starColor,
-    required Color capColor,
-    bool isWinner = false,
-  }) {
-    final double avatarSize = isWinner ? 70 : 56;
-
+  // Rank 2 Column (Silver)
+  Widget _buildPodiumRank2(PodiumMemberModel member) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Floating Crown for #1 Winner
-        if (isWinner)
-          const Padding(
-            padding: EdgeInsets.only(bottom: 2),
-            child: Icon(
-              Icons.workspace_premium_rounded,
-              color: Color(0xFFFFB300),
-              size: 28,
-            ),
-          )
-        else
-          const SizedBox(height: 18),
+        // Avatar
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFCBD5E1), width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: _buildAvatar(member.profileImage, size: 56),
+          ),
+        ),
+        const SizedBox(height: 8),
 
-        // Avatar + Rank Badge
+        // Member Name
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: SizedBox(
+            height: 36,
+            child: Center(
+              child: Text(
+                member.name ?? 'Member',
+                style: AppStyles.text13Px.poppins.w700.copyWith(
+                  color: const Color(0xFF111827),
+                  height: 1.15,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+
+        // Points
+        Text(
+          '${member.points ?? member.currentPoints ?? 0} pts',
+          style: AppStyles.text13Px.poppins.w700.copyWith(
+            color: const Color(0xFF475569),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Isometric Top Face with true elliptical cast shadow
+        ClipPath(
+          clipper: _LeftPodiumTopClipper(),
+          child: Container(
+            height: 24,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFE2E8F0), Color(0xFFCBD5E1)],
+              ),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 62,
+                height: 16,
+                child: CustomPaint(
+                  painter: _PodiumShadowPainter(
+                    color: Color(0x30000000),
+                    blurRadius: 4.0,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Front Face
+        Container(
+          height: 110,
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFD8DDE6), Color(0xFFBAC2D0)],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '2',
+            style: TextStyle(
+              fontSize: 52,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF475569),
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Rank 1 Column (Gold)
+  Widget _buildPodiumRank1(PodiumMemberModel member) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Avatar with Golden Glow + Crown
         Stack(
-          alignment: Alignment.topCenter,
           clipBehavior: Clip.none,
+          alignment: Alignment.center,
           children: [
             Container(
-              width: avatarSize,
-              height: avatarSize,
+              width: 68,
+              height: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: borderColor, width: isWinner ? 3.5 : 2.5),
+                border: Border.all(
+                  color: const Color(0xFFF59E0B),
+                  width: 3.5,
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: borderColor.withValues(alpha: 0.3),
-                    blurRadius: 8,
+                    color: const Color(0xFFF59E0B).withOpacity(0.38),
+                    blurRadius: 10,
+                    spreadRadius: 1,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(100),
-                child: (member.profileImage != null &&
-                        member.profileImage!.isNotEmpty)
-                    ? ImageNetwork(
-                        member.profileImage!,
-                        fit: BoxFit.cover,
-                        errorWidget: SvgPicture.asset(
-                          'assets/images/svg/icons/person.svg',
-                          colorFilter: const ColorFilter.mode(
-                            AppColors.textGrey,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      )
-                    : SvgPicture.asset(
-                        'assets/images/svg/icons/person.svg',
-                        colorFilter: const ColorFilter.mode(
-                          AppColors.textGrey,
-                          BlendMode.srcIn,
-                        ),
-                      ),
+                child: _buildAvatar(member.profileImage, size: 68),
               ),
             ),
+            // Tilted Gold Crown on Top Right
             Positioned(
-              top: -6,
-              left: -2,
-              child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 4,
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    '$rankNumber',
-                    style: AppStyles.text12Px.poppins.w700.copyWith(
-                      color: Colors.white,
-                      fontSize: 11,
-                      height: 1.0,
-                    ),
+              top: -8,
+              right: 2,
+              child: Transform.rotate(
+                angle: 0.35, // ~20 degrees tilt
+                child: const SizedBox(
+                  width: 24,
+                  height: 20,
+                  child: CustomPaint(
+                    painter: _CrownPainter(),
                   ),
                 ),
               ),
@@ -698,103 +503,197 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
         ),
         const SizedBox(height: 8),
 
-        // User Card Container
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+        // Member Name
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: SizedBox(
+            height: 22,
+            child: Text(
+              member.name ?? 'Member',
+              style: AppStyles.text15Px.poppins.w700.copyWith(
+                color: const Color(0xFF111827),
+                height: 1.15,
               ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Text(
-                member.name ?? 'Member',
-                style: AppStyles.text12Px.poppins.w700.copyWith(
-                  color: const Color(0xFF111111),
-                  fontSize: isWinner ? 13 : 11,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 3),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    '${member.points ?? member.currentPoints ?? 0}',
-                    style: AppStyles.text14Px.poppins.w800.copyWith(
-                      color: const Color(0xFFD32F2F),
-                      fontSize: isWinner ? 15 : 13,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Text(
-                    'pts',
-                    style: AppStyles.text12Px.poppins.w700.copyWith(
-                      color: const Color(0xFFD32F2F),
-                      fontSize: isWinner ? 13 : 11,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              _buildRankChangeBadge(
-                member.rankChangeType,
-                member.rankChange,
-                member.previousRank,
-              ),
-            ],
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
 
-        // 3D Step Base
+        // Points
+        Text(
+          '${member.points ?? member.currentPoints ?? 0} pts',
+          style: AppStyles.text14Px.poppins.w700.copyWith(
+            color: const Color(0xFFD97706),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Isometric Top Face with true elliptical cast shadow
+        ClipPath(
+          clipper: _CenterPodiumTopClipper(),
+          child: Container(
+            height: 24,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFFDE68A), Color(0xFFFCD34D)],
+              ),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 76,
+                height: 18,
+                child: CustomPaint(
+                  painter: _PodiumShadowPainter(
+                    color: Color(0x38000000),
+                    blurRadius: 4.5,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Front Face
         Container(
-          height: podiumHeight,
+          height: 172,
           width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFFDE047),
+                Color(0xFFFACC15),
+                Color(0xFFEAB308),
+              ],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '1',
+            style: TextStyle(
+              fontSize: 66,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFB45309),
+              fontFamily: 'Poppins',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Rank 3 Column (Bronze / Terracotta)
+  Widget _buildPodiumRank3(PodiumMemberModel member) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Avatar
+        Container(
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFE29A83), width: 2.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
+                color: Colors.black.withOpacity(0.08),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Column(
-            children: [
-              // Top Cap colored edge
-              Container(
-                height: isWinner ? 9 : 7,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: capColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(8),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(100),
+            child: _buildAvatar(member.profileImage, size: 56),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Member Name
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: SizedBox(
+            height: 36,
+            child: Center(
+              child: Text(
+                member.name ?? 'Member',
+                style: AppStyles.text13Px.poppins.w700.copyWith(
+                  color: const Color(0xFF111827),
+                  height: 1.15,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+
+        // Points
+        Text(
+          '${member.points ?? member.currentPoints ?? 0} pts',
+          style: AppStyles.text13Px.poppins.w700.copyWith(
+            color: const Color(0xFF8C4634),
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // Isometric Top Face with true elliptical cast shadow
+        ClipPath(
+          clipper: _RightPodiumTopClipper(),
+          child: Container(
+            height: 24,
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFFEBB29F), Color(0xFFDEA18D)],
+              ),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 62,
+                height: 16,
+                child: CustomPaint(
+                  painter: _PodiumShadowPainter(
+                    color: Color(0x30000000),
+                    blurRadius: 4.0,
                   ),
                 ),
               ),
-              Expanded(
-                child: Center(
-                  child: Icon(
-                    Icons.star_rounded,
-                    color: starColor,
-                    size: isWinner ? 22 : 18,
-                  ),
-                ),
-              ),
-            ],
+            ),
+          ),
+        ),
+
+        // Front Face
+        Container(
+          height: 72,
+          width: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Color(0xFFE5A18C), Color(0xFFD28771)],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: const Text(
+            '3',
+            style: TextStyle(
+              fontSize: 52,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF7C2D12),
+              fontFamily: 'Poppins',
+            ),
           ),
         ),
       ],
@@ -802,26 +701,62 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
   }
 
   // ==================== MY POSITION CARD ====================
-  Widget _buildMyPositionCard(MyPositionModel myPos, ScoreCardUserModel? me) {
-    final int rank = myPos.rank ?? myPos.currentRank ?? me?.rank ?? 0;
-    final int points = myPos.points ?? myPos.currentPoints ?? me?.points ?? 0;
-    final int streak = myPos.streak ?? me?.streak ?? 0;
-    final int? pointsChange = myPos.pointsChange;
-    final String? profilePic = me?.profileImage;
+  Widget _buildMyPositionCard(ScoreCardResponseModel data) {
+    final myPos = data.myPosition;
+    final me = data.me;
+    final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+    final String currentUserName =
+        '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+    final String? currentUserPic = currentUser?.profilePicture is String &&
+            (currentUser?.profilePicture as String).isNotEmpty
+        ? currentUser?.profilePicture as String
+        : null;
+
+    final int rank = myPos?.rank ?? myPos?.currentRank ?? me?.rank ?? 0;
+    final int points =
+        myPos?.points ?? myPos?.currentPoints ?? me?.points ?? 0;
+    final String name = (me?.name != null && me!.name!.isNotEmpty)
+        ? me.name!
+        : (currentUserName.isNotEmpty ? currentUserName : 'You');
+    final String? profilePic = me?.profileImage ?? currentUserPic;
+
+    // Rank tier & progress to next tier
+    final currentTier = UserRankTier.getTierForScore(points);
+    final nextTier = UserRankTier.getNextTier(currentTier);
+
+    final String currentTierName =
+        myPos?.currentRankName ?? data.currentRank ?? currentTier.name;
+    final String currentTierEmoji =
+        myPos?.rankEmoji ?? data.rankEmoji ?? currentTier.emoji;
+
+    final String? nextTierName =
+        myPos?.nextRank ?? data.nextRank ?? nextTier?.name;
+    final String? nextTierEmoji =
+        myPos?.nextRankEmoji ?? data.nextRankEmoji ?? nextTier?.emoji;
+    final int nextMinScore =
+        myPos?.nextRankScore ?? data.nextRankScore ?? (nextTier?.minScore ?? 500);
+
+    final int remainingPts = myPos?.remainingScoreToNextRank ??
+        data.remainingScoreToNextRank ??
+        (nextTier != null ? (nextTier.minScore - points).clamp(0, nextTier.minScore) : 0);
+
+    final double progressFraction = (nextTier != null)
+        ? ((points - currentTier.minScore) /
+                (nextMinScore - currentTier.minScore))
+            .clamp(0.0, 1.0)
+        : 1.0;
+    final int progressPercent = (progressFraction * 100).round();
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF5F5),
+        color: const Color(0xFFFFFBEB),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: const Color(0xFFFDE68A), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
+            color: const Color(0xFFF59E0B).withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -829,318 +764,208 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            'My Position',
-            style: AppStyles.text12Px.poppins.w600.copyWith(
-              color: Colors.grey.shade700,
-            ),
-          ),
-          const SizedBox(height: 10),
-
           Row(
             children: [
-              // Large Rank Display
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rank > 0 ? '#$rank' : '-',
-                    style: AppStyles.text26Px.poppins.w800.copyWith(
-                      color: const Color(0xFF1F1F1F),
-                      height: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  _buildRankChangeBadge(
-                    myPos.rankChangeType ?? me?.rankChangeType,
-                    myPos.rankChange ?? me?.rankChange,
-                    myPos.previousRank ?? me?.previousRank,
-                  ),
-                ],
+              // Giant Rank Numeral
+              Text(
+                rank > 0 ? '$rank' : '-',
+                style: const TextStyle(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFFF59E0B),
+                  height: 1.0,
+                  fontFamily: 'Poppins',
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 14),
 
-              // Profile Avatar with YOU pill badge
-              Stack(
-                alignment: Alignment.bottomCenter,
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    width: 54,
-                    height: 54,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.primary, width: 2),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: (profilePic != null && profilePic.isNotEmpty)
-                          ? ImageNetwork(
-                              profilePic,
-                              fit: BoxFit.cover,
-                              errorWidget: SvgPicture.asset(
-                                'assets/images/svg/icons/person.svg',
-                                colorFilter: const ColorFilter.mode(
-                                  AppColors.textGrey,
-                                  BlendMode.srcIn,
-                                ),
-                              ),
-                            )
-                          : SvgPicture.asset(
-                              'assets/images/svg/icons/person.svg',
-                              colorFilter: const ColorFilter.mode(
-                                AppColors.textGrey,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        'YOU',
-                        style: AppStyles.text12Px.poppins.w700.copyWith(
-                          color: Colors.white,
-                          fontSize: 9,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              // Avatar
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(100),
+                  child: _buildAvatar(profilePic, size: 48),
+                ),
               ),
-              const Spacer(),
+              const SizedBox(width: 12),
 
-              // Points Stat Box
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.star_rounded,
-                        color: AppColors.primary,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Points',
-                        style: AppStyles.text12Px.poppins.w500.copyWith(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$points pts',
-                    style: AppStyles.text16Px.poppins.w700.copyWith(
-                      color: const Color(0xFF212121),
-                    ),
-                  ),
-                  if (pointsChange != null && pointsChange > 0)
+              // Name & Points
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
                     Text(
-                      '+ $pointsChange',
-                      style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: const Color(0xFF2E7D32),
-                        fontSize: 11,
+                      name,
+                      style: AppStyles.text15Px.poppins.w700.copyWith(
+                        color: const Color(0xFF111827),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$points pts',
+                      style: AppStyles.text14Px.poppins.w700.copyWith(
+                        color: const Color(0xFFD97706),
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(width: 16),
 
-              // Streak Stat Box
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        color: Colors.orangeAccent,
-                        size: 15,
-                      ),
-                      const SizedBox(width: 3),
-                      Text(
-                        'Streak',
-                        style: AppStyles.text12Px.poppins.w500.copyWith(
-                          color: Colors.grey.shade600,
-                          fontSize: 11,
-                        ),
-                      ),
-                    ],
+              // "You" Pill Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFDE68A),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'You',
+                  style: AppStyles.text13Px.poppins.w700.copyWith(
+                    color: const Color(0xFF1F2937),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$streak days',
-                    style: AppStyles.text16Px.poppins.w700.copyWith(
-                      color: const Color(0xFF212121),
-                    ),
-                  ),
-                  Text(
-                    '+ 1 day',
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                      color: const Color(0xFF2E7D32),
-                      fontSize: 11,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          const Divider(color: Color(0xFFFFD6D6), height: 1),
+
+          // Divider
+          const SizedBox(height: 12),
+          Container(
+            height: 1,
+            color: const Color(0xFFFDE68A).withOpacity(0.6),
+          ),
           const SizedBox(height: 10),
 
-          // Motivational Quote
-          () {
-            late final String motivationalMessage;
-            late final IconData motivationalIcon;
-            late final Color motivationalColor;
-
-            if (points == 0) {
-              motivationalMessage =
-                  "Log a workout today to get on the leaderboard and start climbing!";
-              motivationalIcon = Icons.bolt_rounded;
-              motivationalColor = const Color(0xFFD97706);
-            } else if (rank == 1) {
-              motivationalMessage =
-                  "You're at the top! Outstanding work maintaining 1st place.";
-              motivationalIcon = Icons.emoji_events_rounded;
-              motivationalColor = const Color(0xFFFFB300);
-            } else {
-              motivationalMessage =
-                  "You're doing great! Keep pushing to reach the top.";
-              motivationalIcon = Icons.trending_up_rounded;
-              motivationalColor = AppColors.primary;
-            }
-
-            return Row(
-              children: [
-                Icon(
-                  motivationalIcon,
-                  color: motivationalColor,
-                  size: 16,
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    motivationalMessage,
-                    style: AppStyles.text12Px.poppins.w500.copyWith(
-                      color: motivationalColor == const Color(0xFFFFB300)
-                          ? const Color(0xFFD97706)
-                          : motivationalColor,
-                      fontSize: 11,
+          // Rank & Next Rank Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    currentTierEmoji,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    currentTierName,
+                    style: AppStyles.text13Px.poppins.w700.copyWith(
+                      color: const Color(0xFF1F2937),
                     ),
                   ),
+                ],
+              ),
+              if (nextTierName != null)
+                Text(
+                  remainingPts > 0
+                      ? '$remainingPts pts to ${nextTierEmoji ?? ''} $nextTierName'
+                      : 'Max Rank Reached',
+                  style: AppStyles.text12Px.poppins.w600.copyWith(
+                    color: const Color(0xFF92400E),
+                  ),
                 ),
-              ],
-            );
-          }(),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Progress Bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: progressFraction,
+              minHeight: 7,
+              backgroundColor: const Color(0xFFFDE68A).withOpacity(0.5),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Progress Min / Max Labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${currentTier.minScore} pts',
+                style: AppStyles.text10Px.poppins.w500.copyWith(
+                  color: const Color(0xFF78350F).withOpacity(0.7),
+                ),
+              ),
+              Text(
+                '$progressPercent%',
+                style: AppStyles.text10Px.poppins.w700.copyWith(
+                  color: const Color(0xFF92400E),
+                ),
+              ),
+              Text(
+                nextTier != null ? '${nextMinScore} pts' : 'Max',
+                style: AppStyles.text10Px.poppins.w500.copyWith(
+                  color: const Color(0xFF78350F).withOpacity(0.7),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ==================== RANK CHANGE BADGE ====================
-  Widget _buildRankChangeBadge(String? type, int? change, int? prevRank) {
-    if (type == 'increased') {
-      final changeStr = change != null ? '$change' : '';
-      final prevStr = prevRank != null ? ' from #$prevRank' : '';
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.arrow_drop_up_rounded,
-              color: Color(0xFF2E7D32), size: 18),
-          Text(
-            '$changeStr$prevStr',
-            style: AppStyles.text12Px.poppins.w600.copyWith(
-              color: const Color(0xFF2E7D32),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      );
-    } else if (type == 'decreased') {
-      final changeStr = change != null ? '$change' : '';
-      final prevStr = prevRank != null ? ' from #$prevRank' : '';
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.arrow_drop_down_rounded,
-              color: Color(0xFFD32F2F), size: 18),
-          Text(
-            '$changeStr$prevStr',
-            style: AppStyles.text12Px.poppins.w600.copyWith(
-              color: const Color(0xFFD32F2F),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      );
-    } else if (type == 'new') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          'NEW',
-          style: AppStyles.text12Px.poppins.w700.copyWith(
-            color: AppColors.primary,
-            fontSize: 9,
-          ),
-        ),
-      );
+  // ==================== LEADERBOARD CARD ====================
+  Widget _buildLeaderboardCard(
+      ScoreCardState state, ScoreCardResponseModel data) {
+    // Leaderboard list starts from rank 4 (ranks 1-3 are displayed in the podium)
+    final Map<String, LeaderboardMemberModel> memberMap = {};
+
+    final sourceMembers = state.allLeaderboardMembers.isNotEmpty
+        ? state.allLeaderboardMembers
+        : data.leaderboard;
+
+    for (final m in sourceMembers) {
+      // Exclude ranks 1, 2, and 3
+      if (m.rank != null && m.rank! < 4) continue;
+
+      // Also ensure members already in podium aren't duplicated
+      final isPodium = data.podium.any((p) =>
+          (p.userId != null && p.userId == m.userId) ||
+          (p.customerId != null && p.customerId == m.customerId) ||
+          (p.name != null &&
+              m.name != null &&
+              p.name!.trim().toLowerCase() == m.name!.trim().toLowerCase()));
+      if (isPodium) continue;
+
+      final key = (m.userId != null)
+          ? 'u_${m.userId}'
+          : ((m.customerId != null)
+              ? 'c_${m.customerId}'
+              : ((m.name != null && m.name!.isNotEmpty)
+                  ? 'n_${m.name}'
+                  : 'r_${m.rank}'));
+      memberMap[key] = m;
     }
 
-    // Default / no_change
-    final prevStr = prevRank != null ? ' from #$prevRank' : '';
-    return Text(
-      '—$prevStr',
-      style: AppStyles.text12Px.poppins.w500.copyWith(
-        color: Colors.grey.shade500,
-        fontSize: 11,
-      ),
-    );
-  }
-
-  // ==================== LEADERBOARD SECTION ====================
-  Widget _buildLeaderboardSection(ScoreCardState state) {
-    final hasPodium = state.data?.podium.isNotEmpty ?? false;
-    final List<LeaderboardMemberModel> displayMembers;
-
-    if (hasPodium) {
-      displayMembers = state.allLeaderboardMembers.where((m) {
-        if (m.rank != null) return m.rank! > 3;
-        return state.allLeaderboardMembers.indexOf(m) >= 3;
-      }).toList();
-    } else {
-      displayMembers = state.allLeaderboardMembers;
-    }
+    final allMembers = memberMap.values.toList()
+      ..sort((a, b) => (a.rank ?? 9999).compareTo(b.rank ?? 9999));
 
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
+            blurRadius: 12,
             offset: const Offset(0, 2),
           ),
         ],
@@ -1148,78 +973,32 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Column Headers
-          Row(
-            children: [
-              SizedBox(
-                width: 36,
-                child: Text('Rank',
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: Colors.grey.shade500, fontSize: 11)),
-              ),
-              Expanded(
-                flex: 3,
-                child: Text('Member',
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: Colors.grey.shade500, fontSize: 11)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('Points',
-                    textAlign: TextAlign.center,
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: Colors.grey.shade500, fontSize: 11)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('Streak',
-                    textAlign: TextAlign.center,
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: Colors.grey.shade500, fontSize: 11)),
-              ),
-              Expanded(
-                flex: 2,
-                child: Text('Change',
-                    textAlign: TextAlign.right,
-                    style: AppStyles.text12Px.poppins.w600.copyWith(
-                        color: Colors.grey.shade500, fontSize: 11)),
-              ),
-            ],
+          Text(
+            'Leaderboard',
+            style: AppStyles.text16Px.poppins.w700.copyWith(
+              color: const Color(0xFF111827),
+            ),
           ),
-          const SizedBox(height: 8),
-          const Divider(height: 1, color: Color(0xFFEEEEEE)),
+          const SizedBox(height: 10),
 
-          if (state.allLeaderboardMembers.isEmpty) ...[
+          if (allMembers.isEmpty) ...[
             const SizedBox(height: 20),
             _buildEmptyLeaderboardWidget(),
             const SizedBox(height: 20),
-          ] else if (displayMembers.isEmpty) ...[
-            const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'All members are featured on the podium! 🏆',
-                style: AppStyles.text12Px.poppins.w500.copyWith(
-                  color: Colors.grey.shade600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
           ] else ...[
-            ListView.separated(
+            ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: displayMembers.length,
-              separatorBuilder: (context, index) =>
-                  const Divider(height: 1, color: Color(0xFFF5F5F5)),
+              itemCount: allMembers.length,
               itemBuilder: (context, index) {
-                final member = displayMembers[index];
-                return _buildLeaderboardRow(member);
+                final member = allMembers[index];
+                return _buildLeaderboardRow(member, index, data);
               },
             ),
           ],
 
           if (state.status == ScoreCardStatus.loadingMore) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Center(
               child: SizedBox(
                 width: 24,
@@ -1236,162 +1015,87 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     );
   }
 
-  Widget _buildLeaderboardRow(LeaderboardMemberModel member) {
-    final bool isUser = member.isCurrentUser;
+  Widget _buildLeaderboardRow(
+    LeaderboardMemberModel member,
+    int index,
+    ScoreCardResponseModel data,
+  ) {
+    final bool isUser = _checkIsCurrentUser(member, data);
+    final int rank = member.rank ?? (index + 4);
     final int points = member.points ?? member.currentPoints ?? 0;
-    final int streak = member.streak ?? 0;
+
+    final Color rankColor;
+    final Color pointsColor;
+
+    if (rank == 1) {
+      rankColor = const Color(0xFFD97706);
+      pointsColor = const Color(0xFFD97706);
+    } else if (rank == 2) {
+      rankColor = const Color(0xFF64748B);
+      pointsColor = const Color(0xFF475569);
+    } else if (rank == 3) {
+      rankColor = const Color(0xFFB45309);
+      pointsColor = const Color(0xFF8C4634);
+    } else {
+      rankColor = const Color(0xFF94A3B8);
+      pointsColor = const Color(0xFF64748B);
+    }
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: isUser ? const Color(0xFFFFF5F5) : Colors.transparent,
+        color: isUser ? const Color(0xFFFFFBEB) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: [
           // Rank Number
           SizedBox(
-            width: 36,
+            width: 28,
             child: Text(
-              '${member.rank ?? '-'}',
-              style: AppStyles.text14Px.poppins.w700.copyWith(
-                color: isUser ? AppColors.primary : const Color(0xFF424242),
+              '$rank',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: rankColor,
+                fontFamily: 'Poppins',
               ),
             ),
           ),
+          const SizedBox(width: 8),
 
-          // Member Avatar & Name
+          // Avatar
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(100),
+              child: _buildAvatar(member.profileImage, size: 36),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Member Name
           Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isUser ? AppColors.primary : Colors.grey.shade300,
-                      width: 1,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(100),
-                    child: (member.profileImage != null &&
-                            member.profileImage!.isNotEmpty)
-                        ? ImageNetwork(
-                            member.profileImage!,
-                            fit: BoxFit.cover,
-                            errorWidget: SvgPicture.asset(
-                              'assets/images/svg/icons/person.svg',
-                              colorFilter: const ColorFilter.mode(
-                                AppColors.textGrey,
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                          )
-                        : SvgPicture.asset(
-                            'assets/images/svg/icons/person.svg',
-                            colorFilter: const ColorFilter.mode(
-                              AppColors.textGrey,
-                              BlendMode.srcIn,
-                            ),
-                          ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              (member.name != null &&
-                                      member.name!.isNotEmpty &&
-                                      member.name != 'You')
-                                  ? member.name!
-                                  : (isUser ? 'You' : 'Member'),
-                              style: AppStyles.text14Px.poppins.w600.copyWith(
-                                color: isUser
-                                    ? AppColors.primary
-                                    : const Color(0xFF212121),
-                                fontSize: 13,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (isUser &&
-                              member.name != null &&
-                              member.name!.isNotEmpty &&
-                              member.name != 'You') ...[
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                                vertical: 1,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                'YOU',
-                                style: AppStyles.text12Px.poppins.w700.copyWith(
-                                  color: Colors.white,
-                                  fontSize: 8,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+            child: Text(
+              member.name ?? 'Member',
+              style: AppStyles.text14Px.poppins.w600.copyWith(
+                color: const Color(0xFF1F2937),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
 
           // Points
-          Expanded(
-            flex: 2,
-            child: Text(
-              '$points pts',
-              textAlign: TextAlign.center,
-              style: AppStyles.text14Px.poppins.w700.copyWith(
-                color: AppColors.primary,
-                fontSize: 13,
-              ),
-            ),
-          ),
-
-          // Streak
-          Expanded(
-            flex: 2,
-            child: Text(
-              '$streak ${streak == 1 ? 'day' : 'days'}',
-              textAlign: TextAlign.center,
-              style: AppStyles.text12Px.poppins.w500.copyWith(
-                color: const Color(0xFF424242),
-                fontSize: 12,
-              ),
-            ),
-          ),
-
-          // Change
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: _buildRankChangeBadge(
-                member.rankChangeType,
-                member.rankChange,
-                member.previousRank,
-              ),
+          Text(
+            '$points pts',
+            style: AppStyles.text13Px.poppins.w700.copyWith(
+              color: pointsColor,
             ),
           ),
         ],
@@ -1399,86 +1103,74 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     );
   }
 
-  // ==================== SUMMARY FOOTER METRICS ====================
-  Widget _buildSummaryFooter(ScoreCardResponseModel data) {
-    final int myRank = data.myPosition?.rank ?? data.me?.rank ?? 0;
+  bool _checkIsCurrentUser(
+      LeaderboardMemberModel member, ScoreCardResponseModel data) {
+    if (member.isCurrentUser) return true;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricTile(
-            icon: Icons.group_rounded,
-            label: 'Total Members',
-            value: '${data.totalMembers}',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildMetricTile(
-            icon: Icons.trending_up_rounded,
-            label: 'Your Best Rank',
-            value: myRank > 0 ? '#$myRank' : '-',
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _buildMetricTile(
-            icon: Icons.track_changes_rounded,
-            label: 'Goal',
-            value: 'Top 3',
-          ),
-        ),
-      ],
-    );
+    final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+    final currentUserId = currentUser?.id;
+    final currentCustomerId = currentUser?.customer?.id;
+
+    if (currentUserId != null &&
+        member.userId != null &&
+        currentUserId == member.userId) {
+      return true;
+    }
+    if (currentCustomerId != null &&
+        member.customerId != null &&
+        currentCustomerId == member.customerId) {
+      return true;
+    }
+
+    final myRank = data.myPosition?.rank ??
+        data.myPosition?.currentRank ??
+        data.me?.rank;
+    if (myRank != null && myRank > 0 && member.rank == myRank) {
+      final appUserName =
+          '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+      final myName =
+          data.me?.name ?? (appUserName.isNotEmpty ? appUserName : null);
+      if (myName != null &&
+          member.name != null &&
+          myName.trim().toLowerCase() == member.name!.trim().toLowerCase()) {
+        return true;
+      }
+    }
+    return false;
   }
 
-  Widget _buildMetricTile({
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
+  // ==================== AVATAR BUILDER ====================
+  Widget _buildAvatar(String? url, {required double size}) {
+    if (url != null && url.isNotEmpty) {
+      return ImageNetwork(
+        url,
+        fit: BoxFit.cover,
+        errorWidget: Container(
+          color: const Color(0xFFF1F5F9),
+          alignment: Alignment.center,
+          child: SvgPicture.asset(
+            'assets/images/svg/icons/person.svg',
+            width: size * 0.6,
+            height: size * 0.6,
+            colorFilter: const ColorFilter.mode(
+              AppColors.textGrey,
+              BlendMode.srcIn,
+            ),
+          ),
+        ),
+      );
+    }
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: AppColors.primary, size: 16),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: AppStyles.text12Px.poppins.w500.copyWith(
-              color: Colors.grey.shade600,
-              fontSize: 10,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: AppStyles.text16Px.poppins.w700.copyWith(
-              color: const Color(0xFF212121),
-            ),
-          ),
-        ],
+      color: const Color(0xFFF1F5F9),
+      alignment: Alignment.center,
+      child: SvgPicture.asset(
+        'assets/images/svg/icons/person.svg',
+        width: size * 0.6,
+        height: size * 0.6,
+        colorFilter: const ColorFilter.mode(
+          AppColors.textGrey,
+          BlendMode.srcIn,
+        ),
       ),
     );
   }
@@ -1579,10 +1271,10 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
         children: List.generate(
-          5,
+          4,
           (index) => Container(
             margin: const EdgeInsets.only(bottom: 16),
-            height: index == 0 ? 70 : (index == 1 ? 50 : 120),
+            height: index == 0 ? 50 : (index == 1 ? 220 : 120),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
@@ -1639,37 +1331,123 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
   }
 }
 
-class _PodiumConfettiPainter extends CustomPainter {
+// ==================== 3D PODIUM ISOMETRIC CLIPPERS ====================
+
+class _LeftPodiumTopClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.moveTo(size.width * 0.08, 0);
+    path.lineTo(size.width, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _CenterPodiumTopClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.moveTo(size.width * 0.06, 0);
+    path.lineTo(size.width * 0.94, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _RightPodiumTopClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width * 0.92, 0);
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+// ==================== GOLD CROWN PAINTER ====================
+
+class _CrownPainter extends CustomPainter {
+  final Color color;
+  const _CrownPainter({this.color = const Color(0xFFFBBF24)});
+
   @override
   void paint(Canvas canvas, Size size) {
-    final confettiList = [
-      (0.10, 0.08, 4.0, const Color(0xFFFF9800), false),
-      (0.22, 0.16, 5.0, const Color(0xFF29B6F6), true),
-      (0.06, 0.28, 4.5, const Color(0xFFE53935), false),
-      (0.35, 0.06, 6.0, const Color(0xFFFFC107), true),
-      (0.48, 0.02, 5.0, const Color(0xFFFF5722), false),
-      (0.64, 0.07, 5.5, const Color(0xFFAB47BC), true),
-      (0.78, 0.14, 4.0, const Color(0xFF29B6F6), false),
-      (0.88, 0.09, 5.0, const Color(0xFFFF9800), true),
-      (0.94, 0.26, 4.5, const Color(0xFFE53935), false),
-      (0.18, 0.38, 4.0, const Color(0xFFFFC107), false),
-      (0.82, 0.36, 5.0, const Color(0xFFFF5722), true),
-    ];
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
 
-    for (final c in confettiList) {
-      final paint = Paint()
-        ..color = c.$4.withValues(alpha: 0.75)
-        ..style = PaintingStyle.fill;
-      final center = Offset(size.width * c.$1, size.height * c.$2);
-      if (c.$5) {
-        canvas.drawCircle(center, c.$3 / 2, paint);
-      } else {
-        final rect = Rect.fromCenter(center: center, width: c.$3, height: c.$3 * 1.4);
-        canvas.drawRect(rect, paint);
-      }
-    }
+    final path = Path();
+    // 3-point crown with center peak tallest
+    path.moveTo(0, size.height * 0.85);
+    path.quadraticBezierTo(
+      size.width * 0.5,
+      size.height,
+      size.width,
+      size.height * 0.85,
+    );
+    path.lineTo(size.width * 0.95, size.height * 0.18);
+    path.lineTo(size.width * 0.65, size.height * 0.55);
+    path.lineTo(size.width * 0.50, 0);
+    path.lineTo(size.width * 0.35, size.height * 0.55);
+    path.lineTo(size.width * 0.05, size.height * 0.18);
+    path.close();
+
+    canvas.drawPath(path, paint);
+
+    final strokePaint = Paint()
+      ..color = const Color(0xFFD97706)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawPath(path, strokePaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ==================== PODIUM CAST SHADOW PAINTER ====================
+
+class _PodiumShadowPainter extends CustomPainter {
+  final Color color;
+  final double blurRadius;
+
+  const _PodiumShadowPainter({
+    this.color = const Color(0x38000000),
+    this.blurRadius = 4.5,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurRadius);
+
+    final rect = Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: size.width - (blurRadius * 2),
+      height: size.height - (blurRadius * 2),
+    );
+    canvas.drawOval(rect, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PodiumShadowPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.blurRadius != blurRadius;
 }

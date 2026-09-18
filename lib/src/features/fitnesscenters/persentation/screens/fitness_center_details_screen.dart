@@ -2073,7 +2073,10 @@ class _FitnessCenterDetailsScreenState
     final specs = trainer.specializations ?? [];
     final visibleSpecs = specs.take(2).toList();
     final extraCount = specs.length - visibleSpecs.length;
-    final rating = (trainer.averageRating as num?)?.toDouble() ?? 0.0;
+    final rawRating = trainer.averageRating;
+    final rating = rawRating is num
+        ? rawRating.toDouble()
+        : (rawRating is String ? (double.tryParse(rawRating) ?? 0.0) : 0.0);
 
     return GestureDetector(
       onTap: () {

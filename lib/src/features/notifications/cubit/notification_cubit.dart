@@ -12,12 +12,15 @@ class NotificationCubit extends Cubit<NotificationState> {
 
   Future<void> fetchUnreadCount() async {
     final count = await _repository.getUnreadCount();
+    if (isClosed) return;
     emit(state.copyWith(unreadCount: count));
   }
 
   Future<void> fetchNotifications() async {
+    if (isClosed) return;
     emit(state.copyWith(status: NotificationStatus.loading));
     final result = await _repository.getNotifications();
+    if (isClosed) return;
     result.fold(
       (error) {
         emit(state.copyWith(
@@ -38,6 +41,7 @@ class NotificationCubit extends Cubit<NotificationState> {
 
   Future<void> refreshNotifications() async {
     final result = await _repository.getNotifications();
+    if (isClosed) return;
     result.fold(
       (_) {},
       (notifications) {

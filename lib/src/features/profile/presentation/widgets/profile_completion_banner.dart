@@ -23,7 +23,7 @@ class ProfileCompletionBanner extends StatelessWidget {
         // 2. Loading State: Render Shimmer Placeholder only on initial load when no data is present
         if (state.isLoading && data == null) {
           return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 16),
             child: KShimmer(
               height: 120,
               radius: 14,
@@ -56,7 +56,7 @@ class ProfileCompletionBanner extends StatelessWidget {
     final percentage = data.completionPercentage.clamp(0, 100).toDouble();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 6, bottom: 16),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -202,7 +202,7 @@ class ProfileCompletionBanner extends StatelessWidget {
                   color: Colors.white,
                 ),
                 ontap: () {
-                  context.read<DashboardCubit>().changeNav(index: 3);
+                  context.read<DashboardCubit>().navigateToProfile();
                 },
               ),
             ),

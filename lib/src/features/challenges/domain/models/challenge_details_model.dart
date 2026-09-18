@@ -444,7 +444,7 @@ class ChallengeDetailsResponse {
       brand: json['brand'] is Map<String, dynamic>
           ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
           : null,
-      isJoined: json['is_joined'] as bool?,
+      isJoined: _parseBool(json['is_joined']),
       joinedMemberCount: json['joined_member_count'] as int?,
       joinedMembers: (json['joined_members'] as List<dynamic>?)
           ?.map((e) => ChallengeJoinedMember.fromJson(e as Map<String, dynamic>))
@@ -512,4 +512,16 @@ class ChallengeDetailsResponse {
       'status': status,
     };
   }
+}
+
+bool? _parseBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is num) return value == 1;
+  if (value is String) {
+    final lower = value.trim().toLowerCase();
+    if (lower == 'true' || lower == '1' || lower == 'yes') return true;
+    if (lower == 'false' || lower == '0' || lower == 'no') return false;
+  }
+  return null;
 }

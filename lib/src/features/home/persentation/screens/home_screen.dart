@@ -14,8 +14,10 @@ import 'package:customer_mobile_app/src/features/profile/presentation/widgets/pr
 import 'package:customer_mobile_app/src/features/fitnesscenters/domain/models/fitnesscenter_details_model.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/trainer_details_screen.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/home_challenge_cubit.dart';
+import 'package:customer_mobile_app/src/features/home/cubit/home_challenge_state.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/repositories/challenge_repository.dart';
 import 'package:customer_mobile_app/src/features/home/persentation/widgets/home_challenge_card.dart';
+import 'package:customer_mobile_app/src/features/challenges/presentation/screens/all_challenges_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/winner_announcement_dialog.dart';
 import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
 import 'package:customer_mobile_app/src/features/home/domain/models/app_season_model.dart';
@@ -23,6 +25,8 @@ import 'package:customer_mobile_app/src/features/notifications/cubit/notificatio
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
 import 'package:customer_mobile_app/src/features/home/persentation/screens/notifications_screen.dart';
+import 'package:customer_mobile_app/src/features/rewards/presentation/screens/rewards_screen.dart';
+import 'package:customer_mobile_app/src/features/scorecard/presentation/screens/score_card_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.activeMembership});
@@ -81,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _dashboardCubit.close();
     _profileCompletionCubit.close();
     _homeCubit.close();
     _homeChallengeCubit.close();
@@ -113,6 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
       providers: [
         BlocProvider.value(value: _profileCompletionCubit),
         BlocProvider.value(value: _appSeasonCubit),
+        BlocProvider.value(value: _homeChallengeCubit),
       ],
       child: BlocBuilder<AppSeasonCubit, AppSeasonState>(
         bloc: _appSeasonCubit,
@@ -250,29 +256,6 @@ class _HomeScreenState extends State<HomeScreen> {
             // Profile Completion Banner
             if (!isGuest) const ProfileCompletionBanner(),
 
-            // Active Gym Section (only if user has active membership data)
-            BlocBuilder<DashboardCubit, DashboardState>(
-              bloc: _dashboardCubit,
-              builder: (context, dashboardState) {
-                return dashboardState.activeMembershipData.fold(
-                  () => const SizedBox.shrink(),
-                  (either) => either.fold((_) => const SizedBox.shrink(), (
-                    activeMembership,
-                  ) {
-                    if (activeMembership == null) {
-                      return const SizedBox.shrink();
-                    }
-                    return Column(
-                      children: [
-                        _buildActiveGymSection(activeMembership).pxy(x: 16),
-                        const SizedBox(height: 24),
-                      ],
-                    );
-                  }),
-                );
-              },
-            ),
-
             // Carousel Banners (Dynamic API Banners with Fallback)
             BlocBuilder<DashboardCubit, DashboardState>(
               bloc: _dashboardCubit,
@@ -292,13 +275,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
             const SizedBox(height: 20),
 
-            // Customer Home Challenge Section
-            BlocProvider.value(
-              value: _homeChallengeCubit,
-              child: const HomeChallengeSection().pxy(x: 16),
+            // Rewards and Scorecard Quick Action Cards
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _buildRewardsCard(context),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildScorecardCard(context),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),
+
+            // Challenges Container Section
+            BlocBuilder<HomeChallengeCubit, HomeChallengeState>(
+              bloc: _homeChallengeCubit,
+              builder: (context, challengeState) {
+                if (!challengeState.isLoading &&
+                    (challengeState.errorMessage != null || challengeState.challenges.isEmpty)) {
+                  return const SizedBox.shrink();
+                }
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const HomeChallengeSection().pxy(x: 16),
+                    const SizedBox(height: 20),
+                  ],
+                );
+              },
+            ),
 
             if (isGuest)
               _membershipExpireCard(context)
@@ -343,6 +354,318 @@ class _HomeScreenState extends State<HomeScreen> {
             _buildDidYouKnowSection(isSeasonal: isSeasonalActive),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRewardsCard(BuildContext context) {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFDF5),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFFEEBC8).withOpacity(0.55),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF9A7B38).withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(
+            top: -28,
+            right: -20,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFDE68A).withOpacity(0.55),
+                    const Color(0xFFFDE68A).withOpacity(0.18),
+                    const Color(0xFFFDE68A).withOpacity(0.0),
+                  ],
+                  stops: const [0.0, 0.65, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -28,
+            left: -20,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFDE68A).withOpacity(0.4),
+                    const Color(0xFFFDE68A).withOpacity(0.12),
+                    const Color(0xFFFDE68A).withOpacity(0.0),
+                  ],
+                  stops: const [0.0, 0.65, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const RewardsScreen(),
+                  ),
+                );
+              },
+              borderRadius: BorderRadius.circular(22),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 10, 4, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFFDF58),
+                            Color(0xFFFFA000),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFA000).withOpacity(0.32),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const CustomPaint(
+                        size: Size(22, 22),
+                        painter: _GiftBoxPainter(),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Rewards',
+                            style: AppStyles.text14Px.poppins.w700.copyWith(
+                              fontSize: 13.5,
+                              color: const Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                              height: 1.15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Show your QR and\nget discounts',
+                            style: AppStyles.text10Px.poppins.w400.copyWith(
+                              fontSize: 9.5,
+                              color: const Color(0xFF64748B),
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScorecardCard(BuildContext context) {
+    return Container(
+      height: 100,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF2F4),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: const Color(0xFFFDCFD6).withOpacity(0.55),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFBE123C).withOpacity(0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned(
+            top: -28,
+            right: -20,
+            child: Container(
+              width: 90,
+              height: 90,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFECDD3).withOpacity(0.65),
+                    const Color(0xFFFECDD3).withOpacity(0.22),
+                    const Color(0xFFFECDD3).withOpacity(0.0),
+                  ],
+                  stops: const [0.0, 0.65, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -28,
+            left: -20,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFFFECDD3).withOpacity(0.45),
+                    const Color(0xFFFECDD3).withOpacity(0.15),
+                    const Color(0xFFFECDD3).withOpacity(0.0),
+                  ],
+                  stops: const [0.0, 0.65, 1.0],
+                ),
+              ),
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                try {
+                  final dashboardCubit = context.read<DashboardCubit>();
+                  final bool hasActiveGym = dashboardCubit.state.activeMembershipData.fold(
+                    () => false,
+                    (either) => either.fold((_) => false, (activeMembership) => activeMembership?.id != null),
+                  );
+                  if (hasActiveGym) {
+                    dashboardCubit.changeNav(index: 2);
+                  } else {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ScoreCardScreen()),
+                    );
+                  }
+                } catch (e) {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ScoreCardScreen()),
+                  );
+                }
+              },
+              borderRadius: BorderRadius.circular(22),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(8, 10, 4, 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFFFF5B65),
+                            Color(0xFFE11D48),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE11D48).withOpacity(0.32),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: SvgPicture.asset(
+                        'assets/images/svg/icons/selected_scorecard.svg',
+                        width: 22,
+                        height: 22,
+                        colorFilter: const ColorFilter.mode(
+                          Colors.white,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Scorecard',
+                            style: AppStyles.text14Px.poppins.w700.copyWith(
+                              fontSize: 13.5,
+                              color: const Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                              height: 1.15,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Track rank, XP\nand total points',
+                            style: AppStyles.text10Px.poppins.w400.copyWith(
+                              fontSize: 9.5,
+                              color: const Color(0xFF64748B),
+                              height: 1.25,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -604,7 +927,10 @@ class _HomeScreenState extends State<HomeScreen> {
         : (trainer.userType != null && trainer.userType!.trim().isNotEmpty
             ? trainer.userType![0].toUpperCase() + trainer.userType!.substring(1).toLowerCase()
             : 'Trainer');
-    final double ratingVal = trainer.rating ?? (trainer.fullGymTrainer?.averageRating as num?)?.toDouble() ?? 4.8;
+    final rawR = trainer.rating ?? trainer.fullGymTrainer?.averageRating;
+    final double ratingVal = rawR is num
+        ? rawR.toDouble()
+        : (rawR is String ? (double.tryParse(rawR) ?? 4.8) : 4.8);
     final String ratingStr = ratingVal.toStringAsFixed(1);
 
     return GestureDetector(
@@ -621,6 +947,11 @@ class _HomeScreenState extends State<HomeScreen> {
               reviewCount: 0,
               specializations: trainer.specializations,
               mobile: trainer.mobile,
+              clientsCount: trainer.fullGymTrainer?.clientsCount,
+              verifiedWorkoutsCount: trainer.fullGymTrainer?.verifiedWorkoutsCount,
+              certifications: trainer.fullGymTrainer?.certifications,
+              email: trainer.fullGymTrainer?.email,
+              gender: trainer.fullGymTrainer?.gender,
             );
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -1073,35 +1404,36 @@ class _BannersViewState extends State<BannersView> {
       }
     }
 
-    if (banner.contactNumber != null && banner.contactNumber!.isNotEmpty) {
-      final String phone = banner.contactNumber!.trim();
-      final Uri whatsappUri = Uri.parse('https://wa.me/$phone');
-      try {
-        if (await canLaunchUrl(whatsappUri)) {
-          await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
-          return;
-        }
-      } catch (_) {}
-
-      final Uri phoneUri = Uri(scheme: 'tel', path: phone);
-      try {
-        if (await canLaunchUrl(phoneUri)) {
-          await launchUrl(phoneUri);
-        }
-      } catch (e) {
-        debugPrint('Error launching call: $e');
-      }
+    final phone = banner.whatsappNumber ?? banner.contactNumber;
+    if (phone != null && phone.trim().isNotEmpty) {
+      await _launchWhatsApp(phone, banner);
     }
   }
 
-  Future<void> _launchWhatsApp(String target) async {
+  Future<void> _launchWhatsApp(String target, [HomeBannerItem? banner]) async {
     final cleanStr = target.trim();
     if (cleanStr.isEmpty) return;
+
+    final businessName = (banner?.title != null && banner!.title!.trim().isNotEmpty)
+        ? ' ${banner.title!.trim()}'
+        : '';
+    final message = Uri.encodeComponent(
+      'Hi$businessName,\n\n'
+      'I saw your offer on the Discipl app and would like to place an order.\n\n'
+      'Could you please share the menu and ordering details?\n\n'
+      'Thank you!\n\n'
+      '—\n'
+      'Sent via Discipl App',
+    );
 
     if (cleanStr.startsWith('http://') ||
         cleanStr.startsWith('https://') ||
         cleanStr.startsWith('whatsapp://')) {
-      final Uri uri = Uri.parse(cleanStr);
+      var uri = Uri.parse(cleanStr);
+      if (!cleanStr.contains('text=')) {
+        final separator = cleanStr.contains('?') ? '&' : '?';
+        uri = Uri.parse('$cleanStr${separator}text=$message');
+      }
       try {
         if (await canLaunchUrl(uri)) {
           await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1112,10 +1444,13 @@ class _BannersViewState extends State<BannersView> {
       }
     }
 
-    final String phoneDigits = cleanStr.replaceAll(RegExp(r'[^\d]'), '');
-    final String phoneToUse = phoneDigits.isNotEmpty ? phoneDigits : cleanStr;
+    var phoneDigits = cleanStr.replaceAll(RegExp(r'[^\d]'), '');
+    if (phoneDigits.length == 10) {
+      phoneDigits = '91$phoneDigits';
+    }
+    final phoneToUse = phoneDigits.isNotEmpty ? phoneDigits : cleanStr;
 
-    final Uri whatsappUri = Uri.parse('https://wa.me/$phoneToUse');
+    final whatsappUri = Uri.parse('https://wa.me/$phoneToUse?text=$message');
     try {
       if (await canLaunchUrl(whatsappUri)) {
         await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
@@ -1123,8 +1458,8 @@ class _BannersViewState extends State<BannersView> {
       }
     } catch (_) {}
 
-    final Uri apiWhatsappUri =
-        Uri.parse('https://api.whatsapp.com/send?phone=$phoneToUse');
+    final apiWhatsappUri =
+        Uri.parse('https://api.whatsapp.com/send?phone=$phoneToUse&text=$message');
     try {
       if (await canLaunchUrl(apiWhatsappUri)) {
         await launchUrl(apiWhatsappUri, mode: LaunchMode.externalApplication);
@@ -1132,7 +1467,7 @@ class _BannersViewState extends State<BannersView> {
       }
     } catch (_) {}
 
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneToUse);
+    final phoneUri = Uri(scheme: 'tel', path: phoneToUse);
     try {
       if (await canLaunchUrl(phoneUri)) {
         await launchUrl(phoneUri);
@@ -1142,14 +1477,15 @@ class _BannersViewState extends State<BannersView> {
     }
   }
 
-  Widget _buildWhatsAppButton(String whatsappNum) {
+  Widget _buildWhatsAppButton(HomeBannerItem banner) {
+    final whatsappNum = banner.whatsappNumber!;
     return Positioned(
       bottom: 10,
       right: 10,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _launchWhatsApp(whatsappNum),
+          onTap: () => _launchWhatsApp(whatsappNum, banner),
           borderRadius: BorderRadius.circular(24),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1171,11 +1507,10 @@ class _BannersViewState extends State<BannersView> {
                   'assets/images/svg/icons/whatsapp_logo.svg',
                   width: 16,
                   height: 16,
-                  fit: BoxFit.contain,
                 ),
                 const SizedBox(width: 5),
                 const Text(
-                  'WhatsApp',
+                  'Order Now',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
@@ -1202,7 +1537,7 @@ class _BannersViewState extends State<BannersView> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return AspectRatio(
-        aspectRatio: 16 / 9,
+        aspectRatio: 2.1 / 1,
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           child: Container(
@@ -1224,7 +1559,7 @@ class _BannersViewState extends State<BannersView> {
       final hasWa = banner.whatsappNumber != null &&
           banner.whatsappNumber!.trim().isNotEmpty;
       return AspectRatio(
-        aspectRatio: 16 / 9,
+        aspectRatio: 2.1 / 1,
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           child: Stack(
@@ -1250,7 +1585,7 @@ class _BannersViewState extends State<BannersView> {
                         ),
                 ),
               ),
-              if (hasWa) _buildWhatsAppButton(banner.whatsappNumber!),
+              if (hasWa) _buildWhatsAppButton(banner),
             ],
           ),
         ),
@@ -1260,7 +1595,7 @@ class _BannersViewState extends State<BannersView> {
     return Column(
       children: [
         AspectRatio(
-          aspectRatio: 16 / 9,
+          aspectRatio: 2.1 / 1,
           child: ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(16)),
             child: PageView.builder(
@@ -1301,14 +1636,14 @@ class _BannersViewState extends State<BannersView> {
                               ),
                       ),
                     ),
-                    if (hasWa) _buildWhatsAppButton(banner.whatsappNumber!),
+                    if (hasWa) _buildWhatsAppButton(banner),
                   ],
                 );
               },
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
         Center(
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -1745,3 +2080,86 @@ class __AssignedGymTrainersSectionState
     );
   }
 }
+
+class _GiftBoxPainter extends CustomPainter {
+  const _GiftBoxPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final scale = size.width / 26.0;
+    canvas.save();
+    canvas.scale(scale, scale);
+
+    final whiteFill = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    final whiteStroke = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    // Bow loops
+    final leftLoop = Path()
+      ..moveTo(13.0, 7.0)
+      ..cubicTo(10.5, 2.5, 5.8, 2.5, 7.8, 6.0)
+      ..cubicTo(8.8, 7.2, 11.2, 7.2, 13.0, 7.0);
+    canvas.drawPath(leftLoop, whiteStroke);
+
+    final rightLoop = Path()
+      ..moveTo(13.0, 7.0)
+      ..cubicTo(15.5, 2.5, 20.2, 2.5, 18.2, 6.0)
+      ..cubicTo(17.2, 7.2, 14.8, 7.2, 13.0, 7.0);
+    canvas.drawPath(rightLoop, whiteStroke);
+
+    // Knot
+    canvas.drawCircle(const Offset(13.0, 7.0), 1.1, whiteFill);
+
+    // Lid pieces
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTRB(3.5, 7.8, 11.8, 11.3),
+        const Radius.circular(1.6),
+      ),
+      whiteFill,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTRB(14.2, 7.8, 22.5, 11.3),
+        const Radius.circular(1.6),
+      ),
+      whiteFill,
+    );
+
+    // Box body pieces
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        const Rect.fromLTRB(4.5, 12.8, 11.8, 22.3),
+        bottomLeft: const Radius.circular(2.5),
+        topLeft: const Radius.circular(1.0),
+        topRight: const Radius.circular(1.0),
+      ),
+      whiteFill,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndCorners(
+        const Rect.fromLTRB(14.2, 12.8, 21.5, 22.3),
+        bottomRight: const Radius.circular(2.5),
+        topRight: const Radius.circular(1.0),
+        topLeft: const Radius.circular(1.0),
+      ),
+      whiteFill,
+    );
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+
+
+

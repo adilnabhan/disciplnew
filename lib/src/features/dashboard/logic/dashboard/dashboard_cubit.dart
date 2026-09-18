@@ -16,6 +16,35 @@ class DashboardCubit extends Cubit<DashboardState> {
     emit(state.copyWith(navIndex: index));
   }
 
+  bool get hasActiveGym {
+    return state.activeMembershipData.fold(
+      () {
+        final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+        if (currentUser?.customer != null) {
+          final c = currentUser!.customer!;
+          if (c.isActiveMember == true ||
+              c.organizationId != null ||
+              c.assignedFitnessCenter != null) {
+            return true;
+          }
+        }
+        return false;
+      },
+      (either) => either.fold(
+        (error) => false,
+        (activeMembership) =>
+            activeMembership != null &&
+            (activeMembership.isActive == true ||
+                activeMembership.organization != null ||
+                activeMembership.id != null),
+      ),
+    );
+  }
+
+  void navigateToProfile() {
+    emit(state.copyWith(navIndex: hasActiveGym ? 4 : 3));
+  }
+
   //* Fetch active membership data
   Future<void> fetchActiveMembership() async {
     final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
@@ -31,6 +60,7 @@ class DashboardCubit extends Cubit<DashboardState> {
             final cachedModel = ActiveMembershipModel.fromJson(
               jsonDecode(cachedJsonStr) as Map<String, dynamic>,
             );
+            if (isClosed) return;
             emit(state.copyWith(activeMembershipData: some(right(cachedModel))));
             print('⚡ DashboardCubit: Restored active membership from local cache');
           }
@@ -42,6 +72,7 @@ class DashboardCubit extends Cubit<DashboardState> {
       final id = currentUser?.customer?.id;
       if (id == null) {
         if (state.activeMembershipData.isNone()) {
+          if (isClosed) return;
           emit(
             state.copyWith(
               activeMembershipData: some(left(const ApiException.unknown())),
@@ -77,6 +108,7 @@ class DashboardCubit extends Cubit<DashboardState> {
         },
       );
 
+      if (isClosed) return;
       emit(state.copyWith(activeMembershipData: some(response)));
     }
   }

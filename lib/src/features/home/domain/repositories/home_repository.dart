@@ -184,13 +184,55 @@ final class HomeRepository {
             }
           }
 
+          // Sanitize rating to avoid String to num cast exception
+          if (t['rating'] != null) {
+            if (t['rating'] is String) {
+              t['rating'] = double.tryParse(t['rating'].toString());
+            } else if (t['rating'] is num) {
+              t['rating'] = (t['rating'] as num).toDouble();
+            }
+          } else if (t['average_rating'] != null) {
+            if (t['average_rating'] is String) {
+              t['rating'] = double.tryParse(t['average_rating'].toString());
+            } else if (t['average_rating'] is num) {
+              t['rating'] = (t['average_rating'] as num).toDouble();
+            }
+          }
+
+          // Sanitize specializations to List<String>
+          if (t['specializations'] != null && t['specializations'] is List) {
+            t['specializations'] = (t['specializations'] as List)
+                .map((s) => s is Map ? (s['name'] ?? s['title'] ?? '').toString() : s.toString())
+                .where((s) => s.isNotEmpty)
+                .toList();
+          }
+
           GymTrainer? fullTrainer;
           try {
             fullTrainer = GymTrainer.fromApiJson(t);
           } catch (e) {
             debugPrint('Error parsing GymTrainer in fetchAssignedGymTrainers: $e');
           }
-          final model = AssignedTrainerModel.fromJson(t);
+
+          AssignedTrainerModel? model;
+          try {
+            model = AssignedTrainerModel.fromJson(t);
+          } catch (e) {
+            debugPrint('Error parsing AssignedTrainerModel in fetchAssignedGymTrainers: $e');
+            model = AssignedTrainerModel(
+              id: (t['id'] as num?)?.toInt(),
+              name: t['name']?.toString() ?? t['full_name']?.toString(),
+              profileImage: t['profile_image']?.toString(),
+              mobile: t['mobile']?.toString(),
+              experienceYears: (t['experience_years'] as num?)?.toInt(),
+              bio: t['bio']?.toString(),
+              specializations: t['specializations'] is List
+                  ? (t['specializations'] as List).map((e) => e.toString()).toList()
+                  : null,
+              userType: t['user_type']?.toString() ?? 'Trainer',
+              rating: t['rating'] is num ? (t['rating'] as num).toDouble() : null,
+            );
+          }
           return model.copyWith(fullGymTrainer: fullTrainer);
         }).toList();
       }

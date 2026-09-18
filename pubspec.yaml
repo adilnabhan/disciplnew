@@ -3,7 +3,7 @@ description: "A new Discipl Flutter project."
 
 publish_to: "none"
 
-version: 1.0.7+41
+version: 1.0.7+42
 
 environment:
   sdk: ^3.7.2
@@ -138,6 +138,8 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^29.2.11
   share_plus: ^12.0.2
   gal: ^2.3.3
+  health: ^13.1.4
+  qr_flutter: ^4.1.0
 
 dependency_overrides:
   web: any

@@ -27,9 +27,20 @@ class SetupCompleteStep extends StatelessWidget {
               SizedBox(height: size.height / 28),
 
               /// Title
-              Text(
-                "You're all set, ${login?.firstName} ${login?.lastName}! 👋",
-                style: AppStyles.text36Px.w500.copyWith(color: AppColors.dark),
+              Builder(
+                builder: (context) {
+                  final parts = [
+                    login?.firstName,
+                    login?.lastName,
+                  ].where((s) => s != null && s.trim().isNotEmpty && s.trim().toLowerCase() != 'null' && s.trim().toLowerCase() != 'none').toList();
+                  final nameStr = parts.join(' ').trim();
+                  return Text(
+                    nameStr.isNotEmpty
+                        ? "You're all set, $nameStr! 👋"
+                        : "You're all set! 👋",
+                    style: AppStyles.text36Px.w500.copyWith(color: AppColors.dark),
+                  );
+                },
               ),
 
               const SizedBox(height: 8),
@@ -57,7 +68,9 @@ class SetupCompleteStep extends StatelessWidget {
               Button.filled(
                 title: 'Find my Fitness Center',
                 ontap: () {
-                  context.read<AppCubit>().addUser(login!);
+                  if (login != null) {
+                    context.read<AppCubit>().addUser(login!);
+                  }
                   if (login?.customer?.organizationId == null) {
                     context.pushAndRemoveUntil(
                       const DashboardScreen(navIndex: 0),

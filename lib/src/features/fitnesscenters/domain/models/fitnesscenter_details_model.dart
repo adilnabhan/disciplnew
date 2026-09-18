@@ -36,7 +36,19 @@ class FitnesscenterDetailsModel with _$FitnesscenterDetailsModel {
     @JsonKey(name: 'trainers') List<GymTrainer>? trainers,
   }) = _FitnesscenterDetailsModel;
 
-  factory FitnesscenterDetailsModel.fromJson(Map<String, dynamic> json) => _$FitnesscenterDetailsModelFromJson(json);
+  factory FitnesscenterDetailsModel.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+    if (map['trainers'] != null && map['trainers'] is List) {
+      map['trainers'] = (map['trainers'] as List).map((t) {
+        if (t is Map) {
+          final tMap = Map<String, dynamic>.from(t);
+          return GymTrainer.fromApiJson(tMap).toJson();
+        }
+        return t;
+      }).toList();
+    }
+    return _$FitnesscenterDetailsModelFromJson(map);
+  }
 }
 
 @freezed
@@ -189,6 +201,52 @@ class GymTrainer with _$GymTrainer {
       }
     }
 
+    if (map['mobile'] == null || map['mobile'].toString().trim().isEmpty) {
+      map['mobile'] = map['mobile_number'] ?? map['phone_number'] ?? map['phone'];
+    }
+
+    int? clientsCount = (map['clients_count'] as num?)?.toInt() ??
+        int.tryParse(map['clients_count']?.toString() ?? '') ??
+        (map['client_count'] as num?)?.toInt() ??
+        int.tryParse(map['client_count']?.toString() ?? '') ??
+        (map['total_clients'] as num?)?.toInt() ??
+        int.tryParse(map['total_clients']?.toString() ?? '') ??
+        (map['active_clients'] as num?)?.toInt() ??
+        (map['assigned_clients_count'] as num?)?.toInt();
+
+    if (clientsCount == null) {
+      if (map['clients'] is num) {
+        clientsCount = (map['clients'] as num).toInt();
+      } else if (map['clients'] is String) {
+        clientsCount = int.tryParse(map['clients'].toString());
+      } else if (map['clients'] is List) {
+        clientsCount = (map['clients'] as List).length;
+      } else if (map['assigned_clients'] is List) {
+        clientsCount = (map['assigned_clients'] as List).length;
+      } else if (map['customers'] is List) {
+        clientsCount = (map['customers'] as List).length;
+      }
+    }
+    if (clientsCount != null) {
+      map['clients_count'] = clientsCount;
+    }
+
+    int? workoutsCount = (map['verified_workouts_count'] as num?)?.toInt() ??
+        int.tryParse(map['verified_workouts_count']?.toString() ?? '') ??
+        (map['verified_workouts'] as num?)?.toInt() ??
+        int.tryParse(map['verified_workouts']?.toString() ?? '') ??
+        (map['workouts_count'] as num?)?.toInt();
+    if (workoutsCount == null) {
+      if (map['workouts'] is num) {
+        workoutsCount = (map['workouts'] as num).toInt();
+      } else if (map['workouts'] is List) {
+        workoutsCount = (map['workouts'] as List).length;
+      }
+    }
+    if (workoutsCount != null) {
+      map['verified_workouts_count'] = workoutsCount;
+    }
+
     if (map['specializations'] == null || (map['specializations'] is List && (map['specializations'] as List).isEmpty)) {
       if (map['specialization'] != null) {
         if (map['specialization'] is List) {
@@ -201,17 +259,64 @@ class GymTrainer with _$GymTrainer {
       }
     }
 
+    if (map['specializations'] != null && map['specializations'] is List) {
+      map['specializations'] = (map['specializations'] as List)
+          .map((s) => s is Map ? (s['name'] ?? s['title'] ?? '').toString() : s.toString())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+
     if (map['certifications'] != null && map['certifications'] is List) {
       final certsList = (map['certifications'] as List).map((c) {
-        if (c is Map<String, dynamic>) {
-          return Certification.fromApiJson(c).toJson();
+        if (c is Map) {
+          final cMap = Map<String, dynamic>.from(c);
+          return Certification.fromApiJson(cMap).toJson();
         }
         return c;
       }).toList();
       map['certifications'] = certsList;
     }
 
-    return GymTrainer.fromJson(map);
+    try {
+      return GymTrainer.fromJson(map);
+    } catch (e) {
+      return GymTrainer(
+        id: (map['id'] as num?)?.toInt(),
+        fullName: map['full_name']?.toString() ?? map['name']?.toString(),
+        userType: map['user_type']?.toString() ?? 'Trainer',
+        bio: map['bio']?.toString(),
+        profileImage: map['profile_image']?.toString(),
+        bannerImage: map['banner_image']?.toString(),
+        experienceYears: (map['experience_years'] as num?)?.toInt(),
+        averageRating: map['average_rating'],
+        reviewCount: (map['review_count'] as num?)?.toInt(),
+        specializations: (map['specializations'] is List)
+            ? (map['specializations'] as List).map((e) => e.toString()).toList()
+            : null,
+        clientsCount: (map['clients_count'] as num?)?.toInt() ?? int.tryParse(map['clients_count']?.toString() ?? ''),
+        verifiedWorkoutsCount: (map['verified_workouts_count'] as num?)?.toInt() ?? int.tryParse(map['verified_workouts_count']?.toString() ?? ''),
+        email: map['email']?.toString(),
+        mobile: map['mobile']?.toString() ??
+            map['mobile_number']?.toString() ??
+            map['phone_number']?.toString() ??
+            map['phone']?.toString(),
+        gender: map['gender']?.toString(),
+        certifications: (map['certifications'] is List)
+            ? (map['certifications'] as List).map((c) {
+                if (c is Map) {
+                  final cMap = Map<String, dynamic>.from(c);
+                  return Certification(
+                    name: cMap['name']?.toString() ?? cMap['title']?.toString(),
+                    issuedBy: cMap['issued_by']?.toString() ?? cMap['institution']?.toString(),
+                    issuedDate: cMap['issued_date']?.toString() ?? cMap['issue_date']?.toString(),
+                    fileUrl: cMap['file_url']?.toString() ?? cMap['file']?.toString(),
+                  );
+                }
+                return null;
+              }).whereType<Certification>().toList()
+            : null,
+      );
+    }
   }
 }
 
@@ -247,6 +352,9 @@ class Certification with _$Certification {
     }
     if (!map.containsKey('file_url') || map['file_url'] == null) {
       map['file_url'] = map['certificate_image'] ?? map['image'] ?? map['file'];
+    }
+    if (!map.containsKey('issued_date') || map['issued_date'] == null) {
+      map['issued_date'] = map['issue_date'] ?? map['date'];
     }
     return Certification.fromJson(map);
   }

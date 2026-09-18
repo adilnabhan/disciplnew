@@ -10,9 +10,11 @@ class ChallengeDetailsCubit extends Cubit<ChallengeDetailsState> {
         super(const ChallengeDetailsState());
 
   Future<void> loadChallengeDetails(int challengeId) async {
+    if (isClosed) return;
     emit(state.copyWith(isLoading: true, error: null));
     try {
       final details = await _repository.getChallengeDetails(challengeId);
+      if (isClosed) return;
       if (details != null) {
         emit(state.copyWith(challenge: details, isLoading: false, error: null));
       } else {
@@ -22,6 +24,7 @@ class ChallengeDetailsCubit extends Cubit<ChallengeDetailsState> {
         ));
       }
     } catch (e) {
+      if (isClosed) return;
       emit(state.copyWith(
         isLoading: false,
         error: 'An unexpected error occurred. Please try again.',
@@ -32,6 +35,7 @@ class ChallengeDetailsCubit extends Cubit<ChallengeDetailsState> {
   Future<void> refreshChallengeDetails(int challengeId) async {
     try {
       final details = await _repository.getChallengeDetails(challengeId);
+      if (isClosed) return;
       if (details != null) {
         emit(state.copyWith(challenge: details, isLoading: false, error: null));
       }
@@ -39,11 +43,13 @@ class ChallengeDetailsCubit extends Cubit<ChallengeDetailsState> {
   }
 
   Future<bool> joinChallenge(int challengeId) async {
+    if (isClosed) return false;
     emit(state.copyWith(isJoining: true));
     final res = await _repository.joinChallenge(challengeId);
     if (res.status) {
       await refreshChallengeDetails(challengeId);
     }
+    if (isClosed) return res.status;
     emit(state.copyWith(isJoining: false));
     return res.status;
   }

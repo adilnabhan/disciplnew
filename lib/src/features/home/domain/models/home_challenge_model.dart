@@ -127,6 +127,9 @@ class HomeChallenge {
   final String? shortDescription;
   final ChallengeBrand? brand;
   final String? bannerImage;
+  final String? thumbnailImage;
+  final String? category;
+  final String? categoryDisplay;
   final String? challengeType;
   final String? themeColor;
   final int? joinedMemberCount;
@@ -143,6 +146,9 @@ class HomeChallenge {
     this.shortDescription,
     this.brand,
     this.bannerImage,
+    this.thumbnailImage,
+    this.category,
+    this.categoryDisplay,
     this.challengeType,
     this.themeColor,
     this.joinedMemberCount,
@@ -154,6 +160,16 @@ class HomeChallenge {
     this.remainingSeconds,
   });
 
+  String? get heroImageUrl {
+    if (thumbnailImage != null && thumbnailImage!.trim().isNotEmpty) {
+      return thumbnailImage;
+    }
+    if (bannerImage != null && bannerImage!.trim().isNotEmpty) {
+      return bannerImage;
+    }
+    return null;
+  }
+
   factory HomeChallenge.fromJson(Map<String, dynamic> json) {
     return HomeChallenge(
       id: json['id'] as int?,
@@ -163,13 +179,19 @@ class HomeChallenge {
           ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
           : null,
       bannerImage: json['banner_image'] as String?,
+      thumbnailImage: (json['thumbnail_image'] ??
+          json['thumbnail'] ??
+          json['thumbnail_url'] ??
+          json['image']) as String?,
+      category: json['category'] as String?,
+      categoryDisplay: (json['category_display'] ?? json['category']) as String?,
       challengeType: json['challenge_type'] as String?,
       themeColor: json['theme_color'] as String?,
       joinedMemberCount: json['joined_member_count'] as int?,
       joinedMembers: (json['joined_members'] as List<dynamic>?)
           ?.map((e) => JoinedMember.fromJson(e as Map<String, dynamic>))
           .toList(),
-      isJoined: json['is_joined'] as bool?,
+      isJoined: _parseBool(json['is_joined']),
       button: json['button'] is Map<String, dynamic>
           ? ChallengeButton.fromJson(json['button'] as Map<String, dynamic>)
           : null,
@@ -188,6 +210,9 @@ class HomeChallenge {
       'short_description': shortDescription,
       'brand': brand?.toJson(),
       'banner_image': bannerImage,
+      'thumbnail_image': thumbnailImage,
+      'category': category,
+      'category_display': categoryDisplay,
       'challenge_type': challengeType,
       'theme_color': themeColor,
       'joined_member_count': joinedMemberCount,
@@ -222,4 +247,16 @@ class HomeChallengeResponse {
       'results': results?.map((e) => e.toJson()).toList(),
     };
   }
+}
+
+bool? _parseBool(dynamic value) {
+  if (value == null) return null;
+  if (value is bool) return value;
+  if (value is num) return value == 1;
+  if (value is String) {
+    final lower = value.trim().toLowerCase();
+    if (lower == 'true' || lower == '1' || lower == 'yes') return true;
+    if (lower == 'false' || lower == '0' || lower == 'no') return false;
+  }
+  return null;
 }

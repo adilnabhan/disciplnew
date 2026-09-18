@@ -2,9 +2,16 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 
 class FitnessPassportStep extends StatefulWidget {
   final SentOtpEntity? sentOtpEntity;
+  final LoginSuccessModel? loginSuccessModel;
   final bool isLoading;
   final void Function(String, String, String, String, XFile? image) onNext;
-  const FitnessPassportStep({required this.onNext, this.sentOtpEntity,this.isLoading=false});
+  const FitnessPassportStep({
+    required this.onNext,
+    super.key,
+    this.sentOtpEntity,
+    this.loginSuccessModel,
+    this.isLoading = false,
+  });
 
   @override
   State<FitnessPassportStep> createState() => FitnessPassportStepState();
@@ -21,9 +28,44 @@ class FitnessPassportStepState extends State<FitnessPassportStep> {
   void initState() {
     super.initState();
 
-    if (widget.sentOtpEntity!.mobileNumber != null) {
-      _mobile.text = widget.sentOtpEntity!.mobileNumber!;
+    final mobileNum = widget.sentOtpEntity?.mobileNumber ??
+        widget.loginSuccessModel?.mobileNumber;
+    if (mobileNum != null && mobileNum.isNotEmpty) {
+      _mobile.text = mobileNum;
     }
+
+    final fName = widget.loginSuccessModel?.firstName;
+    if (fName != null &&
+        fName.trim().isNotEmpty &&
+        fName.trim().toLowerCase() != 'null' &&
+        fName.trim().toLowerCase() != 'none') {
+      _firstName.text = fName.trim();
+    }
+
+    final lName = widget.loginSuccessModel?.lastName;
+    if (lName != null &&
+        lName.trim().isNotEmpty &&
+        lName.trim().toLowerCase() != 'null' &&
+        lName.trim().toLowerCase() != 'none') {
+      _lastName.text = lName.trim();
+    }
+
+    final emailVal = widget.loginSuccessModel?.email;
+    if (emailVal != null &&
+        emailVal.trim().isNotEmpty &&
+        emailVal.trim().toLowerCase() != 'null' &&
+        emailVal.trim().toLowerCase() != 'none') {
+      _email.text = emailVal.trim();
+    }
+  }
+
+  @override
+  void dispose() {
+    _firstName.dispose();
+    _lastName.dispose();
+    _email.dispose();
+    _mobile.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,14 +98,14 @@ class FitnessPassportStepState extends State<FitnessPassportStep> {
                 hintText: 'First Name',
                 controller: _firstName,
                 heading: '',
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 10),
               Question.text(
                 controller: _lastName,
                 hintText: 'Last Name',
                 heading: '',
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
 
               const SizedBox(height: 10),
@@ -77,7 +119,22 @@ class FitnessPassportStepState extends State<FitnessPassportStep> {
                   ),
                 ],
               ),
-              Question.text(controller: _email, hintText: 'Email', heading: ''),
+              Question.text(
+                controller: _email,
+                hintText: 'Email',
+                heading: '',
+                keyboardType: TextInputType.emailAddress,
+                validator: (v) {
+                  if (v != null && v.trim().isNotEmpty) {
+                    if (!RegExp(
+                      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                    ).hasMatch(v.trim())) {
+                      return 'Invalid email address!';
+                    }
+                  }
+                  return null;
+                },
+              ),
 
               const SizedBox(height: 10),
               Text(
@@ -103,10 +160,10 @@ class FitnessPassportStepState extends State<FitnessPassportStep> {
             ontap: () {
               if (_formKey.currentState!.validate()) {
                 widget.onNext(
-                  _firstName.text,
-                  _lastName.text,
-                  _email.text,
-                  _mobile.text,
+                  _firstName.text.trim(),
+                  _lastName.text.trim(),
+                  _email.text.trim(),
+                  _mobile.text.trim(),
                   _profilePicture,
                 );
               }

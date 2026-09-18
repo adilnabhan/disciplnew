@@ -27,6 +27,12 @@ abstract class AppStyles {
     //height: calculateHeight(14, 12),
   );
 
+  ///* Text 11px
+  static TextStyle get text11Px => const TextStyle(
+    fontSize: 11,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
   ///* Text 12px
   static TextStyle get text12Px => const TextStyle(
     fontSize: 11,

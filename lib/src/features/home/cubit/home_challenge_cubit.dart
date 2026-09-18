@@ -1,9 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/models/challenge_list_model.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/repositories/challenge_repository.dart';
-import 'package:customer_mobile_app/src/features/home/domain/models/home_challenge_model.dart';
-import 'package:customer_mobile_app/src/features/home/domain/repositories/home_repository.dart';
-import 'package:customer_mobile_app/src/features/home/cubit/home_challenge_state.dart';
 
 class HomeChallengeCubit extends Cubit<HomeChallengeState> {
   HomeChallengeCubit() : super(const HomeChallengeState());
@@ -11,17 +8,22 @@ class HomeChallengeCubit extends Cubit<HomeChallengeState> {
   final HomeRepository _repository = HomeRepository();
   final ChallengeRepository _challengeRepository = ChallengeRepository();
 
-  Future<void> loadHomeChallenges() async {
-    emit(state.copyWith(isLoading: true, errorMessage: null));
+  Future<void> loadHomeChallenges({bool isRefresh = false}) async {
+    if (isClosed) return;
+    if (state.challenges.isEmpty || isRefresh) {
+      emit(state.copyWith(isLoading: true));
+    }
     try {
       final challenges = await _repository.getHomeChallenges();
+      if (isClosed) return;
       emit(state.copyWith(challenges: challenges, isLoading: false));
     } catch (e) {
       debugPrint('Error loading home challenges: $e');
+      if (isClosed) return;
       emit(state.copyWith(
-        challenges: [],
+        challenges: state.challenges,
         isLoading: false,
-        errorMessage: e.toString(),
+        errorMessage: state.challenges.isEmpty ? e.toString() : null,
       ));
     }
   }
@@ -29,7 +31,7 @@ class HomeChallengeCubit extends Cubit<HomeChallengeState> {
   Future<JoinChallengeResponse> joinChallenge(int challengeId) async {
     final response = await _challengeRepository.joinChallenge(challengeId);
     if (response.status) {
-      loadHomeChallenges();
+      unawaited(loadHomeChallenges());
     }
     return response;
   }

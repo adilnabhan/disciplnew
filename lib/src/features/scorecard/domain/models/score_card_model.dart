@@ -150,6 +150,146 @@ class ScoreCardUserModel {
 }
 
 @immutable
+class UserRankTier {
+  final String name;
+  final String emoji;
+  final int minScore;
+  final int maxScore;
+
+  const UserRankTier({
+    required this.name,
+    required this.emoji,
+    required this.minScore,
+    required this.maxScore,
+  });
+
+  static const List<UserRankTier> tiers = [
+    UserRankTier(name: 'Recruit', emoji: '🟢', minScore: 0, maxScore: 499),
+    UserRankTier(name: 'Warrior', emoji: '⚔️', minScore: 500, maxScore: 1499),
+    UserRankTier(name: 'Gladiator', emoji: '🛡️', minScore: 1500, maxScore: 2999),
+    UserRankTier(name: 'Spartan', emoji: '🏛️', minScore: 3000, maxScore: 4999),
+    UserRankTier(name: 'Titan', emoji: '🔥', minScore: 5000, maxScore: 7499),
+    UserRankTier(name: 'Conqueror', emoji: '👑', minScore: 7500, maxScore: 9999),
+    UserRankTier(name: 'Legend', emoji: '⭐', minScore: 10000, maxScore: 14999),
+    UserRankTier(name: 'Champion', emoji: '💎', minScore: 15000, maxScore: 19999),
+    UserRankTier(name: 'Elite', emoji: '🏆', minScore: 20000, maxScore: 29999),
+    UserRankTier(name: 'Mythic', emoji: '👑', minScore: 30000, maxScore: 99999999),
+  ];
+
+  static UserRankTier getTierForScore(int score) {
+    if (score < 0) score = 0;
+    for (final tier in tiers.reversed) {
+      if (score >= tier.minScore) {
+        return tier;
+      }
+    }
+    return tiers.first;
+  }
+
+  static UserRankTier? getNextTier(UserRankTier current) {
+    final idx = tiers.indexOf(current);
+    if (idx >= 0 && idx < tiers.length - 1) {
+      return tiers[idx + 1];
+    }
+    return null;
+  }
+
+  static double calculateProgress(int currentScore, UserRankTier current, UserRankTier? next) {
+    if (next == null) return 100.0;
+    final int min = current.minScore;
+    final int nextMin = next.minScore;
+    if (nextMin <= min) return 100.0;
+    final progress = ((currentScore - min) / (nextMin - min)) * 100.0;
+    return progress.clamp(0.0, 100.0);
+  }
+}
+
+@immutable
+class CategoryBreakdownModel {
+  final int attendance;
+  final int consistency;
+  final int workout;
+  final int verification;
+  final int steps;
+  final int inspiration;
+  final int challenge;
+  final int penalties;
+
+  const CategoryBreakdownModel({
+    this.attendance = 0,
+    this.consistency = 0,
+    this.workout = 0,
+    this.verification = 0,
+    this.steps = 0,
+    this.inspiration = 0,
+    this.challenge = 0,
+    this.penalties = 0,
+  });
+
+  factory CategoryBreakdownModel.fromJson(Map<String, dynamic> json) {
+    return CategoryBreakdownModel(
+      attendance: json['attendance'] as int? ?? 0,
+      consistency: json['consistency'] as int? ?? 0,
+      workout: json['workout'] as int? ?? 0,
+      verification: json['verification'] as int? ?? 0,
+      steps: json['steps'] as int? ?? 0,
+      inspiration: json['inspiration'] as int? ?? 0,
+      challenge: json['challenge'] as int? ?? 0,
+      penalties: json['penalties'] as int? ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'attendance': attendance,
+        'consistency': consistency,
+        'workout': workout,
+        'verification': verification,
+        'steps': steps,
+        'inspiration': inspiration,
+        'challenge': challenge,
+        'penalties': penalties,
+      };
+
+  int get totalEarned =>
+      attendance + consistency + workout + verification + steps + inspiration + challenge;
+}
+
+@immutable
+class ScoreTransactionModel {
+  final int? id;
+  final String? category;
+  final int? points;
+  final String? description;
+  final String? date;
+
+  const ScoreTransactionModel({
+    this.id,
+    this.category,
+    this.points,
+    this.description,
+    this.date,
+  });
+
+  factory ScoreTransactionModel.fromJson(Map<String, dynamic> json) {
+    return ScoreTransactionModel(
+      id: json['id'] as int?,
+      category: json['category'] as String?,
+      points: json['points'] as int?,
+      description: json['description'] as String?,
+      date: json['date'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'category': category,
+        'points': points,
+        'description': description,
+        'date': date,
+      };
+}
+
+@immutable
 class MyPositionModel {
   final int? rank;
   final int? currentRank;
@@ -163,6 +303,18 @@ class MyPositionModel {
   final String? pointsChangeType;
   final int? streak;
   final int? totalMembers;
+  final String? currentRankName;
+  final String? rankEmoji;
+  final String? nextRank;
+  final String? nextRankEmoji;
+  final int? nextRankScore;
+  final int? remainingScoreToNextRank;
+  final double? progressPercentage;
+  final int? restDaysCount;
+  final int? totalEarnedScore;
+  final int? totalPenaltyScore;
+  final CategoryBreakdownModel? categoryBreakdown;
+  final List<ScoreTransactionModel> recentTransactions;
 
   const MyPositionModel({
     this.rank,
@@ -177,6 +329,18 @@ class MyPositionModel {
     this.pointsChangeType,
     this.streak,
     this.totalMembers,
+    this.currentRankName,
+    this.rankEmoji,
+    this.nextRank,
+    this.nextRankEmoji,
+    this.nextRankScore,
+    this.remainingScoreToNextRank,
+    this.progressPercentage,
+    this.restDaysCount,
+    this.totalEarnedScore,
+    this.totalPenaltyScore,
+    this.categoryBreakdown,
+    this.recentTransactions = const [],
   });
 
   factory MyPositionModel.fromJson(Map<String, dynamic> json) {
@@ -186,13 +350,30 @@ class MyPositionModel {
       previousRank: json['previous_rank'] as int?,
       rankChange: json['rank_change'] as int?,
       rankChangeType: json['rank_change_type'] as String?,
-      points: json['points'] as int? ?? json['current_points'] as int?,
-      currentPoints: json['current_points'] as int? ?? json['points'] as int?,
+      points: json['points'] as int? ?? json['current_points'] as int? ?? json['current_score'] as int?,
+      currentPoints: json['current_points'] as int? ?? json['points'] as int? ?? json['current_score'] as int?,
       previousPoints: json['previous_points'] as int?,
       pointsChange: json['points_change'] as int?,
       pointsChangeType: json['points_change_type'] as String?,
-      streak: json['streak'] as int?,
+      streak: json['streak'] as int? ?? json['streak_days'] as int?,
       totalMembers: json['total_members'] as int?,
+      currentRankName: json['current_rank'] is String ? json['current_rank'] as String : json['rank_name'] as String?,
+      rankEmoji: json['rank_emoji'] as String?,
+      nextRank: json['next_rank'] as String?,
+      nextRankEmoji: json['next_rank_emoji'] as String?,
+      nextRankScore: json['next_rank_score'] as int?,
+      remainingScoreToNextRank: json['remaining_score_to_next_rank'] as int?,
+      progressPercentage: (json['progress_percentage'] as num?)?.toDouble(),
+      restDaysCount: json['rest_days_count'] as int?,
+      totalEarnedScore: json['total_earned_score'] as int?,
+      totalPenaltyScore: json['total_penalty_score'] as int?,
+      categoryBreakdown: json['category_breakdown'] != null
+          ? CategoryBreakdownModel.fromJson(json['category_breakdown'] as Map<String, dynamic>)
+          : null,
+      recentTransactions: (json['recent_transactions'] as List<dynamic>?)
+              ?.map((e) => ScoreTransactionModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -209,6 +390,18 @@ class MyPositionModel {
         'points_change_type': pointsChangeType,
         'streak': streak,
         'total_members': totalMembers,
+        'current_rank_name': currentRankName,
+        'rank_emoji': rankEmoji,
+        'next_rank': nextRank,
+        'next_rank_emoji': nextRankEmoji,
+        'next_rank_score': nextRankScore,
+        'remaining_score_to_next_rank': remainingScoreToNextRank,
+        'progress_percentage': progressPercentage,
+        'rest_days_count': restDaysCount,
+        'total_earned_score': totalEarnedScore,
+        'total_penalty_score': totalPenaltyScore,
+        'category_breakdown': categoryBreakdown?.toJson(),
+        'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
       };
 }
 
@@ -412,6 +605,19 @@ class ScoreCardResponseModel {
   final List<LeaderboardMemberModel> leaderboard;
   final int totalMembers;
   final ScoreCardPaginationModel? pagination;
+  final String? currentRank;
+  final String? rankEmoji;
+  final String? nextRank;
+  final String? nextRankEmoji;
+  final int? nextRankScore;
+  final int? remainingScoreToNextRank;
+  final double? progressPercentage;
+  final int? streakDays;
+  final int? restDaysCount;
+  final int? totalEarnedScore;
+  final int? totalPenaltyScore;
+  final CategoryBreakdownModel? categoryBreakdown;
+  final List<ScoreTransactionModel> recentTransactions;
 
   const ScoreCardResponseModel({
     required this.hasActiveGym,
@@ -423,15 +629,60 @@ class ScoreCardResponseModel {
     this.leaderboard = const [],
     this.totalMembers = 0,
     this.pagination,
+    this.currentRank,
+    this.rankEmoji,
+    this.nextRank,
+    this.nextRankEmoji,
+    this.nextRankScore,
+    this.remainingScoreToNextRank,
+    this.progressPercentage,
+    this.streakDays,
+    this.restDaysCount,
+    this.totalEarnedScore,
+    this.totalPenaltyScore,
+    this.categoryBreakdown,
+    this.recentTransactions = const [],
   });
 
   factory ScoreCardResponseModel.fromJson(Map<String, dynamic> json) {
+    final catBreakdown = json['category_breakdown'] != null
+        ? CategoryBreakdownModel.fromJson(json['category_breakdown'] as Map<String, dynamic>)
+        : null;
+    final transactions = (json['recent_transactions'] as List<dynamic>?)
+            ?.map((e) => ScoreTransactionModel.fromJson(e as Map<String, dynamic>))
+            .toList() ??
+        const [];
+
+    MyPositionModel? pos;
+    if (json['my_position'] != null) {
+      pos = MyPositionModel.fromJson(json['my_position'] as Map<String, dynamic>);
+    } else if (json['current_score'] != null ||
+        json['current_rank'] != null ||
+        json['customer_id'] != null) {
+      pos = MyPositionModel(
+        points: json['current_score'] as int?,
+        streak: json['streak_days'] as int?,
+        currentRankName: json['current_rank'] as String?,
+        rankEmoji: json['rank_emoji'] as String?,
+        nextRank: json['next_rank'] as String?,
+        nextRankEmoji: json['next_rank_emoji'] as String?,
+        nextRankScore: json['next_rank_score'] as int?,
+        remainingScoreToNextRank: json['remaining_score_to_next_rank'] as int?,
+        progressPercentage: (json['progress_percentage'] as num?)?.toDouble(),
+        restDaysCount: json['rest_days_count'] as int?,
+        totalEarnedScore: json['total_earned_score'] as int?,
+        totalPenaltyScore: json['total_penalty_score'] as int?,
+        categoryBreakdown: catBreakdown,
+        recentTransactions: transactions,
+      );
+    }
+
     return ScoreCardResponseModel(
       hasActiveGym: json['has_active_gym'] as bool? ?? false,
       gym: json['gym'] != null ? GymScoreCardModel.fromJson(json['gym'] as Map<String, dynamic>) : null,
       period: json['period'] != null ? ScoreCardPeriodModel.fromJson(json['period'] as Map<String, dynamic>) : null,
       me: json['me'] != null ? ScoreCardUserModel.fromJson(json['me'] as Map<String, dynamic>) : null,
-      myPosition: json['my_position'] != null ? MyPositionModel.fromJson(json['my_position'] as Map<String, dynamic>) : null,
+      myPosition: pos,
       podium: (json['podium'] as List<dynamic>?)
               ?.map((e) => PodiumMemberModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -444,6 +695,19 @@ class ScoreCardResponseModel {
       pagination: json['pagination'] != null
           ? ScoreCardPaginationModel.fromJson(json['pagination'] as Map<String, dynamic>)
           : null,
+      currentRank: json['current_rank'] as String?,
+      rankEmoji: json['rank_emoji'] as String?,
+      nextRank: json['next_rank'] as String?,
+      nextRankEmoji: json['next_rank_emoji'] as String?,
+      nextRankScore: json['next_rank_score'] as int?,
+      remainingScoreToNextRank: json['remaining_score_to_next_rank'] as int?,
+      progressPercentage: (json['progress_percentage'] as num?)?.toDouble(),
+      streakDays: json['streak_days'] as int?,
+      restDaysCount: json['rest_days_count'] as int?,
+      totalEarnedScore: json['total_earned_score'] as int?,
+      totalPenaltyScore: json['total_penalty_score'] as int?,
+      categoryBreakdown: catBreakdown,
+      recentTransactions: transactions,
     );
   }
 
@@ -457,5 +721,18 @@ class ScoreCardResponseModel {
         'leaderboard': leaderboard.map((e) => e.toJson()).toList(),
         'total_members': totalMembers,
         'pagination': pagination?.toJson(),
+        'current_rank': currentRank,
+        'rank_emoji': rankEmoji,
+        'next_rank': nextRank,
+        'next_rank_emoji': nextRankEmoji,
+        'next_rank_score': nextRankScore,
+        'remaining_score_to_next_rank': remainingScoreToNextRank,
+        'progress_percentage': progressPercentage,
+        'streak_days': streakDays,
+        'rest_days_count': restDaysCount,
+        'total_earned_score': totalEarnedScore,
+        'total_penalty_score': totalPenaltyScore,
+        'category_breakdown': categoryBreakdown?.toJson(),
+        'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
       };
 }
