@@ -5,11 +5,12 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 final class ApiUris {
   ///* BASE URL
   static const _baseUrlEnv = String.fromEnvironment('baseUrl');
-  static final _baseUrl = _baseUrlEnv == ''
-      ? 'https://discipl-backend.onrender.com'
-      : (_baseUrlEnv.endsWith('/')
-          ? _baseUrlEnv.substring(0, _baseUrlEnv.length - 1)
-          : _baseUrlEnv);
+  static final _baseUrl =
+      _baseUrlEnv == ''
+          ? 'https://discipl-backend.onrender.com'
+          : (_baseUrlEnv.endsWith('/')
+              ? _baseUrlEnv.substring(0, _baseUrlEnv.length - 1)
+              : _baseUrlEnv);
   static final _v1 = '$_baseUrl/api/v1/';
 
   ///============================= AUTH =============================\\\
@@ -38,7 +39,8 @@ final class ApiUris {
   static final assignedGymTrainers = '${_v1}customer/gym-trainers/';
   static final trainerPremiumList = '${_v1}customer/trainers/premium-list/';
   static final scoreCard = '${_v1}customer/score-card/';
-  static String gymScoreCard(int gymId) => '${_v1}customer/gyms/$gymId/score-card/';
+  static String gymScoreCard(int gymId) =>
+      '${_v1}customer/gyms/$gymId/score-card/';
 
   ///============================= Home & Banners =============================\\\
   static final appSeason = '${_v1}customer/app-season/';
@@ -50,7 +52,8 @@ final class ApiUris {
   static final homeChallenges = '${_v1}customer/challenges/home/';
   static final challengesList = '${_v1}customer/challenges/';
   static final winnerPopup = '${_v1}customer/challenges/winner-popup/';
-  static final markWinnerPopupSeen = '${_v1}customer/challenges/winner-popup/seen/';
+  static final markWinnerPopupSeen =
+      '${_v1}customer/challenges/winner-popup/seen/';
   static final allChallengeWinners = '${_v1}customer/challenges/all-winners/';
   static final challengeWinners = '${_v1}customer/challenges/winners/';
 
@@ -77,7 +80,8 @@ final class ApiUris {
   static String activeMembership(int id) =>
       '${_v1}customer/manage/$id/active-membership/';
   static final allMemberships = '${_v1}customer/membership-org/';
-  static final createMembershipRequest = '${_v1}customer/membership-request/create/';
+  static final createMembershipRequest =
+      '${_v1}customer/membership-request/create/';
 
   ///============================= Subscription =============================\\\
   static final initiateRazorpayOrder =
