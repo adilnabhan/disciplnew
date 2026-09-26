@@ -104,9 +104,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   ),
                   const SizedBox(height: 8),
                   Padding(
-                    padding: const EdgeInsets.only(
-                      left: 51,
-                    ),
+                    padding: const EdgeInsets.only(left: 51),
                     child: Text(
                       '$totalExercises Exercises',
                       style: const TextStyle(
@@ -122,7 +120,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
               ),
             ),
 
-             // Scrollable Content
+            // Scrollable Content
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(
@@ -141,49 +139,55 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
             ),
             if (!widget.isReadOnly) ...[
               Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20, bottom: 24, top: 12),
+                padding: const EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  bottom: 24,
+                  top: 12,
+                ),
                 child: PrimaryPillButton(
                   text: 'Finish Workout',
                   onTap: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
-                      builder: (context) => AlertDialog(
-                        backgroundColor: Colors.white,
-                        title: const Text(
-                          'Finish Workout',
-                          style: TextStyle(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        content: const Text(
-                          'Are you sure you want to finish this workout session?',
-                          style: TextStyle(fontFamily: 'Poppins'),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text(
-                              'Cancel',
+                      builder:
+                          (context) => AlertDialog(
+                            backgroundColor: Colors.white,
+                            title: const Text(
+                              'Finish Workout',
                               style: TextStyle(
                                 fontFamily: 'Poppins',
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text(
-                              'Finish',
-                              style: TextStyle(
-                                fontFamily: 'Poppins',
-                                color: AppColors.primary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
+                            content: const Text(
+                              'Are you sure you want to finish this workout session?',
+                              style: TextStyle(fontFamily: 'Poppins'),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  'Finish',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
                     );
                     if (confirm == true && mounted) {
                       Navigator.pop(context, true);
@@ -202,15 +206,14 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
     final sets = exercise['sets'] as List<Map<String, dynamic>>;
     final subtitle = (exercise['subtitle']?.toString() ?? '').toLowerCase();
     final trackBy = (exercise['track_by']?.toString() ?? 'rep').toLowerCase();
-    final isTimeBased = trackBy == 'time' ||
+    final isTimeBased =
+        trackBy == 'time' ||
         subtitle.contains('cardio') ||
         subtitle.contains('flexibility') ||
         subtitle.contains('hiit') ||
         sets.any((s) => s['input_type']?.toString().toLowerCase() == 'seconds');
     final isDistanceBased = trackBy == 'distance';
-    final repsHeader = isTimeBased
-        ? 'Sec'
-        : (isDistanceBased ? 'Km' : 'Rep');
+    final repsHeader = isTimeBased ? 'Sec' : (isDistanceBased ? 'Km' : 'Rep');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -242,7 +245,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                 Expanded(
                   child: GestureDetector(
                     onTap: () {
-                      debugPrint('DEBUG: Tapped exercise: ${exercise['title']} with ID: ${exercise['id']}');
+                      debugPrint(
+                        'DEBUG: Tapped exercise: ${exercise['title']} with ID: ${exercise['id']}',
+                      );
                       _showExerciseDetailsBottomSheet(
                         context,
                         exercise['id']?.toString(),
@@ -285,7 +290,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                     if (videoUrlStr.isNotEmpty) {
                       final uri = Uri.parse(videoUrlStr);
                       if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        await launchUrl(
+                          uri,
+                          mode: LaunchMode.externalApplication,
+                        );
                       } else {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -298,7 +306,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('No video link available for this exercise.'),
+                          content: Text(
+                            'No video link available for this exercise.',
+                          ),
                         ),
                       );
                     }
@@ -380,7 +390,12 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         if (val == null) return 'KG';
                         final lower = val.toLowerCase().replaceAll(' ', '');
                         if (lower == 'bw') return 'BW';
-                        if (lower == 'fw' || lower == 'freeweight' || lower == 'baronly' || lower == 'bo' || lower == 'bar') return 'FW';
+                        if (lower == 'fw' ||
+                            lower == 'freeweight' ||
+                            lower == 'baronly' ||
+                            lower == 'bo' ||
+                            lower == 'bar')
+                          return 'FW';
                         if (lower == 'kg+bw' || lower == 'kgbw') return 'KG';
                         return 'KG';
                       }(),
@@ -404,15 +419,30 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                       items: const [
                         DropdownMenuItem(
                           value: 'KG',
-                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Kilograms', maxLines: 1))),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Kilograms', maxLines: 1),
+                            ),
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'BW',
-                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Body Weight', maxLines: 1))),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Body Weight', maxLines: 1),
+                            ),
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'FW',
-                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Free Weight', maxLines: 1))),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Free Weight', maxLines: 1),
+                            ),
+                          ),
                         ),
                       ],
                       onChanged: (val) {
@@ -430,9 +460,18 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: () {
-                        final val = exercise['track_by']?.toString().toLowerCase();
-                        if (val == 'time' || val == 'sec' || val == 'secs' || val == 'seconds') return 'time';
-                        if (val == 'distance' || val == 'dist' || val == 'km' || val == 'm') return 'distance';
+                        final val =
+                            exercise['track_by']?.toString().toLowerCase();
+                        if (val == 'time' ||
+                            val == 'sec' ||
+                            val == 'secs' ||
+                            val == 'seconds')
+                          return 'time';
+                        if (val == 'distance' ||
+                            val == 'dist' ||
+                            val == 'km' ||
+                            val == 'm')
+                          return 'distance';
                         return 'rep';
                       }(),
                       isDense: true,
@@ -544,7 +583,11 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         child: Align(
                           alignment: Alignment.center,
                           child: () {
-                            final wType = exercise['weight_type']?.toString().toUpperCase() ?? 'KG';
+                            final wType =
+                                exercise['weight_type']
+                                    ?.toString()
+                                    .toUpperCase() ??
+                                'KG';
                             if (wType == 'BW') {
                               return Container(
                                 width: 58,
@@ -574,37 +617,37 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                               child: TextFormField(
                                 initialValue: set['kg'] as String?,
                                 readOnly: widget.isReadOnly,
-                              inputFormatters: [
-                                LengthLimitingTextInputFormatter(8),
-                              ],
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w400,
-                                color: Color(0xFF212121),
-                                height: 1.0,
-                              ),
-                              decoration: const InputDecoration(
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: 4,
+                                inputFormatters: [
+                                  LengthLimitingTextInputFormatter(8),
+                                ],
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                  color: Color(0xFF212121),
+                                  height: 1.0,
                                 ),
-                                border: InputBorder.none,
-                                filled: false,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                  contentPadding: EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  border: InputBorder.none,
+                                  filled: false,
+                                ),
+                                onChanged: (val) {
+                                  set['kg'] = val;
+                                },
                               ),
-                              onChanged: (val) {
-                                set['kg'] = val;
-                              },
-                            ),
-                          );
-                        }(),
+                            );
+                          }(),
+                        ),
                       ),
-                    ),
                       // Rep / Sec / Distance Input Box
                       Expanded(
                         flex: 3,
@@ -622,9 +665,17 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                                 LengthLimitingTextInputFormatter(8),
                               ],
                               keyboardType: () {
-                                final trackBy = exercise['track_by']?.toString().toLowerCase();
-                                if (trackBy == 'distance' || trackBy == 'dist' || trackBy == 'km' || trackBy == 'm') {
-                                  return const TextInputType.numberWithOptions(decimal: true);
+                                final trackBy =
+                                    exercise['track_by']
+                                        ?.toString()
+                                        .toLowerCase();
+                                if (trackBy == 'distance' ||
+                                    trackBy == 'dist' ||
+                                    trackBy == 'km' ||
+                                    trackBy == 'm') {
+                                  return const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  );
                                 }
                                 return TextInputType.number;
                               }(),
@@ -657,14 +708,15 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         child: Align(
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
-                            onTap: widget.isReadOnly
-                                ? null
-                                : () {
-                                    setState(() {
-                                      set['checked'] =
-                                          !(set['checked'] as bool? ?? false);
-                                    });
-                                  },
+                            onTap:
+                                widget.isReadOnly
+                                    ? null
+                                    : () {
+                                      setState(() {
+                                        set['checked'] =
+                                            !(set['checked'] as bool? ?? false);
+                                      });
+                                    },
                             child: Container(
                               width: 22,
                               height: 22,
@@ -713,7 +765,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
     String? exerciseId,
     String? exerciseTitle,
   ) {
-    debugPrint('DEBUG: _showExerciseDetailsBottomSheet called for $exerciseTitle (ID: $exerciseId)');
+    debugPrint(
+      'DEBUG: _showExerciseDetailsBottomSheet called for $exerciseTitle (ID: $exerciseId)',
+    );
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -734,18 +788,25 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   final parsedId = int.tryParse(exerciseId ?? '');
                   if (parsedId != null) {
                     debugPrint('DEBUG: Trying lookup by ID: $parsedId');
-                    final res = await WorkoutRepository().getExerciseDetailsById(parsedId);
+                    final res = await WorkoutRepository()
+                        .getExerciseDetailsById(parsedId);
                     if (res.isRight()) {
                       debugPrint('DEBUG: ID lookup succeeded!');
                       return res;
                     }
-                    debugPrint('DEBUG: ID lookup failed, falling back to title lookup');
+                    debugPrint(
+                      'DEBUG: ID lookup failed, falling back to title lookup',
+                    );
                   }
                   if (exerciseTitle != null && exerciseTitle.isNotEmpty) {
                     debugPrint('DEBUG: Trying lookup by title: $exerciseTitle');
-                    return WorkoutRepository().getExerciseDetails(title: exerciseTitle);
+                    return WorkoutRepository().getExerciseDetails(
+                      title: exerciseTitle,
+                    );
                   }
-                  return left<ApiException, Map<String, dynamic>>(const ApiException.unknown());
+                  return left<ApiException, Map<String, dynamic>>(
+                    const ApiException.unknown(),
+                  );
                 }(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -760,7 +821,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   }
 
                   if (snapshot.hasError) {
-                    return _buildErrorState(context, "An unexpected error occurred.");
+                    return _buildErrorState(
+                      context,
+                      "An unexpected error occurred.",
+                    );
                   }
 
                   final result = snapshot.data;
@@ -769,8 +833,15 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   }
 
                   return result.fold(
-                    (error) => _buildErrorState(context, "Error fetching details: $error"),
-                    (data) => _buildExerciseDetailsContent(context, data, scrollController),
+                    (error) => _buildErrorState(
+                      context,
+                      "Error fetching details: $error",
+                    ),
+                    (data) => _buildExerciseDetailsContent(
+                      context,
+                      data,
+                      scrollController,
+                    ),
                   );
                 },
               ),
@@ -789,7 +860,11 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppColors.primary, size: 64),
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.primary,
+            size: 64,
+          ),
           const SizedBox(height: 16),
           Text(
             message,
@@ -806,7 +881,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Close', style: TextStyle(color: Colors.white)),
           ),
@@ -821,18 +898,20 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
     ScrollController scrollController,
   ) {
     final String name = data['name']?.toString() ?? 'Exercise Details';
-    final String description = data['description']?.toString() ?? 'No description available.';
+    final String description =
+        data['description']?.toString() ?? 'No description available.';
     final String type = data['type']?.toString() ?? '';
     final String muscle = data['primary_muscle_group_name']?.toString() ?? '';
     final String equipment = data['equipment_name']?.toString() ?? '';
     final String instructions = data['instructions']?.toString() ?? '';
     final String? videoUrlStr = data['video_url']?.toString();
 
-    final instructionSteps = instructions
-        .split('\n')
-        .map((step) => step.trim())
-        .where((step) => step.isNotEmpty)
-        .toList();
+    final instructionSteps =
+        instructions
+            .split('\n')
+            .map((step) => step.trim())
+            .where((step) => step.isNotEmpty)
+            .toList();
 
     return Column(
       children: [
@@ -886,11 +965,23 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                 runSpacing: 8,
                 children: [
                   if (muscle.isNotEmpty)
-                    _buildDetailTag(muscle, const Color(0xFFFFF0F1), const Color(0xFFD30C15)),
+                    _buildDetailTag(
+                      muscle,
+                      const Color(0xFFFFF0F1),
+                      const Color(0xFFD30C15),
+                    ),
                   if (equipment.isNotEmpty)
-                    _buildDetailTag(equipment, const Color(0xFFF1F3F9), const Color(0xFF4A5568)),
+                    _buildDetailTag(
+                      equipment,
+                      const Color(0xFFF1F3F9),
+                      const Color(0xFF4A5568),
+                    ),
                   if (type.isNotEmpty)
-                    _buildDetailTag(type.toUpperCase(), const Color(0xFFE6FFFA), const Color(0xFF00A389)),
+                    _buildDetailTag(
+                      type.toUpperCase(),
+                      const Color(0xFFE6FFFA),
+                      const Color(0xFF00A389),
+                    ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -924,7 +1015,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   onPressed: () async {
                     final uri = Uri.parse(videoUrlStr);
                     if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
                     } else {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -935,12 +1029,23 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                       }
                     }
                   },
-                  icon: const Icon(Icons.play_circle_fill_rounded, color: Colors.white),
-                  label: const Text('Watch Execution Video', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                  icon: const Icon(
+                    Icons.play_circle_fill_rounded,
+                    color: Colors.white,
+                  ),
+                  label: const Text(
+                    'Watch Execution Video',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFD30C15),
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -987,7 +1092,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            stepText.replaceFirst(RegExp(r'^\d+\.\s*'), ''), // Strip duplicate numbering if present
+                            stepText.replaceFirst(
+                              RegExp(r'^\d+\.\s*'),
+                              '',
+                            ), // Strip duplicate numbering if present
                             style: const TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 14,

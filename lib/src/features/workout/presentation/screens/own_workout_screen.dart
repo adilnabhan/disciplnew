@@ -1048,9 +1048,16 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     required BuildContext context,
     required String title,
     required String hintText,
+    String? initialText,
     required void Function(String name) onSave,
   }) {
-    final controller = TextEditingController();
+    final controller = TextEditingController(text: initialText ?? '');
+    if (initialText != null && initialText.isNotEmpty) {
+      controller.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: initialText.length,
+      );
+    }
     showDialog(
       context: context,
       builder: (ctx) {
@@ -1271,114 +1278,68 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     : null,
                               ),
                               const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
+                              SearchableSingleSelectDropdown<int>(
                                 value: selectedMuscleId,
+                                hintText: 'Select the muscle',
+                                searchHintText: 'Search muscle...',
+                                decoration: _dropdownDecoration(),
                                 validator: (val) {
                                   if (val == null) {
                                     return 'Required this field';
                                   }
                                   return null;
                                 },
-                                decoration: _dropdownDecoration(),
-                                hint: const Text(
-                                  'Select the muscle',
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 15,
-                                    height: 1.0,
-                                    letterSpacing: -0.3,
-                                    color: Color(0xFF888888),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: Color(0xFF9E9E9E),
-                                ),
-                                items: [
-                                  ...state.muscleGroups
-                                      .map(
-                                        (m) => DropdownMenuItem(
-                                          value: m.id,
-                                          child: Text(
-                                            m.name,
-                                            style: const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 15,
-                                              height: 1.0,
-                                              letterSpacing: -0.3,
-                                              color: AppColors.button,
+                                items: state.muscleGroups
+                                    .map(
+                                      (m) => SearchableDropdownItem<int>(
+                                        value: m.id,
+                                        label: m.name,
+                                      ),
+                                    )
+                                    .toList(),
+                                addNewText: 'Add New Muscle',
+                                onAddNew: (query) {
+                                  _showAddNewDialog(
+                                    context: sheetContext,
+                                    title: 'Add New Muscle',
+                                    hintText: 'Enter muscle name',
+                                    initialText: query,
+                                    onSave: (name) async {
+                                      final result = await WorkoutRepository()
+                                          .createMuscleGroup(name: name);
+                                      result.fold(
+                                        (error) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Failed to create: ${error.msg}',
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  DropdownMenuItem(
-                                    value: -1,
-                                    child: Row(
-                                      children: const [
-                                        Icon(
-                                          Icons.add_circle_outline,
-                                          size: 18,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Add New Muscle',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 15,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                          );
+                                        },
+                                        (newMuscle) {
+                                          _cubit.addMuscleGroup(newMuscle);
+                                          _cubit.loadLookups();
+                                          setDialogState(() {
+                                            selectedMuscleId = newMuscle.id;
+                                          });
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '"${newMuscle.name}" added!',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
                                 onChanged: (val) {
-                                  if (val == -1) {
-                                    _showAddNewDialog(
-                                      context: sheetContext,
-                                      title: 'Add New Muscle',
-                                      hintText: 'Enter muscle name',
-                                      onSave: (name) async {
-                                        final result = await WorkoutRepository()
-                                            .createMuscleGroup(name: name);
-                                        result.fold(
-                                          (error) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Failed to create: ${error.msg}',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          (newMuscle) {
-                                            _cubit.addMuscleGroup(newMuscle);
-                                            _cubit.loadLookups();
-                                            setDialogState(() {
-                                              selectedMuscleId = newMuscle.id;
-                                            });
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  '"${newMuscle.name}" added!',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                    return;
-                                  }
                                   setDialogState(() {
                                     selectedMuscleId = val;
                                   });
@@ -1478,6 +1439,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
+                                isExpanded: true,
                                 value: selectedTypeCode,
                                 validator: (val) {
                                   if (val == null || val.isEmpty) {
@@ -1488,6 +1450,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 decoration: _dropdownDecoration(),
                                 hint: const Text(
                                   'Select the type of exercise',
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
                                   style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontWeight: FontWeight.w400,
@@ -1508,6 +1472,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           value: t.id,
                                           child: Text(
                                             t.name,
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
                                             style: const TextStyle(
                                               fontFamily: 'Poppins',
                                               fontWeight: FontWeight.w400,
@@ -1523,6 +1489,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   DropdownMenuItem(
                                     value: '__add_new__',
                                     child: Row(
+                                      mainAxisSize: MainAxisSize.min,
                                       children: const [
                                         Icon(
                                           Icons.add_circle_outline,
@@ -1530,13 +1497,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           color: AppColors.primary,
                                         ),
                                         SizedBox(width: 8),
-                                        Text(
-                                          'Add New Type',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 15,
-                                            color: AppColors.primary,
+                                        Flexible(
+                                          child: Text(
+                                            'Add New Type',
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 1,
+                                            style: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 15,
+                                              color: AppColors.primary,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1594,114 +1565,68 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              DropdownButtonFormField<int>(
+                              SearchableSingleSelectDropdown<int>(
                                 value: selectedEquipmentId,
+                                hintText: 'Select the equipment used',
+                                searchHintText: 'Search equipment...',
+                                decoration: _dropdownDecoration(),
                                 validator: (val) {
                                   if (val == null) {
                                     return 'Required this field';
                                   }
                                   return null;
                                 },
-                                decoration: _dropdownDecoration(),
-                                hint: const Text(
-                                  'Select the equipment used',
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 15,
-                                    height: 1.0,
-                                    letterSpacing: -0.3,
-                                    color: Color(0xFF888888),
-                                  ),
-                                ),
-                                icon: const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: Color(0xFF9E9E9E),
-                                ),
-                                items: [
-                                  ...state.equipment
-                                      .map(
-                                        (e) => DropdownMenuItem(
-                                          value: e.id,
-                                          child: Text(
-                                            e.name,
-                                            style: const TextStyle(
-                                              fontFamily: 'Poppins',
-                                              fontWeight: FontWeight.w400,
-                                              fontSize: 15,
-                                              height: 1.0,
-                                              letterSpacing: -0.3,
-                                              color: AppColors.button,
+                                items: state.equipment
+                                    .map(
+                                      (e) => SearchableDropdownItem<int>(
+                                        value: e.id,
+                                        label: e.name,
+                                      ),
+                                    )
+                                    .toList(),
+                                addNewText: 'Add New Equipment',
+                                onAddNew: (query) {
+                                  _showAddNewDialog(
+                                    context: sheetContext,
+                                    title: 'Add New Equipment',
+                                    hintText: 'Enter equipment name',
+                                    initialText: query,
+                                    onSave: (name) async {
+                                      final result = await WorkoutRepository()
+                                          .createEquipment(name: name);
+                                      result.fold(
+                                        (error) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Failed to create: ${error.msg}',
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  DropdownMenuItem(
-                                    value: -1,
-                                    child: Row(
-                                      children: const [
-                                        Icon(
-                                          Icons.add_circle_outline,
-                                          size: 18,
-                                          color: AppColors.primary,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Text(
-                                          'Add New Equipment',
-                                          style: TextStyle(
-                                            fontFamily: 'Poppins',
-                                            fontWeight: FontWeight.w500,
-                                            fontSize: 15,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                          );
+                                        },
+                                        (newEquip) {
+                                          _cubit.addEquipment(newEquip);
+                                          _cubit.loadLookups();
+                                          setDialogState(() {
+                                            selectedEquipmentId = newEquip.id;
+                                          });
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                '"${newEquip.name}" added!',
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                },
                                 onChanged: (val) {
-                                  if (val == -1) {
-                                    _showAddNewDialog(
-                                      context: sheetContext,
-                                      title: 'Add New Equipment',
-                                      hintText: 'Enter equipment name',
-                                      onSave: (name) async {
-                                        final result = await WorkoutRepository()
-                                            .createEquipment(name: name);
-                                        result.fold(
-                                          (error) {
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Failed to create: ${error.msg}',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                          (newEquip) {
-                                            _cubit.addEquipment(newEquip);
-                                            _cubit.loadLookups();
-                                            setDialogState(() {
-                                              selectedEquipmentId = newEquip.id;
-                                            });
-                                            ScaffoldMessenger.of(
-                                              context,
-                                            ).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  '"${newEquip.name}" added!',
-                                                ),
-                                              ),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    );
-                                    return;
-                                  }
                                   setDialogState(() {
                                     selectedEquipmentId = val;
                                   });
@@ -1723,6 +1648,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               ),
                               const SizedBox(height: 8),
                               DropdownButtonFormField<String>(
+                                isExpanded: true,
                                 value: selectedTrackBy,
                                 decoration: _dropdownDecoration(),
                                 items: const [
@@ -1730,6 +1656,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     value: 'rep',
                                     child: Text(
                                       'Reps',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontWeight: FontWeight.w400,
@@ -1742,6 +1670,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     value: 'time',
                                     child: Text(
                                       'Time',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontWeight: FontWeight.w400,
@@ -1754,6 +1684,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     value: 'distance',
                                     child: Text(
                                       'Distance',
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
                                       style: TextStyle(
                                         fontFamily: 'Poppins',
                                         fontWeight: FontWeight.w400,
@@ -4145,18 +4077,23 @@ class _SecondaryMuscleDropdownState extends State<SecondaryMuscleDropdown> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Select secondary muscle groups',
+                  widget.selectedIds.isNotEmpty
+                      ? '${widget.selectedIds.length} secondary muscle${widget.selectedIds.length > 1 ? 's' : ''} selected'
+                      : 'Select secondary muscle groups',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w400,
                     fontSize: 15,
                     height: 1.0,
                     letterSpacing: -0.3,
-                    color: Color(0xFF888888),
+                    color: widget.selectedIds.isNotEmpty
+                        ? AppColors.button
+                        : const Color(0xFF888888),
                   ),
                   overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
               Icon(
@@ -4201,6 +4138,8 @@ class _DropdownOverlayContentState extends State<_DropdownOverlayContent>
   late Animation<double> _fadeAnimation;
 
   late List<int> _tempSelectedIds;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -4224,6 +4163,7 @@ class _DropdownOverlayContentState extends State<_DropdownOverlayContent>
   @override
   void dispose() {
     _animationController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -4239,9 +4179,11 @@ class _DropdownOverlayContentState extends State<_DropdownOverlayContent>
 
   @override
   Widget build(BuildContext context) {
+    final query = _searchQuery.toLowerCase().trim();
     final filteredMuscles =
         widget.allMuscleGroups
             .where((m) => m.id != widget.selectedPrimaryMuscleId)
+            .where((m) => query.isEmpty || m.name.toLowerCase().contains(query))
             .toList();
 
     return SizeTransition(
@@ -4258,7 +4200,7 @@ class _DropdownOverlayContentState extends State<_DropdownOverlayContent>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
@@ -4268,69 +4210,634 @@ class _DropdownOverlayContentState extends State<_DropdownOverlayContent>
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Search bar
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                  child: Container(
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: Color(0xFF212121),
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        hintText: 'Search secondary muscle...',
+                        hintStyle: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          size: 18,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 18,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Color(0xFF9E9E9E),
+                                ),
+                              )
+                            : null,
+                        suffixIconConstraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 16,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _searchQuery = val;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+
                 // Muscle groups list
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 240),
-                  child:
-                      filteredMuscles.isEmpty
-                          ? const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 24),
+                  constraints: const BoxConstraints(maxHeight: 220),
+                  child: filteredMuscles.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Text(
+                            _searchQuery.isNotEmpty
+                                ? 'No matching muscle groups found'
+                                : 'No muscle groups found',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              color: Color(0xFF888888),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          itemCount: filteredMuscles.length,
+                          itemBuilder: (context, index) {
+                            final m = filteredMuscles[index];
+                            final isSelected = _tempSelectedIds.contains(
+                              m.id,
+                            );
+                            return ListTile(
+                              dense: true,
+                              visualDensity: VisualDensity.compact,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 2,
+                              ),
+                              title: Text(
+                                m.name,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : const Color(0xFF212121),
+                                ),
+                              ),
+                              trailing: isSelected
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: AppColors.primary,
+                                      size: 18,
+                                    )
+                                  : null,
+                              onTap: () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _tempSelectedIds.remove(m.id);
+                                  } else {
+                                    _tempSelectedIds.add(m.id);
+                                  }
+                                });
+                                widget.onDone(_tempSelectedIds);
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SearchableDropdownItem<T> {
+  final T value;
+  final String label;
+
+  const SearchableDropdownItem({
+    required this.value,
+    required this.label,
+  });
+}
+
+class SearchableSingleSelectDropdown<T> extends FormField<T> {
+  SearchableSingleSelectDropdown({
+    super.key,
+    required T? value,
+    required this.hintText,
+    required this.items,
+    required this.onChanged,
+    required this.decoration,
+    this.searchHintText = 'Search...',
+    super.validator,
+    this.addNewText,
+    this.onAddNew,
+  }) : super(
+          initialValue: value,
+          builder: (FormFieldState<T> field) {
+            final state = field as _SearchableSingleSelectDropdownState<T>;
+
+            SearchableDropdownItem<T>? selectedItem;
+            for (final item in state.widget.items) {
+              if (item.value == field.value) {
+                selectedItem = item;
+                break;
+              }
+            }
+
+            final hasError = field.hasError;
+
+            return CompositedTransformTarget(
+              link: state._layerLink,
+              child: GestureDetector(
+                onTap: state._toggleDropdown,
+                child: InputDecorator(
+                  isFocused: state._isOpen,
+                  decoration: state.widget.decoration.copyWith(
+                    errorText: hasError ? field.errorText : null,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          selectedItem != null
+                              ? selectedItem.label
+                              : state.widget.hintText,
+                          style: TextStyle(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w400,
+                            fontSize: 15,
+                            height: 1,
+                            letterSpacing: -0.3,
+                            color: selectedItem != null
+                                ? AppColors.button
+                                : const Color(0xFF888888),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ),
+                      Icon(
+                        state._isOpen
+                            ? Icons.keyboard_arrow_up
+                            : Icons.keyboard_arrow_down,
+                        color: const Color(0xFF9E9E9E),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+
+  final String hintText;
+  final String searchHintText;
+  final List<SearchableDropdownItem<T>> items;
+  final ValueChanged<T?> onChanged;
+  final InputDecoration decoration;
+  final String? addNewText;
+  final void Function(String? query)? onAddNew;
+
+  @override
+  FormFieldState<T> createState() => _SearchableSingleSelectDropdownState<T>();
+}
+
+class _SearchableSingleSelectDropdownState<T> extends FormFieldState<T> {
+  @override
+  SearchableSingleSelectDropdown<T> get widget =>
+      super.widget as SearchableSingleSelectDropdown<T>;
+
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _overlayEntry;
+  bool _isOpen = false;
+  final GlobalKey<_SearchableSingleSelectOverlayContentState<T>> _overlayKey =
+      GlobalKey<_SearchableSingleSelectOverlayContentState<T>>();
+
+  @override
+  void didUpdateWidget(covariant SearchableSingleSelectDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue != widget.initialValue) {
+      setValue(widget.initialValue);
+    }
+  }
+
+  void _toggleDropdown() {
+    if (_isOpen) {
+      _overlayKey.currentState?._handleClose();
+    } else {
+      _openDropdown();
+    }
+  }
+
+  void _openDropdown() {
+    if (_isOpen) return;
+
+    final overlay = Overlay.of(context);
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    final size = renderBox.size;
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) {
+        return Stack(
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () {
+                _overlayKey.currentState?._handleClose();
+              },
+            ),
+            CompositedTransformFollower(
+              link: _layerLink,
+              showWhenUnlinked: false,
+              offset: Offset(0, size.height + 4),
+              child: Material(
+                color: Colors.transparent,
+                child: _SearchableSingleSelectOverlayContent<T>(
+                  key: _overlayKey,
+                  items: widget.items,
+                  selectedValue: value,
+                  searchHintText: widget.searchHintText,
+                  addNewText: widget.addNewText,
+                  onAddNew: widget.onAddNew != null
+                      ? (query) {
+                          _closeDropdown();
+                          widget.onAddNew?.call(query);
+                        }
+                      : null,
+                  width: size.width,
+                  onSelected: (val) {
+                    didChange(val);
+                    widget.onChanged(val);
+                    _closeDropdown();
+                  },
+                  onClose: _closeDropdown,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    overlay.insert(_overlayEntry!);
+    setState(() {
+      _isOpen = true;
+    });
+  }
+
+  void _closeDropdown() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+    if (mounted) {
+      setState(() {
+        _isOpen = false;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    if (_isOpen) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+    super.dispose();
+  }
+}
+
+class _SearchableSingleSelectOverlayContent<T> extends StatefulWidget {
+  final List<SearchableDropdownItem<T>> items;
+  final T? selectedValue;
+  final String searchHintText;
+  final String? addNewText;
+  final void Function(String? query)? onAddNew;
+  final ValueChanged<T> onSelected;
+  final VoidCallback onClose;
+  final double width;
+
+  const _SearchableSingleSelectOverlayContent({
+    super.key,
+    required this.items,
+    required this.selectedValue,
+    required this.searchHintText,
+    required this.onSelected,
+    required this.onClose,
+    required this.width,
+    this.addNewText,
+    this.onAddNew,
+  });
+
+  @override
+  State<_SearchableSingleSelectOverlayContent<T>> createState() =>
+      _SearchableSingleSelectOverlayContentState<T>();
+}
+
+class _SearchableSingleSelectOverlayContentState<T>
+    extends State<_SearchableSingleSelectOverlayContent<T>>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _expandAnimation;
+  late Animation<double> _fadeAnimation;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 200),
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    );
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _handleClose([VoidCallback? onComplete]) {
+    if (_animationController.isAnimating &&
+        _animationController.status == AnimationStatus.reverse) {
+      return;
+    }
+    _animationController.reverse().then((_) {
+      widget.onClose();
+      onComplete?.call();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = _searchQuery.toLowerCase().trim();
+    final filteredItems = query.isEmpty
+        ? widget.items
+        : widget.items
+            .where((item) => item.label.toLowerCase().contains(query))
+            .toList();
+
+    return SizeTransition(
+      sizeFactor: _expandAnimation,
+      axisAlignment: -1,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: GestureDetector(
+          onTap: () {}, // Absorb taps
+          child: Container(
+            width: widget.width,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Search field
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                  child: Container(
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F5F5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        fontSize: 13,
+                        color: Color(0xFF212121),
+                      ),
+                      decoration: InputDecoration(
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 8,
+                        ),
+                        hintText: widget.searchHintText,
+                        hintStyle: const TextStyle(
+                          fontFamily: 'Poppins',
+                          fontSize: 13,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          size: 18,
+                          color: Color(0xFF9E9E9E),
+                        ),
+                        prefixIconConstraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 18,
+                        ),
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? GestureDetector(
+                                onTap: () {
+                                  _searchController.clear();
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                                child: const Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: Color(0xFF9E9E9E),
+                                ),
+                              )
+                            : null,
+                        suffixIconConstraints: const BoxConstraints(
+                          minWidth: 28,
+                          minHeight: 16,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _searchQuery = val;
+                        });
+                      },
+                    ),
+                  ),
+                ),
+
+                // Items list
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: filteredItems.isEmpty
+                      ? Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          child: Text(
+                            _searchQuery.isNotEmpty
+                                ? 'No matching items found'
+                                : 'No items found',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13,
+                              color: Color(0xFF888888),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          itemCount: filteredItems.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredItems[index];
+                            final isSelected =
+                                item.value == widget.selectedValue;
+                            return ListTile(
+                              dense: true,
+                              visualDensity: VisualDensity.compact,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 2,
+                              ),
+                              title: Text(
+                                item.label,
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  fontWeight: isSelected
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : const Color(0xFF212121),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                              ),
+                              trailing: isSelected
+                                  ? const Icon(
+                                      Icons.check,
+                                      color: AppColors.primary,
+                                      size: 18,
+                                    )
+                                  : null,
+                              onTap: () {
+                                _handleClose(() {
+                                  widget.onSelected(item.value);
+                                });
+                              },
+                            );
+                          },
+                        ),
+                ),
+
+                // Add New option
+                if (widget.addNewText != null && widget.onAddNew != null) ...[
+                  const Divider(height: 1, color: Color(0xFFEEEEEE)),
+                  InkWell(
+                    onTap: () {
+                      _handleClose(() {
+                        widget.onAddNew?.call(
+                          _searchQuery.trim().isNotEmpty
+                              ? _searchQuery.trim()
+                              : null,
+                        );
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.add_circle_outline,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
                             child: Text(
-                              'No muscle groups found',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
+                              widget.addNewText!,
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                              style: const TextStyle(
                                 fontFamily: 'Poppins',
-                                fontSize: 13,
-                                color: Color(0xFF888888),
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                color: AppColors.primary,
                               ),
                             ),
-                          )
-                          : ListView.builder(
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: filteredMuscles.length,
-                            itemBuilder: (context, index) {
-                              final m = filteredMuscles[index];
-                              final isSelected = _tempSelectedIds.contains(
-                                m.id,
-                              );
-                              return ListTile(
-                                dense: true,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 4,
-                                ),
-                                title: Text(
-                                  m.name,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Color(0xFF212121),
-                                  ),
-                                ),
-                                trailing:
-                                    isSelected
-                                        ? const Icon(
-                                          Icons.check,
-                                          color: AppColors.primary,
-                                          size: 18,
-                                        )
-                                        : null,
-                                onTap: () {
-                                  setState(() {
-                                    if (isSelected) {
-                                      _tempSelectedIds.remove(m.id);
-                                    } else {
-                                      _tempSelectedIds.add(m.id);
-                                    }
-                                  });
-                                  widget.onDone(_tempSelectedIds);
-                                },
-                              );
-                            },
                           ),
-                ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
