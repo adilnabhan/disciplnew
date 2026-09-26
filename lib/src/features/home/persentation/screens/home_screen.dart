@@ -19,8 +19,6 @@ import 'package:customer_mobile_app/src/features/challenges/domain/repositories/
 import 'package:customer_mobile_app/src/features/home/persentation/widgets/home_challenge_card.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/all_challenges_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/widgets/winner_announcement_dialog.dart';
-import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
-import 'package:customer_mobile_app/src/features/home/domain/models/app_season_model.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/settings_screen.dart';
@@ -41,7 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
   late final DashboardCubit _dashboardCubit;
   late final HomeCubit _homeCubit;
   late final HomeChallengeCubit _homeChallengeCubit;
-  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
   late final NotificationCubit _notificationCubit;
   final ProfileCompletionCubit _profileCompletionCubit =
       ProfileCompletionCubit();
@@ -54,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _dashboardCubit = DashboardCubit();
     _homeCubit = HomeCubit();
     _homeChallengeCubit = HomeChallengeCubit();
-    _appSeasonCubit.fetchAppSeason();
     _notificationCubit = NotificationCubit()..fetchUnreadCount();
     _homeChallengeCubit.loadHomeChallenges();
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
@@ -89,7 +85,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _profileCompletionCubit.close();
     _homeCubit.close();
     _homeChallengeCubit.close();
-    _appSeasonCubit.close();
     _notificationCubit.close();
     super.dispose();
   }
@@ -103,7 +98,6 @@ class _HomeScreenState extends State<HomeScreen> {
     await Future.wait([
       _dashboardCubit.fetchActiveMembership(),
       _homeChallengeCubit.loadHomeChallenges(),
-      _appSeasonCubit.fetchAppSeason(),
       if (Feggy.read<AppCubit>()?.state.currentUser != null) ...[
         _homeCubit.fetchHomeData(),
         _profileCompletionCubit.fetchProfileCompletion(),
@@ -114,50 +108,44 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
+    const Color bgColor = Color(0xffF7F7F7);
+
+    if (isGuest) {
+      return MultiBlocProvider(
+        providers: [
+          BlocProvider.value(value: _profileCompletionCubit),
+          BlocProvider.value(value: _homeChallengeCubit),
+        ],
+        child: Scaffold(
+          backgroundColor: bgColor,
+          body: homeView(),
+        ),
+      );
+    }
+
     return MultiBlocProvider(
       providers: [
         BlocProvider.value(value: _profileCompletionCubit),
-        BlocProvider.value(value: _appSeasonCubit),
         BlocProvider.value(value: _homeChallengeCubit),
       ],
-      child: BlocBuilder<AppSeasonCubit, AppSeasonState>(
-        bloc: _appSeasonCubit,
-        builder: (context, seasonState) {
-          final bool isSeasonalActive = seasonState.isActive;
-          final Color bgColor =
-              isSeasonalActive
-                  ? const Color(0xFFFCF2E3)
-                  : const Color(0xffF7F7F7);
-
-          if (isGuest) {
-            return Scaffold(
-              backgroundColor: bgColor,
-              body: homeView(seasonState),
-            );
-          }
-
-          return BlocListener<DashboardCubit, DashboardState>(
-            listenWhen:
-                (previous, current) =>
-                    previous.navIndex != current.navIndex &&
-                    current.navIndex == 0,
-            listener: (context, state) {
-              _profileCompletionCubit.fetchProfileCompletion();
-              _appSeasonCubit.fetchAppSeason();
-            },
-            child: Scaffold(
-              backgroundColor: bgColor,
-              body: homeView(seasonState),
-            ),
-          );
+      child: BlocListener<DashboardCubit, DashboardState>(
+        listenWhen:
+            (previous, current) =>
+                previous.navIndex != current.navIndex &&
+                current.navIndex == 0,
+        listener: (context, state) {
+          _profileCompletionCubit.fetchProfileCompletion();
         },
+        child: Scaffold(
+          backgroundColor: bgColor,
+          body: homeView(),
+        ),
       ),
     );
   }
 
-  Widget homeView(AppSeasonState seasonState) {
+  Widget homeView() {
     final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
-    final bool isSeasonalActive = seasonState.isActive;
 
     return RefreshIndicator(
       onRefresh: _fetchActiveMembership,
@@ -165,13 +153,10 @@ class _HomeScreenState extends State<HomeScreen> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: EdgeInsets.only(bottom: 16, top: isSeasonalActive ? 0 : 16),
+        padding: const EdgeInsets.only(bottom: 16, top: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Seasonal Header (when active)
-            if (isSeasonalActive)
-              _buildSeasonalHeader(context, seasonState.seasonModel),
             // Expired Warning Banner
             BlocBuilder<DashboardCubit, DashboardState>(
               bloc: _dashboardCubit,
@@ -276,22 +261,23 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // Rewards and Scorecard Quick Action Cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _buildRewardsCard(context),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildScorecardCard(context),
-                  ),
-                ],
+            if (!isGuest) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildRewardsCard(context),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildScorecardCard(context),
+                    ),
+                  ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+            ],
 
             // Challenges Container Section
             BlocBuilder<HomeChallengeCubit, HomeChallengeState>(
@@ -304,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const HomeChallengeSection().pxy(x: 16),
+                    const HomeChallengeSection().pxy(x: 10),
                     const SizedBox(height: 20),
                   ],
                 );
@@ -351,7 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             // Did You Know Section (always shown)
-            _buildDidYouKnowSection(isSeasonal: isSeasonalActive),
+            _buildDidYouKnowSection(),
           ],
         ),
       ),
@@ -670,9 +656,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSeasonalHeader(BuildContext context, AppSeasonModel season) {
-    return const SizedBox(height: 8);
-  }
 
   Widget _buildActiveGymSection(ActiveMembershipModel activeMembership) {
     final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
@@ -1142,9 +1125,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-Widget _buildDidYouKnowSection({bool isSeasonal = false}) {
+Widget _buildDidYouKnowSection() {
   return ColoredBox(
-    color: isSeasonal ? const Color(0xFFFCF2E3) : const Color(0xffF7F7F7),
+    color: const Color(0xffF7F7F7),
     child: SizedBox(
       width: double.maxFinite,
       child: Column(
@@ -1537,7 +1520,7 @@ class _BannersViewState extends State<BannersView> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return AspectRatio(
-        aspectRatio: 2.1 / 1,
+        aspectRatio: 2.0 / 1,
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           child: Container(
@@ -1559,7 +1542,7 @@ class _BannersViewState extends State<BannersView> {
       final hasWa = banner.whatsappNumber != null &&
           banner.whatsappNumber!.trim().isNotEmpty;
       return AspectRatio(
-        aspectRatio: 2.1 / 1,
+        aspectRatio: 2.0 / 1,
         child: ClipRRect(
           borderRadius: const BorderRadius.all(Radius.circular(16)),
           child: Stack(
@@ -1585,7 +1568,6 @@ class _BannersViewState extends State<BannersView> {
                         ),
                 ),
               ),
-              if (hasWa) _buildWhatsAppButton(banner),
             ],
           ),
         ),
@@ -1595,7 +1577,7 @@ class _BannersViewState extends State<BannersView> {
     return Column(
       children: [
         AspectRatio(
-          aspectRatio: 2.1 / 1,
+          aspectRatio: 2.0 / 1,
           child: ClipRRect(
             borderRadius: const BorderRadius.all(Radius.circular(16)),
             child: PageView.builder(
@@ -1636,32 +1618,64 @@ class _BannersViewState extends State<BannersView> {
                               ),
                       ),
                     ),
-                    if (hasWa) _buildWhatsAppButton(banner),
                   ],
                 );
               },
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+        const SizedBox(height: 8),
+        SizedBox(
+          height: 16,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
             children: List.generate(_banners.length, (index) {
-              return Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(right: 4),
-                decoration: BoxDecoration(
-                  color:
-                      index == _currentPage
-                          ? Colors.red
-                          : Colors.grey.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(4),
+              final isActive = index == _currentPage;
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOut,
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 350),
+                    curve: Curves.easeInOutCubic,
+                    height: isActive ? 16 : 9,
+                    width: isActive ? 30 : 11,
+                    padding: isActive
+                        ? const EdgeInsets.symmetric(horizontal: 3.5, vertical: 2.5)
+                        : EdgeInsets.zero,
+                    decoration: BoxDecoration(
+                      color: isActive ? const Color(0xFFFFF1F2) : const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(isActive ? 10 : 4.5),
+                      border: Border.all(
+                        color: isActive ? const Color(0xFFFECDD3) : Colors.transparent,
+                        width: isActive ? 1.2 : 0,
+                      ),
+                    ),
+                    child: isActive
+                        ? AnimatedContainer(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeInOutCubic,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
                 ),
               );
             }),
           ),
+        ),
         ),
       ],
     );

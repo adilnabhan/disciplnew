@@ -12,7 +12,6 @@ import 'package:customer_mobile_app/core/widgets/image_network.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_details_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_preview_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
-import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
 
 class WorkoutLogScreen extends StatefulWidget {
   const WorkoutLogScreen({super.key});
@@ -25,7 +24,6 @@ class WorkoutLogScreen extends StatefulWidget {
 }
 
 class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
-  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
   DateTime _selectedDate = DateTime.now();
 
   late final ScrollController _scrollController;
@@ -283,7 +281,6 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   @override
   void dispose() {
-    _appSeasonCubit.close();
     _scrollController.dispose();
     super.dispose();
   }
@@ -842,29 +839,15 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       logCards.add(const _RestDayCard());
     }
 
-    return BlocBuilder<AppSeasonCubit, AppSeasonState>(
-      bloc: _appSeasonCubit,
-      builder: (context, seasonState) {
-        final bool isSeasonal = seasonState.isActive;
-        return Scaffold(
-          backgroundColor: AppColors.bgcolorgrey,
-          appBar: AppBar(
-            backgroundColor: AppColors.light,
-            surfaceTintColor: Colors.transparent,
-            elevation: 0,
-            centerTitle: false,
-            titleSpacing: 20,
-            flexibleSpace: isSeasonal
-                ? Container(
-                    color: AppColors.light,
-                    child: Image.asset(
-                      'assets/images/png/vectors/appbar_onam.png',
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                    ),
-                  )
-                : null,
-            title: Text(
+    return Scaffold(
+      backgroundColor: AppColors.bgcolorgrey,
+      appBar: AppBar(
+        backgroundColor: AppColors.light,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        titleSpacing: 20,
+        title: Text(
               'Workout Log',
               style: AppStyles.text20Px.poppins.w500.copyWith(
                 height: 1.0,
@@ -967,9 +950,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                     ),
                   ),
           floatingActionButton: !isCustomer ? null : _buildStartButton(),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-        );
-      },
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 

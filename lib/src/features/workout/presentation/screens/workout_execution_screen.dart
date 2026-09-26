@@ -377,12 +377,12 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                     child: DropdownButton<String>(
                       value: () {
                         final val = exercise['weight_type']?.toString();
-                        if (val == null) return 'kg';
+                        if (val == null) return 'KG';
                         final lower = val.toLowerCase().replaceAll(' ', '');
                         if (lower == 'bw') return 'BW';
-                        if (lower == 'kg+bw' || lower == 'kgbw') return 'kg+BW';
-                        if (lower == 'baronly' || lower == 'bo') return 'Bar only';
-                        return 'kg';
+                        if (lower == 'fw' || lower == 'freeweight' || lower == 'baronly' || lower == 'bo' || lower == 'bar') return 'FW';
+                        if (lower == 'kg+bw' || lower == 'kgbw') return 'KG';
+                        return 'KG';
                       }(),
                       isDense: true,
                       isExpanded: true,
@@ -394,22 +394,25 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         color: Color(0xFF212121),
                       ),
                       icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      selectedItemBuilder: (BuildContext context) {
+                        return const <Widget>[
+                          Center(child: Text('KG')),
+                          Center(child: Text('BW')),
+                          Center(child: Text('FW')),
+                        ];
+                      },
                       items: const [
                         DropdownMenuItem(
-                          value: 'kg',
-                          child: Center(child: Text('kg')),
+                          value: 'KG',
+                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Kilograms', maxLines: 1))),
                         ),
                         DropdownMenuItem(
                           value: 'BW',
-                          child: Center(child: Text('BW')),
+                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Body Weight', maxLines: 1))),
                         ),
                         DropdownMenuItem(
-                          value: 'kg+BW',
-                          child: Center(child: Text('kg+BW')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'Bar only',
-                          child: Center(child: Text('Bar only')),
+                          value: 'FW',
+                          child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Free Weight', maxLines: 1))),
                         ),
                       ],
                       onChanged: (val) {
@@ -540,11 +543,37 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         flex: 3,
                         child: Align(
                           alignment: Alignment.center,
-                          child: SizedBox(
-                            width: 75,
-                            child: TextFormField(
-                              initialValue: set['kg'] as String?,
-                              readOnly: widget.isReadOnly,
+                          child: () {
+                            final wType = exercise['weight_type']?.toString().toUpperCase() ?? 'KG';
+                            if (wType == 'BW') {
+                              return Container(
+                                width: 58,
+                                height: 34,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEEEEEE),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                    color: const Color(0xFFE0E0E0),
+                                    width: 1.0,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'BW',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF666666),
+                                  ),
+                                ),
+                              );
+                            }
+                            return SizedBox(
+                              width: 75,
+                              child: TextFormField(
+                                initialValue: set['kg'] as String?,
+                                readOnly: widget.isReadOnly,
                               inputFormatters: [
                                 LengthLimitingTextInputFormatter(8),
                               ],
@@ -572,9 +601,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                                 set['kg'] = val;
                               },
                             ),
-                          ),
-                        ),
+                          );
+                        }(),
                       ),
+                    ),
                       // Rep / Sec / Distance Input Box
                       Expanded(
                         flex: 3,

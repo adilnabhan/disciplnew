@@ -39,7 +39,9 @@ class ChallengeListState {
     int? currentPage,
     String? selectedStatus,
     String? selectedChallengeType,
+    bool clearChallengeType = false,
     String? selectedCategory,
+    bool clearCategory = false,
     String? searchQuery,
   }) {
     return ChallengeListState(
@@ -51,9 +53,12 @@ class ChallengeListState {
       hasMore: hasMore ?? this.hasMore,
       currentPage: currentPage ?? this.currentPage,
       selectedStatus: selectedStatus ?? this.selectedStatus,
-      selectedChallengeType:
-          selectedChallengeType ?? this.selectedChallengeType,
-      selectedCategory: selectedCategory ?? this.selectedCategory,
+      selectedChallengeType: clearChallengeType 
+          ? null 
+          : (selectedChallengeType ?? this.selectedChallengeType),
+      selectedCategory: clearCategory 
+          ? null 
+          : (selectedCategory ?? this.selectedCategory),
       searchQuery: searchQuery ?? this.searchQuery,
     );
   }

@@ -1,7 +1,6 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/customer_membership_details_screen.dart';
 import 'package:customer_mobile_app/src/features/fitnesscenters/persentation/screens/fitness_centers_listing_screen.dart';
-import 'package:customer_mobile_app/src/features/home/cubit/app_season_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_cubit.dart';
 import 'package:customer_mobile_app/src/features/notifications/cubit/notification_state.dart';
 import 'package:customer_mobile_app/src/features/scorecard/presentation/screens/score_card_screen.dart';
@@ -24,14 +23,12 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   late final DashboardCubit _cubit;
   late final NotificationCubit _notificationCubit;
-  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
 
   @override
   void initState() {
     super.initState();
     _cubit = DashboardCubit(navIndex: widget.navIndex)..fetchActiveMembership();
     _notificationCubit = NotificationCubit()..fetchUnreadCount();
-    _appSeasonCubit.fetchAppSeason();
   }
 
   Widget _buildProfileTabIcon(bool isSelected) {
@@ -79,23 +76,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _cubit.close();
     _notificationCubit.close();
-    _appSeasonCubit.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider.value(value: _cubit),
-        BlocProvider.value(value: _appSeasonCubit),
-      ],
-      child: BlocBuilder<AppSeasonCubit, AppSeasonState>(
-        bloc: _appSeasonCubit,
-        builder: (context, seasonState) {
-          final bool isSeasonalActive = seasonState.isActive;
-          return BlocBuilder<DashboardCubit, DashboardState>(
-            builder: (context, state) {
+    return BlocProvider.value(
+      value: _cubit,
+      child: BlocBuilder<DashboardCubit, DashboardState>(
+        builder: (context, state) {
               // Determine if user has an active gym/membership
               final bool hasActiveGym = state.activeMembershipData.fold(
                 () {
@@ -153,27 +142,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
 
               return Scaffold(
-                backgroundColor: isSeasonalActive && currentIndex == 0
-                    ? const Color(0xFFFCF2E3)
-                    : const Color(0xFFF7F7F7),
+                backgroundColor: const Color(0xFFF7F7F7),
                 appBar:
                     currentIndex == 0
-                        ? (isSeasonalActive
-                            ? SeasonalAppBar(
-                              seasonName: seasonState.seasonModel.name ?? 'Onam',
-                              notificationCubit: _notificationCubit,
-                              dashboardCubit: _cubit,
-                            )
-                            : AppBar(
-                              backgroundColor: AppColors.light,
-                              surfaceTintColor: Colors.transparent,
-                              elevation: 0,
-                              scrolledUnderElevation: 0,
-                              title: Image.asset(
-                                'assets/images/png/vectors/discipl_spell.png',
-                                height: 24,
-                              ),
-                              centerTitle: false,
+                        ? AppBar(
+                            backgroundColor: AppColors.light,
+                            surfaceTintColor: Colors.transparent,
+                            elevation: 0,
+                            scrolledUnderElevation: 0,
+                            title: Image.asset(
+                              'assets/images/png/vectors/discipl_spell.png',
+                              height: 24,
+                            ),
+                            centerTitle: false,
                               actions: [
                                 _GymActionIcon(cubit: _cubit),
                                 const SizedBox(width: 10),
@@ -280,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 const SizedBox(width: 16),
                               ],
-                            ))
+                            )
                         : null,
                 body: LazyIndexedStack(
                   index: currentIndex,
@@ -489,10 +470,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               );
             },
-          );
-        },
-      ),
-    );
+          ),
+        );
   }
 }
 
@@ -558,166 +537,6 @@ class _LazyIndexedStackState extends State<LazyIndexedStack> {
   }
 }
 
-class SeasonalAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const SeasonalAppBar({
-    required this.seasonName,
-    required this.notificationCubit,
-    required this.dashboardCubit,
-    super.key,
-  });
-
-  final String seasonName;
-  final NotificationCubit notificationCubit;
-  final DashboardCubit dashboardCubit;
-
-  @override
-  Size get preferredSize => const Size.fromHeight(160);
-
-  @override
-  Widget build(BuildContext context) {
-    final double topPadding = MediaQuery.of(context).padding.top;
-
-    return Container(
-      height: preferredSize.height + topPadding,
-      width: double.infinity,
-      color: const Color(0xFFFCF2E3),
-      child: Stack(
-        children: [
-          // Single Seasonal Asset Image (onam_home_2.png)
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/png/vectors/onam_home_2.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-
-          // Header Top Action Row (DISCIPL Logo + Notifications + Settings)
-          Positioned(
-            left: 20,
-            top: topPadding + 8,
-            right: 20,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Image.asset(
-                  'assets/images/png/vectors/discipl_spell.png',
-                  height: 24,
-                ),
-                Row(
-                  children: [
-                    _GymActionIcon(cubit: dashboardCubit),
-                    const SizedBox(width: 10),
-                    BlocBuilder<NotificationCubit, NotificationState>(
-                      bloc: notificationCubit,
-                      builder: (context, notificationState) {
-                        final int unreadCount = notificationState.unreadCount;
-                        return GestureDetector(
-                          onTap: () {
-                            context.push(
-                              MultiBlocProvider(
-                                providers: [
-                                  BlocProvider.value(
-                                    value: notificationCubit,
-                                  ),
-                                  BlocProvider.value(value: dashboardCubit),
-                                ],
-                                child: const NotificationsScreen(),
-                              ),
-                            );
-                            notificationCubit.fetchUnreadCount();
-                          },
-                          child: Container(
-                            width: 40,
-                            height: 40,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFEEEEEE),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              alignment: Alignment.center,
-                              children: [
-                                SvgPicture.asset(
-                                  'assets/images/svg/icons/notification_icon.svg',
-                                  width: 20,
-                                  height: 20,
-                                ),
-                                if (unreadCount > 0)
-                                  Positioned(
-                                    right: -2,
-                                    top: -2,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 1,
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(
-                                          10,
-                                        ),
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 1.5,
-                                        ),
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          unreadCount >= 100
-                                              ? '99+'
-                                              : '$unreadCount',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            height: 1.0,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () {
-                        context.push(const SettingsScreen());
-                      },
-                      child: Container(
-                        width: 40,
-                        height: 40,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFEEEEEE),
-                          shape: BoxShape.circle,
-                        ),
-                        alignment: Alignment.center,
-                        child: SvgPicture.asset(
-                          'assets/images/svg/icons/settings _icon.svg',
-                          width: 20,
-                          height: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 void _showActiveGymBottomSheet(
   BuildContext context,

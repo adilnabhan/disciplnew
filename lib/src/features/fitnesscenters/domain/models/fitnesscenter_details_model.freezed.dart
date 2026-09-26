@@ -15,12 +15,6 @@ final _privateConstructorUsedError = UnsupportedError(
   'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
 );
 
-FitnesscenterDetailsModel _$FitnesscenterDetailsModelFromJson(
-  Map<String, dynamic> json,
-) {
-  return _FitnesscenterDetailsModel.fromJson(json);
-}
-
 /// @nodoc
 mixin _$FitnesscenterDetailsModel {
   @JsonKey(name: 'id')
@@ -77,9 +71,6 @@ mixin _$FitnesscenterDetailsModel {
   bool? get isSlotAvailable => throw _privateConstructorUsedError;
   @JsonKey(name: 'trainers')
   List<GymTrainer>? get trainers => throw _privateConstructorUsedError;
-
-  /// Serializes this FitnesscenterDetailsModel to a JSON map.
-  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
 
   /// Create a copy of FitnesscenterDetailsModel
   /// with the given fields replaced by the non-null parameter values.
@@ -563,7 +554,7 @@ class __$$FitnesscenterDetailsModelImplCopyWithImpl<$Res>
 }
 
 /// @nodoc
-@JsonSerializable()
+
 class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
   const _$FitnesscenterDetailsModelImpl({
     @JsonKey(name: 'id') this.id,
@@ -601,9 +592,6 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
        _photos = photos,
        _packages = packages,
        _trainers = trainers;
-
-  factory _$FitnesscenterDetailsModelImpl.fromJson(Map<String, dynamic> json) =>
-      _$$FitnesscenterDetailsModelImplFromJson(json);
 
   @override
   @JsonKey(name: 'id')
@@ -826,7 +814,6 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
             const DeepCollectionEquality().equals(other._trainers, _trainers));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
   @override
   int get hashCode => Object.hashAll([
     runtimeType,
@@ -868,11 +855,6 @@ class _$FitnesscenterDetailsModelImpl implements _FitnesscenterDetailsModel {
   get copyWith => __$$FitnesscenterDetailsModelImplCopyWithImpl<
     _$FitnesscenterDetailsModelImpl
   >(this, _$identity);
-
-  @override
-  Map<String, dynamic> toJson() {
-    return _$$FitnesscenterDetailsModelImplToJson(this);
-  }
 }
 
 abstract class _FitnesscenterDetailsModel implements FitnesscenterDetailsModel {
@@ -906,9 +888,6 @@ abstract class _FitnesscenterDetailsModel implements FitnesscenterDetailsModel {
     @JsonKey(name: 'is_slot_available') final bool? isSlotAvailable,
     @JsonKey(name: 'trainers') final List<GymTrainer>? trainers,
   }) = _$FitnesscenterDetailsModelImpl;
-
-  factory _FitnesscenterDetailsModel.fromJson(Map<String, dynamic> json) =
-      _$FitnesscenterDetailsModelImpl.fromJson;
 
   @override
   @JsonKey(name: 'id')
@@ -2765,6 +2744,9 @@ mixin _$GymTrainer {
   Location? get location => throw _privateConstructorUsedError;
   @JsonKey(name: 'social_media')
   List<SocialMedia>? get socialMedia => throw _privateConstructorUsedError;
+  @JsonKey(name: 'portfolio_images')
+  List<GymPortfolioImage>? get portfolioImages =>
+      throw _privateConstructorUsedError;
 
   /// Serializes this GymTrainer to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -2804,6 +2786,7 @@ abstract class $GymTrainerCopyWith<$Res> {
     @JsonKey(name: 'place') String? place,
     @JsonKey(name: 'location') Location? location,
     @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
+    @JsonKey(name: 'portfolio_images') List<GymPortfolioImage>? portfolioImages,
   });
 
   $LocationCopyWith<$Res>? get location;
@@ -2844,6 +2827,7 @@ class _$GymTrainerCopyWithImpl<$Res, $Val extends GymTrainer>
     Object? place = freezed,
     Object? location = freezed,
     Object? socialMedia = freezed,
+    Object? portfolioImages = freezed,
   }) {
     return _then(
       _value.copyWith(
@@ -2947,6 +2931,11 @@ class _$GymTrainerCopyWithImpl<$Res, $Val extends GymTrainer>
                     ? _value.socialMedia
                     : socialMedia // ignore: cast_nullable_to_non_nullable
                         as List<SocialMedia>?,
+            portfolioImages:
+                freezed == portfolioImages
+                    ? _value.portfolioImages
+                    : portfolioImages // ignore: cast_nullable_to_non_nullable
+                        as List<GymPortfolioImage>?,
           )
           as $Val,
     );
@@ -2997,6 +2986,7 @@ abstract class _$$GymTrainerImplCopyWith<$Res>
     @JsonKey(name: 'place') String? place,
     @JsonKey(name: 'location') Location? location,
     @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
+    @JsonKey(name: 'portfolio_images') List<GymPortfolioImage>? portfolioImages,
   });
 
   @override
@@ -3037,6 +3027,7 @@ class __$$GymTrainerImplCopyWithImpl<$Res>
     Object? place = freezed,
     Object? location = freezed,
     Object? socialMedia = freezed,
+    Object? portfolioImages = freezed,
   }) {
     return _then(
       _$GymTrainerImpl(
@@ -3140,6 +3131,11 @@ class __$$GymTrainerImplCopyWithImpl<$Res>
                 ? _value._socialMedia
                 : socialMedia // ignore: cast_nullable_to_non_nullable
                     as List<SocialMedia>?,
+        portfolioImages:
+            freezed == portfolioImages
+                ? _value._portfolioImages
+                : portfolioImages // ignore: cast_nullable_to_non_nullable
+                    as List<GymPortfolioImage>?,
       ),
     );
   }
@@ -3170,10 +3166,13 @@ class _$GymTrainerImpl implements _GymTrainer {
     @JsonKey(name: 'place') this.place,
     @JsonKey(name: 'location') this.location,
     @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
+    @JsonKey(name: 'portfolio_images')
+    final List<GymPortfolioImage>? portfolioImages,
   }) : _specializations = specializations,
        _transformations = transformations,
        _certifications = certifications,
-       _socialMedia = socialMedia;
+       _socialMedia = socialMedia,
+       _portfolioImages = portfolioImages;
 
   factory _$GymTrainerImpl.fromJson(Map<String, dynamic> json) =>
       _$$GymTrainerImplFromJson(json);
@@ -3270,9 +3269,20 @@ class _$GymTrainerImpl implements _GymTrainer {
     return EqualUnmodifiableListView(value);
   }
 
+  final List<GymPortfolioImage>? _portfolioImages;
+  @override
+  @JsonKey(name: 'portfolio_images')
+  List<GymPortfolioImage>? get portfolioImages {
+    final value = _portfolioImages;
+    if (value == null) return null;
+    if (_portfolioImages is EqualUnmodifiableListView) return _portfolioImages;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(value);
+  }
+
   @override
   String toString() {
-    return 'GymTrainer(id: $id, fullName: $fullName, userType: $userType, bio: $bio, bannerImage: $bannerImage, profileImage: $profileImage, experienceYears: $experienceYears, averageRating: $averageRating, reviewCount: $reviewCount, specializations: $specializations, clientsCount: $clientsCount, verifiedWorkoutsCount: $verifiedWorkoutsCount, transformations: $transformations, certifications: $certifications, email: $email, mobile: $mobile, gender: $gender, place: $place, location: $location, socialMedia: $socialMedia)';
+    return 'GymTrainer(id: $id, fullName: $fullName, userType: $userType, bio: $bio, bannerImage: $bannerImage, profileImage: $profileImage, experienceYears: $experienceYears, averageRating: $averageRating, reviewCount: $reviewCount, specializations: $specializations, clientsCount: $clientsCount, verifiedWorkoutsCount: $verifiedWorkoutsCount, transformations: $transformations, certifications: $certifications, email: $email, mobile: $mobile, gender: $gender, place: $place, location: $location, socialMedia: $socialMedia, portfolioImages: $portfolioImages)';
   }
 
   @override
@@ -3323,6 +3333,10 @@ class _$GymTrainerImpl implements _GymTrainer {
             const DeepCollectionEquality().equals(
               other._socialMedia,
               _socialMedia,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._portfolioImages,
+              _portfolioImages,
             ));
   }
 
@@ -3350,6 +3364,7 @@ class _$GymTrainerImpl implements _GymTrainer {
     place,
     location,
     const DeepCollectionEquality().hash(_socialMedia),
+    const DeepCollectionEquality().hash(_portfolioImages),
   ]);
 
   /// Create a copy of GymTrainer
@@ -3389,6 +3404,8 @@ abstract class _GymTrainer implements GymTrainer {
     @JsonKey(name: 'place') final String? place,
     @JsonKey(name: 'location') final Location? location,
     @JsonKey(name: 'social_media') final List<SocialMedia>? socialMedia,
+    @JsonKey(name: 'portfolio_images')
+    final List<GymPortfolioImage>? portfolioImages,
   }) = _$GymTrainerImpl;
 
   factory _GymTrainer.fromJson(Map<String, dynamic> json) =
@@ -3454,12 +3471,262 @@ abstract class _GymTrainer implements GymTrainer {
   @override
   @JsonKey(name: 'social_media')
   List<SocialMedia>? get socialMedia;
+  @override
+  @JsonKey(name: 'portfolio_images')
+  List<GymPortfolioImage>? get portfolioImages;
 
   /// Create a copy of GymTrainer
   /// with the given fields replaced by the non-null parameter values.
   @override
   @JsonKey(includeFromJson: false, includeToJson: false)
   _$$GymTrainerImplCopyWith<_$GymTrainerImpl> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+GymPortfolioImage _$GymPortfolioImageFromJson(Map<String, dynamic> json) {
+  return _GymPortfolioImage.fromJson(json);
+}
+
+/// @nodoc
+mixin _$GymPortfolioImage {
+  @JsonKey(name: 'id')
+  int? get id => throw _privateConstructorUsedError;
+  @JsonKey(name: 'image')
+  String? get image => throw _privateConstructorUsedError;
+  @JsonKey(name: 'image_url')
+  String? get imageUrl => throw _privateConstructorUsedError;
+  @JsonKey(name: 'type')
+  String? get type => throw _privateConstructorUsedError;
+
+  /// Serializes this GymPortfolioImage to a JSON map.
+  Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
+
+  /// Create a copy of GymPortfolioImage
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  $GymPortfolioImageCopyWith<GymPortfolioImage> get copyWith =>
+      throw _privateConstructorUsedError;
+}
+
+/// @nodoc
+abstract class $GymPortfolioImageCopyWith<$Res> {
+  factory $GymPortfolioImageCopyWith(
+    GymPortfolioImage value,
+    $Res Function(GymPortfolioImage) then,
+  ) = _$GymPortfolioImageCopyWithImpl<$Res, GymPortfolioImage>;
+  @useResult
+  $Res call({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'image') String? image,
+    @JsonKey(name: 'image_url') String? imageUrl,
+    @JsonKey(name: 'type') String? type,
+  });
+}
+
+/// @nodoc
+class _$GymPortfolioImageCopyWithImpl<$Res, $Val extends GymPortfolioImage>
+    implements $GymPortfolioImageCopyWith<$Res> {
+  _$GymPortfolioImageCopyWithImpl(this._value, this._then);
+
+  // ignore: unused_field
+  final $Val _value;
+  // ignore: unused_field
+  final $Res Function($Val) _then;
+
+  /// Create a copy of GymPortfolioImage
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = freezed,
+    Object? image = freezed,
+    Object? imageUrl = freezed,
+    Object? type = freezed,
+  }) {
+    return _then(
+      _value.copyWith(
+            id:
+                freezed == id
+                    ? _value.id
+                    : id // ignore: cast_nullable_to_non_nullable
+                        as int?,
+            image:
+                freezed == image
+                    ? _value.image
+                    : image // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            imageUrl:
+                freezed == imageUrl
+                    ? _value.imageUrl
+                    : imageUrl // ignore: cast_nullable_to_non_nullable
+                        as String?,
+            type:
+                freezed == type
+                    ? _value.type
+                    : type // ignore: cast_nullable_to_non_nullable
+                        as String?,
+          )
+          as $Val,
+    );
+  }
+}
+
+/// @nodoc
+abstract class _$$GymPortfolioImageImplCopyWith<$Res>
+    implements $GymPortfolioImageCopyWith<$Res> {
+  factory _$$GymPortfolioImageImplCopyWith(
+    _$GymPortfolioImageImpl value,
+    $Res Function(_$GymPortfolioImageImpl) then,
+  ) = __$$GymPortfolioImageImplCopyWithImpl<$Res>;
+  @override
+  @useResult
+  $Res call({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'image') String? image,
+    @JsonKey(name: 'image_url') String? imageUrl,
+    @JsonKey(name: 'type') String? type,
+  });
+}
+
+/// @nodoc
+class __$$GymPortfolioImageImplCopyWithImpl<$Res>
+    extends _$GymPortfolioImageCopyWithImpl<$Res, _$GymPortfolioImageImpl>
+    implements _$$GymPortfolioImageImplCopyWith<$Res> {
+  __$$GymPortfolioImageImplCopyWithImpl(
+    _$GymPortfolioImageImpl _value,
+    $Res Function(_$GymPortfolioImageImpl) _then,
+  ) : super(_value, _then);
+
+  /// Create a copy of GymPortfolioImage
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? id = freezed,
+    Object? image = freezed,
+    Object? imageUrl = freezed,
+    Object? type = freezed,
+  }) {
+    return _then(
+      _$GymPortfolioImageImpl(
+        id:
+            freezed == id
+                ? _value.id
+                : id // ignore: cast_nullable_to_non_nullable
+                    as int?,
+        image:
+            freezed == image
+                ? _value.image
+                : image // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        imageUrl:
+            freezed == imageUrl
+                ? _value.imageUrl
+                : imageUrl // ignore: cast_nullable_to_non_nullable
+                    as String?,
+        type:
+            freezed == type
+                ? _value.type
+                : type // ignore: cast_nullable_to_non_nullable
+                    as String?,
+      ),
+    );
+  }
+}
+
+/// @nodoc
+@JsonSerializable()
+class _$GymPortfolioImageImpl implements _GymPortfolioImage {
+  const _$GymPortfolioImageImpl({
+    @JsonKey(name: 'id') this.id,
+    @JsonKey(name: 'image') this.image,
+    @JsonKey(name: 'image_url') this.imageUrl,
+    @JsonKey(name: 'type') this.type,
+  });
+
+  factory _$GymPortfolioImageImpl.fromJson(Map<String, dynamic> json) =>
+      _$$GymPortfolioImageImplFromJson(json);
+
+  @override
+  @JsonKey(name: 'id')
+  final int? id;
+  @override
+  @JsonKey(name: 'image')
+  final String? image;
+  @override
+  @JsonKey(name: 'image_url')
+  final String? imageUrl;
+  @override
+  @JsonKey(name: 'type')
+  final String? type;
+
+  @override
+  String toString() {
+    return 'GymPortfolioImage(id: $id, image: $image, imageUrl: $imageUrl, type: $type)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _$GymPortfolioImageImpl &&
+            (identical(other.id, id) || other.id == id) &&
+            (identical(other.image, image) || other.image == image) &&
+            (identical(other.imageUrl, imageUrl) ||
+                other.imageUrl == imageUrl) &&
+            (identical(other.type, type) || other.type == type));
+  }
+
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  int get hashCode => Object.hash(runtimeType, id, image, imageUrl, type);
+
+  /// Create a copy of GymPortfolioImage
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @override
+  @pragma('vm:prefer-inline')
+  _$$GymPortfolioImageImplCopyWith<_$GymPortfolioImageImpl> get copyWith =>
+      __$$GymPortfolioImageImplCopyWithImpl<_$GymPortfolioImageImpl>(
+        this,
+        _$identity,
+      );
+
+  @override
+  Map<String, dynamic> toJson() {
+    return _$$GymPortfolioImageImplToJson(this);
+  }
+}
+
+abstract class _GymPortfolioImage implements GymPortfolioImage {
+  const factory _GymPortfolioImage({
+    @JsonKey(name: 'id') final int? id,
+    @JsonKey(name: 'image') final String? image,
+    @JsonKey(name: 'image_url') final String? imageUrl,
+    @JsonKey(name: 'type') final String? type,
+  }) = _$GymPortfolioImageImpl;
+
+  factory _GymPortfolioImage.fromJson(Map<String, dynamic> json) =
+      _$GymPortfolioImageImpl.fromJson;
+
+  @override
+  @JsonKey(name: 'id')
+  int? get id;
+  @override
+  @JsonKey(name: 'image')
+  String? get image;
+  @override
+  @JsonKey(name: 'image_url')
+  String? get imageUrl;
+  @override
+  @JsonKey(name: 'type')
+  String? get type;
+
+  /// Create a copy of GymPortfolioImage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  _$$GymPortfolioImageImplCopyWith<_$GymPortfolioImageImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
 

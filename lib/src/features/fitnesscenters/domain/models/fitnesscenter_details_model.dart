@@ -38,16 +38,66 @@ class FitnesscenterDetailsModel with _$FitnesscenterDetailsModel {
 
   factory FitnesscenterDetailsModel.fromJson(Map<String, dynamic> json) {
     final Map<String, dynamic> map = Map<String, dynamic>.from(json);
+
+    // Parse trainers using custom fromApiJson
+    List<GymTrainer>? trainersList;
     if (map['trainers'] != null && map['trainers'] is List) {
-      map['trainers'] = (map['trainers'] as List).map((t) {
+      trainersList = (map['trainers'] as List).map((t) {
         if (t is Map) {
           final tMap = Map<String, dynamic>.from(t);
-          return GymTrainer.fromApiJson(tMap).toJson();
+          return GymTrainer.fromApiJson(tMap);
+        } else if (t is GymTrainer) {
+          return t;
         }
-        return t;
-      }).toList();
+        return null;
+      }).whereType<GymTrainer>().toList();
     }
-    return _$FitnesscenterDetailsModelFromJson(map);
+
+    return FitnesscenterDetailsModel(
+      id: (map['id'] as num?)?.toInt(),
+      name: map['name'] as String?,
+      description: map['description'] as String?,
+      email: map['email'] as String?,
+      phoneNumber: map['phone_number'] as String?,
+      isPublic: map['is_public'] as bool?,
+      active: map['active'] as bool?,
+      isSubscribed: map['is_subscribed'] as bool?,
+      takeFreeTrial: map['take_free_trial'] as bool?,
+      isOnFreeTrial: map['is_on_free_trial'] as bool?,
+      location: map['location'] != null && map['location'] is Map
+          ? Location.fromJson(Map<String, dynamic>.from(map['location'] as Map))
+          : null,
+      googleMapsUrl: map['google_maps_url'] as String?,
+      workingDays: (map['working_days'] as List?)
+          ?.map((e) => WorkingDay.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      timeSlots: (map['time_slots'] as List?)
+          ?.map((e) => GymTimeSlot.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      socialMedia: (map['social_media'] as List?)
+          ?.map((e) => SocialMedia.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      amenities: (map['amenities'] as List?)
+          ?.map((e) => Amenity.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      categories: (map['categories'] as List?)
+          ?.map((e) => Amenity.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      photos: (map['photos'] as List?)
+          ?.map((e) => Photo.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      packages: (map['packages'] as List?)
+          ?.map((e) => Package.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      subscriptionDetails: map['subscription_details'],
+      birthdayWishMessage: map['birthday_wish_message'],
+      anniversaryWishMessage: map['anniversary_wish_message'],
+      logo: map['logo'] as String?,
+      reviewCount: (map['review_count'] as num?)?.toInt(),
+      averageRating: map['average_rating'],
+      isSlotAvailable: map['is_slot_available'] as bool?,
+      trainers: trainersList,
+    );
   }
 }
 
@@ -143,6 +193,7 @@ class GymTrainer with _$GymTrainer {
     @JsonKey(name: 'place') String? place,
     @JsonKey(name: 'location') Location? location,
     @JsonKey(name: 'social_media') List<SocialMedia>? socialMedia,
+    @JsonKey(name: 'portfolio_images') List<GymPortfolioImage>? portfolioImages,
   }) = _GymTrainer;
 
   factory GymTrainer.fromJson(Map<String, dynamic> json) => _$GymTrainerFromJson(json);
@@ -271,10 +322,33 @@ class GymTrainer with _$GymTrainer {
         if (c is Map) {
           final cMap = Map<String, dynamic>.from(c);
           return Certification.fromApiJson(cMap).toJson();
+        } else if (c is Certification) {
+          return c.toJson();
         }
         return c;
       }).toList();
       map['certifications'] = certsList;
+    }
+
+    if (map['portfolio_images'] != null && map['portfolio_images'] is List) {
+      final pList = (map['portfolio_images'] as List).map((p) {
+        if (p is Map) {
+          final pMap = Map<String, dynamic>.from(p);
+          final imgUrl = pMap['image_url'] ?? pMap['image'];
+          return {
+            'id': (pMap['id'] as num?)?.toInt(),
+            'image': pMap['image']?.toString() ?? imgUrl?.toString(),
+            'image_url': imgUrl?.toString(),
+            'type': pMap['type']?.toString(),
+          };
+        } else if (p is GymPortfolioImage) {
+          return p.toJson();
+        } else if (p is String) {
+          return {'image': p, 'image_url': p};
+        }
+        return p;
+      }).toList();
+      map['portfolio_images'] = pList;
     }
 
     try {
@@ -301,6 +375,25 @@ class GymTrainer with _$GymTrainer {
             map['phone_number']?.toString() ??
             map['phone']?.toString(),
         gender: map['gender']?.toString(),
+        portfolioImages: (map['portfolio_images'] is List)
+            ? (map['portfolio_images'] as List).map((p) {
+                if (p is Map) {
+                  final pMap = Map<String, dynamic>.from(p);
+                  final imgUrl = pMap['image_url'] ?? pMap['image'];
+                  return GymPortfolioImage(
+                    id: (pMap['id'] as num?)?.toInt(),
+                    image: pMap['image']?.toString() ?? imgUrl?.toString(),
+                    imageUrl: imgUrl?.toString(),
+                    type: pMap['type']?.toString(),
+                  );
+                } else if (p is GymPortfolioImage) {
+                  return p;
+                } else if (p is String) {
+                  return GymPortfolioImage(image: p, imageUrl: p);
+                }
+                return null;
+              }).whereType<GymPortfolioImage>().toList()
+            : null,
         certifications: (map['certifications'] is List)
             ? (map['certifications'] as List).map((c) {
                 if (c is Map) {
@@ -311,6 +404,8 @@ class GymTrainer with _$GymTrainer {
                     issuedDate: cMap['issued_date']?.toString() ?? cMap['issue_date']?.toString(),
                     fileUrl: cMap['file_url']?.toString() ?? cMap['file']?.toString(),
                   );
+                } else if (c is Certification) {
+                  return c;
                 }
                 return null;
               }).whereType<Certification>().toList()
@@ -318,6 +413,18 @@ class GymTrainer with _$GymTrainer {
       );
     }
   }
+}
+
+@freezed
+class GymPortfolioImage with _$GymPortfolioImage {
+  const factory GymPortfolioImage({
+    @JsonKey(name: 'id') int? id,
+    @JsonKey(name: 'image') String? image,
+    @JsonKey(name: 'image_url') String? imageUrl,
+    @JsonKey(name: 'type') String? type,
+  }) = _GymPortfolioImage;
+
+  factory GymPortfolioImage.fromJson(Map<String, dynamic> json) => _$GymPortfolioImageFromJson(json);
 }
 
 @freezed

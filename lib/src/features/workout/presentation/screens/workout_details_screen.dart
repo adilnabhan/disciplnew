@@ -1278,11 +1278,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                               child: DropdownButton<String>(
                                 value: () {
                                   final val = log['weight_type']?.toString();
-                                  if (val == null) return 'kg';
-                                  if (val.toLowerCase() == 'bw') return 'BW';
-                                  if (val.toLowerCase() == 'kg+bw')
-                                    return 'kg+BW';
-                                  return val;
+                                  if (val == null) return 'KG';
+                                  final lower = val.toLowerCase().replaceAll(' ', '');
+                                  if (lower == 'bw') return 'BW';
+                                  if (lower == 'fw' || lower == 'freeweight' || lower == 'baronly' || lower == 'bo' || lower == 'bar') return 'FW';
+                                  if (lower == 'kg+bw') return 'KG';
+                                  return 'KG';
                                 }(),
                                 isDense: true,
                                 isExpanded: true,
@@ -1293,18 +1294,25 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                   Icons.arrow_drop_down,
                                   size: 14,
                                 ),
+                                selectedItemBuilder: (BuildContext context) {
+                                  return const <Widget>[
+                                    Text('KG'),
+                                    Text('BW'),
+                                    Text('FW'),
+                                  ];
+                                },
                                 items: const [
                                   DropdownMenuItem(
-                                    value: 'kg',
-                                    child: Text('kg'),
+                                    value: 'KG',
+                                    child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Kilograms', maxLines: 1))),
                                   ),
                                   DropdownMenuItem(
                                     value: 'BW',
-                                    child: Text('BW'),
+                                    child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Body Weight', maxLines: 1))),
                                   ),
                                   DropdownMenuItem(
-                                    value: 'kg+BW',
-                                    child: Text('kg+BW'),
+                                    value: 'FW',
+                                    child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Free Weight', maxLines: 1))),
                                   ),
                                 ],
                                 onChanged: (val) {
@@ -1330,10 +1338,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           : Text(
                             'Weight (${() {
                               final val = log['weight_type']?.toString();
-                              if (val == null) return 'kg';
-                              if (val.toLowerCase() == 'bw') return 'BW';
-                              if (val.toLowerCase() == 'kg+bw') return 'kg+BW';
-                              return val;
+                              if (val == null) return 'KG';
+                              final lower = val.toLowerCase().replaceAll(' ', '');
+                              if (lower == 'bw') return 'BW';
+                              if (lower == 'fw' || lower == 'freeweight' || lower == 'baronly' || lower == 'bo' || lower == 'bar') return 'FW';
+                              if (lower == 'kg+bw') return 'KG';
+                              return 'KG';
                             }()})',
                             textAlign: TextAlign.left,
                             style: AppStyles.text12Px.poppins.w500.copyWith(
@@ -1465,10 +1475,19 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                           Expanded(
                             flex: 3,
                             child: Text(
-                              (log['weight_type']?.toString().toUpperCase() ==
-                                      'BW')
-                                  ? 'BW'
-                                  : '$weight kg',
+                              () {
+                                final wType = log['weight_type']
+                                        ?.toString()
+                                        .toUpperCase() ??
+                                    'KG';
+                                if (wType == 'BW') return 'BW';
+                                if (wType == 'FW') {
+                                  return weight.isNotEmpty
+                                      ? '$weight FW'
+                                      : 'FW';
+                                }
+                                return '$weight kg';
+                              }(),
                               style: AppStyles.text14Px.poppins.w400.copyWith(
                                 color: const Color(0xFF212121),
                               ),

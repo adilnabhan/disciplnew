@@ -70,6 +70,7 @@ class DashboardCubit extends Cubit<DashboardState> {
       }
 
       final id = currentUser?.customer?.id;
+      print('🎯 MY CUSTOMER ID IS: $id');
       if (id == null) {
         if (state.activeMembershipData.isNone()) {
           if (isClosed) return;

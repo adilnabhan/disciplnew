@@ -3,8 +3,53 @@ import 'package:customer_mobile_app/src/features/challenges/presentation/screens
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_details_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_winners_screen.dart';
 
-class HomeChallengeSection extends StatelessWidget {
+class HomeChallengeSection extends StatefulWidget {
   const HomeChallengeSection({super.key});
+
+  @override
+  State<HomeChallengeSection> createState() => _HomeChallengeSectionState();
+}
+
+class _HomeChallengeSectionState extends State<HomeChallengeSection> {
+  final ScrollController _scrollController = ScrollController();
+  Timer? _timer;
+  double _cardWidth = 0;
+  bool _isAutoScrolling = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoScroll();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoScroll() {
+    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      if (!_isAutoScrolling || !_scrollController.hasClients || _cardWidth == 0) return;
+      
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll <= 0) return;
+
+      double nextScroll = _scrollController.offset + _cardWidth + 10.0; // cardWidth + separatorWidth
+      if (nextScroll > maxScroll + (_cardWidth / 2)) {
+        nextScroll = 0;
+      } else if (nextScroll > maxScroll) {
+        nextScroll = maxScroll;
+      }
+
+      _scrollController.animateTo(
+        nextScroll,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,89 +63,104 @@ class HomeChallengeSection extends StatelessWidget {
         }
 
         final challenges = state.challenges;
-        final screenWidth = MediaQuery.of(context).size.width;
-        final cardWidth =
-            challenges.length == 1
-                ? (screenWidth - 32.0)
-                : (screenWidth - 48.0);
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Section Header: "Challenges" + "View All" Button
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final hasMultiple = challenges.length > 1;
+            const separatorWidth = 10.0;
+            // When multiple challenges exist, show a 22px peek of the next card
+            final cardWidth =
+                hasMultiple
+                    ? (constraints.maxWidth - 32.0)
+                    : constraints.maxWidth;
+            _cardWidth = cardWidth;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Challenges',
-                  style: AppStyles.text18Px.poppins.w700.copyWith(
-                    color: const Color(0xFF1E1E1E),
-                  ),
+                // Section Header: "Challenges" + "View All" Button
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Challenges',
+                      style: AppStyles.text18Px.poppins.w700.copyWith(
+                        color: const Color(0xFF1E1E1E),
+                      ),
+                    ),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        try {
+                          context.read<DashboardCubit>().changeNav(index: 3);
+                        } catch (_) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const AllChallengesScreen(),
+                            ),
+                          );
+                        }
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'View All',
+                              style: AppStyles.text13Px.poppins.w600.copyWith(
+                                color: AppColors.primary,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              size: 18,
+                              color: AppColors.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () {
-                    try {
-                      context.read<DashboardCubit>().changeNav(index: 3);
-                    } catch (_) {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => const AllChallengesScreen(),
-                        ),
-                      );
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'View All',
-                          style: AppStyles.text13Px.poppins.w600.copyWith(
-                            color: AppColors.primary,
+                const SizedBox(height: 10),
+
+                // Horizontal Scrollable Row of Challenge Cards with Peek
+                SizedBox(
+                  height: 248,
+                  child: Listener(
+                    onPointerDown: (_) => _isAutoScrolling = false,
+                    onPointerUp: (_) => _isAutoScrolling = true,
+                    onPointerCancel: (_) => _isAutoScrolling = true,
+                    child: ListView.separated(
+                      controller: _scrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: challenges.length,
+                      separatorBuilder:
+                          (_, __) => const SizedBox(width: separatorWidth),
+                      itemBuilder: (context, index) {
+                        final challengeItem = challenges[index];
+                        return SizedBox(
+                          key: ValueKey(
+                            'home_challenge_item_${challengeItem.id ?? index}',
                           ),
-                        ),
-                        const SizedBox(width: 2),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 18,
-                          color: AppColors.primary,
-                        ),
-                      ],
+                          width: cardWidth,
+                          child: HomeChallengeCard(
+                            key: ValueKey(
+                              'home_challenge_card_${challengeItem.id ?? index}',
+                            ),
+                            challenge: challengeItem,
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 10),
-
-            // Horizontal Scrollable Row of Challenge Cards
-            SizedBox(
-              height: 256,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                physics: const BouncingScrollPhysics(),
-                itemCount: challenges.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final challengeItem = challenges[index];
-                  return SizedBox(
-                    key: ValueKey(
-                      'home_challenge_item_${challengeItem.id ?? index}',
-                    ),
-                    width: cardWidth,
-                    child: HomeChallengeCard(
-                      key: ValueKey(
-                        'home_challenge_card_${challengeItem.id ?? index}',
-                      ),
-                      challenge: challengeItem,
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+            );
+          },
         );
       },
     );
@@ -148,14 +208,18 @@ class HomeChallengeCard extends StatelessWidget {
               : null,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Colors.white, Color(0xFFF8FAFC)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.white, width: 2.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 4),
+              color: const Color(0xFF94A3B8).withValues(alpha: 0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
           ],
         ),
@@ -185,7 +249,7 @@ class HomeChallengeCard extends StatelessWidget {
     HomeChallenge challenge,
     Color themeColor,
   ) {
-    const bannerHeight = 124.0;
+    const bannerHeight = 110.0;
     final heroImg = challenge.heroImageUrl;
     final hasHeroImg = heroImg != null && heroImg.trim().isNotEmpty;
 
@@ -194,178 +258,186 @@ class HomeChallengeCard extends StatelessWidget {
             ? challenge.challengeType!
             : 'LUCKY DRAW';
 
-    return SizedBox(
-      height: bannerHeight,
-      width: double.infinity,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background Image
-          if (hasHeroImg)
-            CachedNetworkImage(
-              imageUrl: heroImg,
-              fit: BoxFit.cover,
-              memCacheWidth: 720,
-              memCacheHeight: 280,
-              fadeInDuration: const Duration(milliseconds: 150),
-              fadeOutDuration: Duration.zero,
-              placeholder: (_, __) => _buildFallbackBannerBackground(),
-              errorWidget: (_, __, ___) => _buildFallbackBannerBackground(),
-            )
-          else
-            _buildFallbackBannerBackground(),
+    return Padding(
+      padding: const EdgeInsets.all(5.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: SizedBox(
+          height: bannerHeight,
+          width: double.infinity,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background Image
+              if (hasHeroImg)
+                CachedNetworkImage(
+                  imageUrl: heroImg,
+                  fit: BoxFit.cover,
+                  memCacheWidth: 720,
+                  memCacheHeight: 280,
+                  fadeInDuration: const Duration(milliseconds: 150),
+                  fadeOutDuration: Duration.zero,
+                  placeholder: (_, __) => _buildFallbackBannerBackground(),
+                  errorWidget: (_, __, ___) => _buildFallbackBannerBackground(),
+                )
+              else
+                _buildFallbackBannerBackground(),
 
-          // Dark Gradient Overlay for Maximum Legibility
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.black.withValues(alpha: 0.84),
-                  Colors.black.withValues(alpha: 0.50),
-                  Colors.black.withValues(alpha: 0.10),
-                ],
-                stops: const [0, 0.62, 1],
+              // Dark Gradient Overlay for Maximum Legibility
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.black.withValues(alpha: 0.84),
+                      Colors.black.withValues(alpha: 0.50),
+                      Colors.black.withValues(alpha: 0.10),
+                    ],
+                    stops: const [0, 0.62, 1],
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Banner Content Overlay
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Top Row: Tag Badge aligned to the left
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+              // Banner Content Overlay
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Tag Badge (Right) - White Pill with Red Dice & Text
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3.5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 4,
-                            offset: const Offset(0, 1),
+                    // Top Row: Tag Badge aligned to the left
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        // Tag Badge (Right) - White Pill with Red Dice & Text
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
                           ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.casino_rounded,
-                            color: Color(0xFFDC2626),
-                            size: 13,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFFFF1493,
+                                ).withValues(alpha: 0.5),
+                                blurRadius: 12,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 4),
-                          Text(
-                            tagText.toUpperCase(),
-                            style: AppStyles.text10Px.poppins.w800.copyWith(
-                              color: const Color(0xFFDC2626),
-                              letterSpacing: 0.4,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Brand Logo + Title & Short Description Row
-                Row(
-                  children: [
-                    // Brand Logo Avatar (Circular with gold border)
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.black,
-                        border: Border.all(
-                          color: const Color(0xFFFBBF24),
-                          width: 1.5,
-                        ),
-                      ),
-                      child: ClipOval(
-                        child:
-                            challenge.brand?.logo != null &&
-                                    challenge.brand!.logo!.isNotEmpty
-                                ? CachedNetworkImage(
-                                  imageUrl: challenge.brand!.logo!,
-                                  fit: BoxFit.cover,
-                                  memCacheWidth: 100,
-                                  memCacheHeight: 100,
-                                  fadeInDuration: const Duration(
-                                    milliseconds: 150,
-                                  ),
-                                  fadeOutDuration: Duration.zero,
-                                  placeholder:
-                                      (_, __) => const ColoredBox(
-                                        color: Colors.black,
-                                        child: Icon(
-                                          Icons.restaurant_rounded,
-                                          color: Color(0xFFFBBF24),
-                                          size: 24,
-                                        ),
-                                      ),
-                                  errorWidget:
-                                      (_, __, ___) => const Icon(
-                                        Icons.restaurant_rounded,
-                                        color: Color(0xFFFBBF24),
-                                        size: 24,
-                                      ),
-                                )
-                                : const Icon(
-                                  Icons.restaurant_rounded,
-                                  color: Color(0xFFFBBF24),
-                                  size: 24,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.card_giftcard_rounded,
+                                color: Color(0xFFFF1493),
+                                size: 13,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                tagText.toUpperCase(),
+                                style: AppStyles.text10Px.poppins.w800.copyWith(
+                                  color: const Color(0xFFFF1493),
+                                  letterSpacing: 0.5,
                                 ),
-                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
 
-                    // Title & Description
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            challenge.name ?? 'Challenge',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppStyles.text16Px.poppins.w700.copyWith(
-                              color: Colors.white,
-                              letterSpacing: -0.2,
+                    // Brand Logo + Title & Short Description Row
+                    Row(
+                      children: [
+                        // Brand Logo Avatar (Circular with gold border)
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black,
+                            border: Border.all(
+                              color: const Color(0xFFFBBF24),
+                              width: 1.5,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            challenge.shortDescription ?? '',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppStyles.text11Px.poppins.w400.copyWith(
-                              color: Colors.white.withValues(alpha: 0.88),
-                              height: 1.25,
-                            ),
+                          child: ClipOval(
+                            child:
+                                challenge.brand?.logo != null &&
+                                        challenge.brand!.logo!.isNotEmpty
+                                    ? CachedNetworkImage(
+                                      imageUrl: challenge.brand!.logo!,
+                                      fit: BoxFit.cover,
+                                      memCacheWidth: 100,
+                                      memCacheHeight: 100,
+                                      fadeInDuration: const Duration(
+                                        milliseconds: 150,
+                                      ),
+                                      fadeOutDuration: Duration.zero,
+                                      placeholder:
+                                          (_, __) => const ColoredBox(
+                                            color: Colors.black,
+                                            child: Icon(
+                                              Icons.restaurant_rounded,
+                                              color: Color(0xFFFBBF24),
+                                              size: 24,
+                                            ),
+                                          ),
+                                      errorWidget:
+                                          (_, __, ___) => const Icon(
+                                            Icons.restaurant_rounded,
+                                            color: Color(0xFFFBBF24),
+                                            size: 24,
+                                          ),
+                                    )
+                                    : const Icon(
+                                      Icons.restaurant_rounded,
+                                      color: Color(0xFFFBBF24),
+                                      size: 24,
+                                    ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Title & Description
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                challenge.name ?? 'Challenge',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppStyles.text16Px.poppins.w700.copyWith(
+                                  color: Colors.white,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                challenge.shortDescription ?? '',
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppStyles.text11Px.poppins.w400.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.88),
+                                  height: 1.25,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -432,7 +504,8 @@ class HomeChallengeCard extends StatelessWidget {
       btnText = challenge.button?.text ?? 'Join After Workout';
     }
 
-    Color btnBg;
+    Color? btnBg;
+    Gradient? btnGradient;
     var textColor = Colors.white;
     Border? border;
     List<BoxShadow>? boxShadow;
@@ -466,14 +539,18 @@ class HomeChallengeCard extends StatelessWidget {
       prefixWidget = null;
       iconWidget = const SizedBox.shrink();
     } else if (isJoined) {
-      btnBg = const Color(0xFF059669);
+      btnGradient = const LinearGradient(
+        colors: [Color(0xFF0D9488), Color(0xFF10B981)],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      );
       textColor = Colors.white;
       border = null;
       boxShadow = [
         BoxShadow(
-          color: const Color(0xFF059669).withValues(alpha: 0.28),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
+          color: const Color(0xFF10B981).withValues(alpha: 0.45),
+          blurRadius: 16,
+          offset: const Offset(0, 4),
         ),
       ];
       iconWidget = const Padding(
@@ -514,7 +591,7 @@ class HomeChallengeCard extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -588,6 +665,7 @@ class HomeChallengeCard extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 color: btnBg,
+                gradient: btnGradient,
                 borderRadius: BorderRadius.circular(22),
                 border: border,
                 boxShadow: boxShadow,
@@ -993,24 +1071,35 @@ class HomeChallengeCard extends StatelessWidget {
     // Default: 'countdown' or 'winner selection' - Exactly matches user reference design
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF1F2),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFFFE4E6)),
+        gradient: const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Color(0xFFFFE4E6), Color(0xFFFFF1F2)],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFE4E6).withValues(alpha: 0.5),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 30,
-            height: 30,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFE4E6),
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
               shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFFDA4AF), width: 1.2),
             ),
             child: Icon(
               badgeIcon,
-              color: const Color(0xFFDC2626),
+              color: const Color(0xFFE11D48),
               size: isWinnerSelection ? 17 : 16,
             ),
           ),
@@ -1021,18 +1110,18 @@ class HomeChallengeCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 displayTitle,
-                style: AppStyles.text16Px.poppins.w700.copyWith(
-                  color: const Color(0xFF0F172A),
-                  letterSpacing: -0.3,
+                style: AppStyles.text14Px.poppins.w800.copyWith(
+                  color: const Color(0xFF1E1B4B),
+                  letterSpacing: -0.2,
                 ),
               ),
             ),
           ),
           Container(
-            width: 1,
+            width: 1.2,
             height: 28,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            color: const Color(0xFFE2E8F0),
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: const Color(0xFFFDA4AF).withValues(alpha: 0.6),
           ),
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -1100,22 +1189,30 @@ class __ChallengeCountdownTimerState extends State<_ChallengeCountdownTimer> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFFFFE4E8),
-            borderRadius: BorderRadius.circular(9),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.white, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFFDA4AF).withValues(alpha: 0.3),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           alignment: Alignment.center,
           child: Text(
             value,
             style: AppStyles.text14Px.poppins.w700.copyWith(
-              color: const Color(0xFFDC2626),
-              height: 1,
+              color: const Color(0xFFE11D48),
+              height: 1.1,
             ),
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 4),
         Text(
           label,
           style: AppStyles.text9Px.poppins.w500.copyWith(
@@ -1164,7 +1261,7 @@ class _HomeChallengeShimmer extends StatelessWidget {
       baseColor: Colors.grey.shade300,
       highlightColor: Colors.grey.shade100,
       child: Container(
-        height: 256,
+        height: 248,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),

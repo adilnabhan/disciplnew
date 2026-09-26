@@ -11,7 +11,6 @@ import 'package:gal/gal.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/repositories/customer_details_repository.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/models/customer_details_model.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/components/onam_achievement_celebration.dart';
 
 class WorkoutAchievementScreen extends StatefulWidget {
   const WorkoutAchievementScreen({
@@ -35,7 +34,6 @@ class WorkoutAchievementScreen extends StatefulWidget {
 }
 
 class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
-  late final AppSeasonCubit _appSeasonCubit = AppSeasonCubit();
   int _workoutCount = 1;
   bool _isLoadingCount = true;
   bool _isLoadingDetails = true;
@@ -69,8 +67,9 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         }
       }
 
-      final ByteData? byteData =
-          await image.toByteData(format: ui.ImageByteFormat.png);
+      final ByteData? byteData = await image.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
       if (byteData == null) return null;
 
       final Uint8List pngBytes = byteData.buffer.asUint8List();
@@ -79,7 +78,9 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         '${tempDir.path}/discipl_workout_${DateTime.now().millisecondsSinceEpoch}.png',
       );
       await file.writeAsBytes(pngBytes);
-      print('DEBUG CAPTURE: Saved image to ${file.path} (${pngBytes.length} bytes)');
+      print(
+        'DEBUG CAPTURE: Saved image to ${file.path} (${pngBytes.length} bytes)',
+      );
       return file;
     } catch (e, stack) {
       print('DEBUG CAPTURE ERROR: $e\n$stack');
@@ -189,7 +190,6 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
   @override
   void initState() {
     super.initState();
-    _appSeasonCubit.fetchAppSeason();
     _loadWorkoutCount();
     _loadFullSessionDetails();
     _loadCustomerDetails();
@@ -197,7 +197,6 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
 
   @override
   void dispose() {
-    _appSeasonCubit.close();
     super.dispose();
   }
 
@@ -206,8 +205,9 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
       final user = Feggy.read<AppCubit>()?.state.currentUser;
       final customerId = user?.customer?.id ?? user?.id;
       if (customerId != null) {
-        final res =
-            await CustomerDetailsRepository().customerDetails(id: customerId);
+        final res = await CustomerDetailsRepository().customerDetails(
+          id: customerId,
+        );
         res.fold((_) => null, (details) {
           if (mounted) {
             setState(() {
@@ -438,14 +438,15 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     for (final log in logs) {
       if (log is Map) {
         final setLogs = log['set_logs'] as List? ?? log['sets'] as List? ?? [];
-        final completedSetsCount = setLogs.where((set) {
-          if (set is Map) {
-            return (set['is_completed'] == true) ||
-                (set['checked'] == true) ||
-                (set['status']?.toString().toLowerCase() == 'completed');
-          }
-          return false;
-        }).length;
+        final completedSetsCount =
+            setLogs.where((set) {
+              if (set is Map) {
+                return (set['is_completed'] == true) ||
+                    (set['checked'] == true) ||
+                    (set['status']?.toString().toLowerCase() == 'completed');
+              }
+              return false;
+            }).length;
 
         if (completedSetsCount > 0) {
           completed++;
@@ -465,7 +466,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         total += setLogs.length;
         for (final set in setLogs) {
           if (set is Map) {
-            final isCompleted = (set['is_completed'] == true) ||
+            final isCompleted =
+                (set['is_completed'] == true) ||
                 (set['checked'] == true) ||
                 (set['status']?.toString().toLowerCase() == 'completed');
             if (isCompleted) {
@@ -651,16 +653,14 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     final volumeStr = volume > 0 ? '${volume.toStringAsFixed(0)} kg' : '0 kg';
     final exCounts = _countExercises(logs);
     final setCounts = _countSets(logs);
-    final exerciseDisplay = exCounts.total > 0
-        ? '${exCounts.completed}/${exCounts.total}'
-        : '0';
-    final setsDisplay = setCounts.total > 0
-        ? '${setCounts.completed}/${setCounts.total}'
-        : '0';
+    final exerciseDisplay =
+        exCounts.total > 0 ? '${exCounts.completed}/${exCounts.total}' : '0';
+    final setsDisplay =
+        setCounts.total > 0 ? '${setCounts.completed}/${setCounts.total}' : '0';
 
     // 1. Is this a trainer-assigned workout or assigned gym user?
-    final bool isTrainerAssigned = (widget.trainerName != null &&
-            widget.trainerName!.trim().isNotEmpty) ||
+    final bool isTrainerAssigned =
+        (widget.trainerName != null && widget.trainerName!.trim().isNotEmpty) ||
         (data['trainer_name'] != null &&
             data['trainer_name'].toString().trim().isNotEmpty) ||
         (data['assigned_by'] != null &&
@@ -675,7 +675,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     // 2. Resolve Assigned Gym Name (MUST NOT use trainer name)
     String? resolvedGymName = widget.gymName;
     if (resolvedGymName == null || resolvedGymName.trim().isEmpty) {
-      resolvedGymName = data['gym_name']?.toString() ??
+      resolvedGymName =
+          data['gym_name']?.toString() ??
           data['fitness_center_name']?.toString() ??
           data['assigned_gym_name']?.toString() ??
           (data['assigned_fitness_center'] is Map
@@ -696,7 +697,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
       final gymMap =
           _customerDetails?.assignedFitnessCenter ??
           currentUserCustomer?.assignedFitnessCenter;
-      resolvedGymName = gymMap?['name']?.toString() ??
+      resolvedGymName =
+          gymMap?['name']?.toString() ??
           gymMap?['center_name']?.toString() ??
           gymMap?['fitness_center_name']?.toString() ??
           gymMap?['title']?.toString();
@@ -709,7 +711,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     // 3. Resolve Assigned Gym Logo
     String? resolvedGymLogo = widget.gymLogo;
     if (resolvedGymLogo == null || resolvedGymLogo.trim().isEmpty) {
-      resolvedGymLogo = data['gym_logo']?.toString() ??
+      resolvedGymLogo =
+          data['gym_logo']?.toString() ??
           data['fitness_center_logo']?.toString() ??
           data['assigned_gym_logo']?.toString() ??
           (data['assigned_fitness_center'] is Map
@@ -734,7 +737,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
       final gymMap =
           _customerDetails?.assignedFitnessCenter ??
           currentUserCustomer?.assignedFitnessCenter;
-      resolvedGymLogo = gymMap?['logo']?.toString() ??
+      resolvedGymLogo =
+          gymMap?['logo']?.toString() ??
           gymMap?['image']?.toString() ??
           gymMap?['photo']?.toString() ??
           gymMap?['profile_image']?.toString() ??
@@ -745,7 +749,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     // 4. Resolve Trainer Name & Photo
     String? resolvedTrainerName = widget.trainerName;
     if (resolvedTrainerName == null || resolvedTrainerName.trim().isEmpty) {
-      resolvedTrainerName = data['trainer_name']?.toString() ??
+      resolvedTrainerName =
+          data['trainer_name']?.toString() ??
           data['assigned_by']?.toString() ??
           (data['assigned_trainer'] is Map
               ? (data['assigned_trainer']['full_name'] ??
@@ -805,10 +810,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xFFF1F5F9),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -817,10 +819,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               child: Column(
                 children: [
                   // Fitness Center Row
@@ -834,26 +833,28 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                           shape: BoxShape.circle,
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: (assignedGymLogo != null &&
-                                assignedGymLogo.isNotEmpty)
-                            ? Image.network(
-                                assignedGymLogo,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => const Center(
+                        child:
+                            (assignedGymLogo != null &&
+                                    assignedGymLogo.isNotEmpty)
+                                ? Image.network(
+                                  assignedGymLogo,
+                                  fit: BoxFit.cover,
+                                  errorBuilder:
+                                      (_, __, ___) => const Center(
+                                        child: Icon(
+                                          Icons.fitness_center_rounded,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                )
+                                : const Center(
                                   child: Icon(
                                     Icons.fitness_center_rounded,
                                     color: Colors.white,
                                     size: 24,
                                   ),
                                 ),
-                              )
-                            : const Center(
-                                child: Icon(
-                                  Icons.fitness_center_rounded,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -875,9 +876,10 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                                     assignedGymName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: AppStyles.text16Px.poppins.w700.copyWith(
-                                      color: const Color(0xFF0F172A),
-                                    ),
+                                    style: AppStyles.text16Px.poppins.w700
+                                        .copyWith(
+                                          color: const Color(0xFF0F172A),
+                                        ),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -925,26 +927,28 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                             shape: BoxShape.circle,
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: (assignedTrainerPhoto != null &&
-                                  assignedTrainerPhoto.isNotEmpty)
-                              ? Image.network(
-                                  assignedTrainerPhoto,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Center(
+                          child:
+                              (assignedTrainerPhoto != null &&
+                                      assignedTrainerPhoto.isNotEmpty)
+                                  ? Image.network(
+                                    assignedTrainerPhoto,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (_, __, ___) => const Center(
+                                          child: Icon(
+                                            Icons.person_rounded,
+                                            color: Color(0xFF64748B),
+                                            size: 22,
+                                          ),
+                                        ),
+                                  )
+                                  : const Center(
                                     child: Icon(
                                       Icons.person_rounded,
                                       color: Color(0xFF64748B),
                                       size: 22,
                                     ),
                                   ),
-                                )
-                              : const Center(
-                                  child: Icon(
-                                    Icons.person_rounded,
-                                    color: Color(0xFF64748B),
-                                    size: 22,
-                                  ),
-                                ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
@@ -986,10 +990,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: const Color(0xffF0B5B7),
-                  width: 1.5,
-                ),
+                border: Border.all(color: const Color(0xffF0B5B7), width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.04),
@@ -998,10 +999,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1072,146 +1070,148 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
       );
     }
 
-    return BlocBuilder<AppSeasonCubit, AppSeasonState>(
-      bloc: _appSeasonCubit,
-      builder: (context, seasonState) {
-        final bool isSeasonal = seasonState.isActive;
-        return Scaffold(
-          backgroundColor:
-              isSeasonal ? const Color(0xFFFCF2E3) : const Color(0xFFF8F9FA),
-          body: SafeArea(
-            child: isSeasonal
-                ? OnamAchievementCelebration(
-                    childCard: buildAchievementCard(),
-                    shareSection: buildShareSection(),
-                    doneButton: Button.filled(
-                      title: 'Done',
-                      ontap: () => Navigator.pop(context, true),
-                      buttonColor: AppColors.primary,
-                      style: AppStyles.text16Px.poppins.w600.copyWith(
-                        color: Colors.white,
-                      ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  ListView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 10.0,
                     ),
-                    onBack: () => Navigator.pop(context, true),
-                  )
-                : Stack(
                     children: [
-                      ListView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24.0,
-                          vertical: 10.0,
+                      // Top Back button
+                      Align(
+                        alignment: Alignment.topLeft,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(context, true),
+                          child: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEEEEEE),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chevron_left,
+                              color: Color(0xFF444444),
+                              size: 24,
+                            ),
+                          ),
                         ),
+                      ),
+
+                      // Mascot / Non-seasonal Graphic
+                      Center(
+                        child: Lottie.asset(
+                          'assets/images/svg/vectors/thumbsUp_achievement.json',
+                          height: 160,
+                          fit: BoxFit.contain,
+                          repeat: false,
+                        ),
+                      ),
+
+                      // Headers
+                      Center(
+                        child: Text(
+                          'Good Job!',
+                          style: AppStyles.text24Px.poppins.w700.copyWith(
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Center(
+                        child: Text(
+                          'Workout Completed',
+                          style: AppStyles.text16Px.poppins.w500.copyWith(
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Top Back button
-                          Align(
-                            alignment: Alignment.topLeft,
-                            child: GestureDetector(
-                              onTap: () => Navigator.pop(context, true),
-                              child: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFEEEEEE),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.chevron_left,
-                                  color: Color(0xFF444444),
-                                  size: 24,
-                                ),
-                              ),
-                            ),
+                          Container(
+                            width: 40,
+                            height: 1,
+                            color: Colors.grey.shade300,
                           ),
-
-                          // Mascot / Non-seasonal Graphic
-                          Center(
-                            child: Lottie.asset(
-                              'assets/images/svg/vectors/thumbsUp_achievement.json',
-                              height: 160,
-                              fit: BoxFit.contain,
-                              repeat: false,
-                            ),
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.star,
+                            color: AppColors.primary,
+                            size: 10,
                           ),
-
-                          // Headers
-                          Center(
-                            child: Text(
-                              'Good Job!',
-                              style: AppStyles.text24Px.poppins.w700.copyWith(
-                                color: Colors.black,
-                              ),
-                            ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.star,
+                            color: AppColors.primary,
+                            size: 14,
                           ),
-                          const SizedBox(height: 6),
-                          Center(
-                            child: Text(
-                              'Workout Completed',
-                              style: AppStyles.text16Px.poppins.w500.copyWith(
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.star,
+                            color: AppColors.primary,
+                            size: 10,
                           ),
-                          const SizedBox(height: 10),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 40,
-                                height: 1,
-                                color: Colors.grey.shade300,
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.star, color: AppColors.primary, size: 10),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.star, color: AppColors.primary, size: 14),
-                              const SizedBox(width: 4),
-                              const Icon(Icons.star, color: AppColors.primary, size: 10),
-                              const SizedBox(width: 8),
-                              Container(
-                                width: 40,
-                                height: 1,
-                                color: Colors.grey.shade300,
-                              ),
-                            ],
+                          const SizedBox(width: 8),
+                          Container(
+                            width: 40,
+                            height: 1,
+                            color: Colors.grey.shade300,
                           ),
-                          const SizedBox(height: 12),
-
-                          // Workout Summary Card
-                          buildAchievementCard(),
-
-                          const SizedBox(height: 16),
-
-                          // Share Section
-                          buildShareSection(),
-
-                          const SizedBox(height: 40),
-
-                          // Done Button
-                          Button.filled(
-                            title: 'Done',
-                            ontap: () => Navigator.pop(context, true),
-                            buttonColor: AppColors.primary,
-                            style: AppStyles.text16Px.poppins.w600.copyWith(
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
                         ],
                       ),
-                      Positioned.fill(
-                        child: IgnorePointer(
-                          child: Lottie.asset(
-                            'assets/images/svg/vectors/celebrations.json',
-                            fit: BoxFit.cover,
-                            repeat: false,
-                          ),
-                        ),
-                      ),
+                      const SizedBox(height: 12),
+
+                      // Workout Summary Card
+                      buildAchievementCard(),
+
+                      const SizedBox(height: 24),
                     ],
                   ),
-          ),
-        );
-      },
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: Lottie.asset(
+                        'assets/images/svg/vectors/celebrations.json',
+                        fit: BoxFit.cover,
+                        repeat: false,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Share Section
+            buildShareSection(),
+            const SizedBox(height: 32),
+
+            Padding(
+              padding: const EdgeInsets.only(
+                left: 24,
+                right: 24,
+                bottom: 24,
+                top: 16,
+              ),
+              child: Button.filled(
+                title: 'Done',
+                ontap: () => Navigator.pop(context, true),
+                buttonColor: AppColors.primary,
+                style: AppStyles.text16Px.poppins.w600.copyWith(
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1269,10 +1269,11 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                 ),
               ),
               label: 'Stories',
-              onTap: () => _handleShare(
-                text:
-                    'Check out my workout on Discipl! 💪 #discipl #workout',
-              ),
+              onTap:
+                  () => _handleShare(
+                    text:
+                        'Check out my workout on Discipl! 💪 #discipl #workout',
+                  ),
             ),
             // 💬 WhatsApp
             _buildShareButton(
@@ -1288,9 +1289,10 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                 ),
               ),
               label: 'WhatsApp',
-              onTap: () => _handleShare(
-                text: 'Check out my workout summary on Discipl! 💪',
-              ),
+              onTap:
+                  () => _handleShare(
+                    text: 'Check out my workout summary on Discipl! 💪',
+                  ),
             ),
 
             // 📤 More (Native Share Sheet)

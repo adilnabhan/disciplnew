@@ -37,7 +37,7 @@ class ScoreCardCubit extends Cubit<ScoreCardState> {
     final result = await _repository.getScoreCard(
       timeframe: selectedTimeframe,
       page: pageToFetch,
-      pageSize: 20,
+      pageSize: 10,
     );
 
     result.fold(

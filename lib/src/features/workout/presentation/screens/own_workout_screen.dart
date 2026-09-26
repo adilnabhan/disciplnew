@@ -33,7 +33,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   Timer? _timer;
   int _elapsedSeconds = 0;
   final Map<String, FocusNode> _setKgFocusNodes = {};
-  final Set<int> _addingExerciseIds = {};
+  final Set<String> _addingExerciseIds = {};
+  final Set<String> _removingExerciseIds = {};
   final Set<int> _addingSetExerciseIndices = {};
   final Set<int> _completingSetIds = {};
 
@@ -297,13 +298,15 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                             if (currentTab == 0) {
                                               _cubit.loadLibraryExercises(
                                                 search: '',
-                                                majorMuscle: selectedMajorMuscle,
+                                                majorMuscle:
+                                                    selectedMajorMuscle,
                                                 subMuscle: selectedSubMuscle,
                                               );
                                             } else {
                                               _cubit.loadCustomExercises(
                                                 search: '',
-                                                majorMuscle: selectedMajorMuscle,
+                                                majorMuscle:
+                                                    selectedMajorMuscle,
                                                 subMuscle: selectedSubMuscle,
                                               );
                                             }
@@ -458,7 +461,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 selectedSubMuscle = sub;
                               });
                               if (major != null) {
-                                _cubit.loadMuscleClassification(majorMuscle: major);
+                                _cubit.loadMuscleClassification(
+                                  majorMuscle: major,
+                                );
                               }
                               if (currentTab == 0) {
                                 _cubit.loadLibraryExercises(
@@ -614,7 +619,10 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: isSelected ? AppColors.primary : const Color(0xFFF5F5F5),
+                      color:
+                          isSelected
+                              ? AppColors.primary
+                              : const Color(0xFFF5F5F5),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color:
@@ -633,7 +641,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               isSelected ? FontWeight.w600 : FontWeight.w500,
                           fontSize: 13,
                           color:
-                              isSelected ? Colors.white : const Color(0xFF444444),
+                              isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF444444),
                         ),
                       ),
                     ),
@@ -783,11 +793,26 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
       itemCount: filteredList.length,
       itemBuilder: (itemContext, index) {
         final item = filteredList[index];
-        final isAdded = _cubit.state.exercises.any(
+        final exerciseKey =
+            (item['id'] != null && item['id']!.isNotEmpty)
+                ? item['id']!
+                : (item['title'] ?? '$index');
+        final exerciseId = int.tryParse(item['id'] ?? '') ?? 0;
+
+        final addedIndex = _cubit.state.exercises.indexWhere(
           (e) =>
+              (item['id'] != null &&
+                  item['id']!.isNotEmpty &&
+                  e['id'] != null &&
+                  e['id'].toString() == item['id'].toString()) ||
               e['title'].toString().toLowerCase() ==
-              item['title']!.toLowerCase(),
+                  (item['title'] ?? '').toLowerCase(),
         );
+        final isAdded = addedIndex != -1;
+        final canRemove = _cubit.state.exercises.length > 1;
+        final isAdding = _addingExerciseIds.contains(exerciseKey);
+        final isRemoving = _removingExerciseIds.contains(exerciseKey);
+        final isLoading = isAdding || isRemoving;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -827,46 +852,93 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      (isAdded ||
-                              _addingExerciseIds.contains(
-                                int.tryParse(item['id'] ?? '') ?? 0,
-                              ))
+                      isRemoving
                           ? const Color(0xFFFFF4F4)
-                          : AppColors.primary,
+                          : (isAdded
+                              ? (canRemove
+                                  ? const Color(0xFFFFF4F4)
+                                  : const Color(0xFFEBEBEB))
+                              : AppColors.primary),
                   foregroundColor:
-                      (isAdded ||
-                              _addingExerciseIds.contains(
-                                int.tryParse(item['id'] ?? '') ?? 0,
-                              ))
+                      isRemoving
                           ? AppColors.primary
-                          : Colors.white,
+                          : (isAdded
+                              ? (canRemove
+                                  ? AppColors.primary
+                                  : const Color(0xFF888888))
+                              : Colors.white),
+                  disabledBackgroundColor:
+                      isRemoving
+                          ? const Color(0xFFFFF4F4)
+                          : (isAdding
+                              ? AppColors.primary
+                              : const Color(0xFFEBEBEB)),
+                  disabledForegroundColor:
+                      isRemoving
+                          ? AppColors.primary
+                          : (isAdding ? Colors.white : const Color(0xFF888888)),
                   elevation: 0,
                   side:
-                      (isAdded ||
-                              _addingExerciseIds.contains(
-                                int.tryParse(item['id'] ?? '') ?? 0,
-                              ))
+                      (isRemoving || (isAdded && canRemove))
                           ? const BorderSide(color: Color(0xFFF0B5B7))
                           : null,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  minimumSize: const Size(0, 30),
+                  minimumSize: const Size(76, 32),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
                 onPressed:
-                    (isAdded ||
-                            _addingExerciseIds.contains(
-                              int.tryParse(item['id'] ?? '') ?? 0,
-                            ))
+                    isLoading
                         ? null
+                        : isAdded
+                        ? (canRemove
+                            ? () async {
+                              FocusScope.of(context).unfocus();
+                              setSheetState(() {
+                                _removingExerciseIds.add(exerciseKey);
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Removing exercise...'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                              try {
+                                final removeIndex = _cubit.state.exercises
+                                    .indexWhere(
+                                      (e) =>
+                                          (item['id'] != null &&
+                                              item['id']!.isNotEmpty &&
+                                              e['id'] != null &&
+                                              e['id'].toString() ==
+                                                  item['id'].toString()) ||
+                                          e['title'].toString().toLowerCase() ==
+                                              (item['title'] ?? '')
+                                                  .toLowerCase(),
+                                    );
+                                if (removeIndex != -1) {
+                                  await Future.wait([
+                                    _cubit.deleteExercise(removeIndex),
+                                    Future.delayed(
+                                      const Duration(milliseconds: 350),
+                                    ),
+                                  ]);
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setSheetState(() {
+                                    _removingExerciseIds.remove(exerciseKey);
+                                  });
+                                }
+                              }
+                            }
+                            : null)
                         : () async {
                           // Dismiss keyboard so it doesn't pop back up on Add tap
                           FocusScope.of(context).unfocus();
-                          final exerciseId =
-                              int.tryParse(item['id'] ?? '') ?? 0;
                           setSheetState(() {
-                            _addingExerciseIds.add(exerciseId);
+                            _addingExerciseIds.add(exerciseKey);
                           });
                           if (!widget.isPresetCreation) {
                             _startTimer();
@@ -888,26 +960,26 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                           } finally {
                             if (mounted) {
                               setSheetState(() {
-                                _addingExerciseIds.remove(exerciseId);
+                                _addingExerciseIds.remove(exerciseKey);
                               });
                             }
                           }
                         },
                 child:
-                    _addingExerciseIds.contains(
-                          int.tryParse(item['id'] ?? '') ?? 0,
-                        )
-                        ? const SizedBox(
+                    isLoading
+                        ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
-                            strokeWidth: 1.5,
+                            strokeWidth: 2.0,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              AppColors.primary,
+                              isAdding ? Colors.white : AppColors.primary,
                             ),
                           ),
                         )
-                        : Text(isAdded ? 'Added' : 'Add'),
+                        : Text(
+                          isAdded ? (canRemove ? 'Remove' : 'Added') : 'Add',
+                        ),
               ),
             ],
           ),
@@ -2753,25 +2825,26 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 }
                               }
                             },
-                    child: isSubmitting
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                    child:
+                        isSubmitting
+                            ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                            : Text(
+                              widget.isPresetCreation ? 'Save' : 'Finish',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
                             ),
-                          )
-                        : Text(
-                            widget.isPresetCreation ? 'Save' : 'Finish',
-                            style: const TextStyle(
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
                   ),
                 ],
               ),
@@ -3283,9 +3356,13 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         if (val == null) return 'KG';
                         final lower = val.toLowerCase().replaceAll(' ', '');
                         if (lower == 'bw') return 'BW';
-                        if (lower == 'kg+bw') return 'KG + BW';
-                        if (lower == 'baronly' || lower == 'bo')
-                          return 'BAR only';
+                        if (lower == 'fw' ||
+                            lower == 'freeweight' ||
+                            lower == 'baronly' ||
+                            lower == 'bo' ||
+                            lower == 'bar')
+                          return 'FW';
+                        if (lower == 'kg+bw' || lower == 'kgbw') return 'KG';
                         return 'KG';
                       }(),
                       isDense: true,
@@ -3298,22 +3375,40 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         color: Color(0xFF212121),
                       ),
                       icon: const Icon(Icons.arrow_drop_down, size: 16),
+                      selectedItemBuilder: (BuildContext context) {
+                        return const <Widget>[
+                          Center(child: Text('KG')),
+                          Center(child: Text('BW')),
+                          Center(child: Text('FW')),
+                        ];
+                      },
                       items: const [
                         DropdownMenuItem(
                           value: 'KG',
-                          child: Center(child: Text('KG')),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Kilograms', maxLines: 1),
+                            ),
+                          ),
                         ),
                         DropdownMenuItem(
                           value: 'BW',
-                          child: Center(child: Text('BW')),
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Body Weight', maxLines: 1),
+                            ),
+                          ),
                         ),
                         DropdownMenuItem(
-                          value: 'KG + BW',
-                          child: Center(child: Text('KG + BW')),
-                        ),
-                        DropdownMenuItem(
-                          value: 'BAR only',
-                          child: Center(child: Text('BAR only')),
+                          value: 'FW',
+                          child: Center(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text('Free Weight', maxLines: 1),
+                            ),
+                          ),
                         ),
                       ],
                       onChanged: (val) {
@@ -3492,11 +3587,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 ?.toString()
                                 .toUpperCase()
                                 .replaceAll(' ', '');
-                            if (weightType == 'BW' ||
-                                weightType == 'BARONLY' ||
-                                weightType == 'BO') {
-                              final displayText =
-                                  (weightType == 'BW') ? 'BW' : 'BO';
+                            if (weightType == 'BW') {
                               return Container(
                                 width: 58,
                                 height: 34,
@@ -3509,9 +3600,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     width: 1.0,
                                   ),
                                 ),
-                                child: Text(
-                                  displayText,
-                                  style: const TextStyle(
+                                child: const Text(
+                                  'BW',
+                                  style: TextStyle(
                                     fontFamily: 'Poppins',
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
@@ -3708,10 +3799,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                             .toUpperCase()
                                             .replaceAll(' ', '') ??
                                         '';
-                                    final isBodyweight =
-                                        weightType == 'BW' ||
-                                        weightType == 'BARONLY' ||
-                                        weightType == 'BO';
+                                    final isBodyweight = weightType == 'BW';
 
                                     // Fallback to ghost/hint text if unedited
                                     if (kgVal.isEmpty &&

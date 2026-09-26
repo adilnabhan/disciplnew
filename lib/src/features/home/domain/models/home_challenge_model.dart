@@ -6,11 +6,7 @@ class ChallengeBrand {
   final String? name;
   final String? logo;
 
-  const ChallengeBrand({
-    this.id,
-    this.name,
-    this.logo,
-  });
+  const ChallengeBrand({this.id, this.name, this.logo});
 
   factory ChallengeBrand.fromJson(Map<String, dynamic> json) {
     return ChallengeBrand(
@@ -21,11 +17,7 @@ class ChallengeBrand {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'logo': logo,
-    };
+    return {'id': id, 'name': name, 'logo': logo};
   }
 }
 
@@ -34,10 +26,7 @@ class JoinedMember {
   final int? id;
   final String? profileImage;
 
-  const JoinedMember({
-    this.id,
-    this.profileImage,
-  });
+  const JoinedMember({this.id, this.profileImage});
 
   factory JoinedMember.fromJson(Map<String, dynamic> json) {
     return JoinedMember(
@@ -47,10 +36,7 @@ class JoinedMember {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'profile_image': profileImage,
-    };
+    return {'id': id, 'profile_image': profileImage};
   }
 }
 
@@ -60,11 +46,7 @@ class ChallengeButton {
   final String? action;
   final bool? enabled;
 
-  const ChallengeButton({
-    this.text,
-    this.action,
-    this.enabled,
-  });
+  const ChallengeButton({this.text, this.action, this.enabled});
 
   factory ChallengeButton.fromJson(Map<String, dynamic> json) {
     return ChallengeButton(
@@ -75,11 +57,7 @@ class ChallengeButton {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'text': text,
-      'action': action,
-      'enabled': enabled,
-    };
+    return {'text': text, 'action': action, 'enabled': enabled};
   }
 }
 
@@ -174,30 +152,38 @@ class HomeChallenge {
     return HomeChallenge(
       id: json['id'] as int?,
       name: json['name'] as String?,
-      shortDescription: (json['short_description'] ?? json['description']) as String?,
-      brand: json['brand'] is Map<String, dynamic>
-          ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
-          : null,
+      shortDescription:
+          (json['short_description'] ?? json['description']) as String?,
+      brand:
+          json['brand'] is Map<String, dynamic>
+              ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
+              : null,
       bannerImage: json['banner_image'] as String?,
-      thumbnailImage: (json['thumbnail_image'] ??
-          json['thumbnail'] ??
-          json['thumbnail_url'] ??
-          json['image']) as String?,
+      thumbnailImage:
+          (json['thumbnail_image'] ??
+                  json['thumbnail'] ??
+                  json['thumbnail_url'] ??
+                  json['image'])
+              as String?,
       category: json['category'] as String?,
-      categoryDisplay: (json['category_display'] ?? json['category']) as String?,
+      categoryDisplay:
+          (json['category_display'] ?? json['category']) as String?,
       challengeType: json['challenge_type'] as String?,
       themeColor: json['theme_color'] as String?,
       joinedMemberCount: json['joined_member_count'] as int?,
-      joinedMembers: (json['joined_members'] as List<dynamic>?)
-          ?.map((e) => JoinedMember.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      joinedMembers:
+          (json['joined_members'] as List<dynamic>?)
+              ?.map((e) => JoinedMember.fromJson(e as Map<String, dynamic>))
+              .toList(),
       isJoined: _parseBool(json['is_joined']),
-      button: json['button'] is Map<String, dynamic>
-          ? ChallengeButton.fromJson(json['button'] as Map<String, dynamic>)
-          : null,
-      footer: json['footer'] is Map<String, dynamic>
-          ? ChallengeFooter.fromJson(json['footer'] as Map<String, dynamic>)
-          : null,
+      button:
+          json['button'] is Map<String, dynamic>
+              ? ChallengeButton.fromJson(json['button'] as Map<String, dynamic>)
+              : null,
+      footer:
+          json['footer'] is Map<String, dynamic>
+              ? ChallengeFooter.fromJson(json['footer'] as Map<String, dynamic>)
+              : null,
       status: json['status'] as String?,
       remainingSeconds: json['remaining_seconds'] as int?,
     );
@@ -230,22 +216,19 @@ class HomeChallenge {
 class HomeChallengeResponse {
   final List<HomeChallenge>? results;
 
-  const HomeChallengeResponse({
-    this.results,
-  });
+  const HomeChallengeResponse({this.results});
 
   factory HomeChallengeResponse.fromJson(Map<String, dynamic> json) {
     return HomeChallengeResponse(
-      results: (json['results'] as List<dynamic>?)
-          ?.map((e) => HomeChallenge.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      results:
+          (json['results'] as List<dynamic>?)
+              ?.map((e) => HomeChallenge.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'results': results?.map((e) => e.toJson()).toList(),
-    };
+    return {'results': results?.map((e) => e.toJson()).toList()};
   }
 }
 

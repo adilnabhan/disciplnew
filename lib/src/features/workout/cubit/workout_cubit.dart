@@ -593,8 +593,21 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     );
     if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
       final exercise = updatedExercises[exerciseIndex];
-      exercise['weight_type'] = weightType;
+      final canonical = () {
+        final lower = weightType.toLowerCase().replaceAll(' ', '');
+        if (lower == 'bw') return 'BW';
+        if (lower == 'fw' ||
+            lower == 'freeweight' ||
+            lower == 'baronly' ||
+            lower == 'bo' ||
+            lower == 'bar') {
+          return 'FW';
+        }
+        return 'KG';
+      }();
+      exercise['weight_type'] = canonical;
       emit(state.copyWith(exercises: updatedExercises));
+      await saveDraftSession(state.sessionTitle);
     }
   }
 
@@ -833,13 +846,96 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
     if (exerciseIndex >= 0 && exerciseIndex < updatedExercises.length) {
+      final exercise = updatedExercises[exerciseIndex];
       final sets = List<Map<String, dynamic>>.from(
-        updatedExercises[exerciseIndex]['sets'] as List,
+        exercise['sets'] as List,
       );
       if (setIndex >= 0 && setIndex < sets.length) {
         final set = Map<String, dynamic>.from(sets[setIndex]);
         final newChecked = !(set['checked'] as bool? ?? false);
         set['checked'] = newChecked;
+        
+        // Evaluate temporary feedback if checking
+        if (newChecked) {
+          final previousStr = set['previous']?.toString() ?? '';
+          
+          if (previousStr == 'no data') {
+            set['feedback_type'] = 'first_time';
+          } else {
+            // Attempt to compare raw values if available
+            final currentKg = double.tryParse(set['kg']?.toString() ?? '0') ?? 0;
+            final currentReps = double.tryParse(set['reps']?.toString() ?? '0') ?? 0;
+            
+            final prevKg = double.tryParse(set['raw_prev_kg']?.toString() ?? '0') ?? 0;
+            final prevReps = double.tryParse(set['raw_prev_reps']?.toString() ?? '0') ?? 0;
+            
+            final weightType = exercise['weight_type']?.toString().toUpperCase() ?? 'KG';
+            final trackBy = exercise['track_by']?.toString().toLowerCase() ?? 'rep';
+            
+            bool isStronger = false;
+            double percentage = 0.0;
+            
+            if (prevKg > 0 || prevReps > 0) {
+              if (weightType == 'BW') {
+                if (currentReps > prevReps) {
+                  isStronger = true;
+                  percentage = prevReps > 0 ? ((currentReps - prevReps) / prevReps) * 100 : 0;
+                }
+              } else if (trackBy == 'rep') {
+                // Simplified 1RM comparison for KG/FW
+                final current1RM = currentKg * (1 + (currentReps / 30));
+                final prev1RM = prevKg * (1 + (prevReps / 30));
+                
+                if (current1RM > prev1RM && prev1RM > 0) {
+                  isStronger = true;
+                  percentage = ((current1RM - prev1RM) / prev1RM) * 100;
+                }
+              } else if (trackBy == 'time' || trackBy == 'distance') {
+                if (currentReps > prevReps) {
+                  isStronger = true;
+                  percentage = prevReps > 0 ? ((currentReps - prevReps) / prevReps) * 100 : 0;
+                }
+              }
+              
+              if (isStronger) {
+                set['feedback_type'] = 'stronger';
+                set['feedback_pct'] = '+${percentage.toStringAsFixed(0)}%';
+              }
+            } else {
+              // Safest fallback: no raw data = no stronger feedback, do nothing.
+            }
+          }
+          
+          // Clear feedback automatically after 3 seconds
+          if (set['feedback_type'] != null) {
+            Future.delayed(const Duration(seconds: 3), () {
+              if (isClosed) return;
+              final currentExercises = List<Map<String, dynamic>>.from(
+                state.exercises.map((e) => Map<String, dynamic>.from(e)),
+              );
+              if (exerciseIndex < currentExercises.length) {
+                final currentSets = List<Map<String, dynamic>>.from(
+                  currentExercises[exerciseIndex]['sets'] as List,
+                );
+                if (setIndex < currentSets.length) {
+                  final targetSet = Map<String, dynamic>.from(currentSets[setIndex]);
+                  if (targetSet['checked'] == true) {
+                    targetSet.remove('feedback_type');
+                    targetSet.remove('feedback_pct');
+                    currentSets[setIndex] = targetSet;
+                    currentExercises[exerciseIndex]['sets'] = currentSets;
+                    emit(state.copyWith(exercises: currentExercises));
+                  }
+                }
+              }
+            });
+          }
+        } else {
+          // If unchecked, remove feedback
+          set.remove('feedback_type');
+          set.remove('feedback_pct');
+        }
+
         sets[setIndex] = set;
         updatedExercises[exerciseIndex]['sets'] = sets;
         emit(state.copyWith(exercises: updatedExercises));
@@ -1339,7 +1435,9 @@ class WorkoutCubit extends Cubit<WorkoutState> {
             }
 
             final prevRaw = s['previous'];
-            final prevWeightRaw = s['previous_weight_kg'];
+            final prevWeightRaw = s['previous_weight_kg'] ?? s['previous_weight'] ?? s['previous_kg'];
+            final prevRepsRaw = s['previous_reps'] ?? s['previous_value'];
+            
             String prevStr;
             if (prevRaw != null &&
                 prevRaw.toString().isNotEmpty &&
@@ -1366,6 +1464,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
               'setNum':
                   s['set_number'] ?? s['set_num'] ?? s['setNum'] ?? (i + 1),
               'previous': prevStr,
+              'raw_prev_kg': prevWeightRaw,
+              'raw_prev_reps': prevRepsRaw,
               'kg': kgVal,
               'reps': repsVal,
               'input_type': s['input_type'],
@@ -1441,10 +1541,10 @@ class WorkoutCubit extends Cubit<WorkoutState> {
           if (type == null) return 'KG';
           final lower = type.toLowerCase().replaceAll(' ', '');
           if (lower == 'bw') return 'BW';
-          if (lower == 'kg+bw') return 'KG + BW';
-          if (lower == 'baronly' || lower == 'bo') return 'BAR only';
+          if (lower == 'fw' || lower == 'freeweight' || lower == 'baronly' || lower == 'bo' || lower == 'bar') return 'FW';
+          if (lower == 'kg+bw') return 'KG';
           if (lower == 'kg') return 'KG';
-          return type;
+          return 'KG';
         }(),
         'sets': sets,
       });

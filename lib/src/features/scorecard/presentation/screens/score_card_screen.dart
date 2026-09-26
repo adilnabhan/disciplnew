@@ -116,9 +116,9 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     return BlocProvider.value(
       value: _cubit,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
+        backgroundColor: AppColors.bgcolorgrey,
         appBar: AppBar(
-          backgroundColor: const Color(0xFFF8F9FA),
+          backgroundColor: Colors.white,
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false,
@@ -188,13 +188,13 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                   parent: BouncingScrollPhysics(),
                 ),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    const EdgeInsets.fromLTRB(16, 4, 16, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Centered capsule period selector with right info button
                     _buildHeaderControls(state),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
 
                     // 3D Isometric Podium
                     _build3DPodium(data.podium),
@@ -772,29 +772,29 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               Text(
                 rank > 0 ? '$rank' : '-',
                 style: const TextStyle(
-                  fontSize: 42,
+                  fontSize: 32,
                   fontWeight: FontWeight.w900,
                   color: Color(0xFFF59E0B),
                   height: 1.0,
                   fontFamily: 'Poppins',
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
 
               // Avatar
               Container(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(100),
-                  child: _buildAvatar(profilePic, size: 48),
+                  child: _buildAvatar(profilePic, size: 40),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
 
               // Name & Points
               Expanded(
@@ -811,30 +811,71 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
-                    Text(
-                      '$points pts',
-                      style: AppStyles.text14Px.poppins.w700.copyWith(
-                        color: const Color(0xFFD97706),
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          '$points pts',
+                          style: AppStyles.text14Px.poppins.w700.copyWith(
+                            color: const Color(0xFFD97706),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFDE68A),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'You',
+                            style: AppStyles.text13Px.poppins.w700.copyWith(
+                              color: const Color(0xFF1F2937),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
 
-              // "You" Pill Badge
+              // Streak Card
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFDE68A),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'You',
-                  style: AppStyles.text13Px.poppins.w700.copyWith(
-                    color: const Color(0xFF1F2937),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFCE4EC),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('🔥', style: TextStyle(fontSize: 14)),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${myPos?.streak ?? me?.streak ?? 0}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFDC2626),
+                              fontFamily: 'Poppins',
+                              height: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        'Streak',
+                        style: AppStyles.text9Px.poppins.w600.copyWith(
+                          color: const Color(0xFF6B7280),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
             ],
           ),
 
@@ -1041,6 +1082,10 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
       pointsColor = const Color(0xFF64748B);
     }
 
+    final int streak = member.streak ?? 0;
+    final int rankChangeVal = member.rankChange ?? 0;
+    final String rankChangeType = member.rankChangeType?.toLowerCase() ?? '';
+
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1063,7 +1108,36 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+
+          // Rank Change Indicator
+          if (rankChangeVal > 0)
+            SizedBox(
+              width: 20,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    rankChangeType == 'up' ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                    color: rankChangeType == 'up' ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                    size: 18,
+                  ),
+                  Text(
+                    '$rankChangeVal',
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w700,
+                      color: rankChangeType == 'up' ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      fontFamily: 'Poppins',
+                      height: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            const SizedBox(width: 20),
+
+          const SizedBox(width: 4),
 
           // Avatar
           Container(
@@ -1090,6 +1164,31 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+
+          // Streak
+          if (streak > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF7ED),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('🔥', style: TextStyle(fontSize: 10)),
+                  const SizedBox(width: 2),
+                  Text(
+                    '$streak',
+                    style: AppStyles.text10Px.poppins.w700.copyWith(
+                      color: const Color(0xFFEA580C),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
 
           // Points
           Text(

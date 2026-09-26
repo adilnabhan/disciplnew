@@ -93,8 +93,8 @@ final class FitnesscenterRepository {
       );
     } on ApiException catch (e) {
       return left(e);
-    } catch (e) {
-      debugPrint(e.toString());
+    } catch (e, stackTrace) {
+      debugPrint('fitnesscenterDetails parsing error: $e\n$stackTrace');
       return left(const ApiException.unknown());
     }
   }

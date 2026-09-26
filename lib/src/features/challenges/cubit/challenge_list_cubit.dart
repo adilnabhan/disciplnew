@@ -129,7 +129,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
     try {
       final response = await _repository.getChallenges(
         page: 1,
-        pageSize: 50,
+        pageSize: 4,
         status: state.selectedStatus,
         challengeType: state.selectedChallengeType,
         category: state.selectedCategory,
@@ -140,17 +140,10 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
       final results = response.results ?? [];
       final bool hasMore = response.next != null && response.next!.isNotEmpty;
 
-      final filtered = applyFilters(
-        results,
-        status: state.selectedStatus,
-        challengeType: state.selectedChallengeType,
-        searchQuery: state.searchQuery,
-      );
-
       if (isClosed) return;
       emit(state.copyWith(
         allChallenges: results,
-        challenges: filtered,
+        challenges: results,
         isLoading: false,
         hasMore: hasMore,
         currentPage: 1,
@@ -178,7 +171,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
       final nextPage = state.currentPage + 1;
       final response = await _repository.getChallenges(
         page: nextPage,
-        pageSize: 20,
+        pageSize: 4,
         status: state.selectedStatus,
         challengeType: state.selectedChallengeType,
         category: state.selectedCategory,
@@ -192,17 +185,10 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
       final updatedAll = List<ChallengeModel>.from(state.allChallenges)
         ..addAll(newResults);
 
-      final filtered = applyFilters(
-        updatedAll,
-        status: state.selectedStatus,
-        challengeType: state.selectedChallengeType,
-        searchQuery: state.searchQuery,
-      );
-
       if (isClosed) return;
       emit(state.copyWith(
         allChallenges: updatedAll,
-        challenges: filtered,
+        challenges: updatedAll,
         isLoadingMore: false,
         hasMore: hasMore,
         currentPage: nextPage,
@@ -217,45 +203,26 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
   void filterByStatus(String status) {
     // Toggle: if tapping already selected status, reset to 'all'
     final newStatus = (state.selectedStatus == status) ? 'all' : status;
-    final filtered = applyFilters(
-      state.allChallenges,
-      status: newStatus,
-      challengeType: state.selectedChallengeType,
-      searchQuery: state.searchQuery,
-    );
-    emit(state.copyWith(
-      selectedStatus: newStatus,
-      challenges: filtered,
-    ));
+    emit(state.copyWith(selectedStatus: newStatus));
+    loadChallenges();
   }
 
   void filterByChallengeType(String? type) {
     if (state.selectedChallengeType == type) return;
-    final filtered = applyFilters(
-      state.allChallenges,
-      status: state.selectedStatus,
-      challengeType: type,
-      searchQuery: state.searchQuery,
-    );
     emit(state.copyWith(
       selectedChallengeType: type,
-      challenges: filtered,
+      clearChallengeType: type == null,
     ));
+    loadChallenges();
   }
 
   void clearFilters() {
-    final filtered = applyFilters(
-      state.allChallenges,
-      status: 'all',
-      challengeType: null,
-      searchQuery: '',
-    );
     emit(state.copyWith(
       selectedStatus: 'all',
-      selectedChallengeType: null,
+      clearChallengeType: true,
       searchQuery: '',
-      challenges: filtered,
     ));
+    loadChallenges();
   }
 
   void filterByCategory(String? category) {
@@ -268,17 +235,8 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       if (isClosed) return;
-      final filtered = applyFilters(
-        state.allChallenges,
-        status: state.selectedStatus,
-        challengeType: state.selectedChallengeType,
-        searchQuery: query,
-      );
-      if (isClosed) return;
-      emit(state.copyWith(
-        searchQuery: query,
-        challenges: filtered,
-      ));
+      emit(state.copyWith(searchQuery: query));
+      loadChallenges();
     });
   }
 

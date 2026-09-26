@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/rewards/domain/models/partner_qr_model.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -197,18 +198,24 @@ class RewardQrCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: qrToken.isNotEmpty
-                      ? QrImageView(
-                          data: qrToken,
-                          size: 220,
-                          backgroundColor: Colors.white,
-                          eyeStyle: const QrEyeStyle(
-                            eyeShape: QrEyeShape.square,
-                            color: Color(0xFF0F172A),
+                  child: (qrToken.isNotEmpty || !isEligible)
+                      ? ImageFiltered(
+                          imageFilter: ui.ImageFilter.blur(
+                            sigmaX: !isEligible ? 6.0 : 0.0,
+                            sigmaY: !isEligible ? 6.0 : 0.0,
                           ),
-                          dataModuleStyle: const QrDataModuleStyle(
-                            dataModuleShape: QrDataModuleShape.square,
-                            color: Color(0xFF0F172A),
+                          child: QrImageView(
+                            data: qrToken.isNotEmpty ? qrToken : 'locked_qr_code_placeholder',
+                            size: 220,
+                            backgroundColor: Colors.white,
+                            eyeStyle: const QrEyeStyle(
+                              eyeShape: QrEyeShape.square,
+                              color: Color(0xFF0F172A),
+                            ),
+                            dataModuleStyle: const QrDataModuleStyle(
+                              dataModuleShape: QrDataModuleShape.square,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
                         )
                       : Container(
@@ -219,8 +226,46 @@ class RewardQrCard extends StatelessWidget {
                         ),
                 ),
 
+                // Ineligibility Overlay
+                if (!isEligible)
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.lock_outline_rounded, color: AppColors.primary, size: 36),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Partner discount QR',
+                            style: AppStyles.text14Px.poppins.w700.copyWith(
+                              color: const Color(0xFF1E293B),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Complete the requirements\nto view your QR code',
+                            textAlign: TextAlign.center,
+                            style: AppStyles.text12Px.poppins.w500.copyWith(
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
                 // Expired Overlay
-                if (isExpired)
+                else if (isExpired)
                   Positioned.fill(
                     child: Container(
                       decoration: BoxDecoration(
@@ -319,40 +364,7 @@ class RewardQrCard extends StatelessWidget {
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Bottom Brightness & Security Notice Bar
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-              border: Border(
-                top: BorderSide(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.brightness_medium_rounded, size: 16, color: Color(0xFF94A3B8)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Dynamic secure token. Turn up screen brightness for fast cashier scan.',
-                    style: AppStyles.text10Px.poppins.w500.copyWith(
-                      color: const Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: 20),
         ],
       ),
     );

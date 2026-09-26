@@ -1090,118 +1090,58 @@ class _WorkoutHistoryCalendarState extends State<WorkoutHistoryCalendar> {
 
     final isToday = (dateOnly == todayOnly);
 
-    // 1. Green Double Tick (Verified Workout)
+    Color bgColor = Colors.transparent;
+    Color textColor = const Color(0xFF212121);
+    Color borderColor = Colors.transparent;
+
     if (state == CalendarDayState.verified) {
-      return _dayState(
-        day: day,
-        bgColor: const Color(0xFFE8F5E9),
-        borderColor: isToday ? const Color(0xFF019C37) : Colors.transparent,
-        topIcon: SvgPicture.asset(
-          'assets/images/svg/icons/trainer_verified_tick.svg',
-          width: 17,
-          height: 17,
-        ),
-      );
+      bgColor = const Color(0xFF019C37); // Green
+      textColor = Colors.white;
+    } else if (state == CalendarDayState.completed) {
+      bgColor = const Color(0xFFDCA71B); // Yellow
+      textColor = Colors.white;
+    } else if (state == CalendarDayState.missed) {
+      bgColor = const Color(0xFFE53935); // Red
+      textColor = Colors.white;
+    } else if (state == CalendarDayState.rest) {
+      bgColor = const Color(0xFF86A8E7); // Blue
+      textColor = Colors.white;
+    } else if (state == CalendarDayState.inactive) {
+      bgColor = const Color(0xFFF5F5F5);
+      textColor = Colors.grey.shade400;
+    } else {
+      // Future
+      bgColor = const Color(0xFFF5F5F5);
+      textColor = const Color(0xFF212121);
     }
 
-    // 2. Yellow Single Tick (Completed Workout - Pending Verification)
-    if (state == CalendarDayState.completed) {
-      return _dayState(
-        day: day,
-        bgColor: const Color(0xFFFFFDE7),
-        borderColor: isToday ? const Color(0xFFA9AF00) : Colors.transparent,
-        topIcon: SvgPicture.asset(
-          'assets/images/svg/icons/not_verified_tick.svg',
-          width: 17,
-          height: 17,
-        ),
-      );
+    if (isToday) {
+      borderColor = (state == CalendarDayState.future || state == CalendarDayState.inactive) 
+          ? Colors.grey.shade600 
+          : bgColor;
+      bgColor = Colors.white;
+      textColor = const Color(0xFF212121);
     }
-
-    // 3. Red X Mark (Missed Session)
-    if (state == CalendarDayState.missed) {
-      return _dayState(
-        day: day,
-        bgColor: const Color(0xFFFFEBEE),
-        borderColor: isToday ? const Color(0xFFFF5252) : Colors.transparent,
-        topIcon: Container(
-          padding: const EdgeInsets.all(2),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFF5252),
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 1.5),
-          ),
-          child: const Icon(Icons.close_rounded, color: Colors.white, size: 11),
-        ),
-      );
-    }
-
-    final isRest = state == CalendarDayState.rest;
-    final isBeforeStart = state == CalendarDayState.inactive;
-    final dayTextColor =
-        isRest
-            ? const Color.fromRGBO(95, 122, 197, 1)
-            : isBeforeStart
-            ? Colors.grey.shade400
-            : const Color(0xFF212121);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       decoration: BoxDecoration(
-        color:
-            isRest
-                ? const Color.fromRGBO(239, 243, 255, 1)
-                : const Color(0xFFF5F5F5),
+        color: bgColor,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color:
-              isToday
-                  ? (isRest ? const Color(0xFF1D9BF0) : Colors.grey.shade600)
-                  : Colors.transparent,
+          color: isToday ? borderColor : Colors.transparent,
           width: 1.5,
         ),
       ),
       alignment: Alignment.center,
       child: Text(
         '${day.day}',
-        style: AppStyles.text14Px.poppins.w500.copyWith(color: dayTextColor),
+        style: AppStyles.text14Px.poppins.w500.copyWith(color: textColor),
       ),
     );
   }
 
-  Widget _dayState({
-    required DateTime day,
-    required Color bgColor,
-    required Color borderColor,
-    required Widget topIcon,
-  }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-          decoration: BoxDecoration(
-            color: bgColor,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: borderColor, width: 1.5),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '${day.day}',
-            style: AppStyles.text14Px.poppins.w500.copyWith(
-              color: Colors.black87,
-            ),
-          ),
-        ),
-        Positioned(
-          top: -3,
-          left: 0,
-          right: 0,
-          child: Align(alignment: Alignment.topCenter, child: topIcon),
-        ),
-      ],
-    );
-  }
+
 
   Future<void> _checkAndShowOnboardingHint() async {}
 

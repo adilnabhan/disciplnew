@@ -140,6 +140,7 @@ dependencies:
   gal: ^2.3.3
   health: ^13.1.4
   qr_flutter: ^4.1.0
+  dropdown_search: ^6.0.2
 
 dependency_overrides:
   web: any

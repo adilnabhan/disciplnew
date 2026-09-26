@@ -42,10 +42,7 @@ class ChallengeJoinedMember {
   final int? id;
   final String? profileImage;
 
-  const ChallengeJoinedMember({
-    this.id,
-    this.profileImage,
-  });
+  const ChallengeJoinedMember({this.id, this.profileImage});
 
   factory ChallengeJoinedMember.fromJson(Map<String, dynamic> json) {
     return ChallengeJoinedMember(
@@ -55,10 +52,7 @@ class ChallengeJoinedMember {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'profile_image': profileImage,
-    };
+    return {'id': id, 'profile_image': profileImage};
   }
 }
 
@@ -150,11 +144,7 @@ class ChallengeHowItWorks {
   final String? title;
   final String? description;
 
-  const ChallengeHowItWorks({
-    this.icon,
-    this.title,
-    this.description,
-  });
+  const ChallengeHowItWorks({this.icon, this.title, this.description});
 
   factory ChallengeHowItWorks.fromJson(Map<String, dynamic> json) {
     return ChallengeHowItWorks(
@@ -165,11 +155,7 @@ class ChallengeHowItWorks {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'icon': icon,
-      'title': title,
-      'description': description,
-    };
+    return {'icon': icon, 'title': title, 'description': description};
   }
 }
 
@@ -266,9 +252,10 @@ class ChallengeWinner {
       selectionMethod: json['selection_method'] as String?,
       announcementDate: json['announcement_date'] as String?,
       isAnnounced: json['is_announced'] as bool?,
-      announcedWinners: (json['announced_winners'] as List<dynamic>?)
-          ?.map((e) => AnnouncedWinner.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      announcedWinners:
+          (json['announced_winners'] as List<dynamic>?)
+              ?.map((e) => AnnouncedWinner.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
   }
 
@@ -288,11 +275,7 @@ class ChallengeShare {
   final String? description;
   final String? deepLink;
 
-  const ChallengeShare({
-    this.title,
-    this.description,
-    this.deepLink,
-  });
+  const ChallengeShare({this.title, this.description, this.deepLink});
 
   factory ChallengeShare.fromJson(Map<String, dynamic> json) {
     return ChallengeShare(
@@ -303,11 +286,7 @@ class ChallengeShare {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'title': title,
-      'description': description,
-      'deep_link': deepLink,
-    };
+    return {'title': title, 'description': description, 'deep_link': deepLink};
   }
 }
 
@@ -317,11 +296,7 @@ class ChallengeButton {
   final String? action;
   final bool? enabled;
 
-  const ChallengeButton({
-    this.text,
-    this.action,
-    this.enabled,
-  });
+  const ChallengeButton({this.text, this.action, this.enabled});
 
   factory ChallengeButton.fromJson(Map<String, dynamic> json) {
     return ChallengeButton(
@@ -332,11 +307,7 @@ class ChallengeButton {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'text': text,
-      'action': action,
-      'enabled': enabled,
-    };
+    return {'text': text, 'action': action, 'enabled': enabled};
   }
 }
 
@@ -441,45 +412,67 @@ class ChallengeDetailsResponse {
       challengeType: json['challenge_type'] as String?,
       themeColor: json['theme_color'] as String?,
       bannerImage: json['banner_image'] as String?,
-      brand: json['brand'] is Map<String, dynamic>
-          ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
-          : null,
+      brand:
+          json['brand'] is Map<String, dynamic>
+              ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
+              : null,
       isJoined: _parseBool(json['is_joined']),
       joinedMemberCount: json['joined_member_count'] as int?,
-      joinedMembers: (json['joined_members'] as List<dynamic>?)
-          ?.map((e) => ChallengeJoinedMember.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      progress: json['progress'] is Map<String, dynamic>
-          ? ChallengeProgress.fromJson(json['progress'] as Map<String, dynamic>)
-          : null,
-      reward: json['reward'] is Map<String, dynamic>
-          ? ChallengeReward.fromJson(json['reward'] as Map<String, dynamic>)
-          : null,
-      howItWorks: (json['how_it_works'] as List<dynamic>?)
-          ?.map((e) => ChallengeHowItWorks.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      timeline: json['timeline'] is Map<String, dynamic>
-          ? ChallengeTimeline.fromJson(json['timeline'] as Map<String, dynamic>)
-          : null,
-      winner: json['winner'] is Map<String, dynamic>
-          ? ChallengeWinner.fromJson(json['winner'] as Map<String, dynamic>)
-          : null,
-      share: json['share'] is Map<String, dynamic>
-          ? ChallengeShare.fromJson(json['share'] as Map<String, dynamic>)
-          : null,
-      rules: (json['rules'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
-      disqualificationRules: (json['disqualification_rules'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toList(),
-      termsAndConditions: (json['terms_and_conditions'] as List<dynamic>?)
-          ?.map((e) => e.toString())
-          .toList(),
-      button: json['button'] is Map<String, dynamic>
-          ? ChallengeButton.fromJson(json['button'] as Map<String, dynamic>)
-          : null,
-      footer: json['footer'] is Map<String, dynamic>
-          ? ChallengeFooter.fromJson(json['footer'] as Map<String, dynamic>)
-          : null,
+      joinedMembers:
+          (json['joined_members'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    ChallengeJoinedMember.fromJson(e as Map<String, dynamic>),
+              )
+              .toList(),
+      progress:
+          json['progress'] is Map<String, dynamic>
+              ? ChallengeProgress.fromJson(
+                json['progress'] as Map<String, dynamic>,
+              )
+              : null,
+      reward:
+          json['reward'] is Map<String, dynamic>
+              ? ChallengeReward.fromJson(json['reward'] as Map<String, dynamic>)
+              : null,
+      howItWorks:
+          (json['how_it_works'] as List<dynamic>?)
+              ?.map(
+                (e) => ChallengeHowItWorks.fromJson(e as Map<String, dynamic>),
+              )
+              .toList(),
+      timeline:
+          json['timeline'] is Map<String, dynamic>
+              ? ChallengeTimeline.fromJson(
+                json['timeline'] as Map<String, dynamic>,
+              )
+              : null,
+      winner:
+          json['winner'] is Map<String, dynamic>
+              ? ChallengeWinner.fromJson(json['winner'] as Map<String, dynamic>)
+              : null,
+      share:
+          json['share'] is Map<String, dynamic>
+              ? ChallengeShare.fromJson(json['share'] as Map<String, dynamic>)
+              : null,
+      rules:
+          (json['rules'] as List<dynamic>?)?.map((e) => e.toString()).toList(),
+      disqualificationRules:
+          (json['disqualification_rules'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList(),
+      termsAndConditions:
+          (json['terms_and_conditions'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList(),
+      button:
+          json['button'] is Map<String, dynamic>
+              ? ChallengeButton.fromJson(json['button'] as Map<String, dynamic>)
+              : null,
+      footer:
+          json['footer'] is Map<String, dynamic>
+              ? ChallengeFooter.fromJson(json['footer'] as Map<String, dynamic>)
+              : null,
       status: json['status'] as String?,
     );
   }

@@ -111,7 +111,7 @@ class RewardsHowItWorksSheet extends StatelessWidget {
                     stepNumber: '01',
                     stepTitle: 'Complete Daily Workout',
                     stepDescription:
-                        'Finish your gym workout or hit your daily step goal in Discipl to activate your dynamic discount QR.',
+                        'Finish your gym workout in Discipl to activate your dynamic discount QR.',
                     stepIcon: Icons.fitness_center_rounded,
                     stepColor: const Color(0xFF059669),
                     badgeBgColor: const Color(0xFFECFDF5),
@@ -146,61 +146,7 @@ class RewardsHowItWorksSheet extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-                  // Important Notes Highlight Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFF0FDF4), Color(0xFFECFDF5)],
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFA7F3D0)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF10B981),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                                size: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Important Notes',
-                              style: AppStyles.text12Px.poppins.w700.copyWith(
-                                color: const Color(0xFF065F46),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        _buildTipRow(
-                          Icons.calendar_today_rounded,
-                          'Valid once per partner location per day.',
-                        ),
-                        const SizedBox(height: 7),
-                        _buildTipRow(
-                          Icons.timer_outlined,
-                          'Live dynamic QR refreshes periodically for fraud prevention.',
-                        ),
-                        const SizedBox(height: 7),
-                        _buildTipRow(
-                          Icons.savings_outlined,
-                          'Track all your saved money in your Savings Passbook.',
-                        ),
-                      ],
-                    ),
-                  ),
+
 
                   const SizedBox(height: 16),
                 ],

@@ -37,7 +37,11 @@ final class ChallengeRepository {
         queryParams['status'] = status.toLowerCase();
       }
       if (challengeType != null && challengeType.isNotEmpty) {
-        queryParams['challenge_type'] = challengeType.toLowerCase();
+        String type = challengeType.toLowerCase();
+        if (type == 'community') {
+          type = 'community_goal';
+        }
+        queryParams['challenge_type'] = type;
       }
       if (category != null && category.isNotEmpty) {
         queryParams['category'] = category.toLowerCase();

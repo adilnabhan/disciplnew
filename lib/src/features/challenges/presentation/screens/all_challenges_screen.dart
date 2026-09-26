@@ -206,88 +206,6 @@ class __AllChallengesScreenContentState
     );
   }
 
-  Widget _buildChampionsBanner(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const ChallengeWinnersScreen(challengeId: 0),
-          ),
-        );
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                Color(0xFF041933),
-                Color(0xFF052044),
-              ],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF041933).withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Trophy Asset Icon
-              Image.asset(
-                'assets/images/png/vectors/view_all_winners_icon.png',
-                width: 44,
-                height: 44,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 12),
-
-              // Title & Subtitle
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Celebrate our champions!',
-                      style: AppStyles.text12Px.poppins.w400.copyWith(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Text(
-                          'View All Winners',
-                          style: AppStyles.text14Px.poppins.w700.copyWith(
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -359,9 +277,6 @@ class __AllChallengesScreenContentState
           const ChallengeFilterBar(),
           const SizedBox(height: 14),
 
-          // Champions Banner
-          _buildChampionsBanner(context),
-          const SizedBox(height: 16),
 
           // Challenges Section Header (Dynamic title reflecting current filter)
           Padding(
@@ -403,7 +318,6 @@ class __AllChallengesScreenContentState
                         state.selectedChallengeType!.isNotEmpty);
 
                 return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       title,
@@ -412,6 +326,7 @@ class __AllChallengesScreenContentState
                         color: const Color(0xFF1F1F1F),
                       ),
                     ),
+                    const Spacer(),
                     if (hasActiveFilter)
                       GestureDetector(
                         onTap: () {
@@ -422,6 +337,38 @@ class __AllChallengesScreenContentState
                           style: AppStyles.text13Px.poppins.w600.copyWith(
                             color: const Color(0xFFD71920),
                             fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const ChallengeWinnersScreen(challengeId: 0),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEE2E2), // Light red bg
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.emoji_events, color: Color(0xFFDC2626), size: 14), // Trophy
+                              const SizedBox(width: 4),
+                              Text(
+                                'View All Winners',
+                                style: AppStyles.text10Px.poppins.w600.copyWith(
+                                  color: const Color(0xFFDC2626),
+                                ),
+                              ),
+                              const SizedBox(width: 2),
+                              const Icon(Icons.chevron_right_rounded, color: Color(0xFFDC2626), size: 14),
+                            ],
                           ),
                         ),
                       ),

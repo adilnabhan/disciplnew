@@ -1135,4 +1135,35 @@ final class WorkoutRepository {
       return left(const ApiException.unknown());
     }
   }
+
+  Future<Either<ApiException, void>> postGymLead({
+    required String gymName,
+    required int userId,
+    required String userName,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'gym_name': gymName,
+        'user_id': userId,
+        'user_name': userName,
+      };
+
+      return await Feggy.async(
+        call: _dio.post<dynamic>(
+          '/api/v1/gym-leads/',
+          data: data,
+          options: Options(headers: {'X-Platform': platformSource}),
+        ),
+        onSuccess: (res) {
+          if (res.statusCode == 200 || res.statusCode == 201) {
+            return right(null);
+          }
+          return left(const ApiException.unknown());
+        },
+      );
+    } catch (e) {
+      debugPrint(e.toString());
+      return left(const ApiException.unknown());
+    }
+  }
 }

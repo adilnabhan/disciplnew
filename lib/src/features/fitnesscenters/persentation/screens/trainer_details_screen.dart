@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -27,10 +28,27 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
 
   final PageController _headerPageController = PageController();
   int _currentHeaderIndex = 0;
+  Timer? _headerAutoScrollTimer;
 
   final PageController _transPageController = PageController();
   int _currentTransIndex = 0;
   String _selectedTransTab = 'Before';
+
+  void _startHeaderAutoScroll() {
+    _headerAutoScrollTimer?.cancel();
+    final count = _getHeaderImages().length;
+    if (count <= 1) return;
+
+    _headerAutoScrollTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+      if (!mounted || !_headerPageController.hasClients) return;
+      final nextIndex = (_currentHeaderIndex + 1) % count;
+      _headerPageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
 
   @override
   void initState() {
@@ -45,6 +63,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
     _fetchReviewsAll();
     _fetchCustomerDetails();
     _fetchFullTrainerDetails();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startHeaderAutoScroll());
   }
 
   Future<void> _fetchFullTrainerDetails() async {
@@ -80,6 +99,9 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
               certifications: (full.certifications != null && full.certifications!.isNotEmpty)
                   ? full.certifications
                   : _trainer.certifications,
+              portfolioImages: (full.portfolioImages != null && full.portfolioImages!.isNotEmpty)
+                  ? full.portfolioImages
+                  : _trainer.portfolioImages,
             );
           } else {
             target = _trainer.copyWith(
@@ -109,6 +131,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                 _trainerReviewCount = _trainer.reviewCount!;
               }
             });
+            _startHeaderAutoScroll();
             break;
           }
         }
@@ -120,6 +143,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
 
   @override
   void dispose() {
+    _headerAutoScrollTimer?.cancel();
     _headerPageController.dispose();
     _transPageController.dispose();
     super.dispose();
@@ -229,18 +253,38 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
 
   List<String> _getHeaderImages() {
     final List<String> images = [];
-    if (_trainer.bannerImage != null && _trainer.bannerImage!.isNotEmpty) {
-      images.add(_trainer.bannerImage!);
-    } else {
-      if (_trainer.profileImage != null && _trainer.profileImage!.isNotEmpty) {
-        images.add(_trainer.profileImage!);
+
+    // 1. Portfolio images
+    if (_trainer.portfolioImages != null && _trainer.portfolioImages!.isNotEmpty) {
+      for (final p in _trainer.portfolioImages!) {
+        final url = (p.imageUrl != null && p.imageUrl!.trim().isNotEmpty)
+            ? p.imageUrl!.trim()
+            : (p.image != null && p.image!.trim().isNotEmpty ? p.image!.trim() : null);
+        if (url != null && url.isNotEmpty && !images.contains(url)) {
+          images.add(url);
+        }
+      }
+    }
+
+    // 2. Banner image
+    if (_trainer.bannerImage != null && _trainer.bannerImage!.trim().isNotEmpty) {
+      final banner = _trainer.bannerImage!.trim();
+      if (!images.contains(banner)) {
+        images.add(banner);
+      }
+    }
+
+    // 3. Fallbacks if no portfolio or banner images
+    if (images.isEmpty) {
+      if (_trainer.profileImage != null && _trainer.profileImage!.trim().isNotEmpty) {
+        images.add(_trainer.profileImage!.trim());
       } else if (_trainer.transformations != null) {
         for (final trans in _trainer.transformations!) {
           if (trans.beforeImage != null && trans.beforeImage!.isNotEmpty) {
-            images.add(trans.beforeImage!);
+            images.add(trans.beforeImage!.trim());
             break;
           } else if (trans.afterImage != null && trans.afterImage!.isNotEmpty) {
-            images.add(trans.afterImage!);
+            images.add(trans.afterImage!.trim());
             break;
           }
         }
@@ -602,6 +646,7 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
                             setState(() {
                               _currentHeaderIndex = index;
                             });
+                            _startHeaderAutoScroll();
                           },
                           itemCount: headerImages.length,
                           itemBuilder: (context, index) {
@@ -1302,7 +1347,9 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
             Wrap(
               spacing: 12,
               runSpacing: 8,
-              children: socialMedia.map((sm) {
+              children: socialMedia
+                  .where((sm) => !(sm.platform ?? '').toLowerCase().contains('whatsapp'))
+                  .map((sm) {
                 return _buildSocialButton(
                   platform: sm.platform ?? '',
                   url: sm.url,
@@ -1319,27 +1366,58 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
     String? url,
   }) {
     final p = platform.toLowerCase();
-    IconData iconData;
-    const Color iconColor = Color(0xFFE53935);
+    String assetPath;
 
     if (p.contains('instagram')) {
-      iconData = Icons.camera_alt_outlined;
+      assetPath = 'assets/images/svg/icons/instagram.svg';
     } else if (p.contains('facebook')) {
-      iconData = Icons.facebook;
+      assetPath = 'assets/images/svg/icons/facebook.svg';
     } else if (p.contains('youtube')) {
-      iconData = Icons.play_arrow_rounded;
+      assetPath = 'assets/images/svg/icons/youtube.svg';
     } else if (p.contains('whatsapp')) {
-      iconData = Icons.chat_bubble_outline_rounded;
+      assetPath = 'assets/images/svg/icons/whatsapp_logo.svg';
     } else {
-      iconData = Icons.link_rounded;
+      assetPath = 'assets/images/svg/icons/website.svg';
     }
+
+    const Color iconColor = Color(0xFFE53935);
+    const Color bgColor = Color(0xFFFFECEF);
 
     return InkWell(
       onTap: () async {
-        if (url != null && url.isNotEmpty) {
-          final uri = Uri.parse(url);
+        final rawUrl = url ?? '';
+        if (rawUrl.isEmpty) {
+          await Dialogs.showSnack(msg: 'No link available');
+          return;
+        }
+        if (p.contains('whatsapp')) {
+          final phone = rawUrl.replaceAll(RegExp('[^0-9+]'), '');
+          if (phone.isNotEmpty) {
+            final waUrl = Uri.parse('https://wa.me/$phone');
+            if (await canLaunchUrl(waUrl)) {
+              await launchUrl(waUrl, mode: LaunchMode.externalApplication);
+            } else {
+              await Dialogs.showSnack(msg: 'Invalid WhatsApp number');
+            }
+          } else {
+            // Try as a direct URL
+            final uri = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+                ? Uri.parse(rawUrl)
+                : Uri.parse('https://$rawUrl');
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(uri, mode: LaunchMode.externalApplication);
+            } else {
+              await Dialogs.showSnack(msg: 'Invalid WhatsApp link');
+            }
+          }
+        } else {
+          final uri = rawUrl.startsWith('http://') || rawUrl.startsWith('https://')
+              ? Uri.parse(rawUrl)
+              : Uri.parse('https://$rawUrl');
           if (await canLaunchUrl(uri)) {
-            await launchUrl(uri);
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            await Dialogs.showSnack(msg: 'Could not open link');
           }
         }
       },
@@ -1347,16 +1425,14 @@ class _TrainerDetailsScreenState extends State<TrainerDetailsScreen> {
       child: Container(
         width: 44,
         height: 44,
+        padding: const EdgeInsets.all(10),
         decoration: const BoxDecoration(
-          color: Color(0xFFFFECEF),
+          color: bgColor,
           shape: BoxShape.circle,
         ),
-        child: Center(
-          child: Icon(
-            iconData,
-            color: iconColor,
-            size: 22,
-          ),
+        child: SvgPicture.asset(
+          assetPath,
+          colorFilter: const ColorFilter.mode(iconColor, BlendMode.srcIn),
         ),
       ),
     );
