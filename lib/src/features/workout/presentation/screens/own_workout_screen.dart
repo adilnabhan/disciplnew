@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/workout_feedback_banner.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 
@@ -37,6 +38,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   final Set<String> _removingExerciseIds = {};
   final Set<int> _addingSetExerciseIndices = {};
   final Set<int> _completingSetIds = {};
+  final Map<String, WorkoutSetFeedbackResult> _activeFeedbacks = {};
+  final Map<String, Timer> _feedbackTimers = {};
 
   @override
   void initState() {
@@ -63,6 +66,11 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
   @override
   void dispose() {
+    for (final timer in _feedbackTimers.values) {
+      timer.cancel();
+    }
+    _feedbackTimers.clear();
+    _activeFeedbacks.clear();
     _titleController.dispose();
     _titleFocusNode.dispose();
     _timer?.cancel();
@@ -3714,17 +3722,18 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             if (!widget.isPresetCreation) ...[
-                              GestureDetector(
+                                GestureDetector(
                                 onTap: () async {
                                   FocusScope.of(context).unfocus();
                                   focusNode.unfocus();
                                   final isCurrentlyChecked =
                                       set['checked'] as bool? ?? false;
+                                  var kgVal =
+                                      set['kg']?.toString().trim() ?? '';
+                                  var repsVal =
+                                      set['reps']?.toString().trim() ?? '';
+
                                   if (!isCurrentlyChecked) {
-                                    var kgVal =
-                                        set['kg']?.toString().trim() ?? '';
-                                    var repsVal =
-                                        set['reps']?.toString().trim() ?? '';
                                     final weightType =
                                         exercise['weight_type']
                                             ?.toString()
@@ -3782,6 +3791,48 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     }
                                   }
 
+                                  final setKey = '${exerciseIndex}_$setIndex';
+                                  _feedbackTimers[setKey]?.cancel();
+                                  _feedbackTimers.remove(setKey);
+
+                                  if (!isCurrentlyChecked) {
+                                    final setForEval =
+                                        Map<String, dynamic>.from(set);
+                                    setForEval['kg'] = kgVal;
+                                    setForEval['reps'] = repsVal;
+
+                                    final feedback =
+                                        WorkoutFeedbackEvaluator.evaluateFeedback(
+                                          set: setForEval,
+                                          exercise: exercise,
+                                        );
+
+                                    if (feedback != null) {
+                                      setState(() {
+                                        _activeFeedbacks[setKey] = feedback;
+                                      });
+                                      _feedbackTimers[setKey] = Timer(
+                                        const Duration(seconds: 3),
+                                        () {
+                                          if (mounted) {
+                                            setState(() {
+                                              _activeFeedbacks.remove(setKey);
+                                              _feedbackTimers.remove(setKey);
+                                            });
+                                          }
+                                        },
+                                      );
+                                    } else {
+                                      setState(() {
+                                        _activeFeedbacks.remove(setKey);
+                                      });
+                                    }
+                                  } else {
+                                    setState(() {
+                                      _activeFeedbacks.remove(setKey);
+                                    });
+                                  }
+
                                   final setLogId = set['id'] as int?;
                                   if (setLogId != null) {
                                     if (_completingSetIds.contains(setLogId)) {
@@ -3795,6 +3846,13 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                     exerciseIndex,
                                     setIndex,
                                     onError: (errorMsg) {
+                                      if (mounted) {
+                                        setState(() {
+                                          _activeFeedbacks.remove(setKey);
+                                          _feedbackTimers[setKey]?.cancel();
+                                          _feedbackTimers.remove(setKey);
+                                        });
+                                      }
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(
                                           context,
@@ -3864,6 +3922,11 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           TextButton(
                                             onPressed: () {
                                               Navigator.pop(dialogContext);
+                                              final setKey =
+                                                  '${exerciseIndex}_$setIndex';
+                                              _feedbackTimers[setKey]?.cancel();
+                                              _feedbackTimers.remove(setKey);
+                                              _activeFeedbacks.remove(setKey);
                                               _cubit.deleteSet(
                                                 exerciseIndex,
                                                 setIndex,
@@ -3897,6 +3960,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ],
                   ),
                 ),
+                _buildFeedbackBanner(exerciseIndex, setIndex),
                 const Divider(height: 1, color: Color(0xFFF1F1F1)),
               ],
             );
@@ -3914,6 +3978,34 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFeedbackBanner(int exerciseIndex, int setIndex) {
+    final setKey = '${exerciseIndex}_$setIndex';
+    final feedback = _activeFeedbacks[setKey];
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SizeTransition(
+              sizeFactor: animation,
+              child: child,
+            ),
+          );
+        },
+        child: feedback == null
+            ? const SizedBox.shrink(key: ValueKey('empty_banner'))
+            : WorkoutFeedbackBanner(
+                key: ValueKey('feedback_banner_$setKey'),
+                feedback: feedback,
+              ),
       ),
     );
   }
