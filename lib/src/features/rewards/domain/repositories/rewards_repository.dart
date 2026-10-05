@@ -20,9 +20,7 @@ final class RewardsRepository {
   Future<PartnerQrModel> getMyPartnerQr() async {
     try {
       final token = Feggy.read<AppCubit>()?.state.currentUser?.access;
-      final headers = <String, dynamic>{
-        'X-Platform': platformSource,
-      };
+      final headers = <String, dynamic>{'X-Platform': platformSource};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -44,11 +42,14 @@ final class RewardsRepository {
 
     // Fallback default model for instant UI testing if backend endpoint is unavailable
     final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
-    final fullName = '${currentUser?.firstName ?? "Member"} ${currentUser?.lastName ?? ""}'.trim();
+    final fullName =
+        '${currentUser?.firstName ?? "Member"} ${currentUser?.lastName ?? ""}'
+            .trim();
     final customerId = currentUser?.id ?? 12;
 
     return PartnerQrModel(
-      qrToken: 'eyJjaWQiOi${customerId}LCJ0cyI6MTcyNjM0MTkyMCwiZXhwIjoxNzI2MzQyNTIwfXw4NmY5ZjhhN2IyYzQ=',
+      qrToken:
+          'eyJjaWQiOi${customerId}LCJ0cyI6MTcyNjM0MTkyMCwiZXhwIjoxNzI2MzQyNTIwfXw4NmY5ZjhhN2IyYzQ=',
       memberCode: 'DISC-${customerId.toString().padLeft(6, '0')}',
       customerId: customerId,
       customerName: fullName.isNotEmpty ? fullName : 'Discipl Member',
@@ -74,9 +75,7 @@ final class RewardsRepository {
   }) async {
     try {
       final token = Feggy.read<AppCubit>()?.state.currentUser?.access;
-      final headers = <String, dynamic>{
-        'X-Platform': platformSource,
-      };
+      final headers = <String, dynamic>{'X-Platform': platformSource};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -113,10 +112,11 @@ final class RewardsRepository {
         }
 
         if (resultsList != null && resultsList.isNotEmpty) {
-          final shops = resultsList
-              .whereType<Map<String, dynamic>>()
-              .map(PartnerShop.fromJson)
-              .toList();
+          final shops =
+              resultsList
+                  .whereType<Map<String, dynamic>>()
+                  .map(PartnerShop.fromJson)
+                  .toList();
           return shops;
         }
       }
@@ -124,8 +124,8 @@ final class RewardsRepository {
       debugPrint('Error fetching qr-shops from backend: $e');
     }
 
-    // Fallback to sample shops if backend endpoint is unavailable or empty
-    return PartnerShop.sampleShops;
+    // Return empty list if no partner shops found from API
+    return <PartnerShop>[];
   }
 
   /// GET /api/v1/partners/my-transactions/
@@ -138,9 +138,7 @@ final class RewardsRepository {
     try {
       final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
       final token = currentUser?.access;
-      final headers = <String, dynamic>{
-        'X-Platform': platformSource,
-      };
+      final headers = <String, dynamic>{'X-Platform': platformSource};
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -173,11 +171,10 @@ final class RewardsRepository {
       debugPrint('Error fetching my-transactions from backend: $e');
     }
 
-    // Fallback response for offline or development testing
-    return PartnerTransactionsResponse(
-      summary: UserSavingsSummaryModel.mockSummary,
-      items: QrRedemptionHistoryItem.mockHistoryList,
-      count: QrRedemptionHistoryItem.mockHistoryList.length,
+    // Return empty transactions response if no data returned from backend
+    return const PartnerTransactionsResponse(
+      summary: UserSavingsSummaryModel.empty,
+      items: [],
     );
   }
 }

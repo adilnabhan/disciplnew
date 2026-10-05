@@ -8,8 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RewardsCubit extends Cubit<RewardsState> {
   RewardsCubit({RewardsRepository? repository})
-      : _repository = repository ?? RewardsRepository(),
-        super(const RewardsState());
+    : _repository = repository ?? RewardsRepository(),
+      super(const RewardsState());
 
   final RewardsRepository _repository;
   Timer? _countdownTimer;
@@ -19,7 +19,13 @@ class RewardsCubit extends Cubit<RewardsState> {
     if (isRefresh) {
       emit(state.copyWith(isRefreshing: true, isHistoryLoading: true));
     } else {
-      emit(state.copyWith(isLoading: true, isShopsLoading: true, isHistoryLoading: true));
+      emit(
+        state.copyWith(
+          isLoading: true,
+          isShopsLoading: true,
+          isHistoryLoading: true,
+        ),
+      );
     }
 
     try {
@@ -27,7 +33,11 @@ class RewardsCubit extends Cubit<RewardsState> {
       final shopsFuture = _repository.getQrAvailableShops();
       final transactionsFuture = _repository.getMyPartnerTransactions();
 
-      final results = await Future.wait([qrFuture, shopsFuture, transactionsFuture]);
+      final results = await Future.wait([
+        qrFuture,
+        shopsFuture,
+        transactionsFuture,
+      ]);
       if (isClosed) return;
 
       final qrModel = results[0] as PartnerQrModel;
@@ -38,27 +48,35 @@ class RewardsCubit extends Cubit<RewardsState> {
       _startTimer(seconds);
 
       if (isClosed) return;
-      emit(state.copyWith(
-        isLoading: false,
-        isRefreshing: false,
-        isShopsLoading: false,
-        isHistoryLoading: false,
-        partnerQr: qrModel,
-        remainingSeconds: seconds,
-        allShops: shops,
-        filteredShops: _filterShops(shops, state.selectedCategory, state.searchQuery),
-        savingsSummary: transactionsResponse.summary,
-        historyItems: transactionsResponse.items,
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          isRefreshing: false,
+          isShopsLoading: false,
+          isHistoryLoading: false,
+          partnerQr: qrModel,
+          remainingSeconds: seconds,
+          allShops: shops,
+          filteredShops: _filterShops(
+            shops,
+            state.selectedCategory,
+            state.searchQuery,
+          ),
+          savingsSummary: transactionsResponse.summary,
+          historyItems: transactionsResponse.items,
+        ),
+      );
     } catch (e) {
       if (isClosed) return;
-      emit(state.copyWith(
-        isLoading: false,
-        isRefreshing: false,
-        isShopsLoading: false,
-        isHistoryLoading: false,
-        errorMessage: 'Failed to load rewards. Tap to retry.',
-      ));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          isRefreshing: false,
+          isShopsLoading: false,
+          isHistoryLoading: false,
+          errorMessage: 'Failed to load rewards. Tap to retry.',
+        ),
+      );
     }
   }
 
@@ -71,11 +89,13 @@ class RewardsCubit extends Cubit<RewardsState> {
         search: search,
       );
       if (isClosed) return;
-      emit(state.copyWith(
-        isHistoryLoading: false,
-        savingsSummary: response.summary,
-        historyItems: response.items,
-      ));
+      emit(
+        state.copyWith(
+          isHistoryLoading: false,
+          savingsSummary: response.summary,
+          historyItems: response.items,
+        ),
+      );
     } catch (e) {
       if (isClosed) return;
       emit(state.copyWith(isHistoryLoading: false));
@@ -106,17 +126,29 @@ class RewardsCubit extends Cubit<RewardsState> {
   }
 
   void setCategory(String category) {
-    emit(state.copyWith(
-      selectedCategory: category,
-      filteredShops: _filterShops(state.allShops, category, state.searchQuery),
-    ));
+    emit(
+      state.copyWith(
+        selectedCategory: category,
+        filteredShops: _filterShops(
+          state.allShops,
+          category,
+          state.searchQuery,
+        ),
+      ),
+    );
   }
 
   void setSearchQuery(String query) {
-    emit(state.copyWith(
-      searchQuery: query,
-      filteredShops: _filterShops(state.allShops, state.selectedCategory, query),
-    ));
+    emit(
+      state.copyWith(
+        searchQuery: query,
+        filteredShops: _filterShops(
+          state.allShops,
+          state.selectedCategory,
+          query,
+        ),
+      ),
+    );
   }
 
   List<PartnerShop> _filterShops(
@@ -128,11 +160,13 @@ class RewardsCubit extends Cubit<RewardsState> {
     final lowerQuery = query.toLowerCase().trim();
 
     return shops.where((shop) {
-      final matchesCategory = category == 'All' ||
+      final matchesCategory =
+          category == 'All' ||
           shop.category.toLowerCase() == lowerCat ||
           shop.categoryDisplay.toLowerCase().contains(lowerCat);
 
-      final matchesQuery = lowerQuery.isEmpty ||
+      final matchesQuery =
+          lowerQuery.isEmpty ||
           shop.name.toLowerCase().contains(lowerQuery) ||
           shop.location.toLowerCase().contains(lowerQuery) ||
           shop.address.toLowerCase().contains(lowerQuery) ||

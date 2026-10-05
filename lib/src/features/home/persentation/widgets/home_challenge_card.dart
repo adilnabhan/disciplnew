@@ -31,12 +31,21 @@ class _HomeChallengeSectionState extends State<HomeChallengeSection> {
 
   void _startAutoScroll() {
     _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      if (!_isAutoScrolling || !_scrollController.hasClients || _cardWidth == 0) return;
-      
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      if (maxScroll <= 0) return;
+      if (!_isAutoScrolling ||
+          !_scrollController.hasClients ||
+          _cardWidth == 0) {
+        return;
+      }
 
-      double nextScroll = _scrollController.offset + _cardWidth + 10.0; // cardWidth + separatorWidth
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      if (maxScroll <= 0) {
+        return;
+      }
+
+      var nextScroll =
+          _scrollController.offset +
+          _cardWidth +
+          10.0; // cardWidth + separatorWidth
       if (nextScroll > maxScroll + (_cardWidth / 2)) {
         nextScroll = 0;
       } else if (nextScroll > maxScroll) {
@@ -259,7 +268,7 @@ class HomeChallengeCard extends StatelessWidget {
             : 'LUCKY DRAW';
 
     return Padding(
-      padding: const EdgeInsets.all(5.0),
+      padding: const EdgeInsets.all(5),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: SizedBox(
@@ -306,7 +315,6 @@ class HomeChallengeCard extends StatelessWidget {
                   children: [
                     // Top Row: Tag Badge aligned to the left
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         // Tag Badge (Right) - White Pill with Red Dice & Text
                         Container(
@@ -511,6 +519,8 @@ class HomeChallengeCard extends StatelessWidget {
     List<BoxShadow>? boxShadow;
     Widget? prefixWidget;
     Widget iconWidget;
+    var padding = const EdgeInsets.symmetric(horizontal: 16, vertical: 8.5);
+    var textStyle = AppStyles.text12Px.poppins.w700;
 
     if (!isEnabled) {
       btnBg = Colors.grey.shade300;
@@ -539,16 +549,18 @@ class HomeChallengeCard extends StatelessWidget {
       prefixWidget = null;
       iconWidget = const SizedBox.shrink();
     } else if (isJoined) {
-      btnGradient = const LinearGradient(
-        colors: [Color(0xFF0D9488), Color(0xFF10B981)],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      );
+      final hsl = HSLColor.fromColor(themeColor);
+      final darkerTheme =
+          hsl.withLightness((hsl.lightness - 0.08).clamp(0.0, 1.0)).toColor();
+      final lighterTheme =
+          hsl.withLightness((hsl.lightness + 0.08).clamp(0.0, 1.0)).toColor();
+      btnBg = null;
+      btnGradient = LinearGradient(colors: [darkerTheme, lighterTheme]);
       textColor = Colors.white;
-      border = null;
+      border = Border.all(color: Colors.white.withValues(alpha: 0.35));
       boxShadow = [
         BoxShadow(
-          color: const Color(0xFF10B981).withValues(alpha: 0.45),
+          color: themeColor.withValues(alpha: 0.45),
           blurRadius: 16,
           offset: const Offset(0, 4),
         ),
@@ -573,31 +585,43 @@ class HomeChallengeCard extends StatelessWidget {
         child: Icon(Icons.emoji_events_rounded, color: Colors.white, size: 15),
       );
     } else {
-      // Default: "Join After Workout >" with Solid Vibrant Red button (as in Image 2)
-      btnBg = const Color(0xFFDC2626);
-      textColor = Colors.white;
-      border = null;
+      // Default: Subtle frosted glass informational requirement chip
+      final hsl = HSLColor.fromColor(themeColor);
+      final textAndIconColor =
+          hsl.lightness > 0.65 ? hsl.withLightness(0.35).toColor() : themeColor;
+
+      btnBg = null;
+      btnGradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Colors.white.withValues(alpha: 0.75),
+          themeColor.withValues(alpha: 0.08),
+        ],
+      );
+      textColor = textAndIconColor;
+      border = Border.all(color: Colors.white);
       boxShadow = [
         BoxShadow(
-          color: const Color(0xFFDC2626).withValues(alpha: 0.28),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
+          color: themeColor.withValues(alpha: 0.08),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
         ),
       ];
-      iconWidget = const Padding(
-        padding: EdgeInsets.only(left: 3),
-        child: Icon(Icons.chevron_right_rounded, color: Colors.white, size: 17),
-      );
+      prefixWidget = null;
+      iconWidget = const SizedBox.shrink();
+      padding = const EdgeInsets.symmetric(horizontal: 12, vertical: 8);
+      textStyle = AppStyles.text12Px.poppins.w500;
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left: Joined Members Avatar Stack + Count
           Expanded(child: _buildJoinedMembersStack(challenge)),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
 
           // Right: Action Button
           GestureDetector(
@@ -618,7 +642,8 @@ class HomeChallengeCard extends StatelessWidget {
                             ),
                           );
                         }
-                      } else if (action == 'details') {
+                      } else if (action == 'details' ||
+                          btnText.toLowerCase().contains('join after')) {
                         if (challenge.id != null) {
                           unawaited(
                             Navigator.of(context).push(
@@ -659,10 +684,7 @@ class HomeChallengeCard extends StatelessWidget {
                       }
                     },
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8.5,
-              ),
+              padding: padding,
               decoration: BoxDecoration(
                 color: btnBg,
                 gradient: btnGradient,
@@ -676,9 +698,9 @@ class HomeChallengeCard extends StatelessWidget {
                   if (prefixWidget != null) prefixWidget,
                   Text(
                     btnText,
-                    style: AppStyles.text12Px.poppins.w700.copyWith(
-                      color: textColor,
-                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: textStyle.copyWith(color: textColor),
                   ),
                   iconWidget,
                 ],
@@ -696,13 +718,18 @@ class HomeChallengeCard extends StatelessWidget {
     final displayMembers = members.take(3).toList();
     final extraCount = totalCount - displayMembers.length;
 
+    final avatarWidth =
+        displayMembers.isNotEmpty
+            ? ((displayMembers.length - 1) * 15.0) + 27.0
+            : 0.0;
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (displayMembers.isNotEmpty)
           SizedBox(
             height: 28,
-            width: (displayMembers.length * 16.0) + 12.0,
+            width: avatarWidth + 2.0,
             child: Stack(
               children: List.generate(displayMembers.length, (index) {
                 final member = displayMembers[index];
@@ -762,16 +789,21 @@ class HomeChallengeCard extends StatelessWidget {
             ),
           ),
         if (extraCount > 0)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '+$extraCount joined',
-              style: AppStyles.text10Px.poppins.w600.copyWith(
-                color: const Color(0xFF334155),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '+$extraCount members joined',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppStyles.text10Px.poppins.w600.copyWith(
+                  color: const Color(0xFF334155),
+                  fontSize: 10,
+                ),
               ),
             ),
           ),
@@ -1074,8 +1106,6 @@ class HomeChallengeCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
           colors: [Color(0xFFFFE4E6), Color(0xFFFFF1F2)],
         ),
         borderRadius: BorderRadius.circular(16),

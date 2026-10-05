@@ -1704,8 +1704,6 @@ class __AssignedGymTrainersSectionState
     extends State<_AssignedGymTrainersSection> {
   bool _isLoading = true;
   List<AssignedTrainerModel> _trainers = [];
-  List<Map<String, dynamic>> _transformations = [];
-  int _currentTransformIndex = 0;
 
   @override
   void initState() {
@@ -1724,28 +1722,14 @@ class __AssignedGymTrainersSectionState
   Future<void> _loadTrainers() async {
     try {
       List<AssignedTrainerModel> trainers = [];
-      List<Map<String, dynamic>> transformations = [];
 
       // 1. Fetch from assigned gym trainers API (/api/v1/customer/gym-trainers/)
       final apiTrainers = await HomeRepository().fetchAssignedGymTrainers();
       if (apiTrainers.isNotEmpty) {
         trainers = apiTrainers;
-        for (final t in apiTrainers) {
-          if (t.fullGymTrainer?.transformations != null) {
-            for (final trans in t.fullGymTrainer!.transformations!) {
-              if ((trans.beforeImage != null && trans.beforeImage!.trim().isNotEmpty) ||
-                  (trans.afterImage != null && trans.afterImage!.trim().isNotEmpty)) {
-                transformations.add({
-                  'trainerName': t.name ?? t.fullGymTrainer?.fullName,
-                  'transformation': trans,
-                });
-              }
-            }
-          }
-        }
       }
 
-      // 2. Fetch/check fitness center details API for complete trainers and transformations
+      // 2. Fetch/check fitness center details API for complete trainers
       final repo = FitnesscenterRepository();
       var cached = repo.getCachedDetails(widget.organizationId);
       if (cached == null) {
@@ -1771,29 +1755,11 @@ class __AssignedGymTrainersSectionState
                   ))
               .toList();
         }
-
-        // Collect transformations from cached gym details if list is empty
-        if (transformations.isEmpty) {
-          for (final t in cached!.trainers!) {
-            if (t.transformations != null) {
-              for (final trans in t.transformations!) {
-                if ((trans.beforeImage != null && trans.beforeImage!.trim().isNotEmpty) ||
-                    (trans.afterImage != null && trans.afterImage!.trim().isNotEmpty)) {
-                  transformations.add({
-                    'trainerName': t.fullName,
-                    'transformation': trans,
-                  });
-                }
-              }
-            }
-          }
-        }
       }
 
       if (mounted) {
         setState(() {
           _trainers = trainers;
-          _transformations = transformations;
           _isLoading = false;
         });
       }
@@ -1827,270 +1793,38 @@ class __AssignedGymTrainersSectionState
           }),
         );
 
-        if (finalTrainers.isEmpty && _transformations.isEmpty) {
+        if (finalTrainers.isEmpty) {
           return const SizedBox.shrink();
         }
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (finalTrainers.isNotEmpty) ...[
-              Text(
-                widget.gymName != null && widget.gymName!.trim().isNotEmpty
-                    ? '${widget.gymName!.trim()} Trainers'
-                    : 'Gym Trainers',
-                style: AppStyles.text16Px.poppins.w600.copyWith(
-                  color: const Color(0xFF222222),
-                ),
+            Text(
+              widget.gymName != null && widget.gymName!.trim().isNotEmpty
+                  ? '${widget.gymName!.trim()} Trainers'
+                  : 'Gym Trainers',
+              style: AppStyles.text16Px.poppins.w600.copyWith(
+                color: const Color(0xFF222222),
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 215,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: finalTrainers.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (context, index) {
-                    final trainer = finalTrainers[index];
-                    return widget.onBuildTrainerCard(trainer);
-                  },
-                ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 215,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: finalTrainers.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemBuilder: (context, index) {
+                  final trainer = finalTrainers[index];
+                  return widget.onBuildTrainerCard(trainer);
+                },
               ),
-            ],
-            if (_transformations.isNotEmpty) ...[
-              const SizedBox(height: 20),
-              _buildGymTransformationsWidget(_transformations),
-            ],
+            ),
             const SizedBox(height: 16),
           ],
         );
       },
-    );
-  }
-
-  Widget _buildGymTransformationsWidget(List<Map<String, dynamic>> transformations) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Transformations',
-          style: AppStyles.text16Px.poppins.w600.copyWith(
-            color: const Color(0xFF222222),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 190,
-          child: PageView.builder(
-            itemCount: transformations.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentTransformIndex = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              final item = transformations[index];
-              final trans = item['transformation'] as GymTransformation;
-              final trainerName = item['trainerName'] as String?;
-
-              return Container(
-                margin: const EdgeInsets.only(right: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey.withOpacity(0.1)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            // Before Image
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: trans.beforeImage != null && trans.beforeImage!.isNotEmpty
-                                        ? ImageNetwork(
-                                            trans.beforeImage!,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Container(
-                                            color: const Color(0xFFEAEAEA),
-                                            child: const Center(
-                                              child: Icon(
-                                                Icons.image_outlined,
-                                                color: Colors.grey,
-                                                size: 32,
-                                              ),
-                                            ),
-                                          ),
-                                  ),
-                                  Positioned(
-                                    top: 10,
-                                    left: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Text(
-                                        'Before',
-                                        style: TextStyle(
-                                          fontFamily: 'Poppins',
-                                          color: Colors.black87,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const VerticalDivider(
-                              width: 1,
-                              color: Colors.white,
-                            ),
-                            // After Image
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  Positioned.fill(
-                                    child: trans.afterImage != null && trans.afterImage!.isNotEmpty
-                                        ? ImageNetwork(
-                                            trans.afterImage!,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Container(
-                                            color: const Color(0xFFEAEAEA),
-                                            child: const Center(
-                                              child: Icon(
-                                                Icons.image_outlined,
-                                                color: Colors.grey,
-                                                size: 32,
-                                              ),
-                                            ),
-                                          ),
-                                  ),
-                                  Positioned(
-                                    top: 10,
-                                    right: 10,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(20),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withOpacity(0.05),
-                                            blurRadius: 4,
-                                          ),
-                                        ],
-                                      ),
-                                      child: const Text(
-                                        'After',
-                                        style: TextStyle(
-                                          fontFamily: 'Poppins',
-                                          color: Colors.black87,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if ((trans.description != null && trans.description!.isNotEmpty) ||
-                          (trainerName != null && trainerName.isNotEmpty))
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12.0,
-                            vertical: 8.0,
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (trans.description != null && trans.description!.isNotEmpty)
-                                      Text(
-                                        trans.description!,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    if (trainerName != null && trainerName.isNotEmpty)
-                                      Text(
-                                        'Coach: $trainerName',
-                                        style: TextStyle(
-                                          fontFamily: 'Poppins',
-                                          fontSize: 10,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        if (transformations.length > 1) ...[
-          const SizedBox(height: 10),
-          Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(
-                transformations.length,
-                (idx) => Container(
-                  width: 6,
-                  height: 6,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _currentTransformIndex == idx
-                        ? const Color(0xFFE53935)
-                        : Colors.grey[300],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
     );
   }
 }

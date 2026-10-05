@@ -2,20 +2,6 @@ import 'package:flutter/foundation.dart';
 
 @immutable
 class PartnerQrModel {
-  final String? qrToken;
-  final String? memberCode;
-  final int? customerId;
-  final String? customerName;
-  final bool? isActiveMember;
-  final bool? isWorkoutCompleted;
-  final bool? isStepsCompleted;
-  final bool? isEligibleForDiscount;
-  final String? eligibilityStatus;
-  final String? eligibilityReason;
-  final String? membershipStatus;
-  final int? expiresInSeconds;
-  final DateTime? generatedAt;
-
   const PartnerQrModel({
     this.qrToken,
     this.memberCode,
@@ -58,6 +44,20 @@ class PartnerQrModel {
       generatedAt: parsedDate,
     );
   }
+
+  final String? qrToken;
+  final String? memberCode;
+  final int? customerId;
+  final String? customerName;
+  final bool? isActiveMember;
+  final bool? isWorkoutCompleted;
+  final bool? isStepsCompleted;
+  final bool? isEligibleForDiscount;
+  final String? eligibilityStatus;
+  final String? eligibilityReason;
+  final String? membershipStatus;
+  final int? expiresInSeconds;
+  final DateTime? generatedAt;
 
   Map<String, dynamic> toJson() {
     return {

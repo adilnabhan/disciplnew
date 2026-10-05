@@ -33,15 +33,29 @@ class PartnerShop {
   });
 
   factory PartnerShop.fromJson(Map<String, dynamic> json) {
-    final photoUrl = json['photo']?.toString();
-    final bannerUrl = json['banner']?.toString() ??
-        json['banner_image']?.toString() ??
-        json['cover_image']?.toString() ??
-        json['cover']?.toString() ??
-        json['shop_banner']?.toString();
-    final logoUrl = json['logo']?.toString() ??
-        json['shop_logo']?.toString() ??
-        photoUrl;
+    final photoUrl = _resolveUrl(
+      json['photo'] ?? json['image'] ?? json['shop_photo'],
+    );
+    final bannerUrl = _resolveUrl(
+      json['banner'] ??
+          json['banner_image'] ??
+          json['banner_img'] ??
+          json['cover_image'] ??
+          json['cover'] ??
+          json['shop_banner'] ??
+          json['banner_url'] ??
+          json['image'] ??
+          json['shop_image'] ??
+          json['photo'],
+    );
+    final logoUrl = _resolveUrl(
+      json['logo'] ??
+          json['shop_logo'] ??
+          json['logo_image'] ??
+          json['logo_url'] ??
+          photoUrl ??
+          bannerUrl,
+    );
 
     return PartnerShop(
       id: json['id']?.toString() ?? '',
@@ -80,6 +94,17 @@ class PartnerShop {
     );
   }
 
+  static String? _resolveUrl(dynamic val) {
+    if (val == null) return null;
+    final str = val.toString().trim();
+    if (str.isEmpty || str == 'null' || str == 'None') return null;
+    if (str.startsWith('http://') || str.startsWith('https://')) {
+      return str;
+    }
+    final cleanPath = str.startsWith('/') ? str : '/$str';
+    return 'https://discipl-backend.onrender.com$cleanPath';
+  }
+
   final String id;
   final String name;
   final String? photo;
@@ -110,12 +135,14 @@ class PartnerShop {
 
   String? get bannerUrl {
     if (banner != null && banner!.trim().isNotEmpty) return banner;
+    if (photo != null && photo!.trim().isNotEmpty) return photo;
     return null;
   }
 
   String? get logoUrl {
-    if (logo != null && logo!.isNotEmpty) return logo;
-    if (photo != null && photo!.isNotEmpty) return photo;
+    if (logo != null && logo!.trim().isNotEmpty) return logo;
+    if (photo != null && photo!.trim().isNotEmpty) return photo;
+    if (banner != null && banner!.trim().isNotEmpty) return banner;
     return null;
   }
 
@@ -244,145 +271,5 @@ class PartnerShop {
     }
   }
 
-  static const List<PartnerShop> sampleShops = [
-    PartnerShop(
-      id: 'fahhh_1',
-      name: 'Fahhh',
-      category: 'hotel',
-      categoryDisplay: 'Hotel & Resort',
-      discountPercentage: '10.00',
-      minPurchase: '100.00',
-      maxDiscount: '500.00',
-      address: 'Kerala, Kozhikode',
-      city: 'Kozhikode',
-      contactPhone: '+91 9876543210',
-      qrCodeData: 'DISC-FAHHH-01',
-      photo:
-          'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80',
-      banner:
-          'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&auto=format&fit=crop&q=80',
-      logo:
-          'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=200&auto=format&fit=crop&q=80',
-      description: 'Experience comfort, luxury, and unforgettable moments.',
-      distance: '0.8 km away',
-      rating: 4.9,
-      totalReviews: 540,
-    ),
-    PartnerShop(
-      id: '1',
-      name: 'Healthy Protein Bar',
-      category: 'cafe',
-      categoryDisplay: 'Health Cafe & Salad Bar',
-      address: 'Beach Road',
-      city: 'Kozhikode',
-      pincode: '673001',
-      contactPhone: '+91 9876543210',
-      contactEmail: 'cafe@health.com',
-      qrCodeData: 'DISC-SHOP-1',
-      distance: '1.2 km away',
-      totalReviews: 420,
-      timings: '10:00 AM - 10:30 PM',
-      banner:
-          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1200&auto=format&fit=crop&q=80',
-      logo:
-          'https://images.unsplash.com/photo-1550547660-d9450f859349?w=200&auto=format&fit=crop&q=80',
-      description:
-          'Healthy meal partner offering fresh nutrient-rich bowls, shakes and toasts.',
-    ),
-    PartnerShop(
-      id: '2',
-      name: 'Protein Hub Nutrition',
-      category: 'nutrition',
-      categoryDisplay: 'Sports Nutrition & Vitamins',
-      discountPercentage: '20.00',
-      minDiscountPercentage: '10.00',
-      minPurchase: '1000.00',
-      maxDiscount: '200.00',
-      address: 'Palarivattom Junction',
-      pincode: '682025',
-      contactPhone: '+91 9845012345',
-      contactEmail: 'info@proteinhub.com',
-      rewardPointsPer100Inr: 10,
-      qrCodeData: 'DISC-SHOP-2',
-      distance: '2.5 km away',
-      rating: 4.9,
-      totalReviews: 280,
-      timings: '9:30 AM - 9:30 PM',
-      banner:
-          'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?w=1200&auto=format&fit=crop&q=80',
-      logo:
-          'https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=200&auto=format&fit=crop&q=80',
-      description:
-          '100% genuine whey proteins, creatine, BCAAs, multivitamins & athlete nutrition.',
-    ),
-    PartnerShop(
-      id: '3',
-      name: 'FitBites Kitchen & Grill',
-      category: 'restaurant',
-      categoryDisplay: 'Health Grill & Whole Foods',
-      minPurchase: '300.00',
-      maxDiscount: '150.00',
-      address: 'Stadium Link Rd, Kaloor',
-      pincode: '682017',
-      contactPhone: '+91 9812345678',
-      contactEmail: 'orders@fitbites.in',
-      qrCodeData: 'DISC-SHOP-3',
-      distance: '3.1 km away',
-      rating: 4.7,
-      totalReviews: 315,
-      timings: '11:00 AM - 11:00 PM',
-      banner:
-          'https://images.unsplash.com/photo-1544025162-d76694265947?w=1200&auto=format&fit=crop&q=80',
-      logo:
-          'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=200&auto=format&fit=crop&q=80',
-      description:
-          'Authentic coal-grilled healthy chicken, high-protein quinoa bowls and salads.',
-    ),
-    PartnerShop(
-      id: '4',
-      name: 'Raw Pressed Detox Bar',
-      category: 'cafe',
-      categoryDisplay: 'Cold Pressed Juices & Smoothies',
-      address: 'Panampilly Nagar Main Ave',
-      pincode: '682036',
-      contactPhone: '+91 9745678901',
-      contactEmail: 'hello@rawpressed.in',
-      rewardPointsPer100Inr: 4,
-      qrCodeData: 'DISC-SHOP-4',
-      distance: '4.2 km away',
-      totalReviews: 190,
-      timings: '7:30 AM - 10:30 PM',
-      banner:
-          'https://images.unsplash.com/photo-1610970881699-44a5587cabec?w=1200&auto=format&fit=crop&q=80',
-      logo:
-          'https://images.unsplash.com/photo-1534353473418-4cfa6c56fd38?w=200&auto=format&fit=crop&q=80',
-      description:
-          'Cold-pressed raw detox juices, protein smoothies and wholesome hydrating bowls.',
-    ),
-    PartnerShop(
-      id: '5',
-      name: 'IronGear Athletics',
-      category: 'retail',
-      categoryDisplay: 'Sportswear & Training Gear',
-      discountPercentage: '10.00',
-      minPurchase: '500.00',
-      maxDiscount: '300.00',
-      address: 'MG Road',
-      city: 'Ernakulam',
-      pincode: '682011',
-      contactPhone: '+91 9998887776',
-      contactEmail: 'care@irongear.com',
-      qrCodeData: 'DISC-SHOP-5',
-      distance: '5.0 km away',
-      rating: 4.6,
-      totalReviews: 145,
-      timings: '10:00 AM - 9:00 PM',
-      banner:
-          'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200&auto=format&fit=crop&q=80',
-      logo:
-          'https://images.unsplash.com/photo-1556906781-9a412961c28c?w=200&auto=format&fit=crop&q=80',
-      description:
-          'Breathable dry-fit activewear, lifting belts, wrist wraps and training accessories.',
-    ),
-  ];
+  static const List<PartnerShop> sampleShops = [];
 }

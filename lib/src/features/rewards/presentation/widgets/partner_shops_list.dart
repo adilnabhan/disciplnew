@@ -28,11 +28,14 @@ class PartnerShopsList extends StatelessWidget {
   ];
 
   static Future<void> launchNavigation(PartnerShop shop) async {
-    final destination = shop.fullAddress.isNotEmpty
-        ? '${shop.name}, ${shop.fullAddress}'
-        : '${shop.name}, ${shop.location}';
+    final destination =
+        shop.fullAddress.isNotEmpty
+            ? '${shop.name}, ${shop.fullAddress}'
+            : '${shop.name}, ${shop.location}';
     final query = Uri.encodeComponent(destination);
-    final url = Uri.parse('https://www.google.com/maps/search/?api=1&query=$query');
+    final url = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$query',
+    );
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
@@ -163,35 +166,43 @@ class PartnerShopsList extends StatelessWidget {
               final cat = categories[index];
               final isSelected =
                   cat.toLowerCase() == selectedCategory.toLowerCase() ||
-                      (selectedCategory == 'All' && cat == 'All');
+                  (selectedCategory == 'All' && cat == 'All');
               return GestureDetector(
                 onTap: () => onCategorySelected(cat),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected ? const Color(0xFF0F172A) : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFF0F172A)
-                          : const Color(0xFFE2E8F0),
+                      color:
+                          isSelected
+                              ? const Color(0xFF0F172A)
+                              : const Color(0xFFE2E8F0),
                     ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: const Color(0xFF0F172A).withValues(alpha: 0.2),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
+                    boxShadow:
+                        isSelected
+                            ? [
+                              BoxShadow(
+                                color: const Color(
+                                  0xFF0F172A,
+                                ).withValues(alpha: 0.2),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                            : null,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     cat,
                     style: AppStyles.text12Px.poppins.w600.copyWith(
-                      color: isSelected ? Colors.white : const Color(0xFF64748B),
+                      color:
+                          isSelected ? Colors.white : const Color(0xFF64748B),
                       fontSize: 11.5,
                     ),
                   ),
@@ -207,27 +218,41 @@ class PartnerShopsList extends StatelessWidget {
         if (shops.isEmpty)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 36),
+            padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
             alignment: Alignment.center,
             child: Column(
               children: [
-                Icon(
-                  Icons.storefront_outlined,
-                  size: 48,
-                  color: Colors.grey.shade300,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'No partner stores found',
-                  style: AppStyles.text14Px.poppins.w600.copyWith(
-                    color: const Color(0xFF64748B),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF8FAFC),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.storefront_outlined,
+                    size: 32,
+                    color: Color(0xFF94A3B8),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
                 Text(
-                  'Try searching for another city, brand, or category',
+                  'No Partner Outlets Available',
+                  style: AppStyles.text14Px.poppins.w600.copyWith(
+                    color: const Color(0xFF1E293B),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Partner outlets and exclusive offers will appear here as new partner locations are activated.',
+                  textAlign: TextAlign.center,
                   style: AppStyles.text12Px.poppins.w400.copyWith(
-                    color: const Color(0xFF94A3B8),
+                    color: const Color(0xFF64748B),
+                    height: 1.4,
                   ),
                 ),
               ],
@@ -254,7 +279,12 @@ class PartnerShopsList extends StatelessWidget {
     final hasLogo = logo != null && logo.isNotEmpty;
 
     return GestureDetector(
-      onTap: () => _showShopDetailsSheet(context, shop),
+      onTap:
+          () => showShopDetailsSheet(
+            context,
+            shop,
+            onShowQrTapped: onShowQrTapped,
+          ),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -278,12 +308,7 @@ class PartnerShopsList extends StatelessWidget {
 
               // Card Body Content
               Padding(
-                padding: EdgeInsets.fromLTRB(
-                  16,
-                  hasBanner ? 14 : 16,
-                  16,
-                  14,
-                ),
+                padding: EdgeInsets.fromLTRB(16, hasBanner ? 14 : 16, 16, 14),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -304,32 +329,35 @@ class PartnerShopsList extends StatelessWidget {
                                 width: 0.8,
                               ),
                             ),
-                            child: hasLogo
-                                ? CachedNetworkImage(
-                                    imageUrl: logo,
-                                    fit: BoxFit.cover,
-                                    placeholder: (_, __) => Center(
+                            child:
+                                hasLogo
+                                    ? CachedNetworkImage(
+                                      imageUrl: logo,
+                                      fit: BoxFit.cover,
+                                      placeholder:
+                                          (_, __) => Center(
+                                            child: Icon(
+                                              shop.iconData,
+                                              color: shop.themeColor,
+                                              size: 24,
+                                            ),
+                                          ),
+                                      errorWidget:
+                                          (_, __, ___) => Center(
+                                            child: Icon(
+                                              shop.iconData,
+                                              color: shop.themeColor,
+                                              size: 24,
+                                            ),
+                                          ),
+                                    )
+                                    : Center(
                                       child: Icon(
                                         shop.iconData,
                                         color: shop.themeColor,
                                         size: 24,
                                       ),
                                     ),
-                                    errorWidget: (_, __, ___) => Center(
-                                      child: Icon(
-                                        shop.iconData,
-                                        color: shop.themeColor,
-                                        size: 24,
-                                      ),
-                                    ),
-                                  )
-                                : Center(
-                                    child: Icon(
-                                      shop.iconData,
-                                      color: shop.themeColor,
-                                      size: 24,
-                                    ),
-                                  ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -353,20 +381,25 @@ class PartnerShopsList extends StatelessWidget {
                               Row(
                                 children: [
                                   // Category Pill
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 9,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEEF2FF),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      shop.displayCategory,
-                                      style: AppStyles.text11Px.poppins.w600.copyWith(
-                                        color: const Color(0xFF4F46E5),
-                                        fontSize: 10,
+                                  Flexible(
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 9,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFEEF2FF),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        shop.displayCategory,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppStyles.text11Px.poppins.w600
+                                            .copyWith(
+                                              color: const Color(0xFF4F46E5),
+                                              fontSize: 10,
+                                            ),
                                       ),
                                     ),
                                   ),
@@ -381,9 +414,10 @@ class PartnerShopsList extends StatelessWidget {
                                     Flexible(
                                       child: Text(
                                         shop.city,
-                                        style: AppStyles.text12Px.poppins.w500.copyWith(
-                                          color: const Color(0xFF64748B),
-                                        ),
+                                        style: AppStyles.text12Px.poppins.w500
+                                            .copyWith(
+                                              color: const Color(0xFF64748B),
+                                            ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -410,7 +444,9 @@ class PartnerShopsList extends StatelessWidget {
                             borderRadius: BorderRadius.circular(22),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF6366F1).withValues(alpha: 0.35),
+                                color: const Color(
+                                  0xFF6366F1,
+                                ).withValues(alpha: 0.35),
                                 blurRadius: 8,
                                 offset: const Offset(0, 2),
                               ),
@@ -468,7 +504,9 @@ class PartnerShopsList extends StatelessWidget {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              shop.fullAddress.isNotEmpty ? shop.fullAddress : shop.location,
+                              shop.fullAddress.isNotEmpty
+                                  ? shop.fullAddress
+                                  : shop.location,
                               style: AppStyles.text12Px.poppins.w600.copyWith(
                                 color: const Color(0xFF334155),
                               ),
@@ -503,9 +541,10 @@ class PartnerShopsList extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     Text(
                                       'Directions',
-                                      style: AppStyles.text11Px.poppins.w700.copyWith(
-                                        color: const Color(0xFF2563EB),
-                                      ),
+                                      style: AppStyles.text11Px.poppins.w700
+                                          .copyWith(
+                                            color: const Color(0xFF2563EB),
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -592,13 +631,14 @@ class PartnerShopsList extends StatelessWidget {
   }
 
   Widget _buildShopBanner(PartnerShop shop, String bannerUrl) {
-    return _ShopBannerImage(
-      bannerUrl: bannerUrl,
-      themeColor: shop.themeColor,
-    );
+    return _ShopBannerImage(bannerUrl: bannerUrl, themeColor: shop.themeColor);
   }
 
-  void _showShopDetailsSheet(BuildContext context, PartnerShop shop) {
+  static void showShopDetailsSheet(
+    BuildContext context,
+    PartnerShop shop, {
+    VoidCallback? onShowQrTapped,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.white,
@@ -654,21 +694,23 @@ class PartnerShopsList extends StatelessWidget {
                           color: shop.themeColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        child: shop.logoUrl != null && shop.logoUrl!.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: shop.logoUrl!,
-                                fit: BoxFit.cover,
-                                errorWidget: (_, __, ___) => Icon(
+                        child:
+                            shop.logoUrl != null && shop.logoUrl!.isNotEmpty
+                                ? CachedNetworkImage(
+                                  imageUrl: shop.logoUrl!,
+                                  fit: BoxFit.cover,
+                                  errorWidget:
+                                      (_, __, ___) => Icon(
+                                        shop.iconData,
+                                        color: shop.themeColor,
+                                        size: 26,
+                                      ),
+                                )
+                                : Icon(
                                   shop.iconData,
                                   color: shop.themeColor,
                                   size: 26,
                                 ),
-                              )
-                            : Icon(
-                                shop.iconData,
-                                color: shop.themeColor,
-                                size: 26,
-                              ),
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -811,17 +853,17 @@ class PartnerShopsList extends StatelessWidget {
                               children: [
                                 Text(
                                   'Store Location',
-                                  style: AppStyles.text11Px.poppins.w600.copyWith(
-                                    color: const Color(0xFF0F172A),
-                                  ),
+                                  style: AppStyles.text11Px.poppins.w600
+                                      .copyWith(color: const Color(0xFF0F172A)),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   shop.fullAddress,
-                                  style: AppStyles.text11Px.poppins.w400.copyWith(
-                                    color: const Color(0xFF475569),
-                                    height: 1.35,
-                                  ),
+                                  style: AppStyles.text11Px.poppins.w400
+                                      .copyWith(
+                                        color: const Color(0xFF475569),
+                                        height: 1.35,
+                                      ),
                                 ),
                               ],
                             ),
@@ -844,7 +886,9 @@ class PartnerShopsList extends StatelessWidget {
                                 backgroundColor: const Color(0xFF2563EB),
                                 foregroundColor: Colors.white,
                                 elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 9,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -855,12 +899,9 @@ class PartnerShopsList extends StatelessWidget {
                               shop.contactPhone!.isNotEmpty) ...[
                             const SizedBox(width: 10),
                             ElevatedButton.icon(
-                              onPressed: () =>
-                                  launchPhoneCall(shop.contactPhone!),
-                              icon: const Icon(
-                                Icons.call_rounded,
-                                size: 15,
-                              ),
+                              onPressed:
+                                  () => launchPhoneCall(shop.contactPhone!),
+                              icon: const Icon(Icons.call_rounded, size: 15),
                               label: const Text('Call'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,
@@ -918,10 +959,7 @@ class PartnerShopsList extends StatelessWidget {
 }
 
 class _ShopBannerImage extends StatefulWidget {
-  const _ShopBannerImage({
-    required this.bannerUrl,
-    required this.themeColor,
-  });
+  const _ShopBannerImage({required this.bannerUrl, required this.themeColor});
 
   final String bannerUrl;
   final Color themeColor;
@@ -946,21 +984,22 @@ class _ShopBannerImageState extends State<_ShopBannerImage> {
         width: double.infinity,
         height: bannerHeight,
         fit: BoxFit.cover,
-        placeholder: (context, url) => Container(
-          width: double.infinity,
-          height: bannerHeight,
-          color: const Color(0xFFF1F5F9),
-          child: Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: widget.themeColor,
+        placeholder:
+            (context, url) => Container(
+              width: double.infinity,
+              height: bannerHeight,
+              color: const Color(0xFFF1F5F9),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: widget.themeColor,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
         errorWidget: (context, url, error) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && !_hasError) {

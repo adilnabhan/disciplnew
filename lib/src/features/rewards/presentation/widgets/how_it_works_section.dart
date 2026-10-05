@@ -74,7 +74,8 @@ class HowItWorksSection extends StatelessWidget {
           _buildStepRow(
             stepNumber: '1',
             title: 'Complete Daily Workout / Steps',
-            description: 'Finish at least 1 gym workout or achieve your daily step goal in Discipl to activate your daily discount QR code.',
+            description:
+                'Finish at least 1 gym workout or achieve your daily step goal in Discipl to activate your daily discount QR code.',
             icon: Icons.fitness_center_rounded,
             accentColor: const Color(0xFF3B82F6),
             isLast: false,
@@ -82,7 +83,8 @@ class HowItWorksSection extends StatelessWidget {
           _buildStepRow(
             stepNumber: '2',
             title: 'Show QR Code to Partner Cashier',
-            description: 'Visit any of our participating partner cafes, restaurants, or stores and present your dynamic QR code at checkout.',
+            description:
+                'Visit any of our participating partner cafes, restaurants, or stores and present your dynamic QR code at checkout.',
             icon: Icons.qr_code_2_rounded,
             accentColor: const Color(0xFF8B5CF6),
             isLast: false,
@@ -90,7 +92,8 @@ class HowItWorksSection extends StatelessWidget {
           _buildStepRow(
             stepNumber: '3',
             title: 'Instant Discount Applied',
-            description: 'The cashier scans your code using their partner terminal, and your instant discount is deducted from your total bill.',
+            description:
+                'The cashier scans your code using their partner terminal, and your instant discount is deducted from your total bill.',
             icon: Icons.local_offer_rounded,
             accentColor: const Color(0xFF10B981),
             isLast: true,
@@ -119,7 +122,10 @@ class HowItWorksSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: accentColor.withValues(alpha: 0.12),
                 shape: BoxShape.circle,
-                border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1.5),
+                border: Border.all(
+                  color: accentColor.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
               ),
               alignment: Alignment.center,
               child: Text(

@@ -358,6 +358,7 @@ class ChallengeDetailsResponse {
   final String? challengeType;
   final String? themeColor;
   final String? bannerImage;
+  final List<String>? bannerImages;
   final ChallengeBrand? brand;
   final bool? isJoined;
   final int? joinedMemberCount;
@@ -384,6 +385,7 @@ class ChallengeDetailsResponse {
     this.challengeType,
     this.themeColor,
     this.bannerImage,
+    this.bannerImages,
     this.brand,
     this.isJoined,
     this.joinedMemberCount,
@@ -403,6 +405,12 @@ class ChallengeDetailsResponse {
   });
 
   factory ChallengeDetailsResponse.fromJson(Map<String, dynamic> json) {
+    final parsedBannerImages = _parseBannerImages(json);
+    final singleBanner = (json['banner_image'] is String &&
+            (json['banner_image'] as String).trim().isNotEmpty)
+        ? (json['banner_image'] as String).trim()
+        : (parsedBannerImages.isNotEmpty ? parsedBannerImages.first : null);
+
     return ChallengeDetailsResponse(
       id: json['id'] as int?,
       name: json['name'] as String?,
@@ -411,7 +419,8 @@ class ChallengeDetailsResponse {
       category: json['category'] as String?,
       challengeType: json['challenge_type'] as String?,
       themeColor: json['theme_color'] as String?,
-      bannerImage: json['banner_image'] as String?,
+      bannerImage: singleBanner,
+      bannerImages: parsedBannerImages,
       brand:
           json['brand'] is Map<String, dynamic>
               ? ChallengeBrand.fromJson(json['brand'] as Map<String, dynamic>)
@@ -487,6 +496,7 @@ class ChallengeDetailsResponse {
       'challenge_type': challengeType,
       'theme_color': themeColor,
       'banner_image': bannerImage,
+      'banner_images': bannerImages,
       'brand': brand?.toJson(),
       'is_joined': isJoined,
       'joined_member_count': joinedMemberCount,
@@ -517,4 +527,54 @@ bool? _parseBool(dynamic value) {
     if (lower == 'false' || lower == '0' || lower == 'no') return false;
   }
   return null;
+}
+
+List<String> _parseBannerImages(Map<String, dynamic> json) {
+  final list = <String>[];
+
+  void addCandidate(dynamic item) {
+    if (item == null) return;
+    if (item is String && item.trim().isNotEmpty) {
+      list.add(item.trim());
+    } else if (item is Map) {
+      final url = item['image'] ??
+          item['banner_image'] ??
+          item['url'] ??
+          item['banner'] ??
+          item['file'];
+      if (url is String && url.trim().isNotEmpty) {
+        list.add(url.trim());
+      }
+    }
+  }
+
+  if (json['banner_images'] is List) {
+    for (final it in json['banner_images'] as List) {
+      addCandidate(it);
+    }
+  }
+  if (json['banners'] is List) {
+    for (final it in json['banners'] as List) {
+      addCandidate(it);
+    }
+  }
+  if (json['images'] is List) {
+    for (final it in json['images'] as List) {
+      addCandidate(it);
+    }
+  }
+  if (json['banner_image'] is List) {
+    for (final it in json['banner_image'] as List) {
+      addCandidate(it);
+    }
+  } else if (json['banner_image'] is String) {
+    addCandidate(json['banner_image']);
+  }
+
+  if (json['hero_image_url'] is String) {
+    addCandidate(json['hero_image_url']);
+  }
+
+  final seen = <String>{};
+  return list.where(seen.add).toList();
 }

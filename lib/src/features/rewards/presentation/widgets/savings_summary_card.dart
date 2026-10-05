@@ -2,10 +2,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/rewards/domain/models/qr_history_model.dart';
 
 class SavingsSummaryCard extends StatelessWidget {
-  const SavingsSummaryCard({
-    required this.summary,
-    super.key,
-  });
+  const SavingsSummaryCard({required this.summary, super.key});
 
   final UserSavingsSummaryModel summary;
 
@@ -17,11 +14,7 @@ class SavingsSummaryCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF0F172A),
-            Color(0xFF1E293B),
-            Color(0xFF0F172A),
-          ],
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B), Color(0xFF0F172A)],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -61,7 +54,9 @@ class SavingsSummaryCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(7),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.18),
+                            color: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.18),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -82,7 +77,10 @@ class SavingsSummaryCard extends StatelessWidget {
                     ),
                     if (summary.totalPointsEarned > 0)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
@@ -90,7 +88,9 @@ class SavingsSummaryCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFF59E0B).withValues(alpha: 0.3),
+                              color: const Color(
+                                0xFFF59E0B,
+                              ).withValues(alpha: 0.3),
                               blurRadius: 6,
                               offset: const Offset(0, 2),
                             ),
@@ -116,12 +116,19 @@ class SavingsSummaryCard extends StatelessWidget {
                       )
                     else
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.16),
+                          color: const Color(
+                            0xFF10B981,
+                          ).withValues(alpha: 0.16),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.4),
+                            color: const Color(
+                              0xFF10B981,
+                            ).withValues(alpha: 0.4),
                           ),
                         ),
                         child: Row(
@@ -213,11 +220,16 @@ class SavingsSummaryCard extends StatelessWidget {
                 if (summary.averageDiscountPercent > 0) ...[
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.06),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -258,9 +270,7 @@ class SavingsSummaryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

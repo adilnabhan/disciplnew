@@ -1,7 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
-import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/slide_to_finish_button.dart';
 
 class WorkoutExecutionScreen extends StatefulWidget {
   final WorkoutModel workoutModel;
@@ -145,9 +145,9 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                   bottom: 24,
                   top: 12,
                 ),
-                child: PrimaryPillButton(
-                  text: 'Finish Workout',
-                  onTap: () async {
+                child: SlideToFinishButton(
+                  text: 'Slide to Finish',
+                  onSlideComplete: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder:
@@ -390,13 +390,6 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         if (val == null) return 'KG';
                         final lower = val.toLowerCase().replaceAll(' ', '');
                         if (lower == 'bw') return 'BW';
-                        if (lower == 'fw' ||
-                            lower == 'freeweight' ||
-                            lower == 'baronly' ||
-                            lower == 'bo' ||
-                            lower == 'bar')
-                          return 'FW';
-                        if (lower == 'kg+bw' || lower == 'kgbw') return 'KG';
                         return 'KG';
                       }(),
                       isDense: true,
@@ -413,7 +406,6 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                         return const <Widget>[
                           Center(child: Text('KG')),
                           Center(child: Text('BW')),
-                          Center(child: Text('FW')),
                         ];
                       },
                       items: const [
@@ -432,15 +424,6 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text('Body Weight', maxLines: 1),
-                            ),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'FW',
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text('Free Weight', maxLines: 1),
                             ),
                           ),
                         ),

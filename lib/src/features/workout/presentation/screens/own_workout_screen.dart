@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/primary_pill_button.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/slide_to_finish_button.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/workout_feedback_banner.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
@@ -2433,12 +2434,15 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         bottom: 24,
                         top: 12,
                       ),
-                      child: PrimaryPillButton(
+                      child: SlideToFinishButton(
                         text:
-                            widget.isPresetCreation ? 'Save Preset' : 'Finish',
-                        onTap: () {
+                            widget.isPresetCreation
+                                ? 'Slide to Save Preset'
+                                : 'Slide to finish',
+                        isLoading: _isFinishing,
+                        onSlideComplete: () async {
                           if (_isFinishing) return;
-                          _showFinishDialog(context, state);
+                          await _showFinishDialog(context, state);
                         },
                       ),
                     ),
@@ -3296,13 +3300,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         if (val == null) return 'KG';
                         final lower = val.toLowerCase().replaceAll(' ', '');
                         if (lower == 'bw') return 'BW';
-                        if (lower == 'fw' ||
-                            lower == 'freeweight' ||
-                            lower == 'baronly' ||
-                            lower == 'bo' ||
-                            lower == 'bar')
-                          return 'FW';
-                        if (lower == 'kg+bw' || lower == 'kgbw') return 'KG';
                         return 'KG';
                       }(),
                       isDense: true,
@@ -3319,7 +3316,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         return const <Widget>[
                           Center(child: Text('KG')),
                           Center(child: Text('BW')),
-                          Center(child: Text('FW')),
                         ];
                       },
                       items: const [
@@ -3338,15 +3334,6 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text('Body Weight', maxLines: 1),
-                            ),
-                          ),
-                        ),
-                        DropdownMenuItem(
-                          value: 'FW',
-                          child: Center(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text('Free Weight', maxLines: 1),
                             ),
                           ),
                         ),

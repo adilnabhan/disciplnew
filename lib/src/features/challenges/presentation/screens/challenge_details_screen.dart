@@ -326,21 +326,16 @@ class _ChallengeDetailsContentState extends State<_ChallengeDetailsContent> {
                       SizedBox(
                         height: 240,
                         width: double.infinity,
-                        child: challenge.bannerImage != null && challenge.bannerImage!.isNotEmpty
-                            ? ImageNetwork(
-                                challenge.bannerImage!,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(
-                                color: themeColor.withValues(alpha: 0.85),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.emoji_events_rounded,
-                                    size: 64,
-                                    color: Colors.white54,
-                                  ),
-                                ),
-                              ),
+                        child: _ChallengeBannerCarousel(
+                          images: (challenge.bannerImages != null &&
+                                  challenge.bannerImages!.isNotEmpty)
+                              ? challenge.bannerImages!
+                              : (challenge.bannerImage != null &&
+                                      challenge.bannerImage!.isNotEmpty
+                                  ? [challenge.bannerImage!]
+                                  : const []),
+                          themeColor: themeColor,
+                        ),
                       ),
 
                       // Floating Type Badge on top right of banner
@@ -1318,43 +1313,94 @@ class _ChallengeDetailsContentState extends State<_ChallengeDetailsContent> {
             BlocBuilder<ChallengeDetailsCubit, ChallengeDetailsState>(
               builder: (context, state) {
                 final isJoining = state.isJoining;
+                final currentChallenge = state.challenge ?? widget.challenge;
+                final isJoined = (currentChallenge.isJoined ?? false) ||
+                    btnText.toLowerCase().contains('joined') ||
+                    btnAction == 'details';
+                final isJoinAfter =
+                    btnText.toLowerCase().contains('join after');
+
                 return ElevatedButton(
-                  onPressed: (!btnEnabled || isJoining)
+                  onPressed: isJoining
                       ? null
                       : () async {
-                          if (btnAction == 'join' && challengeId != null) {
-                            final success = await context.read<ChallengeDetailsCubit>().joinChallenge(challengeId);
+                          if (isJoined) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'You have already joined this challenge.',
+                                ),
+                                duration: Duration(seconds: 3),
+                              ),
+                            );
+                          } else if (isJoinAfter) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Complete your workouts to reach 100% progress, and you will automatically be entered into the challenge.',
+                                ),
+                              ),
+                            );
+                          } else if (btnAction == 'join' && challengeId != null) {
+                            final success = await context
+                                .read<ChallengeDetailsCubit>()
+                                .joinChallenge(challengeId);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text(success ? 'Successfully joined challenge!' : 'Failed to join challenge.'),
-                                  backgroundColor: success ? Colors.green.shade700 : Colors.red.shade700,
+                                  content: Text(
+                                    success
+                                        ? 'Successfully joined challenge!'
+                                        : 'Failed to join challenge.',
+                                  ),
+                                  backgroundColor: success
+                                      ? Colors.green.shade700
+                                      : Colors.red.shade700,
                                 ),
                               );
                             }
-                          } else if (btnAction == 'details') {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('You are entered into this challenge.')),
-                            );
                           } else if (btnAction == 'winners') {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => ChallengeWinnersScreen(
-                                  challengeId: challengeId,
-                                  challengeDetails: widget.challenge,
+                            unawaited(
+                              Navigator.of(context).push<void>(
+                                MaterialPageRoute<void>(
+                                  builder: (_) => ChallengeWinnersScreen(
+                                    challengeId: challengeId,
+                                    challengeDetails: widget.challenge,
+                                  ),
                                 ),
+                              ),
+                            );
+                          } else if (!btnEnabled) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  footerSubtitle != null &&
+                                          footerSubtitle.isNotEmpty
+                                      ? footerSubtitle
+                                      : 'This challenge is currently not joinable.',
+                                ),
+                                duration: const Duration(seconds: 2),
                               ),
                             );
                           }
                         },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: btnEnabled ? themeColor : Colors.grey.shade400,
+                    backgroundColor: (btnEnabled || isJoined || isJoinAfter)
+                        ? themeColor
+                        : Colors.grey.shade400,
                     disabledBackgroundColor: Colors.grey.shade300,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    elevation: btnEnabled ? 3 : 0,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    elevation:
+                        (btnEnabled || isJoined || isJoinAfter) ? 3 : 0,
                   ),
                   child: isJoining
                       ? const SizedBox(
@@ -1365,12 +1411,34 @@ class _ChallengeDetailsContentState extends State<_ChallengeDetailsContent> {
                             strokeWidth: 2,
                           ),
                         )
-                      : Text(
-                          btnText,
-                          style: AppStyles.text14Px.poppins.w600.copyWith(
-                            color: btnEnabled ? Colors.white : Colors.grey.shade600,
-                          ),
-                        ),
+                      : isJoined
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  btnText.isNotEmpty ? btnText : 'Joined',
+                                  style: AppStyles.text14Px.poppins.w600
+                                      .copyWith(
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(
+                                  Icons.check_rounded,
+                                  size: 17,
+                                  color: Colors.white,
+                                ),
+                              ],
+                            )
+                          : Text(
+                              btnText,
+                              style: AppStyles.text14Px.poppins.w600
+                                  .copyWith(
+                                color: (btnEnabled || isJoinAfter)
+                                    ? Colors.white
+                                    : Colors.grey.shade600,
+                              ),
+                            ),
                 );
               },
             ),
@@ -1575,6 +1643,104 @@ class _ChallengeDetailsShimmer extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ChallengeBannerCarousel extends StatefulWidget {
+  const _ChallengeBannerCarousel({
+    required this.images,
+    required this.themeColor,
+  });
+
+  final List<String> images;
+  final Color themeColor;
+
+  @override
+  State<_ChallengeBannerCarousel> createState() =>
+      _ChallengeBannerCarouselState();
+}
+
+class _ChallengeBannerCarouselState extends State<_ChallengeBannerCarousel> {
+  late final PageController _pageController;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChallengeBannerCarousel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.images.length != widget.images.length) {
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.images.length <= 1) return;
+
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final current = _pageController.page?.round() ?? 0;
+      final next = (current + 1) % widget.images.length;
+      if (next == 0) {
+        _pageController.animateToPage(
+          0,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.images.isEmpty) {
+      return ColoredBox(
+        color: widget.themeColor.withValues(alpha: 0.85),
+        child: const Center(
+          child: Icon(
+            Icons.emoji_events_rounded,
+            size: 64,
+            color: Colors.white54,
+          ),
+        ),
+      );
+    }
+
+    if (widget.images.length == 1) {
+      return ImageNetwork(
+        widget.images.first,
+      );
+    }
+
+    return PageView.builder(
+      controller: _pageController,
+      physics: const BouncingScrollPhysics(),
+      itemCount: widget.images.length,
+      itemBuilder: (context, index) {
+        final url = widget.images[index];
+        return ImageNetwork(
+          url,
+        );
+      },
     );
   }
 }

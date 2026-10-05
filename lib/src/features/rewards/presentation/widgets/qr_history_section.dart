@@ -64,8 +64,18 @@ class _QrHistorySectionState extends State<QrHistorySection> {
       return 'Yesterday • $timeStr';
     } else {
       const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${dt.day} ${months[dt.month - 1]} • $timeStr';
     }
@@ -73,13 +83,21 @@ class _QrHistorySectionState extends State<QrHistorySection> {
 
   IconData _getCategoryIcon(String category) {
     final cat = category.toLowerCase();
-    if (cat.contains('food') || cat.contains('meal') || cat.contains('restaurant')) {
+    if (cat.contains('food') ||
+        cat.contains('meal') ||
+        cat.contains('restaurant')) {
       return Icons.restaurant_rounded;
-    } else if (cat.contains('nutrition') || cat.contains('supplement') || cat.contains('protein')) {
+    } else if (cat.contains('nutrition') ||
+        cat.contains('supplement') ||
+        cat.contains('protein')) {
       return Icons.fitness_center_rounded;
-    } else if (cat.contains('cafe') || cat.contains('smoothie') || cat.contains('salad')) {
+    } else if (cat.contains('cafe') ||
+        cat.contains('smoothie') ||
+        cat.contains('salad')) {
       return Icons.local_cafe_rounded;
-    } else if (cat.contains('gear') || cat.contains('activewear') || cat.contains('retail')) {
+    } else if (cat.contains('gear') ||
+        cat.contains('activewear') ||
+        cat.contains('retail')) {
       return Icons.checkroom_rounded;
     } else if (cat.contains('spa') || cat.contains('salon')) {
       return Icons.spa_rounded;
@@ -91,13 +109,19 @@ class _QrHistorySectionState extends State<QrHistorySection> {
 
   Color _getCategoryColor(String category) {
     final cat = category.toLowerCase();
-    if (cat.contains('food') || cat.contains('meal') || cat.contains('restaurant')) {
+    if (cat.contains('food') ||
+        cat.contains('meal') ||
+        cat.contains('restaurant')) {
       return const Color(0xFFF97316);
     } else if (cat.contains('nutrition') || cat.contains('supplement')) {
       return const Color(0xFF3B82F6);
-    } else if (cat.contains('cafe') || cat.contains('smoothie') || cat.contains('salad')) {
+    } else if (cat.contains('cafe') ||
+        cat.contains('smoothie') ||
+        cat.contains('salad')) {
       return const Color(0xFF10B981);
-    } else if (cat.contains('gear') || cat.contains('activewear') || cat.contains('retail')) {
+    } else if (cat.contains('gear') ||
+        cat.contains('activewear') ||
+        cat.contains('retail')) {
       return const Color(0xFF8B5CF6);
     } else if (cat.contains('spa') || cat.contains('salon')) {
       return const Color(0xFFEC4899);
@@ -110,10 +134,15 @@ class _QrHistorySectionState extends State<QrHistorySection> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _RedemptionReceiptSheet(
-        item: item,
-        formattedDate: _formatDateTime(item.redeemedAt, date: item.date, time: item.time),
-      ),
+      builder:
+          (ctx) => _RedemptionReceiptSheet(
+            item: item,
+            formattedDate: _formatDateTime(
+              item.redeemedAt,
+              date: item.date,
+              time: item.time,
+            ),
+          ),
     );
   }
 
@@ -142,7 +171,8 @@ class _QrHistorySectionState extends State<QrHistorySection> {
     }
 
     final displayItems = _filteredItems;
-    final visibleItems = _showAll ? displayItems : displayItems.take(4).toList();
+    final visibleItems =
+        _showAll ? displayItems : displayItems.take(4).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +223,10 @@ class _QrHistorySectionState extends State<QrHistorySection> {
                   });
                 },
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -214,39 +247,48 @@ class _QrHistorySectionState extends State<QrHistorySection> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: _filters.map((filter) {
-                final isSelected = _selectedFilter == filter;
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(filter),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      if (selected) {
-                        setState(() {
-                          _selectedFilter = filter;
-                        });
-                      }
-                    },
-                    labelStyle: AppStyles.text12Px.poppins.copyWith(
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                      color: isSelected ? Colors.white : const Color(0xFF475569),
-                    ),
-                    selectedColor: const Color(0xFF0F172A),
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                      side: BorderSide(
-                        color: isSelected
-                            ? const Color(0xFF0F172A)
-                            : const Color(0xFFE2E8F0),
+              children:
+                  _filters.map((filter) {
+                    final isSelected = _selectedFilter == filter;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(filter),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          if (selected) {
+                            setState(() {
+                              _selectedFilter = filter;
+                            });
+                          }
+                        },
+                        labelStyle: AppStyles.text12Px.poppins.copyWith(
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w500,
+                          color:
+                              isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF475569),
+                        ),
+                        selectedColor: const Color(0xFF0F172A),
+                        backgroundColor: const Color(0xFFF1F5F9),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          side: BorderSide(
+                            color:
+                                isSelected
+                                    ? const Color(0xFF0F172A)
+                                    : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        showCheckmark: false,
                       ),
-                    ),
-                    showCheckmark: false,
-                  ),
-                );
-              }).toList(),
+                    );
+                  }).toList(),
             ),
           ),
           const SizedBox(height: 14),
@@ -304,7 +346,10 @@ class _QrHistorySectionState extends State<QrHistorySection> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0F172A),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -343,9 +388,11 @@ class _QrHistorySectionState extends State<QrHistorySection> {
   Widget _buildHistoryCard(BuildContext context, QrRedemptionHistoryItem item) {
     final catColor = _getCategoryColor(item.shopCategory);
     final catIcon = _getCategoryIcon(item.shopCategory);
-    final hasLogo = (item.shopLogo != null && item.shopLogo!.isNotEmpty) ||
+    final hasLogo =
+        (item.shopLogo != null && item.shopLogo!.isNotEmpty) ||
         (item.photo != null && item.photo!.isNotEmpty);
-    final logoUrl = (item.shopLogo?.isNotEmpty ?? false) ? item.shopLogo! : item.photo;
+    final logoUrl =
+        (item.shopLogo?.isNotEmpty ?? false) ? item.shopLogo! : item.photo;
 
     return InkWell(
       onTap: () => _showReceiptSheet(context, item),
@@ -380,20 +427,31 @@ class _QrHistorySectionState extends State<QrHistorySection> {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: hasLogo
-                        ? CachedNetworkImage(
-                            imageUrl: logoUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => Center(
+                    child:
+                        hasLogo
+                            ? CachedNetworkImage(
+                              imageUrl: logoUrl!,
+                              fit: BoxFit.cover,
+                              placeholder:
+                                  (_, __) => Center(
+                                    child: Icon(
+                                      catIcon,
+                                      color: catColor,
+                                      size: 20,
+                                    ),
+                                  ),
+                              errorWidget:
+                                  (_, __, ___) => Center(
+                                    child: Icon(
+                                      catIcon,
+                                      color: catColor,
+                                      size: 20,
+                                    ),
+                                  ),
+                            )
+                            : Center(
                               child: Icon(catIcon, color: catColor, size: 20),
                             ),
-                            errorWidget: (_, __, ___) => Center(
-                              child: Icon(catIcon, color: catColor, size: 20),
-                            ),
-                          )
-                        : Center(
-                            child: Icon(catIcon, color: catColor, size: 20),
-                          ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -416,7 +474,10 @@ class _QrHistorySectionState extends State<QrHistorySection> {
                           const SizedBox(width: 6),
                           // Invoice Number / Ref Tag
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(6),
@@ -466,11 +527,15 @@ class _QrHistorySectionState extends State<QrHistorySection> {
             ),
 
             // Product Details / Items ordered (if available)
-            if (item.productDetails != null && item.productDetails!.isNotEmpty) ...[
+            if (item.productDetails != null &&
+                item.productDetails!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(8),
@@ -497,7 +562,10 @@ class _QrHistorySectionState extends State<QrHistorySection> {
                     if (item.pointsAwarded > 0) ...[
                       const SizedBox(width: 6),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(6),
@@ -556,13 +624,14 @@ class _QrHistorySectionState extends State<QrHistorySection> {
 
                 // Discount Got Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
                     color: const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFA7F3D0),
-                    ),
+                    border: Border.all(color: const Color(0xFFA7F3D0)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -581,7 +650,10 @@ class _QrHistorySectionState extends State<QrHistorySection> {
                       ),
                       const SizedBox(width: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFF059669),
                           borderRadius: BorderRadius.circular(4),
@@ -732,7 +804,10 @@ class _RedemptionReceiptSheet extends StatelessWidget {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE2E8F0),
                         borderRadius: BorderRadius.circular(6),
@@ -761,28 +836,31 @@ class _RedemptionReceiptSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  ...item.items.map((entry) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.check_circle_outline_rounded,
-                          size: 13,
-                          color: Color(0xFF10B981),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            entry,
-                            style: AppStyles.text12Px.poppins.w500.copyWith(
-                              color: const Color(0xFF1E293B),
+                  ...item.items.map(
+                    (entry) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.check_circle_outline_rounded,
+                            size: 13,
+                            color: Color(0xFF10B981),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              entry,
+                              style: AppStyles.text12Px.poppins.w500.copyWith(
+                                color: const Color(0xFF1E293B),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  )),
-                ] else if (item.productDetails != null && item.productDetails!.isNotEmpty) ...[
+                  ),
+                ] else if (item.productDetails != null &&
+                    item.productDetails!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   const Divider(height: 1, color: Color(0xFFE2E8F0)),
                   const SizedBox(height: 10),
@@ -915,14 +993,16 @@ class _RedemptionReceiptSheet extends StatelessWidget {
       children: [
         Text(
           label,
-          style: (isLarge ? AppStyles.text13Px : AppStyles.text12Px).poppins.copyWith(
+          style: (isLarge ? AppStyles.text13Px : AppStyles.text12Px).poppins
+              .copyWith(
                 fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
                 color: const Color(0xFF64748B),
               ),
         ),
         Text(
           value,
-          style: (isLarge ? AppStyles.text16Px : AppStyles.text12Px).poppins.copyWith(
+          style: (isLarge ? AppStyles.text16Px : AppStyles.text12Px).poppins
+              .copyWith(
                 fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
                 color: valueColor ?? const Color(0xFF0F172A),
               ),

@@ -34,7 +34,8 @@ class QrRedemptionHistoryItem {
       if (val == null) return defaultVal;
       if (val is num) return val.toDouble();
       if (val is String) {
-        return double.tryParse(val.replaceAll(RegExp('[^0-9.]'), '')) ?? defaultVal;
+        return double.tryParse(val.replaceAll(RegExp('[^0-9.]'), '')) ??
+            defaultVal;
       }
       return defaultVal;
     }
@@ -70,23 +71,33 @@ class QrRedemptionHistoryItem {
       itemsList = rawItems.map((e) => e.toString()).toList();
     }
 
-    final shopName = json['shop_name']?.toString() ??
+    final shopName =
+        json['shop_name']?.toString() ??
         json['merchant_name']?.toString() ??
         'Partner Store';
-    final shopCategory = json['shop_category']?.toString() ??
+    final shopCategory =
+        json['shop_category']?.toString() ??
         json['merchant_category']?.toString() ??
         'General';
     final invoiceNo = json['invoice_number']?.toString();
     final qrRef = invoiceNo ?? json['qr_ref']?.toString() ?? '#INV-000';
 
-    final billAmount = parseDouble(json['bill_amount'] ?? json['purchase_amount']);
+    final billAmount = parseDouble(
+      json['bill_amount'] ?? json['purchase_amount'],
+    );
     final discountPercent = parseDouble(
-      json['discount_percentage'] ?? json['discount_get'] ?? json['discount_percent'],
+      json['discount_percentage'] ??
+          json['discount_get'] ??
+          json['discount_percent'],
       10,
     );
-    final discountAmount = parseDouble(json['how_much_saved'] ?? json['discount_amount']);
+    final discountAmount = parseDouble(
+      json['how_much_saved'] ?? json['discount_amount'],
+    );
     final finalAmount = parseDouble(
-      json['final_amount_paid'] ?? json['final_amount'] ?? (billAmount - discountAmount),
+      json['final_amount_paid'] ??
+          json['final_amount'] ??
+          (billAmount - discountAmount),
     );
 
     final address = json['shop_address']?.toString() ?? '';
@@ -95,7 +106,9 @@ class QrRedemptionHistoryItem {
     String location;
     if (rawLoc.isNotEmpty) {
       location = rawLoc;
-    } else if (address.isNotEmpty && city.isNotEmpty && !address.contains(city)) {
+    } else if (address.isNotEmpty &&
+        city.isNotEmpty &&
+        !address.contains(city)) {
       location = '$address, $city';
     } else if (address.isNotEmpty) {
       location = address;
@@ -134,7 +147,8 @@ class QrRedemptionHistoryItem {
       customerMobile: json['customer_mobile']?.toString(),
       date: json['date']?.toString(),
       time: json['time']?.toString(),
-      isVerified: statusStr == 'completed' || (json['is_verified'] as bool? ?? true),
+      isVerified:
+          statusStr == 'completed' || (json['is_verified'] as bool? ?? true),
     );
   }
 
@@ -198,105 +212,7 @@ class QrRedemptionHistoryItem {
     };
   }
 
-  static List<QrRedemptionHistoryItem> get mockHistoryList {
-    final now = DateTime.now();
-    return [
-      QrRedemptionHistoryItem(
-        id: '1',
-        merchantId: 5,
-        shopName: 'Super Bowls Cafe',
-        shopCategory: 'Health Cafe & Salad Bar',
-        location: 'Beach Road, Kozhikode',
-        shopCity: 'Kozhikode',
-        shopAddress: 'Beach Road, Kozhikode',
-        shopLogo: 'https://discipl-backend.onrender.com/media/partner_logos/bowl.png',
-        photo: 'https://discipl-backend.onrender.com/media/partner_photos/cafe.jpg',
-        productDetails: 'Açai Protein Bowl & Cold Brew',
-        items: const ['Açai Protein Bowl', 'Cold Brew'],
-        redeemedAt: now.subtract(const Duration(hours: 2, minutes: 15)),
-        billAmount: 500,
-        discountPercent: 10,
-        discountAmount: 50,
-        finalAmount: 450,
-        qrRef: 'INV-001',
-        invoiceNumber: 'INV-001',
-        pointsAwarded: 22,
-        staffName: 'Cafe Cashier',
-        customerName: 'Member',
-        date: '2026-09-17',
-        time: '11:45 AM',
-      ),
-      QrRedemptionHistoryItem(
-        id: '2',
-        merchantId: 8,
-        shopName: "Nature's Protein Hub",
-        shopCategory: 'Nutrition & Supplements',
-        location: 'Palarivattom, Kochi',
-        shopCity: 'Kochi',
-        shopAddress: 'Palarivattom, Kochi',
-        productDetails: 'Iso-Whey 2kg & Creatine Monohydrate',
-        items: const ['Iso-Whey 2kg', 'Creatine Monohydrate'],
-        redeemedAt: now.subtract(const Duration(days: 1, hours: 4)),
-        billAmount: 2400,
-        discountPercent: 15,
-        discountAmount: 360,
-        finalAmount: 2040,
-        qrRef: 'INV-002',
-        invoiceNumber: 'INV-002',
-        pointsAwarded: 45,
-        staffName: 'Store Manager',
-        customerName: 'Member',
-        date: '2026-09-16',
-        time: '04:20 PM',
-      ),
-      QrRedemptionHistoryItem(
-        id: '3',
-        merchantId: 12,
-        shopName: 'FitKitchen Healthy Meals',
-        shopCategory: 'Healthy Meals',
-        location: 'Kadavanthra, Kochi',
-        shopCity: 'Kochi',
-        shopAddress: 'Kadavanthra, Kochi',
-        productDetails: 'Grilled Chicken Brown Rice Bowl',
-        items: const ['Grilled Chicken Brown Rice Bowl', 'Lemon Mint Cooler'],
-        redeemedAt: now.subtract(const Duration(days: 3, hours: 6)),
-        billAmount: 520,
-        discountPercent: 15,
-        discountAmount: 78,
-        finalAmount: 442,
-        qrRef: 'INV-003',
-        invoiceNumber: 'INV-003',
-        pointsAwarded: 18,
-        staffName: 'Counter Staff',
-        customerName: 'Member',
-        date: '2026-09-14',
-        time: '01:10 PM',
-      ),
-      QrRedemptionHistoryItem(
-        id: '4',
-        merchantId: 3,
-        shopName: 'The Smoothie Lab',
-        shopCategory: 'Health Cafe & Salad Bar',
-        location: 'Panampilly Nagar, Kochi',
-        shopCity: 'Kochi',
-        shopAddress: 'Panampilly Nagar, Kochi',
-        productDetails: 'Peanut Butter Blast Protein Smoothie',
-        items: const ['Peanut Butter Blast Protein Smoothie'],
-        redeemedAt: now.subtract(const Duration(days: 5, hours: 2)),
-        billAmount: 300,
-        discountPercent: 10,
-        discountAmount: 30,
-        finalAmount: 270,
-        qrRef: 'INV-004',
-        invoiceNumber: 'INV-004',
-        pointsAwarded: 12,
-        staffName: 'Barista',
-        customerName: 'Member',
-        date: '2026-09-12',
-        time: '06:30 PM',
-      ),
-    ];
-  }
+  static const List<QrRedemptionHistoryItem> emptyList = [];
 }
 
 class UserSavingsSummaryModel {
@@ -318,7 +234,8 @@ class UserSavingsSummaryModel {
       if (val == null) return defaultVal;
       if (val is num) return val.toDouble();
       if (val is String) {
-        return double.tryParse(val.replaceAll(RegExp('[^0-9.]'), '')) ?? defaultVal;
+        return double.tryParse(val.replaceAll(RegExp('[^0-9.]'), '')) ??
+            defaultVal;
       }
       return defaultVal;
     }
@@ -332,9 +249,10 @@ class UserSavingsSummaryModel {
       return defaultVal;
     }
 
-    final summaryObj = json['summary'] is Map<String, dynamic>
-        ? json['summary'] as Map<String, dynamic>
-        : null;
+    final summaryObj =
+        json['summary'] is Map<String, dynamic>
+            ? json['summary'] as Map<String, dynamic>
+            : null;
 
     final totalSaved = parseDouble(
       json['total_saved_money'] ??
@@ -365,14 +283,12 @@ class UserSavingsSummaryModel {
     );
 
     final totalPointsEarned = parseInt(
-      json['total_points_earned'] ??
-          summaryObj?['total_points_earned'],
+      json['total_points_earned'] ?? summaryObj?['total_points_earned'],
     );
 
     final avgDiscount = parseDouble(
       summaryObj?['average_discount_percentage'] ??
           json['average_discount_percent'],
-      10,
     );
 
     // Calculate this month's savings from items if available, or fallback gracefully
@@ -380,8 +296,11 @@ class UserSavingsSummaryModel {
     if (thisMonthSaved == 0 && items != null && items.isNotEmpty) {
       final now = DateTime.now();
       thisMonthSaved = items
-          .where((item) =>
-              item.redeemedAt.month == now.month && item.redeemedAt.year == now.year)
+          .where(
+            (item) =>
+                item.redeemedAt.month == now.month &&
+                item.redeemedAt.year == now.year,
+          )
           .fold<double>(0, (acc, item) => acc + item.discountAmount);
     }
     if (thisMonthSaved == 0) {
@@ -419,14 +338,12 @@ class UserSavingsSummaryModel {
     };
   }
 
-  static const UserSavingsSummaryModel mockSummary = UserSavingsSummaryModel(
-    totalSaved: 518,
-    totalSpent: 3720,
-    totalFinalPaid: 3202,
-    totalRedemptions: 4,
-    totalPointsEarned: 97,
-    thisMonthSaved: 518,
-    averageDiscountPercent: 12.5,
+  static const UserSavingsSummaryModel empty = UserSavingsSummaryModel(
+    totalSaved: 0,
+    totalSpent: 0,
+    totalRedemptions: 0,
+    thisMonthSaved: 0,
+    averageDiscountPercent: 0,
   );
 }
 
@@ -442,10 +359,11 @@ class PartnerTransactionsResponse {
   factory PartnerTransactionsResponse.fromJson(Map<String, dynamic> json) {
     var items = <QrRedemptionHistoryItem>[];
     if (json['results'] is List) {
-      items = (json['results'] as List)
-          .whereType<Map<String, dynamic>>()
-          .map(QrRedemptionHistoryItem.fromJson)
-          .toList();
+      items =
+          (json['results'] as List)
+              .whereType<Map<String, dynamic>>()
+              .map(QrRedemptionHistoryItem.fromJson)
+              .toList();
     }
 
     final summary = UserSavingsSummaryModel.fromJson(json, items: items);

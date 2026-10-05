@@ -1281,8 +1281,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                   if (val == null) return 'KG';
                                   final lower = val.toLowerCase().replaceAll(' ', '');
                                   if (lower == 'bw') return 'BW';
-                                  if (lower == 'fw' || lower == 'freeweight' || lower == 'baronly' || lower == 'bo' || lower == 'bar') return 'FW';
-                                  if (lower == 'kg+bw') return 'KG';
                                   return 'KG';
                                 }(),
                                 isDense: true,
@@ -1298,7 +1296,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                   return const <Widget>[
                                     Text('KG'),
                                     Text('BW'),
-                                    Text('FW'),
                                   ];
                                 },
                                 items: const [
@@ -1309,10 +1306,6 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                   DropdownMenuItem(
                                     value: 'BW',
                                     child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Body Weight', maxLines: 1))),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'FW',
-                                    child: Center(child: FittedBox(fit: BoxFit.scaleDown, child: Text('Free Weight', maxLines: 1))),
                                   ),
                                 ],
                                 onChanged: (val) {

@@ -146,8 +146,6 @@ class RewardsHowItWorksSheet extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-
-
                   const SizedBox(height: 16),
                 ],
               ),
@@ -159,9 +157,7 @@ class RewardsHowItWorksSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             decoration: BoxDecoration(
               color: Colors.white,
-              border: const Border(
-                top: BorderSide(color: Color(0xFFF1F5F9)),
-              ),
+              border: const Border(top: BorderSide(color: Color(0xFFF1F5F9))),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.04),
@@ -237,13 +233,9 @@ class RewardsHowItWorksSheet extends StatelessWidget {
             decoration: BoxDecoration(
               color: badgeBgColor,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: stepColor.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: stepColor.withValues(alpha: 0.2)),
             ),
-            child: Center(
-              child: Icon(stepIcon, color: stepColor, size: 20),
-            ),
+            child: Center(child: Icon(stepIcon, color: stepColor, size: 20)),
           ),
           const SizedBox(width: 12),
           // Content
@@ -296,24 +288,6 @@ class RewardsHowItWorksSheet extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTipRow(IconData icon, String text) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: const Color(0xFF059669)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: AppStyles.text11Px.poppins.w500.copyWith(
-              color: const Color(0xFF047857),
-              height: 1.3,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
