@@ -18,25 +18,34 @@ class BannerModel {
   });
 
   factory BannerModel.fromJson(Map<String, dynamic> json) {
-    final rawWhatsapp = json['whatsapp_number'] ??
+    final rawPhone = json['mobile_number'] ??
+        json['mobile'] ??
+        json['whatsapp_number'] ??
         json['whatsapp_link'] ??
         json['whatsapp_url'] ??
         json['whatsapp'] ??
+        json['phone_number'] ??
+        json['phone'] ??
         json['contact_number'];
     return BannerModel(
       id: json['id'] as int?,
       organization: json['organization'] as int?,
       bannerImage: (json['image'] ?? json['banner_image']) as String?,
       title: json['title'] as String?,
-      contactNumber:
-          (json['whatsapp_number'] ?? json['contact_number']) as String?,
+      contactNumber: (json['contact_number'] ??
+              json['mobile_number'] ??
+              json['mobile'] ??
+              json['phone_number'] ??
+              json['phone'] ??
+              json['whatsapp_number'])
+          ?.toString(),
       websiteUrl: json['website_url'] as String?,
       visibility: json['visibility'] as String?,
       redirectType: json['redirect_type'] as String?,
       isActive: json['is_active'] as bool?,
       displayOrder: json['display_order'] as int?,
       createdAt: json['created_at'] as String?,
-      whatsappNumber: rawWhatsapp?.toString(),
+      whatsappNumber: rawPhone?.toString(),
     );
   }
 

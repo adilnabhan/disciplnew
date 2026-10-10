@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/models/body_matrix_model.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/widgets/body_matrix_history_views.dart';
 
 class BodyMatrixScreen extends StatefulWidget {
   const BodyMatrixScreen({super.key, required this.customerDetails});
@@ -12,6 +13,7 @@ class BodyMatrixScreen extends StatefulWidget {
 }
 
 class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
+  int _selectedTabIndex = 0;
   bool _aboutBmiExpanded = false;
   bool _aboutBmrExpanded = false;
   bool _aboutBfExpanded = false;
@@ -379,27 +381,114 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                 const SizedBox(height: 4),
                 Text(
                   'Health Matrix',
-                  style: AppStyles.text18Px.poppins.w700
+                  style: AppStyles.text20Px.poppins.w700
                       .copyWith(color: AppColors.textDark),
                 ),
-                const SizedBox(height: 16),
-                _buildBmiCard(),
-                const SizedBox(height: 16),
-                _buildBmrCard(),
-                const SizedBox(height: 16),
-                _buildBodyFatCard(details),
-                const SizedBox(height: 16),
-                _buildRatioCardsRow(details),
-                const SizedBox(height: 16),
-                _buildMetricsCard(),
-                const SizedBox(height: 24),
-                _buildDisclaimer(),
-                const SizedBox(height: 32),
+                const SizedBox(height: 14),
+                _buildTabBar(),
+                const SizedBox(height: 18),
+                if (_selectedTabIndex == 0) ...[
+                  _buildBmiCard(),
+                  const SizedBox(height: 16),
+                  _buildBmrCard(),
+                  const SizedBox(height: 16),
+                  _buildBodyFatCard(details),
+                  const SizedBox(height: 16),
+                  _buildRatioCardsRow(details),
+                  const SizedBox(height: 16),
+                  _buildMetricsCard(),
+                  const SizedBox(height: 24),
+                  _buildDisclaimer(),
+                  const SizedBox(height: 32),
+                ] else ...[
+                  BodyMatrixHistoryView(customerDetails: details),
+                  const SizedBox(height: 32),
+                ],
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  // ── Tab Bar ───────────────────────────────────────────────────────────────
+  Widget _buildTabBar() {
+    return Container(
+      height: 46,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9ECEF),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_selectedTabIndex != 0) {
+                  setState(() => _selectedTabIndex = 0);
+                }
+              },
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  color: _selectedTabIndex == 0
+                      ? AppColors.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Present Condition',
+                  style: AppStyles.text14Px.poppins.copyWith(
+                    fontWeight: _selectedTabIndex == 0
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                    color: _selectedTabIndex == 0
+                        ? Colors.white
+                        : const Color(0xFF1F2937),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: GestureDetector(
+              onTap: () {
+                if (_selectedTabIndex != 1) {
+                  setState(() => _selectedTabIndex = 1);
+                }
+              },
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  color: _selectedTabIndex == 1
+                      ? AppColors.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(26),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'History',
+                  style: AppStyles.text14Px.poppins.copyWith(
+                    fontWeight: _selectedTabIndex == 1
+                        ? FontWeight.w600
+                        : FontWeight.w500,
+                    color: _selectedTabIndex == 1
+                        ? Colors.white
+                        : const Color(0xFF1F2937),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

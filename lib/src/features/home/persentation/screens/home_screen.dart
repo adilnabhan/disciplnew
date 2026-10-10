@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/scheduler.dart';
@@ -116,10 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BlocProvider.value(value: _profileCompletionCubit),
           BlocProvider.value(value: _homeChallengeCubit),
         ],
-        child: Scaffold(
-          backgroundColor: bgColor,
-          body: homeView(),
-        ),
+        child: Scaffold(backgroundColor: bgColor, body: homeView()),
       );
     }
 
@@ -131,15 +129,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: BlocListener<DashboardCubit, DashboardState>(
         listenWhen:
             (previous, current) =>
-                previous.navIndex != current.navIndex &&
-                current.navIndex == 0,
+                previous.navIndex != current.navIndex && current.navIndex == 0,
         listener: (context, state) {
           _profileCompletionCubit.fetchProfileCompletion();
         },
-        child: Scaffold(
-          backgroundColor: bgColor,
-          body: homeView(),
-        ),
+        child: Scaffold(backgroundColor: bgColor, body: homeView()),
       ),
     );
   }
@@ -261,30 +255,41 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 20),
 
             // Rewards and Scorecard Quick Action Cards
-            if (!isGuest) ...[
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _buildRewardsCard(context),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildScorecardCard(context),
-                    ),
-                  ],
-                ),
+            if (!isGuest)
+              BlocBuilder<DashboardCubit, DashboardState>(
+                bloc: _dashboardCubit,
+                builder: (context, dashboardState) {
+                  final bool hasActiveGym = _hasActiveGym(dashboardState);
+                  print('🏋️‍♂️ [HomeScreen Quick Action Cards] hasActiveGym=$hasActiveGym -> ${hasActiveGym ? "SHOWING" : "HIDING"} Rewards and Scorecard cards');
+                  if (!hasActiveGym) {
+                    return const SizedBox.shrink();
+                  }
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Row(
+                          children: [
+                            Expanded(child: _buildRewardsCard(context)),
+                            const SizedBox(width: 8),
+                            Expanded(child: _buildScorecardCard(context)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  );
+                },
               ),
-              const SizedBox(height: 20),
-            ],
 
             // Challenges Container Section
             BlocBuilder<HomeChallengeCubit, HomeChallengeState>(
               bloc: _homeChallengeCubit,
               builder: (context, challengeState) {
                 if (!challengeState.isLoading &&
-                    (challengeState.errorMessage != null || challengeState.challenges.isEmpty)) {
+                    (challengeState.errorMessage != null ||
+                        challengeState.challenges.isEmpty)) {
                   return const SizedBox.shrink();
                 }
                 return Column(
@@ -342,6 +347,98 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
+  }
+
+  bool _isMembershipActive(ActiveMembershipModel? activeMembership) {
+    if (activeMembership == null) return false;
+
+    final bool isPending =
+        activeMembership.status?.toLowerCase() == 'pending';
+    final now = DateTime.now();
+    final localEndDate = activeMembership.endDate?.toLocal();
+    final remainingDays = isPending
+        ? 0
+        : (localEndDate != null
+            ? DateTime(
+                  localEndDate.year,
+                  localEndDate.month,
+                  localEndDate.day,
+                )
+                .difference(
+                  DateTime(now.year, now.month, now.day),
+                )
+                .inDays
+            : 0);
+    final bool isExpired = !isPending &&
+        (activeMembership.status?.toLowerCase() == 'expired' ||
+            remainingDays < 0);
+
+    if (isExpired || isPending) {
+      print(
+        '🏋️‍♂️ [_hasActiveGym] Membership NOT active -> isExpired: $isExpired, isPending: $isPending, remainingDays: $remainingDays',
+      );
+      return false;
+    }
+
+    final bool hasValidGym = (activeMembership.isActive == true ||
+        activeMembership.organization != null ||
+        activeMembership.id != null);
+    return hasValidGym;
+  }
+
+  bool _hasActiveGym(DashboardState dashboardState) {
+    if (Feggy.read<AppCubit>()?.state.currentUser == null) {
+      print('🏋️‍♂️ [_hasActiveGym]: false (User is guest)');
+      return false;
+    }
+
+    final bool result = dashboardState.activeMembershipData.fold(
+      () {
+        try {
+          final parentState = context.read<DashboardCubit>().state;
+          final bool? fromParent = parentState.activeMembershipData.fold(
+            () => null,
+            (either) => either.fold(
+              (_) => false,
+              (m) => _isMembershipActive(m),
+            ),
+          );
+          if (fromParent != null) {
+            print('🏋️‍♂️ [_hasActiveGym] from parent DashboardCubit: $fromParent');
+            return fromParent;
+          }
+        } catch (_) {}
+
+        final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+        if (currentUser?.customer != null) {
+          final c = currentUser!.customer!;
+          final bool fallback = c.isActiveMember == true ||
+              c.organizationId != null ||
+              c.assignedFitnessCenter != null;
+          print(
+            '🏋️‍♂️ [_hasActiveGym] fallback: $fallback (isActiveMember: ${c.isActiveMember}, orgId: ${c.organizationId}, assignedGym: ${c.assignedFitnessCenter != null})',
+          );
+          return fallback;
+        }
+        print('🏋️‍♂️ [_hasActiveGym]: false (No customer profile)');
+        return false;
+      },
+      (either) => either.fold(
+        (err) {
+          print('🏋️‍♂️ [_hasActiveGym]: false (Error: $err)');
+          return false;
+        },
+        (activeMembership) {
+          final bool active = _isMembershipActive(activeMembership);
+          print(
+            '🏋️‍♂️ [_hasActiveGym]: $active | Data: ${activeMembership == null ? "None (No active gym membership found)" : "id=${activeMembership.id}, org=${activeMembership.organization?.name}, status=${activeMembership.status}, isActive=${activeMembership.isActive}, endDate=${activeMembership.endDate}"}',
+          );
+          return active;
+        },
+      ),
+    );
+
+    return result;
   }
 
   Widget _buildRewardsCard(BuildContext context) {
@@ -426,10 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFFFDF58),
-                            Color(0xFFFFA000),
-                          ],
+                          colors: [Color(0xFFFFDF58), Color(0xFFFFA000)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -556,15 +650,16 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: () {
                 try {
                   final dashboardCubit = context.read<DashboardCubit>();
-                  final bool hasActiveGym = dashboardCubit.state.activeMembershipData.fold(
-                    () => false,
-                    (either) => either.fold((_) => false, (activeMembership) => activeMembership?.id != null),
-                  );
+                  final bool hasActiveGym =
+                      _hasActiveGym(dashboardCubit.state) ||
+                      _hasActiveGym(_dashboardCubit.state);
                   if (hasActiveGym) {
                     dashboardCubit.changeNav(index: 2);
                   } else {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ScoreCardScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const ScoreCardScreen(),
+                      ),
                     );
                   }
                 } catch (e) {
@@ -586,10 +681,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         gradient: const LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFFF5B65),
-                            Color(0xFFE11D48),
-                          ],
+                          colors: [Color(0xFFFF5B65), Color(0xFFE11D48)],
                         ),
                         boxShadow: [
                           BoxShadow(
@@ -656,7 +748,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Widget _buildActiveGymSection(ActiveMembershipModel activeMembership) {
     final bool isPending = activeMembership.status?.toLowerCase() == 'pending';
     final now = DateTime.now();
@@ -691,9 +782,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => CustomerMembershipDetailsScreen(
-                  membership: activeMembership,
-                ),
+                builder:
+                    (context) => CustomerMembershipDetailsScreen(
+                      membership: activeMembership,
+                    ),
               ),
             );
           },
@@ -779,27 +871,27 @@ class _HomeScreenState extends State<HomeScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              gradient: isPending
-                                  ? null
-                                  : const LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Color(0xFFFFFFFF),
-                                        Color(0xFFEEEEEE),
-                                        Color(0xFFFFFFFF),
-                                        Color(0xFFEEEEEE),
-                                        Color(0xFFFFFFFF),
-                                      ],
-                                    ),
-                              color: isPending
-                                  ? const Color(0xFFFFF3E0)
-                                  : null,
+                              gradient:
+                                  isPending
+                                      ? null
+                                      : const LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Color(0xFFFFFFFF),
+                                          Color(0xFFEEEEEE),
+                                          Color(0xFFFFFFFF),
+                                          Color(0xFFEEEEEE),
+                                          Color(0xFFFFFFFF),
+                                        ],
+                                      ),
+                              color: isPending ? const Color(0xFFFFF3E0) : null,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isPending
-                                    ? const Color(0xFFFFB74D)
-                                    : const Color(0xFFE2E2E2),
+                                color:
+                                    isPending
+                                        ? const Color(0xFFFFB74D)
+                                        : const Color(0xFFE2E2E2),
                                 width: 0.8,
                               ),
                             ),
@@ -808,9 +900,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ? 'Pending Approval'
                                   : (activeMembership.planName ?? ''),
                               style: AppStyles.text12Px.poppins.w500.copyWith(
-                                color: isPending
-                                    ? const Color(0xFFE65100)
-                                    : const Color(0xFF333333),
+                                color:
+                                    isPending
+                                        ? const Color(0xFFE65100)
+                                        : const Color(0xFF333333),
                               ),
                             ),
                           ),
@@ -869,15 +962,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 TextSpan(
                                   text: 'Subscription Expires in ',
-                                  style: AppStyles.text13Px.poppins.w400.copyWith(
-                                    color: const Color(0xFF333333),
-                                  ),
+                                  style: AppStyles.text13Px.poppins.w400
+                                      .copyWith(color: const Color(0xFF333333)),
                                 ),
                                 TextSpan(
                                   text: '$remainingDays Days',
-                                  style: AppStyles.text13Px.poppins.w700.copyWith(
-                                    color: const Color(0xFF111111),
-                                  ),
+                                  style: AppStyles.text13Px.poppins.w700
+                                      .copyWith(color: const Color(0xFF111111)),
                                 ),
                               ],
                             ),
@@ -893,32 +984,41 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildTrainerCard(AssignedTrainerModel trainer) {
     final experience = trainer.experienceYears ?? 0;
-    final String rawName = (trainer.name != null && trainer.name!.trim().isNotEmpty)
-        ? trainer.name!
-        : (trainer.fullGymTrainer?.fullName != null && trainer.fullGymTrainer!.fullName!.trim().isNotEmpty
-            ? trainer.fullGymTrainer!.fullName!
-            : 'Trainer');
+    final String rawName =
+        (trainer.name != null && trainer.name!.trim().isNotEmpty)
+            ? trainer.name!
+            : (trainer.fullGymTrainer?.fullName != null &&
+                    trainer.fullGymTrainer!.fullName!.trim().isNotEmpty
+                ? trainer.fullGymTrainer!.fullName!
+                : 'Trainer');
 
-    final String displayName = rawName.trim().split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    final String displayName = rawName
+        .trim()
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
 
-    final specialization = (trainer.specializations != null &&
-            trainer.specializations!.isNotEmpty)
-        ? trainer.specializations!.first
-        : (trainer.userType != null && trainer.userType!.trim().isNotEmpty
-            ? trainer.userType![0].toUpperCase() + trainer.userType!.substring(1).toLowerCase()
-            : 'Trainer');
+    final specialization =
+        (trainer.specializations != null && trainer.specializations!.isNotEmpty)
+            ? trainer.specializations!.first
+            : (trainer.userType != null && trainer.userType!.trim().isNotEmpty
+                ? trainer.userType![0].toUpperCase() +
+                    trainer.userType!.substring(1).toLowerCase()
+                : 'Trainer');
     final rawR = trainer.rating ?? trainer.fullGymTrainer?.averageRating;
-    final double ratingVal = rawR is num
-        ? rawR.toDouble()
-        : (rawR is String ? (double.tryParse(rawR) ?? 4.8) : 4.8);
-    final String ratingStr = ratingVal.toStringAsFixed(1);
+    final double ratingVal =
+        rawR is num
+            ? rawR.toDouble()
+            : (rawR is String ? (double.tryParse(rawR) ?? 0.0) : 0.0);
+    final int starCount = ratingVal > 0 ? ratingVal.round().clamp(1, 5) : 0;
 
     return GestureDetector(
       onTap: () {
-        final gymTrainer = trainer.fullGymTrainer ??
+        final gymTrainer =
+            trainer.fullGymTrainer ??
             GymTrainer(
               id: trainer.id,
               fullName: displayName,
@@ -931,7 +1031,8 @@ class _HomeScreenState extends State<HomeScreen> {
               specializations: trainer.specializations,
               mobile: trainer.mobile,
               clientsCount: trainer.fullGymTrainer?.clientsCount,
-              verifiedWorkoutsCount: trainer.fullGymTrainer?.verifiedWorkoutsCount,
+              verifiedWorkoutsCount:
+                  trainer.fullGymTrainer?.verifiedWorkoutsCount,
               certifications: trainer.fullGymTrainer?.certifications,
               email: trainer.fullGymTrainer?.email,
               gender: trainer.fullGymTrainer?.gender,
@@ -946,12 +1047,13 @@ class _HomeScreenState extends State<HomeScreen> {
         width: 140,
         child: Column(
           children: [
-            // Circle Avatar with Outer Red Ring & Bottom Star Shield Badge
+            // Circle Avatar with Outer Red Ring & Bottom Star Badges along Circle Shape
             SizedBox(
-              width: 90,
-              height: 94,
+              width: 96,
+              height: 96,
               child: Stack(
                 alignment: Alignment.topCenter,
+                clipBehavior: Clip.none,
                 children: [
                   Container(
                     width: 84,
@@ -965,14 +1067,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     padding: const EdgeInsets.all(2),
                     child: ClipOval(
-                      child: trainer.profileImage != null &&
-                              trainer.profileImage!.isNotEmpty
-                          ? ImageNetwork(
-                              trainer.profileImage!,
-                              height: 80,
-                              width: 80,
-                              fit: BoxFit.cover,
-                              errorWidget: ColoredBox(
+                      child:
+                          trainer.profileImage != null &&
+                                  trainer.profileImage!.isNotEmpty
+                              ? ImageNetwork(
+                                trainer.profileImage!,
+                                height: 80,
+                                width: 80,
+                                fit: BoxFit.cover,
+                                errorWidget: ColoredBox(
+                                  color: Colors.grey.shade200,
+                                  child: const Icon(
+                                    Icons.person,
+                                    color: Colors.grey,
+                                    size: 40,
+                                  ),
+                                ),
+                              )
+                              : ColoredBox(
                                 color: Colors.grey.shade200,
                                 child: const Icon(
                                   Icons.person,
@@ -980,48 +1092,98 @@ class _HomeScreenState extends State<HomeScreen> {
                                   size: 40,
                                 ),
                               ),
-                            )
-                          : ColoredBox(
-                              color: Colors.grey.shade200,
-                              child: const Icon(
-                                Icons.person,
-                                color: Colors.grey,
-                                size: 40,
-                              ),
-                            ),
                     ),
                   ),
 
-                  // Overlapping bottom star icon badge
-                  Positioned(
-                    bottom: 0,
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE53935),
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 4,
-                            offset: Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.star_rounded,
-                          color: Colors.white,
-                          size: 14,
+                  // Golden ribbon arc connecting stars
+                  if (starCount > 1)
+                    Positioned.fill(
+                      child: CustomPaint(
+                        painter: _TrainerStarsArcPainter(
+                          starCount: starCount,
+                          cx: 48.0,
+                          cy: 42.0,
+                          radius: 42.0,
+                          angleStep: 25.0,
                         ),
                       ),
                     ),
-                  ),
+
+                  // Circular white badges with golden borders and stars along bottom arc
+                  if (starCount > 0)
+                    ...() {
+                      const double cx = 48.0;
+                      const double cy = 42.0;
+                      const double arcRadius = 42.0;
+                      const double angleStep = 25.0;
+
+                      final centerIndex = (starCount - 1) / 2.0;
+                      final renderIndices = List.generate(starCount, (i) => i)
+                        ..sort(
+                          (a, b) => (b - centerIndex).abs().compareTo(
+                            (a - centerIndex).abs(),
+                          ),
+                        );
+
+                      return renderIndices.map((i) {
+                        final dist = (i - centerIndex).abs();
+                        final maxDist =
+                            centerIndex == 0
+                                ? 1.0
+                                : centerIndex.clamp(1.0, 2.0);
+                        final sizeFactor = 1.0 - (dist / maxDist) * 0.08;
+
+                        final badgeSize = 18.2 * sizeFactor;
+                        final badgeRadius = badgeSize / 2.0;
+                        final iconSize = 11.8 * sizeFactor;
+                        final borderWidth = 1.5 * sizeFactor;
+
+                        final angleDeg = 90.0 - (i - centerIndex) * angleStep;
+                        final angleRad = angleDeg * math.pi / 180.0;
+                        final x = cx + arcRadius * math.cos(angleRad);
+                        final y = cy + arcRadius * math.sin(angleRad);
+
+                        return Positioned(
+                          left: x - badgeRadius,
+                          top: y - badgeRadius,
+                          width: badgeSize,
+                          height: badgeSize,
+                          child: Container(
+                            width: badgeSize,
+                            height: badgeSize,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFF59E0B),
+                                width: borderWidth,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(
+                                    0xFFD97706,
+                                  ).withOpacity(0.22),
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 1.5),
+                                ),
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 2,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Icon(
+                                Icons.star_rounded,
+                                color: const Color(0xFFFFB800),
+                                size: iconSize,
+                              ),
+                            ),
+                          ),
+                        );
+                      });
+                    }(),
                 ],
               ),
             ),
@@ -1076,48 +1238,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-
-            const SizedBox(height: 8),
-
-            // Rating Pill Container
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 5,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.star_rounded,
-                    color: Color(0xFFE53935),
-                    size: 16,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    ratingStr,
-                    style: AppStyles.text14Px.poppins.w700.copyWith(
-                      color: const Color(0xFF1E1E1E),
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),
@@ -1133,7 +1253,7 @@ Widget _buildDidYouKnowSection() {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 60),
+          const SizedBox(height: 24),
           Text(
             'Did you know?',
             style: AppStyles.text14Px.titanOne.w500.copyWith(
@@ -1245,9 +1365,12 @@ class HomeBannerItem {
   });
 
   factory HomeBannerItem.fromModel(BannerModel model) {
-    final rawWa = (model.whatsappNumber != null && model.whatsappNumber!.trim().isNotEmpty)
-        ? model.whatsappNumber
-        : (model.contactNumber != null && model.contactNumber!.trim().isNotEmpty)
+    final rawWa =
+        (model.whatsappNumber != null &&
+                model.whatsappNumber!.trim().isNotEmpty)
+            ? model.whatsappNumber
+            : (model.contactNumber != null &&
+                model.contactNumber!.trim().isNotEmpty)
             ? model.contactNumber
             : null;
     return HomeBannerItem(
@@ -1296,8 +1419,6 @@ class _BannersViewState extends State<BannersView> {
   late final Duration _autoScrollDuration;
   late final Duration _animationDuration;
   Ticker? _ticker;
-
-
 
   @override
   void initState() {
@@ -1397,13 +1518,14 @@ class _BannersViewState extends State<BannersView> {
     final cleanStr = target.trim();
     if (cleanStr.isEmpty) return;
 
-    final businessName = (banner?.title != null && banner!.title!.trim().isNotEmpty)
-        ? ' ${banner.title!.trim()}'
-        : '';
+    final businessName =
+        (banner?.title != null && banner!.title!.trim().isNotEmpty)
+            ? ' ${banner.title!.trim()}'
+            : '';
     final message = Uri.encodeComponent(
       'Hi$businessName,\n\n'
-      'I saw your offer on the Discipl app and would like to place an order.\n\n'
-      'Could you please share the menu and ordering details?\n\n'
+      'I saw your banner on the Discipl App and would like to get in touch with you.\n\n'
+      'Could you please share more details regarding your services and offers?\n\n'
       'Thank you!\n\n'
       '—\n'
       'Sent via Discipl App',
@@ -1441,8 +1563,9 @@ class _BannersViewState extends State<BannersView> {
       }
     } catch (_) {}
 
-    final apiWhatsappUri =
-        Uri.parse('https://api.whatsapp.com/send?phone=$phoneToUse&text=$message');
+    final apiWhatsappUri = Uri.parse(
+      'https://api.whatsapp.com/send?phone=$phoneToUse&text=$message',
+    );
     try {
       if (await canLaunchUrl(apiWhatsappUri)) {
         await launchUrl(apiWhatsappUri, mode: LaunchMode.externalApplication);
@@ -1477,7 +1600,7 @@ class _BannersViewState extends State<BannersView> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
+                  color: Colors.black.withValues(alpha: 0.30),
                   blurRadius: 6,
                   offset: const Offset(0, 2),
                 ),
@@ -1493,7 +1616,7 @@ class _BannersViewState extends State<BannersView> {
                 ),
                 const SizedBox(width: 5),
                 const Text(
-                  'Order Now',
+                  'Contact Us',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
@@ -1539,7 +1662,8 @@ class _BannersViewState extends State<BannersView> {
 
     if (_banners.length == 1) {
       final banner = _banners[0];
-      final hasWa = banner.whatsappNumber != null &&
+      final hasWa =
+          banner.whatsappNumber != null &&
           banner.whatsappNumber!.trim().isNotEmpty;
       return AspectRatio(
         aspectRatio: 2.0 / 1,
@@ -1550,24 +1674,29 @@ class _BannersViewState extends State<BannersView> {
               Positioned.fill(
                 child: GestureDetector(
                   onTap: () => _onBannerTap(banner),
-                  child: banner.isAsset
-                      ? Image.asset(
-                          banner.imagePath,
-                          fit: BoxFit.cover,
-                          height: double.maxFinite,
-                          width: double.maxFinite,
-                        )
-                      : ImageNetwork(
-                          banner.imagePath,
-                          height: double.maxFinite,
-                          width: double.maxFinite,
-                          errorWidget: ColoredBox(
-                            color: Colors.grey.shade200,
-                            child: const Icon(Icons.error, color: Colors.grey),
+                  child:
+                      banner.isAsset
+                          ? Image.asset(
+                            banner.imagePath,
+                            fit: BoxFit.cover,
+                            height: double.maxFinite,
+                            width: double.maxFinite,
+                          )
+                          : ImageNetwork(
+                            banner.imagePath,
+                            height: double.maxFinite,
+                            width: double.maxFinite,
+                            errorWidget: ColoredBox(
+                              color: Colors.grey.shade200,
+                              child: const Icon(
+                                Icons.error,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ),
-                        ),
                 ),
               ),
+              if (hasWa) _buildWhatsAppButton(banner),
             ],
           ),
         ),
@@ -1590,34 +1719,37 @@ class _BannersViewState extends State<BannersView> {
               },
               itemBuilder: (context, index) {
                 final banner = _banners[index];
-                final hasWa = banner.whatsappNumber != null &&
+                final hasWa =
+                    banner.whatsappNumber != null &&
                     banner.whatsappNumber!.trim().isNotEmpty;
                 return Stack(
                   children: [
                     Positioned.fill(
                       child: GestureDetector(
                         onTap: () => _onBannerTap(banner),
-                        child: banner.isAsset
-                            ? Image.asset(
-                                banner.imagePath,
-                                fit: BoxFit.cover,
-                                height: double.maxFinite,
-                                width: double.maxFinite,
-                              )
-                            : ImageNetwork(
-                                banner.imagePath,
-                                height: double.maxFinite,
-                                width: double.maxFinite,
-                                errorWidget: ColoredBox(
-                                  color: Colors.grey.shade200,
-                                  child: const Icon(
-                                    Icons.error,
-                                    color: Colors.grey,
+                        child:
+                            banner.isAsset
+                                ? Image.asset(
+                                  banner.imagePath,
+                                  fit: BoxFit.cover,
+                                  height: double.maxFinite,
+                                  width: double.maxFinite,
+                                )
+                                : ImageNetwork(
+                                  banner.imagePath,
+                                  height: double.maxFinite,
+                                  width: double.maxFinite,
+                                  errorWidget: ColoredBox(
+                                    color: Colors.grey.shade200,
+                                    child: const Icon(
+                                      Icons.error,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ),
-                              ),
                       ),
                     ),
+                    if (hasWa) _buildWhatsAppButton(banner),
                   ],
                 );
               },
@@ -1631,51 +1763,64 @@ class _BannersViewState extends State<BannersView> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.center,
-            children: List.generate(_banners.length, (index) {
-              final isActive = index == _currentPage;
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {
-                  _pageController.animateToPage(
-                    index,
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOut,
-                  );
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 350),
-                    curve: Curves.easeInOutCubic,
-                    height: isActive ? 16 : 9,
-                    width: isActive ? 30 : 11,
-                    padding: isActive
-                        ? const EdgeInsets.symmetric(horizontal: 3.5, vertical: 2.5)
-                        : EdgeInsets.zero,
-                    decoration: BoxDecoration(
-                      color: isActive ? const Color(0xFFFFF1F2) : const Color(0xFFCBD5E1),
-                      borderRadius: BorderRadius.circular(isActive ? 10 : 4.5),
-                      border: Border.all(
-                        color: isActive ? const Color(0xFFFECDD3) : Colors.transparent,
-                        width: isActive ? 1.2 : 0,
+              children: List.generate(_banners.length, (index) {
+                final isActive = index == _currentPage;
+                return GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () {
+                    _pageController.animateToPage(
+                      index,
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeInOut,
+                    );
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 350),
+                      curve: Curves.easeInOutCubic,
+                      height: isActive ? 16 : 9,
+                      width: isActive ? 30 : 11,
+                      padding:
+                          isActive
+                              ? const EdgeInsets.symmetric(
+                                horizontal: 3.5,
+                                vertical: 2.5,
+                              )
+                              : EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        color:
+                            isActive
+                                ? const Color(0xFFFFF1F2)
+                                : const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(
+                          isActive ? 10 : 4.5,
+                        ),
+                        border: Border.all(
+                          color:
+                              isActive
+                                  ? const Color(0xFFFECDD3)
+                                  : Colors.transparent,
+                          width: isActive ? 1.2 : 0,
+                        ),
                       ),
+                      child:
+                          isActive
+                              ? AnimatedContainer(
+                                duration: const Duration(milliseconds: 350),
+                                curve: Curves.easeInOutCubic,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDC2626),
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                              )
+                              : const SizedBox.shrink(),
                     ),
-                    child: isActive
-                        ? AnimatedContainer(
-                            duration: const Duration(milliseconds: 350),
-                            curve: Curves.easeInOutCubic,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFDC2626),
-                              borderRadius: BorderRadius.circular(5),
-                            ),
-                          )
-                        : const SizedBox.shrink(),
                   ),
-                ),
-              );
-            }),
+                );
+              }),
+            ),
           ),
-        ),
         ),
       ],
     );
@@ -1742,18 +1887,21 @@ class __AssignedGymTrainersSectionState
 
       if (cached != null && cached!.trainers != null) {
         if (trainers.isEmpty) {
-          trainers = cached!.trainers!
-              .map((t) => AssignedTrainerModel(
-                    id: t.id,
-                    name: t.fullName,
-                    profileImage: t.profileImage,
-                    mobile: t.mobile,
-                    experienceYears: t.experienceYears,
-                    bio: t.bio,
-                    specializations: t.specializations,
-                    fullGymTrainer: t,
-                  ))
-              .toList();
+          trainers =
+              cached!.trainers!
+                  .map(
+                    (t) => AssignedTrainerModel(
+                      id: t.id,
+                      name: t.fullName,
+                      profileImage: t.profileImage,
+                      mobile: t.mobile,
+                      experienceYears: t.experienceYears,
+                      bio: t.bio,
+                      specializations: t.specializations,
+                      fullGymTrainer: t,
+                    ),
+                  )
+                  .toList();
         }
       }
 
@@ -1783,9 +1931,12 @@ class __AssignedGymTrainersSectionState
           () {},
           (either) => either.fold((_) {}, (homeModel) {
             if (homeModel.assignedTrainer != null) {
-              final exists = finalTrainers.any((t) =>
-                  (t.id != null && t.id == homeModel.assignedTrainer!.id) ||
-                  (t.name != null && t.name == homeModel.assignedTrainer!.name));
+              final exists = finalTrainers.any(
+                (t) =>
+                    (t.id != null && t.id == homeModel.assignedTrainer!.id) ||
+                    (t.name != null &&
+                        t.name == homeModel.assignedTrainer!.name),
+              );
               if (!exists) {
                 finalTrainers.insert(0, homeModel.assignedTrainer!);
               }
@@ -1810,7 +1961,7 @@ class __AssignedGymTrainersSectionState
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 215,
+              height: 166,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: finalTrainers.length,
@@ -1821,7 +1972,7 @@ class __AssignedGymTrainersSectionState
                 },
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
           ],
         );
       },
@@ -1838,28 +1989,32 @@ class _GiftBoxPainter extends CustomPainter {
     canvas.save();
     canvas.scale(scale, scale);
 
-    final whiteFill = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    final whiteFill =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.fill;
 
-    final whiteStroke = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
+    final whiteStroke =
+        Paint()
+          ..color = Colors.white
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round;
 
     // Bow loops
-    final leftLoop = Path()
-      ..moveTo(13.0, 7.0)
-      ..cubicTo(10.5, 2.5, 5.8, 2.5, 7.8, 6.0)
-      ..cubicTo(8.8, 7.2, 11.2, 7.2, 13.0, 7.0);
+    final leftLoop =
+        Path()
+          ..moveTo(13.0, 7.0)
+          ..cubicTo(10.5, 2.5, 5.8, 2.5, 7.8, 6.0)
+          ..cubicTo(8.8, 7.2, 11.2, 7.2, 13.0, 7.0);
     canvas.drawPath(leftLoop, whiteStroke);
 
-    final rightLoop = Path()
-      ..moveTo(13.0, 7.0)
-      ..cubicTo(15.5, 2.5, 20.2, 2.5, 18.2, 6.0)
-      ..cubicTo(17.2, 7.2, 14.8, 7.2, 13.0, 7.0);
+    final rightLoop =
+        Path()
+          ..moveTo(13.0, 7.0)
+          ..cubicTo(15.5, 2.5, 20.2, 2.5, 18.2, 6.0)
+          ..cubicTo(17.2, 7.2, 14.8, 7.2, 13.0, 7.0);
     canvas.drawPath(rightLoop, whiteStroke);
 
     // Knot
@@ -1908,6 +2063,70 @@ class _GiftBoxPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+class _TrainerStarsArcPainter extends CustomPainter {
+  final int starCount;
+  final double cx;
+  final double cy;
+  final double radius;
+  final double angleStep;
 
+  const _TrainerStarsArcPainter({
+    required this.starCount,
+    required this.cx,
+    required this.cy,
+    required this.radius,
+    required this.angleStep,
+  });
 
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (starCount <= 1) return;
 
+    final centerIndex = (starCount - 1) / 2.0;
+    final rightmostAngleDeg = 90.0 - centerIndex * angleStep;
+    final sweepAngleDeg = (starCount - 1) * angleStep;
+
+    final startAngleRad = rightmostAngleDeg * math.pi / 180.0;
+    final sweepAngleRad = sweepAngleDeg * math.pi / 180.0;
+
+    final rect = Rect.fromCircle(center: Offset(cx, cy), radius: radius);
+
+    // Subtle drop shadow under ribbon
+    final shadowPaint =
+        Paint()
+          ..color = Colors.black.withOpacity(0.12)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5.5
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
+
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy + 1.2), radius: radius),
+      startAngleRad,
+      sweepAngleRad,
+      false,
+      shadowPaint,
+    );
+
+    // Golden curved ribbon connecting star badges
+    final ribbonPaint =
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0xFFE58F00), Color(0xFFF59E0B), Color(0xFFE58F00)],
+          ).createShader(rect)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5.0
+          ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(rect, startAngleRad, sweepAngleRad, false, ribbonPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrainerStarsArcPainter oldDelegate) {
+    return oldDelegate.starCount != starCount ||
+        oldDelegate.cx != cx ||
+        oldDelegate.cy != cy ||
+        oldDelegate.radius != radius ||
+        oldDelegate.angleStep != angleStep;
+  }
+}

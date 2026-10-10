@@ -24,6 +24,7 @@ final class ChallengeRepository {
     int pageSize = 10,
     String? status,
     String? challengeType,
+    List<int>? brandIds,
     String? category,
     String? search,
   }) async {
@@ -42,6 +43,13 @@ final class ChallengeRepository {
           type = 'community_goal';
         }
         queryParams['challenge_type'] = type;
+      }
+      if (brandIds != null && brandIds.isNotEmpty) {
+        if (brandIds.length == 1) {
+          queryParams['brand_id'] = brandIds.first;
+        } else {
+          queryParams['brand_ids'] = brandIds.join(',');
+        }
       }
       if (category != null && category.isNotEmpty) {
         queryParams['category'] = category.toLowerCase();
@@ -74,6 +82,43 @@ final class ChallengeRepository {
       debugPrint('Error fetching challenges list: $e');
     }
     return const ChallengeListResponse(results: []);
+  }
+
+  /// GET /api/v1/customer/challenges/partners/
+  Future<List<ChallengePartner>> getChallengePartners() async {
+    try {
+      final token = Feggy.read<AppCubit>()?.state.currentUser?.access;
+      final Map<String, dynamic> headers = {
+        'X-Platform': platformSource,
+      };
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await _dio.get<dynamic>(
+        ApiUris.challengePartners,
+        options: Options(headers: headers),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        if (response.data is Map<String, dynamic>) {
+          final data = response.data as Map<String, dynamic>;
+          final results = data['results'] as List<dynamic>?;
+          if (results != null) {
+            return results
+                .map((e) => ChallengePartner.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+        } else if (response.data is List) {
+          return (response.data as List)
+              .map((e) => ChallengePartner.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching challenge partners: $e');
+    }
+    return [];
   }
 
   /// GET /api/v1/customer/challenges/{challenge_id}/

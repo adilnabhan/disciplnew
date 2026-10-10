@@ -23,6 +23,29 @@ class WorkoutLogScreen extends StatefulWidget {
   State<WorkoutLogScreen> createState() => _WorkoutLogScreenState();
 }
 
+enum WorkoutDayStatus {
+  verified,
+  completed,
+  rest,
+  missed,
+  none,
+}
+
+Color _getWorkoutDotColor(WorkoutDayStatus status) {
+  switch (status) {
+    case WorkoutDayStatus.verified:
+      return const Color(0xFF019C37); // Green
+    case WorkoutDayStatus.completed:
+      return const Color(0xFFDCA71B); // Yellow
+    case WorkoutDayStatus.rest:
+      return const Color(0xFF86A8E7); // Blue
+    case WorkoutDayStatus.missed:
+      return const Color(0xFFE53935); // Red
+    case WorkoutDayStatus.none:
+      return Colors.transparent;
+  }
+}
+
 class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   DateTime _selectedDate = DateTime.now();
 
@@ -36,11 +59,170 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   ApiException? _activeError;
   CustomerDetailsModel? _customerDetails;
 
+  final Map<String, WorkoutDayStatus> _dayStatusMap = {};
+  final Set<int> _loadedMonths = {};
+  DateTime? _calendarStartDate;
+
+  String _formatDateKey(DateTime d) {
+    return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+  }
+
+  WorkoutDayStatus _getStatusForDate(DateTime d) {
+    final today = DateTime.now();
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+    final dateOnly = DateTime(d.year, d.month, d.day);
+
+    if (dateOnly.isAfter(todayMidnight)) {
+      return WorkoutDayStatus.none;
+    }
+
+    final key = _formatDateKey(dateOnly);
+    if (_dayStatusMap.containsKey(key)) {
+      return _dayStatusMap[key]!;
+    }
+
+    final monthKey = d.year * 100 + d.month;
+    if (_loadedMonths.contains(monthKey)) {
+      if (dateOnly.isBefore(todayMidnight)) {
+        if (_calendarStartDate != null &&
+            dateOnly.isBefore(_calendarStartDate!)) {
+          return WorkoutDayStatus.none;
+        }
+        return WorkoutDayStatus.missed;
+      }
+      return WorkoutDayStatus.none;
+    }
+
+    return WorkoutDayStatus.none;
+  }
+
+  Future<void> _loadCalendarForMonth(
+    int year,
+    int month, {
+    bool forceRefresh = false,
+  }) async {
+    final monthKey = year * 100 + month;
+    if (!forceRefresh && _loadedMonths.contains(monthKey)) return;
+    _loadedMonths.add(monthKey);
+
+    final res = await WorkoutRepository().getWorkoutCalendarForMonth(
+      year: year,
+      month: month,
+      forceRefresh: forceRefresh,
+    );
+
+    if (!mounted) return;
+
+    res.fold(
+      (err) {
+        if (forceRefresh) {
+          _loadedMonths.remove(monthKey);
+        }
+      },
+      (data) {
+        _parseMonthCalendarData(data, year, month);
+        if (mounted) {
+          setState(() {});
+        }
+      },
+    );
+  }
+
+  void _parseMonthCalendarData(
+    Map<String, dynamic> data,
+    int year,
+    int month,
+  ) {
+    final String? apiStartDateStr = data['calendar_start_date'] as String?;
+    if (apiStartDateStr != null) {
+      final parsed = DateTime.tryParse(apiStartDateStr);
+      if (parsed != null) {
+        _calendarStartDate = DateTime(parsed.year, parsed.month, parsed.day);
+      }
+    }
+
+    final List<dynamic> days =
+        (data['days'] as List<dynamic>?) ??
+        (data['calendar'] as List<dynamic>?) ??
+        (data['results'] as List<dynamic>?) ??
+        [];
+
+    final today = DateTime.now();
+    final todayMidnight = DateTime(today.year, today.month, today.day);
+
+    for (final dayItem in days) {
+      if (dayItem is Map<String, dynamic>) {
+        final dateStr = dayItem['date']?.toString();
+        if (dateStr == null) continue;
+        final date = DateTime.tryParse(dateStr);
+        if (date == null) continue;
+        final dateOnly = DateTime(date.year, date.month, date.day);
+        final dateKey = _formatDateKey(dateOnly);
+
+        final bool isCompleted =
+            dayItem['is_completed'] == true || dayItem['completed'] == true;
+        final bool isVerified =
+            dayItem['is_verified'] == true || dayItem['verified'] == true;
+        final bool isRestDay =
+            dayItem['is_rest_day'] == true || dayItem['rest_day'] == true;
+
+        WorkoutDayStatus status;
+        if (dateOnly.isAfter(todayMidnight)) {
+          status = WorkoutDayStatus.none;
+        } else if (_calendarStartDate != null &&
+            dateOnly.isBefore(_calendarStartDate!)) {
+          status = WorkoutDayStatus.none;
+        } else if (isVerified) {
+          status = WorkoutDayStatus.verified;
+        } else if (isCompleted) {
+          status = WorkoutDayStatus.completed;
+        } else if (isRestDay) {
+          status = WorkoutDayStatus.rest;
+        } else if (dateOnly.isBefore(todayMidnight)) {
+          status = WorkoutDayStatus.missed;
+        } else {
+          status = WorkoutDayStatus.none;
+        }
+
+        _dayStatusMap[dateKey] = status;
+      }
+    }
+  }
+
+  void _loadCalendarMonthsAround(DateTime date) {
+    _loadCalendarForMonth(date.year, date.month);
+    final prev = DateTime(date.year, date.month - 1, 1);
+    _loadCalendarForMonth(prev.year, prev.month);
+    if (date.month < 12) {
+      final next = DateTime(date.year, date.month + 1, 1);
+      if (!next.isAfter(DateTime.now())) {
+        _loadCalendarForMonth(next.year, next.month);
+      }
+    }
+  }
+
+  void _onScrollCalendar() {
+    if (!_scrollController.hasClients) return;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final double slotWidth = (screenWidth - 32.0) / 5.0;
+    final index =
+        (_scrollController.offset / slotWidth)
+            .round()
+            .clamp(0, _scrollableDays.length - 1);
+    final visibleDate = _scrollableDays[index];
+    _loadCalendarForMonth(visibleDate.year, visibleDate.month);
+  }
+
   Future<void> _retryLoading() async {
     await Future.wait([
       _loadMyPlans(),
       _loadActiveSessionTitle(),
       _loadWorkoutLogForSelectedDate(),
+      _loadCalendarForMonth(
+        _selectedDate.year,
+        _selectedDate.month,
+        forceRefresh: true,
+      ),
     ]);
   }
 
@@ -69,6 +251,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+    _scrollController.addListener(_onScrollCalendar);
 
     // Generate 180 days before today, today itself, and 2 upcoming days (total 183 days)
     final today = DateTime.now();
@@ -86,6 +269,21 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       _loadMyPlans();
       _loadActiveSessionTitle();
       _loadWorkoutLogForSelectedDate();
+      _loadCalendarMonthsAround(today);
+
+      // Preload remaining past months in background
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        final months = <int>{};
+        for (final d in _scrollableDays) {
+          months.add(d.year * 100 + d.month);
+        }
+        for (final m in months) {
+          final year = m ~/ 100;
+          final month = m % 100;
+          _loadCalendarForMonth(year, month);
+        }
+      });
     });
   }
 
@@ -228,6 +426,17 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           return 0;
         });
         if (mounted) {
+          final dateKey = _formatDateKey(_selectedDate);
+          final hasVerified =
+              enrichedList.any((w) => (w['is_verified'] as bool?) == true);
+          final hasCompleted = enrichedList.any((w) =>
+              ((w['is_completed'] as bool?) ?? false) ||
+              w['status']?.toString().toLowerCase() == 'completed');
+          if (hasVerified) {
+            _dayStatusMap[dateKey] = WorkoutDayStatus.verified;
+          } else if (hasCompleted) {
+            _dayStatusMap[dateKey] = WorkoutDayStatus.completed;
+          }
           setState(() {
             _selectedDateWorkouts = enrichedList;
             _isLoadingDateLog = false;
@@ -281,6 +490,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScrollCalendar);
     _scrollController.dispose();
     super.dispose();
   }
@@ -324,6 +534,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       });
       _centerSelectedDate();
       _loadWorkoutLogForSelectedDate();
+      _loadCalendarMonthsAround(_selectedDate);
       return;
     }
 
@@ -344,6 +555,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     });
     _centerSelectedDate();
     _loadWorkoutLogForSelectedDate();
+    _loadCalendarMonthsAround(_selectedDate);
   }
 
   void _selectDate(DateTime date) {
@@ -352,6 +564,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     });
     _centerSelectedDate();
     _loadWorkoutLogForSelectedDate();
+    _loadCalendarMonthsAround(date);
   }
 
   List<Map<String, dynamic>> _parseWorkoutExercises(dynamic data) {
@@ -842,34 +1055,49 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgcolorgrey,
       appBar: AppBar(
-        backgroundColor: AppColors.light,
+        backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
+        automaticallyImplyLeading: false,
         centerTitle: false,
-        titleSpacing: 20,
+        titleSpacing: 16,
         title: Text(
-              'Workout Log',
-              style: AppStyles.text20Px.poppins.w500.copyWith(
-                height: 1.0,
-                color: AppColors.textDark,
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 20),
-                child: GestureDetector(
-                  onTap: () {
-                    context.push(const SettingsScreen());
-                  },
-                  child: SvgPicture.asset(
-                    'assets/images/svg/icons/settings _icon.svg',
-                    width: 22,
-                    height: 22,
+          'Workout Log',
+          style: AppStyles.text20Px.poppins.w500.copyWith(
+            color: AppColors.textDark,
+          ),
+        ),
+        actions: [
+          Center(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                context.push(const SettingsScreen());
+              },
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEFF1F4),
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: SvgPicture.asset(
+                  'assets/images/svg/icons/settings _icon.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Color(0xFF1F2937),
+                    BlendMode.srcIn,
                   ),
                 ),
               ),
-            ],
+            ),
           ),
+          const SizedBox(width: 16),
+        ],
+      ),
           body:
               !isCustomer
                   ? _GuestWorkoutView(
@@ -892,10 +1120,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                               _buildActiveWorkoutBanner(),
                               const SizedBox(height: 12),
                             ] else ...[
-                              const SizedBox(height: 21),
+                              const SizedBox(height: 14),
                             ],
                             _buildMonthNav(),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 12),
                             _buildWeekStrip(),
                             const SizedBox(height: 20),
                             Padding(
@@ -1025,7 +1253,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _NavArrow(icon: Icons.chevron_left, onTap: () => _changeMonth(-1)),
+          _NavArrow(
+            icon: Icons.chevron_left,
+            onTap: () => _changeMonth(-1),
+          ),
           const SizedBox(width: 12),
           Text(
             monthLabel,
@@ -1053,21 +1284,27 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
     final todayMidnight = DateTime(today.year, today.month, today.day);
 
     return SizedBox(
-      height: 85,
+      height: 108,
       child: ListView.builder(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _scrollableDays.length,
         itemBuilder: (context, index) {
           final d = _scrollableDays[index];
           final isFutureDay = d.isAfter(todayMidnight);
+          final status = _getStatusForDate(d);
           return SizedBox(
             width: slotWidth,
             child: Center(
               child: _DayTile(
                 date: d,
                 selected: _isSameDay(d, _selectedDate),
+                isFuture: isFutureDay,
+                status: status,
+                width: (slotWidth - 6).clamp(60.0, 70.0),
+                height: 96,
                 onTap: isFutureDay ? null : () => _selectDate(d),
               ),
             ),
@@ -1085,13 +1322,13 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Button.filled(
-            size: const Size(double.infinity, 45),
-            title: 'Start Empty Workout',
-            style: AppStyles.text14Px.poppins.w600.copyWith(
+            size: const Size(double.infinity, 48),
+            title: 'Start empty workout',
+            style: AppStyles.text15Px.poppins.w500.copyWith(
               color: Colors.white,
             ),
             icon: const Icon(Icons.add, color: Colors.white, size: 20),
-            raduis: 12,
+            raduis: 28,
             ontap: () async {
               if (_activeSessionData != null) {
                 _showResumeOrNewDialog(context, isPreset: false);
@@ -1114,23 +1351,25 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           ),
           const SizedBox(height: 12),
           Button.filled(
-            size: const Size(double.infinity, 45),
-            title: 'Start a Preset',
-            buttonColor: const Color(0xFFFFF4F4),
-            side: const BorderSide(color: Color(0xFFF0B5B7)),
-            style: AppStyles.text14Px.poppins.w600.copyWith(
-              color: AppColors.primary,
+            size: const Size(double.infinity, 48),
+            title: 'Start a preset',
+            buttonColor: Colors.white,
+            side: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+            style: AppStyles.text15Px.poppins.w500.copyWith(
+              color: AppColors.textDark,
             ),
-            icon: SvgPicture.asset(
-              'assets/images/svg/icons/presets.svg',
+            icon: SvgPicture.string(
+              '''<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2.5" y="3.5" width="4.5" height="4.5" rx="1.2" stroke="#CF0B10" stroke-width="1.8"/>
+                <path d="M9.5 5.75H17.5" stroke="#CF0B10" stroke-width="1.8" stroke-linecap="round"/>
+                <rect x="2.5" y="11.5" width="4.5" height="4.5" rx="1.2" stroke="#CF0B10" stroke-width="1.8"/>
+                <path d="M9.5 12.5H17.5" stroke="#CF0B10" stroke-width="1.8" stroke-linecap="round"/>
+                <path d="M9.5 15.75H14.5" stroke="#CF0B10" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>''',
               width: 20,
               height: 20,
-              colorFilter: const ColorFilter.mode(
-                AppColors.primary,
-                BlendMode.srcIn,
-              ),
             ),
-            raduis: 12,
+            raduis: 28,
             ontap: () async {
               if (_activeSessionData != null) {
                 _showResumeOrNewDialog(context, isPreset: true);
@@ -1461,10 +1700,22 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
 
 // ── Day tile ─────────────────────────────────────────────────────────────────
 class _DayTile extends StatelessWidget {
-  const _DayTile({required this.date, required this.selected, this.onTap});
+  const _DayTile({
+    required this.date,
+    required this.selected,
+    required this.isFuture,
+    this.status = WorkoutDayStatus.none,
+    this.width,
+    this.height,
+    this.onTap,
+  });
 
   final DateTime date;
   final bool selected;
+  final bool isFuture;
+  final WorkoutDayStatus status;
+  final double? width;
+  final double? height;
   final VoidCallback? onTap;
 
   @override
@@ -1472,105 +1723,105 @@ class _DayTile extends StatelessWidget {
     final dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final dayName = dayNames[date.weekday - 1];
 
-    final isEnabled = onTap != null;
+    final Color bgColor;
+    final Color dayNameColor;
+    final Color dayNumColor;
+    final Color dotColor;
+    final bool showDot;
+    final List<BoxShadow>? boxShadow;
+    final Border? border;
+
+    if (selected) {
+      bgColor = AppColors.primary;
+      dayNameColor = Colors.white.withValues(alpha: 0.9);
+      dayNumColor = Colors.white;
+      dotColor = Colors.white;
+      showDot = true;
+      boxShadow = [
+        BoxShadow(
+          color: AppColors.primary.withValues(alpha: 0.28),
+          blurRadius: 8,
+          offset: const Offset(0, 4),
+        ),
+      ];
+      border = null;
+    } else if (isFuture) {
+      bgColor = const Color(0xFFECEEF2);
+      dayNameColor = const Color(0xFFA0A5B1);
+      dayNumColor = const Color(0xFFA0A5B1);
+      dotColor = Colors.transparent;
+      showDot = false;
+      boxShadow = null;
+      border = null;
+    } else {
+      bgColor = Colors.white;
+      dayNameColor = const Color(0xFF757575);
+      dayNumColor = const Color(0xFF1E2022);
+      dotColor = _getWorkoutDotColor(status);
+      showDot = status != WorkoutDayStatus.none;
+      boxShadow = [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.04),
+          blurRadius: 6,
+          offset: const Offset(0, 2),
+        ),
+      ];
+      border = Border.all(
+        color: const Color(0xFFEBEBEB),
+        width: 1,
+      );
+    }
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        width: selected ? 65 : 55,
-        height: selected ? 85 : 70,
+        width: width ?? 68,
+        height: height ?? 96,
         decoration: BoxDecoration(
-          color: selected ? AppColors.primary : const Color(0xFFECECEC),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow:
-              selected
-                  ? [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.24),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                  : null,
+          color: bgColor,
+          borderRadius: BorderRadius.circular(20),
+          border: border,
+          boxShadow: boxShadow,
         ),
-        child: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Padding(
-            padding:
-                selected
-                    ? const EdgeInsets.only(
-                      top: 12,
-                      bottom: 12,
-                      left: 20,
-                      right: 20,
-                    )
-                    : const EdgeInsets.only(
-                      top: 12,
-                      bottom: 12,
-                      left: 16,
-                      right: 16,
-                    ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  '${date.day}',
-                  textAlign: TextAlign.center,
-                  style:
-                      selected
-                          ? AppStyles.text16Px.poppins.w700.copyWith(
-                            height: 1.3,
-                            color: Colors.white,
-                          )
-                          : isEnabled
-                          ? AppStyles.text16Px.poppins.w600.copyWith(
-                            height: 1.3,
-                            color: AppColors.button,
-                          )
-                          : AppStyles.text16Px.poppins.w600.copyWith(
-                            height: 1.3,
-                            color: const Color(0xFF888888),
-                          ),
-                ),
-                SizedBox(height: selected ? 12 : 4),
-                Text(
-                  dayName,
-                  textAlign: TextAlign.center,
-                  style:
-                      selected
-                          ? AppStyles.text12Px.poppins.w500.copyWith(
-                            fontSize: 12,
-                            height: 1.3,
-                            color: Colors.white,
-                          )
-                          : isEnabled
-                          ? AppStyles.text12Px.poppins.w400.copyWith(
-                            fontSize: 12,
-                            height: 1.3,
-                            color: AppColors.button,
-                          )
-                          : AppStyles.text12Px.poppins.w400.copyWith(
-                            fontSize: 12,
-                            height: 1.3,
-                            color: const Color(0xFF888888),
-                          ),
-                ),
-                if (selected) ...[
-                  const SizedBox(height: 6),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              dayName,
+              textAlign: TextAlign.center,
+              style: AppStyles.text12Px.poppins.w500.copyWith(
+                fontSize: 12.5,
+                height: 1.1,
+                color: dayNameColor,
+              ),
             ),
-          ),
+            const SizedBox(height: 6),
+            Text(
+              '${date.day}',
+              textAlign: TextAlign.center,
+              style: AppStyles.text18Px.poppins.copyWith(
+                fontSize: 19.5,
+                height: 1.1,
+                fontWeight: selected
+                    ? FontWeight.w700
+                    : (isFuture ? FontWeight.w400 : FontWeight.w600),
+                color: dayNumColor,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (showDot)
+              Container(
+                width: 5.5,
+                height: 5.5,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: dotColor,
+                ),
+              )
+            else
+              const SizedBox(width: 5.5, height: 5.5),
+          ],
         ),
       ),
     );
@@ -2215,28 +2466,6 @@ class _WorkoutCard extends StatelessWidget {
                       width: 28,
                       height: 27,
                     ),
-          ),
-        if (isMembershipExpired)
-          Positioned(
-            top: -7.0,
-            right: (isCompleted || isMissed) ? 32.0 : -5.35,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFD30C15),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white, width: 1.5),
-              ),
-              child: const Text(
-                'Expired',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
           ),
       ],
     );

@@ -494,6 +494,79 @@ final class WorkoutRepository {
     }
   }
 
+  Future<Either<ApiException, Map<String, dynamic>>> getWorkoutSessionPoints({
+    int? sessionId,
+  }) async {
+    final String uri = sessionId != null
+        ? ApiUris.workoutSessionPoints(sessionId)
+        : ApiUris.workoutPoints;
+
+    print('═══════════════════════════════════════════════════════════');
+    print('🚀 [WORKOUT POINTS API] Calling GET: $uri');
+    print('═══════════════════════════════════════════════════════════');
+
+    try {
+      final res = await _dio.get<dynamic>(
+        uri,
+        options: Options(headers: {'X-Platform': platformSource}),
+      );
+
+      print('✅ [WORKOUT POINTS API RESPONSE]');
+      print('   Status Code: ${res.statusCode}');
+      print('   Response Data: ${res.data}');
+      print('═══════════════════════════════════════════════════════════');
+
+      if ((res.statusCode == 200 || res.statusCode == 201) && res.data != null) {
+        if (res.data is Map) {
+          return right(Map<String, dynamic>.from(res.data as Map));
+        }
+      }
+      return left(const ApiException.unknown());
+    } on DioException catch (e) {
+      print('⚠️ [WORKOUT POINTS API ERROR]');
+      print('   Status Code: ${e.response?.statusCode}');
+      print('   Response: ${e.response?.data ?? e.message}');
+      print('═══════════════════════════════════════════════════════════');
+
+      if (sessionId != null && e.response?.statusCode == 404) {
+        try {
+          final altUri = ApiUris.sessionPoints(sessionId);
+          print('🔄 [WORKOUT POINTS API] Trying alternate URI: $altUri');
+          final altRes = await _dio.get<dynamic>(
+            altUri,
+            options: Options(headers: {'X-Platform': platformSource}),
+          );
+          print('✅ [WORKOUT POINTS ALT SUCCESS]: ${altRes.data}');
+          print('═══════════════════════════════════════════════════════════');
+          if (altRes.data is Map) {
+            return right(Map<String, dynamic>.from(altRes.data as Map));
+          }
+        } catch (_) {
+          try {
+            final queryUri = '${ApiUris.workoutPoints}?session_id=$sessionId';
+            print('🔄 [WORKOUT POINTS API] Trying query URI: $queryUri');
+            final queryRes = await _dio.get<dynamic>(
+              ApiUris.workoutPoints,
+              queryParameters: {'session_id': sessionId},
+              options: Options(headers: {'X-Platform': platformSource}),
+            );
+            print('✅ [WORKOUT POINTS QUERY SUCCESS]: ${queryRes.data}');
+            print('═══════════════════════════════════════════════════════════');
+            if (queryRes.data is Map) {
+              return right(Map<String, dynamic>.from(queryRes.data as Map));
+            }
+          } catch (err) {
+            print('❌ [WORKOUT POINTS FALLBACKS FAILED]: $err');
+          }
+        }
+      }
+      return left(const ApiException.unknown());
+    } catch (e) {
+      print('❌ [WORKOUT POINTS API EXCEPTION]: $e');
+      return left(const ApiException.unknown());
+    }
+  }
+
   Future<Either<ApiException, Map<String, dynamic>>> syncSession({
     required int sessionId,
     required Map<String, dynamic> payload,
@@ -1150,9 +1223,9 @@ final class WorkoutRepository {
 
       return await Feggy.async(
         call: _dio.post<dynamic>(
-          '/api/v1/gym-leads/',
+          ApiUris.gymLeads,
           data: data,
-          options: Options(headers: {'X-Platform': platformSource}),
+          options: Options(headers: {'X-Platform': platformSource}).token,
         ),
         onSuccess: (res) {
           if (res.statusCode == 200 || res.statusCode == 201) {

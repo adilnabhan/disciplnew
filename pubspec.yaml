@@ -92,7 +92,6 @@ dependencies:
 
   #* Managing Directories
   path_provider: ^2.1.2
-  # audioplayers: ^5.2.1
 
   #* Notfication
   # awesome_notifications: ^0.9.2
@@ -141,6 +140,7 @@ dependencies:
   health: ^13.1.4
   qr_flutter: ^4.1.0
   dropdown_search: ^6.0.2
+  audioplayers: ^6.6.0
 
 dependency_overrides:
   web: any
@@ -180,6 +180,7 @@ flutter:
     - assets/images/png/vectors/No_workout-removebg-preview.png
     - assets/images/carousel_images/
     - assets/fonts/
+    - assets/Sounds/
 
   fonts:
     - family: TitanOne

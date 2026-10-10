@@ -1,33 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list_cubit.dart';
 import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list_state.dart';
+import 'package:customer_mobile_app/src/features/challenges/domain/models/challenge_list_model.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ChallengeFilterBar extends StatelessWidget {
   const ChallengeFilterBar({super.key});
-
-  static const List<Map<String, dynamic>> _typeOptions = [
-    {
-      'label': 'All Challenges',
-      'value': null,
-      'icon': Icons.grid_view_rounded,
-    },
-    {
-      'label': 'Lucky Draw',
-      'value': 'lucky_draw',
-      'icon': Icons.card_giftcard_rounded,
-    },
-    {
-      'label': 'Performance',
-      'value': 'performance',
-      'icon': Icons.show_chart_rounded,
-    },
-    {
-      'label': 'Community',
-      'value': 'community',
-      'icon': Icons.people_outline_rounded,
-    },
-  ];
 
   static const List<Map<String, dynamic>> _statusOptions = [
     {
@@ -57,16 +36,123 @@ class ChallengeFilterBar extends StatelessWidget {
     },
   ];
 
-  String _getTypeLabel(String? selectedType) {
-    if (selectedType == null || selectedType.isEmpty) {
-      return 'All Challenges';
-    }
-    for (final opt in _typeOptions) {
-      if (opt['value'] == selectedType) {
-        return opt['label'] as String;
-      }
-    }
-    return 'All Challenges';
+  static const List<Map<String, dynamic>> _typeDropdownOptions = [
+    {
+      'label': 'All Challenges',
+      'value': 'all',
+      'icon': Icons.grid_view_rounded,
+    },
+    {
+      'label': 'Performance',
+      'value': 'performance',
+      'icon': Icons.trending_up_rounded,
+    },
+    {
+      'label': 'Lucky Draw',
+      'value': 'lucky_draw',
+      'icon': Icons.card_giftcard_rounded,
+    },
+    {
+      'label': 'Community',
+      'value': 'community',
+      'icon': Icons.groups_rounded,
+    },
+  ];
+
+  static Widget _buildCheckbox(bool isChecked) {
+    return Container(
+      width: 22,
+      height: 22,
+      decoration: BoxDecoration(
+        color: isChecked ? const Color(0xFFD71920) : Colors.white,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(
+          color: isChecked ? const Color(0xFFD71920) : const Color(0xFFCBD5E1),
+          width: 1.5,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: isChecked
+          ? const Icon(
+              Icons.check_rounded,
+              size: 16,
+              color: Colors.white,
+            )
+          : null,
+    );
+  }
+
+  static Widget _buildPartnerLogo(ChallengePartner partner) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: partner.logo != null && partner.logo!.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: partner.logo!,
+                fit: BoxFit.cover,
+                memCacheWidth: 80,
+                memCacheHeight: 80,
+                placeholder: (_, __) => Container(
+                  color: const Color(0xFFF1F5F9),
+                  alignment: Alignment.center,
+                  child: Text(
+                    partner.name.isNotEmpty
+                        ? partner.name[0].toUpperCase()
+                        : 'P',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+                errorWidget: (_, __, ___) => Container(
+                  color: const Color(0xFFF1F5F9),
+                  alignment: Alignment.center,
+                  child: Text(
+                    partner.name.isNotEmpty
+                        ? partner.name[0].toUpperCase()
+                        : 'P',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              )
+            : Container(
+                color: const Color(0xFFF1F5F9),
+                alignment: Alignment.center,
+                child: Text(
+                  partner.name.isNotEmpty
+                      ? partner.name[0].toUpperCase()
+                      : 'P',
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ),
+      ),
+    );
   }
 
   void _showFilterBottomSheet(
@@ -75,7 +161,8 @@ class ChallengeFilterBar extends StatelessWidget {
     ChallengeListState state,
   ) {
     var tempStatus = state.selectedStatus;
-    var tempType = state.selectedChallengeType;
+    var tempPartnerIds = List<int>.from(state.selectedPartnerIds);
+    final searchController = TextEditingController();
 
     showModalBottomSheet<void>(
       context: context,
@@ -87,10 +174,22 @@ class ChallengeFilterBar extends StatelessWidget {
       builder: (bottomSheetContext) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
+            final query = searchController.text.trim().toLowerCase();
+            final filteredPartners = state.partners.where((p) {
+              if (query.isEmpty) return true;
+              return p.name.toLowerCase().contains(query);
+            }).toList();
+
             return SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                padding: EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  top: 12,
+                  bottom:
+                      MediaQuery.of(bottomSheetContext).viewInsets.bottom + 28,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -108,7 +207,7 @@ class ChallengeFilterBar extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
 
-                    // Header
+                    // Header: "Filter Challenges" + "Reset"
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -125,7 +224,8 @@ class ChallengeFilterBar extends StatelessWidget {
                           onPressed: () {
                             setSheetState(() {
                               tempStatus = 'all';
-                              tempType = null;
+                              tempPartnerIds.clear();
+                              searchController.clear();
                             });
                           },
                           child: const Text(
@@ -213,9 +313,9 @@ class ChallengeFilterBar extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // Section 2: Challenge Type
+                    // Section 2: Partner
                     const Text(
-                      'Challenge Type',
+                      'Partner',
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 14,
@@ -224,78 +324,179 @@ class ChallengeFilterBar extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _typeOptions.map((opt) {
-                        final isSelected = (tempType == opt['value']) ||
-                            (opt['value'] == null &&
-                                (tempType == null || tempType!.isEmpty));
-                        return GestureDetector(
-                          onTap: () {
-                            setSheetState(() {
-                              tempType = opt['value'] as String?;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? const Color(0xFFFFECEE)
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSelected
-                                    ? const Color(0xFFD71920)
-                                    : const Color(0xFFE2E8F0),
-                                width: 1.2,
+
+                    // Search partner bar
+                    Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(22),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.search_rounded,
+                            size: 20,
+                            color: Color(0xFF64748B),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: searchController,
+                              decoration: const InputDecoration(
+                                hintText: 'Search partner...',
+                                hintStyle: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 13.5,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
                               ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  opt['icon'] as IconData,
-                                  size: 14,
-                                  color: isSelected
-                                      ? const Color(0xFFD71920)
-                                      : const Color(0xFF64748B),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  opt['label'] as String,
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 12.5,
-                                    fontWeight: isSelected
-                                        ? FontWeight.w600
-                                        : FontWeight.w500,
-                                    color: isSelected
-                                        ? const Color(0xFFD71920)
-                                        : const Color(0xFF334155),
-                                  ),
-                                ),
-                              ],
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13.5,
+                                color: Color(0xFF1E293B),
+                              ),
+                              onChanged: (_) => setSheetState(() {}),
                             ),
                           ),
-                        );
-                      }).toList(),
+                          if (searchController.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                setSheetState(() {
+                                  searchController.clear();
+                                });
+                              },
+                              child: const Icon(
+                                Icons.close_rounded,
+                                size: 18,
+                                color: Color(0xFF94A3B8),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 26),
+                    const SizedBox(height: 14),
 
-                    // Apply Button
+                    // Partner List with Checkboxes
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: state.isLoadingPartners
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20),
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFFD71920),
+                                  strokeWidth: 2.5,
+                                ),
+                              ),
+                            )
+                          : ListView(
+                              shrinkWrap: true,
+                              children: [
+                                // All Partners Item
+                                if (query.isEmpty) ...[
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      setSheetState(() {
+                                        tempPartnerIds.clear();
+                                      });
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 7),
+                                      child: Row(
+                                        children: [
+                                          _buildCheckbox(tempPartnerIds.isEmpty),
+                                          const SizedBox(width: 14),
+                                          const Text(
+                                            'All Partners',
+                                            style: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontSize: 14.5,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF1E293B),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                ],
+
+                                // Individual Partners
+                                if (filteredPartners.isEmpty && query.isNotEmpty)
+                                  const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: Text(
+                                        'No partners found',
+                                        style: TextStyle(
+                                          fontFamily: 'Poppins',
+                                          fontSize: 13,
+                                          color: Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  ...filteredPartners.map((partner) {
+                                    final isChecked =
+                                        tempPartnerIds.contains(partner.id);
+                                    return GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {
+                                        setSheetState(() {
+                                          if (tempPartnerIds.contains(partner.id)) {
+                                            tempPartnerIds.remove(partner.id);
+                                          } else {
+                                            tempPartnerIds.add(partner.id);
+                                          }
+                                        });
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 6),
+                                        child: Row(
+                                          children: [
+                                            _buildCheckbox(isChecked),
+                                            const SizedBox(width: 14),
+                                            _buildPartnerLogo(partner),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                partner.name,
+                                                style: const TextStyle(
+                                                  fontFamily: 'Poppins',
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: Color(0xFF1E293B),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                              ],
+                            ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Apply Filters Button
                     GestureDetector(
                       onTap: () {
                         Navigator.pop(bottomSheetContext);
                         if (tempStatus != state.selectedStatus) {
                           cubit.filterByStatus(tempStatus);
                         }
-                        if (tempType != state.selectedChallengeType) {
-                          cubit.filterByChallengeType(tempType);
-                        }
+                        cubit.filterByPartners(tempPartnerIds);
                       },
                       child: Container(
                         width: double.infinity,
@@ -305,7 +506,8 @@ class ChallengeFilterBar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(25),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFD71920).withValues(alpha: 0.28),
+                              color: const Color(0xFFD71920)
+                                  .withValues(alpha: 0.28),
                               blurRadius: 8,
                               offset: const Offset(0, 3),
                             ),
@@ -338,17 +540,33 @@ class ChallengeFilterBar extends StatelessWidget {
     return BlocBuilder<ChallengeListCubit, ChallengeListState>(
       builder: (context, state) {
         final cubit = context.read<ChallengeListCubit>();
-        final currentTypeLabel = _getTypeLabel(state.selectedChallengeType);
-        final hasActiveStatus = state.selectedStatus != 'all';
+
+        final currentType = state.selectedChallengeType;
+        final currentTypeLabel = (currentType == null ||
+                currentType.isEmpty ||
+                currentType == 'all')
+            ? 'All Challenges'
+            : currentType == 'performance'
+                ? 'Performance'
+                : currentType == 'lucky_draw'
+                    ? 'Lucky Draw'
+                    : currentType == 'community'
+                        ? 'Community'
+                        : currentType;
+
+        final hasActiveFilter = state.selectedStatus != 'all' ||
+            state.selectedPartnerIds.isNotEmpty;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // All Challenges Dropdown Pill (Left)
-              PopupMenuButton<String?>(
-                onSelected: cubit.filterByChallengeType,
+              // Challenge Type Dropdown Pill (Left)
+              PopupMenuButton<String>(
+                onSelected: (val) {
+                  cubit.filterByChallengeType(val == 'all' ? null : val);
+                },
                 offset: const Offset(0, 48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -356,14 +574,16 @@ class ChallengeFilterBar extends StatelessWidget {
                 color: Colors.white,
                 elevation: 6,
                 itemBuilder: (context) {
-                  return _typeOptions.map((opt) {
-                    final isSelected =
-                        (state.selectedChallengeType == opt['value']) ||
-                            (opt['value'] == null &&
-                                (state.selectedChallengeType == null ||
-                                    state.selectedChallengeType!.isEmpty));
-                    return PopupMenuItem<String?>(
-                      value: opt['value'] as String?,
+                  return _typeDropdownOptions.map((opt) {
+                    final val = opt['value'] as String;
+                    final isSelected = val == 'all'
+                        ? (state.selectedChallengeType == null ||
+                            state.selectedChallengeType!.isEmpty ||
+                            state.selectedChallengeType == 'all')
+                        : state.selectedChallengeType == val;
+
+                    return PopupMenuItem<String>(
+                      value: val,
                       child: Row(
                         children: [
                           Icon(
@@ -475,7 +695,7 @@ class ChallengeFilterBar extends StatelessWidget {
                           color: Color(0xFF8B1D2C),
                         ),
                       ),
-                      if (hasActiveStatus) ...[
+                      if (hasActiveFilter) ...[
                         const SizedBox(width: 6),
                         Container(
                           width: 6,

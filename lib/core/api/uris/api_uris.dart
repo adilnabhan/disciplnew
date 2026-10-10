@@ -32,6 +32,15 @@ final class ApiUris {
   static final updateProfession = '${_v1}customer/manage/profile/profession/';
   static final bodyMeasurements = '${_v1}customer/measurements/';
   static final bodyMatrix = '${_v1}customer/body-matrix/';
+  static final customerBodyMetricsHistory =
+      '${_v1}customer/body-metrics/history/';
+  static String customerUserBodyMetricsHistory(dynamic userId) =>
+      '${_v1}customer/body-metrics/history/$userId/';
+  static String customerUserBodyMetricsByTimeframe(
+    dynamic userId,
+    String timeframe,
+  ) =>
+      '${_v1}customer/body-metrics/history/$userId/?timeframe=$timeframe';
   static final customerProfile = '${_v1}customer/profile/';
   static final profileCompletion = '${_v1}customer/profile/completion/';
   static final profileCompletionDismiss =
@@ -41,6 +50,13 @@ final class ApiUris {
   static final scoreCard = '${_v1}customer/score-card/';
   static String gymScoreCard(int gymId) =>
       '${_v1}customer/gyms/$gymId/score-card/';
+  static final personalRecords = '${_v1}customer/personal-records/';
+  static String personalRecordsForUser(dynamic userId) =>
+      '${_v1}customer/personal-records/$userId/';
+  static String personalRecordExercise(dynamic workoutId) =>
+      '${_v1}customer/personal-records/exercise/$workoutId/';
+  static String personalRecordUserExercise(dynamic userId, dynamic workoutId) =>
+      '${_v1}customer/personal-records/$userId/exercise/$workoutId/';
 
   ///============================= Home & Banners =============================\\\
   static final home = '${_v1}customer/customer-homepage/';
@@ -50,6 +66,7 @@ final class ApiUris {
   static final promotionalBanners = '${_v1}fitnesscenter/banners/';
   static final homeChallenges = '${_v1}customer/challenges/home/';
   static final challengesList = '${_v1}customer/challenges/';
+  static final challengePartners = '${_v1}customer/challenges/partners/';
   static final winnerPopup = '${_v1}customer/challenges/winner-popup/';
   static final markWinnerPopupSeen =
       '${_v1}customer/challenges/winner-popup/seen/';
@@ -95,6 +112,7 @@ final class ApiUris {
   static final fitnesscenterCategories = '${_v1}fitnesscenter/categories/';
   static final listFitnesscenter = '${_v1}customer/nearest/fitnesscenter/';
   static final listAllFitnesscenter = '${_v1}fitnesscenter/gym/list/';
+  static final gymLeads = '${_v1}gym-leads/';
 
   ///============================= Reviews =============================\\\
   static final addReview = '${_v1}customer/reviews/';
@@ -142,5 +160,10 @@ final class ApiUris {
   static String presetDetail(int id) => '${_v1}customer/presets/$id/';
 
   static final workoutCalendar = '${_v1}customer/workout-calendar/';
+  static String workoutSessionPoints(int id) =>
+      '${_v1}customer/workout-sessions/$id/points/';
+  static String sessionPoints(int id) =>
+      '${_v1}customer/sessions/$id/points/';
+  static final workoutPoints = '${_v1}customer/workout-points/';
   static final loginAsGuest = '${_v1}user/login/guest/';
 }

@@ -40,9 +40,10 @@ final class CustomerDetailsRepository {
     final now = DateTime.now();
     if (!forceRefresh &&
         _cachedCustomerDetails != null &&
+        _cachedCustomerDetails!.id == id &&
         _lastDetailsFetchTime != null &&
         now.difference(_lastDetailsFetchTime!).inMinutes < 5) {
-      print('CustomerDetailsRepository: returning cached details');
+      print('CustomerDetailsRepository: returning cached details for id -- $id');
       return right(_cachedCustomerDetails!);
     }
 
@@ -637,6 +638,62 @@ final class CustomerDetailsRepository {
       return left(
         ApiException.unknown(
           msg: e.message ?? 'Failed to fetch body matrix.',
+        ),
+      );
+    } catch (e) {
+      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+    }
+  }
+
+  /// @api {GET /api/v1/customer/body-metrics/history/ or /<user_id>/}
+  Future<Either<ApiException, BodyMetricsHistoryData>> fetchBodyMetricsHistory({
+    dynamic userId,
+    String? timeframe,
+    int? limit,
+    String? metric,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (timeframe != null && timeframe.isNotEmpty) {
+        queryParams['timeframe'] = timeframe;
+      }
+      if (limit != null) {
+        queryParams['limit'] = limit;
+      }
+      if (metric != null && metric.isNotEmpty) {
+        queryParams['metric'] = metric;
+      }
+
+      final url = userId != null
+          ? ApiUris.customerUserBodyMetricsHistory(userId)
+          : ApiUris.customerBodyMetricsHistory;
+
+      final response = await Dio().get<dynamic>(
+        url,
+        queryParameters: queryParams.isEmpty ? null : queryParams,
+        options: Options(
+          headers: {'X-Platform': platformSource},
+        ).token,
+      );
+
+      final statusCode = response.statusCode ?? 0;
+      if (statusCode == 200 && response.data != null) {
+        final dataMap = response.data is Map
+            ? Map<String, dynamic>.from(response.data as Map)
+            : <String, dynamic>{};
+        return right(BodyMetricsHistoryResponse.fromJson(dataMap).data);
+      }
+
+      return left(
+        ApiException.unknown(
+          msg: 'Unexpected response from server. Code: $statusCode',
+        ),
+      );
+    } on DioException catch (e) {
+      print('fetch body metrics history dio error -- $e');
+      return left(
+        ApiException.unknown(
+          msg: e.message ?? 'Failed to fetch body metrics history.',
         ),
       );
     } catch (e) {

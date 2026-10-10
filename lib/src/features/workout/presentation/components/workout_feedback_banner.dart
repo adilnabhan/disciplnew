@@ -4,142 +4,189 @@ import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_
 
 export 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_feedback_evaluator.dart';
 
+/// Workout feedback banner matching the pill design with an interior green glow
 class WorkoutFeedbackBanner extends StatelessWidget {
   final WorkoutSetFeedbackResult feedback;
+  final String? customText;
+  final VoidCallback? onDismiss;
 
   const WorkoutFeedbackBanner({
     super.key,
     required this.feedback,
+    this.customText,
+    this.onDismiss,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isStronger = feedback.type == WorkoutFeedbackType.stronger;
+    const double baseFontSize = 17.5;
+    const double percentageFontSize = 19.0;
 
-    return Container(
-      margin: const EdgeInsets.only(left: 12, right: 12, top: 4, bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE8F8F0),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          // Icon badge with pop/bounce animation
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.3, end: 1.0),
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeOutBack,
-            builder: (context, scale, child) {
-              return Transform.scale(
-                scale: scale,
-                child: child,
-              );
-            },
-            child: Container(
-              width: 28,
-              height: 28,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: isStronger
-                    ? const Color(0xFFFFF7ED)
-                    : const Color(0xFFFEF3C7),
-                shape: BoxShape.circle,
-              ),
-              child: isStronger
-                  ? Lottie.asset(
-                      'assets/images/carousel_images/Fire.json',
-                      width: 22,
-                      height: 22,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(
-                            Icons.local_fire_department_rounded,
-                            color: Color(0xFFEA580C),
-                            size: 18,
-                          ),
-                    )
-                  : const Text(
-                      '🎉',
-                      style: TextStyle(fontSize: 16),
-                    ),
+    Widget textContent;
+    if (customText != null && customText!.isNotEmpty) {
+      textContent = Text(
+        customText!,
+        style: const TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: baseFontSize,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1E2022),
+          height: 1.2,
+        ),
+      );
+    } else if (feedback.type == WorkoutFeedbackType.stronger) {
+      if (feedback.percentage != null && feedback.percentage!.isNotEmpty) {
+        textContent = RichText(
+          text: TextSpan(
+            style: const TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: baseFontSize,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E2022),
+              height: 1.2,
             ),
-          ),
-          const SizedBox(width: 10),
-          // Feedback Text
-          if (isStronger) ...[
-            const Expanded(
-              child: Text(
-                'Stronger than last time',
-                style: TextStyle(
-                  fontFamily: 'Poppins',
-                  fontSize: 13,
+            children: [
+              const TextSpan(text: 'Stronger than last time! '),
+              TextSpan(
+                text: feedback.percentage!,
+                style: const TextStyle(
+                  color: Color(0xFF047857),
+                  fontSize: percentageFontSize,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF065F46),
+                ),
+              ),
+            ],
+          ),
+        );
+      } else {
+        textContent = const Text(
+          'Stronger than last time! 🔥',
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: baseFontSize,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF1E2022),
+            height: 1.2,
+          ),
+        );
+      }
+    } else {
+      textContent = const Text(
+        'First time! Great start 👏',
+        style: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: baseFontSize,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1E2022),
+          height: 1.2,
+        ),
+      );
+    }
+
+    return GestureDetector(
+      onTap: onDismiss,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        height: 68,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(34),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            // Interior green glow spreading horizontally across the card
+            Positioned.fill(
+              child: CustomPaint(painter: _BannerGreenGlowPainter()),
+            ),
+            // Celebration confetti burst animation
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Lottie.asset(
+                  'assets/images/carousel_images/Workout_feedback.json',
+                  fit: BoxFit.cover,
+                  repeat: true,
                 ),
               ),
             ),
-            if (feedback.percentage != null)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFD1FAE5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+            // Centered Mascot and Feedback text
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.trending_up_rounded,
-                      color: Color(0xFF065F46),
-                      size: 16,
+                    SizedBox(
+                      width: 54,
+                      height: 54,
+                      child: Lottie.asset(
+                        'assets/images/svg/vectors/thumbsUp_achievement.json',
+                        fit: BoxFit.contain,
+                        repeat: true,
+                      ),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      feedback.percentage!,
-                      style: const TextStyle(
-                        fontFamily: 'Poppins',
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF065F46),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: textContent,
                       ),
                     ),
                   ],
                 ),
               ),
-          ] else ...[
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text(
-                    'First time!',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF065F46),
-                    ),
-                  ),
-                  Text(
-                    'Great start',
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF047857),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
+}
+
+class _BannerGreenGlowPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    // Center glow horizontally across the card
+    final centerX = size.width * 0.5;
+    final centerY = size.height * 0.5;
+    canvas.translate(centerX, centerY);
+
+    final verticalRadius = size.height * 1.15;
+    final horizontalRadius = size.width * 0.58;
+    final scaleX = horizontalRadius / verticalRadius;
+
+    canvas.scale(scaleX, 1.0);
+
+    final paint =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF86FF1E).withValues(alpha: 0.52),
+              const Color(0xFFA1FF4A).withValues(alpha: 0.40),
+              const Color(0xFFC4FF86).withValues(alpha: 0.25),
+              const Color(0xFFE4FFBC).withValues(alpha: 0.10),
+              Colors.white.withValues(alpha: 0.0),
+            ],
+            stops: const [0.0, 0.35, 0.65, 0.88, 1.0],
+          ).createShader(
+            Rect.fromCircle(center: Offset.zero, radius: verticalRadius),
+          );
+
+    canvas.drawCircle(Offset.zero, verticalRadius, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

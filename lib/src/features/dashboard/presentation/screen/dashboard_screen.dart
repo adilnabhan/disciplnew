@@ -32,43 +32,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildProfileTabIcon(bool isSelected) {
-    final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
-    final String? profilePicUrl = currentUser?.profilePicture as String?;
+    return BlocBuilder<AppCubit, AppState>(
+      builder: (context, appState) {
+        final currentUser = appState.currentUser;
+        final String? profilePicUrl = currentUser?.profilePicture as String?;
 
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          width: 1.5,
-        ),
-      ),
-      padding: const EdgeInsets.all(1.5),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(100),
-        child:
-            (profilePicUrl != null && profilePicUrl.isNotEmpty)
-                ? ImageNetwork(
-                  profilePicUrl,
-                  fit: BoxFit.cover,
-                  errorWidget: SvgPicture.asset(
-                    'assets/images/svg/icons/person.svg',
-                    colorFilter: ColorFilter.mode(
-                      isSelected ? AppColors.primary : AppColors.textGrey,
-                      BlendMode.srcIn,
-                    ),
-                  ),
-                )
-                : SvgPicture.asset(
+        if (profilePicUrl != null && profilePicUrl.isNotEmpty) {
+          return Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isSelected ? AppColors.primary : const Color(0xFFDDDDDD),
+                width: 1.2,
+              ),
+            ),
+            child: ClipOval(
+              child: ImageNetwork(
+                profilePicUrl,
+                width: 24,
+                height: 24,
+                fit: BoxFit.cover,
+                errorWidget: SvgPicture.asset(
                   'assets/images/svg/icons/person.svg',
+                  width: 20,
+                  height: 20,
                   colorFilter: ColorFilter.mode(
-                    isSelected ? AppColors.primary : AppColors.textGrey,
+                    isSelected ? AppColors.primary : const Color(0xFF4A4A4A),
                     BlendMode.srcIn,
                   ),
                 ),
-      ),
+              ),
+            ),
+          );
+        }
+
+        return SvgPicture.asset(
+          'assets/images/svg/icons/person.svg',
+          width: 22,
+          height: 22,
+          colorFilter: ColorFilter.mode(
+            isSelected ? AppColors.primary : const Color(0xFF4A4A4A),
+            BlendMode.srcIn,
+          ),
+        );
+      },
     );
   }
 
@@ -102,11 +111,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
                 (either) => either.fold(
                   (error) => false,
-                  (activeMembership) =>
-                      activeMembership != null &&
-                      (activeMembership.isActive == true ||
-                          activeMembership.organization != null ||
-                          activeMembership.id != null),
+                  (activeMembership) {
+                    if (activeMembership == null) return false;
+                    final bool isPending =
+                        activeMembership.status?.toLowerCase() == 'pending';
+                    final now = DateTime.now();
+                    final localEndDate = activeMembership.endDate?.toLocal();
+                    final remainingDays = isPending
+                        ? 0
+                        : (localEndDate != null
+                            ? DateTime(
+                                  localEndDate.year,
+                                  localEndDate.month,
+                                  localEndDate.day,
+                                )
+                                .difference(
+                                  DateTime(now.year, now.month, now.day),
+                                )
+                                .inDays
+                            : 0);
+                    final bool isExpired = !isPending &&
+                        (activeMembership.status?.toLowerCase() == 'expired' ||
+                            remainingDays < 0);
+                    if (isExpired || isPending) return false;
+
+                    return (activeMembership.isActive == true ||
+                        activeMembership.organization != null ||
+                        activeMembership.id != null);
+                  },
                 ),
               );
 
@@ -156,8 +188,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                             centerTitle: false,
                               actions: [
-                                _GymActionIcon(cubit: _cubit),
-                                const SizedBox(width: 10),
+                                if (hasActiveGym) ...[
+                                  _GymActionIcon(cubit: _cubit),
+                                  const SizedBox(width: 10),
+                                ],
                                 BlocBuilder<NotificationCubit, NotificationState>(
                                   bloc: _notificationCubit,
                                   builder: (context, notificationState) {
@@ -268,202 +302,238 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: tabPages,
                 ),
                 extendBody: false,
-                bottomNavigationBar: Container(
-                  color: Colors.white,
-                  child: SafeArea(
-                    top: false,
+                bottomNavigationBar: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
                     child: Container(
-                      height: 70,
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                      height: 66,
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: const Border(
-                          top: BorderSide(color: AppColors.borderGrey, width: 0.5),
+                        borderRadius: BorderRadius.circular(36),
+                        border: Border.all(
+                          color: const Color(0xFFEEEEEE),
+                          width: 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 10,
-                            offset: const Offset(0, -2),
+                            color: Colors.black.withOpacity(0.07),
+                            blurRadius: 18,
+                            spreadRadius: 0,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: List.generate(tabLabels.length, (i) {
-                          final bool isSelected = currentIndex == i;
-                          Widget iconWidget;
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final int count = tabLabels.length;
+                          final double itemWidth = constraints.maxWidth / count;
+                          final double itemHeight = constraints.maxHeight;
 
-                          if (hasActiveGym) {
-                            // Active Member Tab Icons (5 tabs: Home, Workouts, Score Card, Challenges, Profile)
-                            switch (i) {
-                              case 0:
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/new_home_selected.svg'
-                                      : 'assets/images/svg/icons/new_home_notselected.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: isSelected
-                                      ? null
-                                      : const ColorFilter.mode(
-                                          AppColors.textGrey,
-                                          BlendMode.srcIn,
-                                        ),
-                                );
-                                break;
-                              case 1:
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/workout_selected.svg'
-                                      : 'assets/images/svg/icons/workout_notseleted.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: ColorFilter.mode(
-                                    isSelected ? AppColors.primary : AppColors.textGrey,
-                                    BlendMode.srcIn,
-                                  ),
-                                );
-                                break;
-                              case 2: // Score Card
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/selected_scorecard.svg'
-                                      : 'assets/images/svg/icons/scorecard_notselected.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: isSelected
-                                      ? null
-                                      : const ColorFilter.mode(
-                                          AppColors.textGrey,
-                                          BlendMode.srcIn,
-                                        ),
-                                );
-                                break;
-                              case 3: // Challenges (Steps preserved for later use)
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/challenge_selected.svg'
-                                      : 'assets/images/svg/icons/challenge_notselected.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: isSelected
-                                      ? null
-                                      : const ColorFilter.mode(
-                                          AppColors.textGrey,
-                                          BlendMode.srcIn,
-                                        ),
-                                );
-                                /*
-                                // Preserved Steps icon for later use:
-                                iconWidget = Icon(
-                                  Icons.directions_walk_rounded,
-                                  size: 22,
-                                  color: isSelected ? AppColors.primary : AppColors.textGrey,
-                                );
-                                */
-                                break;
-                              case 4: // Profile
-                                iconWidget = _buildProfileTabIcon(isSelected);
-                                break;
-                              default:
-                                iconWidget = const SizedBox.shrink();
-                            }
-                          } else {
-                            // Regular Tab Icons (4 tabs: Home, Workouts, Explore, Profile)
-                            switch (i) {
-                              case 0:
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/new_home_selected.svg'
-                                      : 'assets/images/svg/icons/new_home_notselected.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: isSelected
-                                      ? null
-                                      : const ColorFilter.mode(
-                                          AppColors.textGrey,
-                                          BlendMode.srcIn,
-                                        ),
-                                );
-                                break;
-                              case 1:
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/workout_selected.svg'
-                                      : 'assets/images/svg/icons/workout_notseleted.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: ColorFilter.mode(
-                                    isSelected ? AppColors.primary : AppColors.textGrey,
-                                    BlendMode.srcIn,
-                                  ),
-                                );
-                                break;
-                              case 2:
-                                iconWidget = SvgPicture.asset(
-                                  isSelected
-                                      ? 'assets/images/svg/icons/selected_explore.svg'
-                                      : 'assets/images/svg/icons/not selected_explore.svg',
-                                  width: 22,
-                                  height: 22,
-                                  colorFilter: isSelected
-                                      ? null
-                                      : const ColorFilter.mode(
-                                          AppColors.textGrey,
-                                          BlendMode.srcIn,
-                                        ),
-                                );
-                                break;
-                              case 3:
-                                iconWidget = _buildProfileTabIcon(isSelected);
-                                break;
-                              default:
-                                iconWidget = const SizedBox.shrink();
-                            }
-                          }
-
-                          return Expanded(
-                            child: InkWell(
-                              onTap: () {
-                                context.read<DashboardCubit>().changeNav(index: i);
-                                _notificationCubit.fetchUnreadCount();
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 4),
-                                decoration: isSelected
-                                    ? BoxDecoration(
-                                        color: AppColors.primary.withOpacity(0.08),
-                                        borderRadius: BorderRadius.circular(12),
-                                      )
-                                    : null,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    iconWidget,
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      tabLabels[i],
-                                      style: AppStyles.text12Px.poppins.copyWith(
-                                        fontSize: 10,
-                                        color: isSelected
-                                            ? AppColors.primary
-                                            : AppColors.textGrey,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.w400,
+                          return Stack(
+                            children: [
+                              // Sliding Active Pill Indicator
+                              AnimatedPositioned(
+                                duration: const Duration(milliseconds: 280),
+                                curve: Curves.easeOutCubic,
+                                left: currentIndex * itemWidth + 2,
+                                top: 2,
+                                width: itemWidth - 4,
+                                height: itemHeight - 4,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFDE8E8),
+                                    borderRadius: BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary.withOpacity(0.06),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
                                       ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+
+                              // Interactive Navigation Items
+                              Row(
+                                children: List.generate(count, (i) {
+                                  final bool isSelected = currentIndex == i;
+                                  const Color unselectedColor = Color(0xFF4A4A4A);
+                                  Widget iconWidget;
+
+                                  if (hasActiveGym) {
+                                    // Active Member Tab Icons (5 tabs: Home, Workouts, Score Card, Challenges, Profile)
+                                    switch (i) {
+                                      case 0:
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/new_home_selected.svg'
+                                              : 'assets/images/svg/icons/new_home_notselected.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: isSelected
+                                              ? null
+                                              : const ColorFilter.mode(
+                                                  unselectedColor,
+                                                  BlendMode.srcIn,
+                                                ),
+                                        );
+                                        break;
+                                      case 1:
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/workout_selected.svg'
+                                              : 'assets/images/svg/icons/workout_notseleted.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: ColorFilter.mode(
+                                            isSelected ? AppColors.primary : unselectedColor,
+                                            BlendMode.srcIn,
+                                          ),
+                                        );
+                                        break;
+                                      case 2: // Score Card
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/selected_scorecard.svg'
+                                              : 'assets/images/svg/icons/scorecard_notselected.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: isSelected
+                                              ? null
+                                              : const ColorFilter.mode(
+                                                  unselectedColor,
+                                                  BlendMode.srcIn,
+                                                ),
+                                        );
+                                        break;
+                                      case 3: // Challenges (Steps preserved for later use)
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/challenge_selected.svg'
+                                              : 'assets/images/svg/icons/challenge_notselected.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: isSelected
+                                              ? null
+                                              : const ColorFilter.mode(
+                                                  unselectedColor,
+                                                  BlendMode.srcIn,
+                                                ),
+                                        );
+                                        break;
+                                      case 4: // Profile
+                                        iconWidget = _buildProfileTabIcon(isSelected);
+                                        break;
+                                      default:
+                                        iconWidget = const SizedBox.shrink();
+                                    }
+                                  } else {
+                                    // Regular Tab Icons (4 tabs: Home, Workouts, Explore, Profile)
+                                    switch (i) {
+                                      case 0:
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/new_home_selected.svg'
+                                              : 'assets/images/svg/icons/new_home_notselected.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: isSelected
+                                              ? null
+                                              : const ColorFilter.mode(
+                                                  unselectedColor,
+                                                  BlendMode.srcIn,
+                                                ),
+                                        );
+                                        break;
+                                      case 1:
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/workout_selected.svg'
+                                              : 'assets/images/svg/icons/workout_notseleted.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: ColorFilter.mode(
+                                            isSelected ? AppColors.primary : unselectedColor,
+                                            BlendMode.srcIn,
+                                          ),
+                                        );
+                                        break;
+                                      case 2:
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/selected_explore.svg'
+                                              : 'assets/images/svg/icons/not selected_explore.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: isSelected
+                                              ? null
+                                              : const ColorFilter.mode(
+                                                  unselectedColor,
+                                                  BlendMode.srcIn,
+                                                ),
+                                        );
+                                        break;
+                                      case 3:
+                                        iconWidget = _buildProfileTabIcon(isSelected);
+                                        break;
+                                      default:
+                                        iconWidget = const SizedBox.shrink();
+                                    }
+                                  }
+
+                                  return Expanded(
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.opaque,
+                                      onTap: () {
+                                        context.read<DashboardCubit>().changeNav(index: i);
+                                        _notificationCubit.fetchUnreadCount();
+                                      },
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 4),
+                                        alignment: Alignment.center,
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            AnimatedScale(
+                                              scale: isSelected ? 1.08 : 1.0,
+                                              duration: const Duration(milliseconds: 250),
+                                              curve: Curves.easeOutBack,
+                                              child: iconWidget,
+                                            ),
+                                            const SizedBox(height: 2),
+                                            AnimatedDefaultTextStyle(
+                                              duration: const Duration(milliseconds: 200),
+                                              style: TextStyle(
+                                                fontFamily: 'Poppins',
+                                                fontSize: isSelected ? 11 : 10.5,
+                                                color: isSelected
+                                                    ? AppColors.primary
+                                                    : unselectedColor,
+                                                fontWeight: isSelected
+                                                    ? FontWeight.w600
+                                                    : FontWeight.w500,
+                                                height: 1.15,
+                                              ),
+                                              child: Text(
+                                                tabLabels[i],
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ],
                           );
-                        }),
+                        },
                       ),
                     ),
                   ),
@@ -808,34 +878,43 @@ class _GymActionIcon extends StatelessWidget {
           (either) => either.fold((_) => null, (r) => r),
         );
 
-        final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
-        if (activeMembership == null && currentUser != null) {
-          final c = currentUser.customer;
-          final gymMap = c?.assignedFitnessCenter is Map ? (c!.assignedFitnessCenter as Map) : null;
-          final dynamic gymId = gymMap?['id'] ?? c?.organizationId ?? 1;
-          final int parsedId = gymId is int ? gymId : (int.tryParse(gymId.toString()) ?? 1);
-          final String gymName = gymMap?['name']?.toString() ?? 'Discipl Fitness Gym';
-          final String? gymLogo = gymMap?['logo']?.toString();
-
-          activeMembership = ActiveMembershipModel(
-            id: parsedId,
-            organization: OrganizationModel(
-              id: parsedId,
-              name: gymName,
-              logo: gymLogo,
-              location: const Location(
-                place: 'Kochi, Kerala',
-              ),
-            ),
-            planName: 'Active Membership Plan',
-            status: 'active',
-            isActive: true,
-            startDate: DateTime.now().subtract(const Duration(days: 15)),
-            endDate: DateTime.now().add(const Duration(days: 30)),
-          );
+        if (activeMembership == null) {
+          return const SizedBox.shrink();
         }
 
-        final String? logoUrl = activeMembership?.organization?.logo;
+        final bool isPending =
+            activeMembership.status?.toLowerCase() == 'pending';
+        final now = DateTime.now();
+        final localEndDate = activeMembership.endDate?.toLocal();
+        final remainingDays = isPending
+            ? 0
+            : (localEndDate != null
+                ? DateTime(
+                      localEndDate.year,
+                      localEndDate.month,
+                      localEndDate.day,
+                    )
+                    .difference(
+                      DateTime(now.year, now.month, now.day),
+                    )
+                    .inDays
+                : 0);
+        final bool isExpired = !isPending &&
+            (activeMembership.status?.toLowerCase() == 'expired' ||
+                remainingDays < 0);
+
+        if (isExpired || isPending) {
+          return const SizedBox.shrink();
+        }
+
+        final bool hasValidGym = (activeMembership.isActive == true ||
+            activeMembership.organization != null ||
+            activeMembership.id != null);
+        if (!hasValidGym) {
+          return const SizedBox.shrink();
+        }
+
+        final String? logoUrl = activeMembership.organization?.logo;
         final Widget gymChild = (logoUrl != null && logoUrl.isNotEmpty)
             ? ClipOval(
                 child: SizedBox(
@@ -862,11 +941,7 @@ class _GymActionIcon extends StatelessWidget {
 
         return GestureDetector(
           onTap: () {
-            if (activeMembership != null) {
-              _showActiveGymBottomSheet(context, activeMembership);
-            } else {
-              context.push(const FitnessCentersListingScreen());
-            }
+            _showActiveGymBottomSheet(context, activeMembership);
           },
           child: Container(
             width: 40,

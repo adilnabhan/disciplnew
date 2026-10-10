@@ -1314,17 +1314,30 @@ class _ChallengeDetailsContentState extends State<_ChallengeDetailsContent> {
               builder: (context, state) {
                 final isJoining = state.isJoining;
                 final currentChallenge = state.challenge ?? widget.challenge;
-                final isJoined = (currentChallenge.isJoined ?? false) ||
-                    btnText.toLowerCase().contains('joined') ||
-                    btnAction == 'details';
                 final isJoinAfter =
                     btnText.toLowerCase().contains('join after');
+                final isJoined = !isJoinAfter &&
+                    ((currentChallenge.isJoined ?? false) ||
+                        btnText.toLowerCase().contains('joined') ||
+                        btnAction == 'details');
+                final showTick = !isJoinAfter &&
+                    (btnText.toLowerCase().contains('joined') ||
+                        (isJoined && btnText.isEmpty));
 
                 return ElevatedButton(
                   onPressed: isJoining
                       ? null
                       : () async {
-                          if (isJoined) {
+                          if (isJoinAfter) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Complete your workouts to reach 100% progress, and you will automatically be entered into the challenge.',
+                                ),
+                              ),
+                            );
+                          } else if (isJoined) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -1332,15 +1345,6 @@ class _ChallengeDetailsContentState extends State<_ChallengeDetailsContent> {
                                   'You have already joined this challenge.',
                                 ),
                                 duration: Duration(seconds: 3),
-                              ),
-                            );
-                          } else if (isJoinAfter) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Complete your workouts to reach 100% progress, and you will automatically be entered into the challenge.',
-                                ),
                               ),
                             );
                           } else if (btnAction == 'join' && challengeId != null) {
@@ -1411,7 +1415,7 @@ class _ChallengeDetailsContentState extends State<_ChallengeDetailsContent> {
                             strokeWidth: 2,
                           ),
                         )
-                      : isJoined
+                      : showTick
                           ? Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [

@@ -12,6 +12,9 @@ class ChallengeListState {
   final int currentPage;
   final String selectedStatus;
   final String? selectedChallengeType;
+  final List<int> selectedPartnerIds;
+  final List<ChallengePartner> partners;
+  final bool isLoadingPartners;
   final String? selectedCategory;
   final String searchQuery;
 
@@ -25,6 +28,9 @@ class ChallengeListState {
     this.currentPage = 1,
     this.selectedStatus = 'all',
     this.selectedChallengeType,
+    this.selectedPartnerIds = const [],
+    this.partners = const [],
+    this.isLoadingPartners = false,
     this.selectedCategory,
     this.searchQuery = '',
   });
@@ -40,6 +46,9 @@ class ChallengeListState {
     String? selectedStatus,
     String? selectedChallengeType,
     bool clearChallengeType = false,
+    List<int>? selectedPartnerIds,
+    List<ChallengePartner>? partners,
+    bool? isLoadingPartners,
     String? selectedCategory,
     bool clearCategory = false,
     String? searchQuery,
@@ -56,6 +65,9 @@ class ChallengeListState {
       selectedChallengeType: clearChallengeType 
           ? null 
           : (selectedChallengeType ?? this.selectedChallengeType),
+      selectedPartnerIds: selectedPartnerIds ?? this.selectedPartnerIds,
+      partners: partners ?? this.partners,
+      isLoadingPartners: isLoadingPartners ?? this.isLoadingPartners,
       selectedCategory: clearCategory 
           ? null 
           : (selectedCategory ?? this.selectedCategory),

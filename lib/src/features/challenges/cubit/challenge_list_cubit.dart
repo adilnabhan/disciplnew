@@ -5,7 +5,9 @@ import 'package:customer_mobile_app/src/features/challenges/domain/repositories/
 import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list_state.dart';
 
 class ChallengeListCubit extends Cubit<ChallengeListState> {
-  ChallengeListCubit() : super(const ChallengeListState());
+  ChallengeListCubit() : super(const ChallengeListState()) {
+    loadPartners();
+  }
 
   final ChallengeRepository _repository = ChallengeRepository();
   Timer? _debounceTimer;
@@ -64,10 +66,19 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
     List<ChallengeModel> source, {
     required String status,
     required String? challengeType,
+    List<int>? partnerIds,
     required String searchQuery,
   }) {
     return source.where((c) {
-      // 1. Challenge Type
+      // 1. Partner Filter
+      if (partnerIds != null && partnerIds.isNotEmpty) {
+        final brandId = c.brand?.id;
+        if (brandId == null || !partnerIds.contains(brandId)) {
+          return false;
+        }
+      }
+
+      // 2. Challenge Type
       if (challengeType != null && challengeType.isNotEmpty) {
         final type = c.challengeType?.toLowerCase().trim() ?? '';
         final filter = challengeType.toLowerCase().trim();
@@ -87,7 +98,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
         if (!typeMatches) return false;
       }
 
-      // 2. Status
+      // 3. Status
       if (status.isNotEmpty && status.toLowerCase() != 'all') {
         final s = status.toLowerCase().trim();
         final bool statusMatches;
@@ -106,7 +117,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
         if (!statusMatches) return false;
       }
 
-      // 3. Search query
+      // 4. Search query
       if (searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim().toLowerCase();
         final name = c.name?.toLowerCase() ?? '';
@@ -121,6 +132,20 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
     }).toList();
   }
 
+  Future<void> loadPartners() async {
+    if (isClosed) return;
+    emit(state.copyWith(isLoadingPartners: true));
+    try {
+      final partners = await _repository.getChallengePartners();
+      if (isClosed) return;
+      emit(state.copyWith(partners: partners, isLoadingPartners: false));
+    } catch (e) {
+      debugPrint('Error loading challenge partners: $e');
+      if (isClosed) return;
+      emit(state.copyWith(isLoadingPartners: false));
+    }
+  }
+
   Future<void> loadChallenges({bool showLoading = true}) async {
     if (isClosed) return;
     if (showLoading) {
@@ -132,6 +157,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
         pageSize: 4,
         status: state.selectedStatus,
         challengeType: state.selectedChallengeType,
+        brandIds: state.selectedPartnerIds.isNotEmpty ? state.selectedPartnerIds : null,
         category: state.selectedCategory,
         search: state.searchQuery,
       );
@@ -160,7 +186,10 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
   }
 
   Future<void> refreshChallenges() async {
-    await loadChallenges(showLoading: false);
+    await Future.wait([
+      loadChallenges(showLoading: false),
+      loadPartners(),
+    ]);
   }
 
   Future<void> loadMoreChallenges() async {
@@ -174,6 +203,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
         pageSize: 4,
         status: state.selectedStatus,
         challengeType: state.selectedChallengeType,
+        brandIds: state.selectedPartnerIds.isNotEmpty ? state.selectedPartnerIds : null,
         category: state.selectedCategory,
         search: state.searchQuery,
       );
@@ -208,11 +238,34 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
   }
 
   void filterByChallengeType(String? type) {
-    if (state.selectedChallengeType == type) return;
+    final effectiveType =
+        (type == null || type.isEmpty || type == 'all') ? null : type;
+    if (state.selectedChallengeType == effectiveType) return;
     emit(state.copyWith(
-      selectedChallengeType: type,
-      clearChallengeType: type == null,
+      selectedChallengeType: effectiveType,
+      clearChallengeType: effectiveType == null,
     ));
+    loadChallenges();
+  }
+
+  void filterByPartners(List<int> partnerIds) {
+    emit(state.copyWith(selectedPartnerIds: partnerIds));
+    loadChallenges();
+  }
+
+  void togglePartner(int partnerId) {
+    final current = List<int>.from(state.selectedPartnerIds);
+    if (current.contains(partnerId)) {
+      current.remove(partnerId);
+    } else {
+      current.add(partnerId);
+    }
+    emit(state.copyWith(selectedPartnerIds: current));
+    loadChallenges();
+  }
+
+  void clearPartnerFilter() {
+    emit(state.copyWith(selectedPartnerIds: const []));
     loadChallenges();
   }
 
@@ -220,6 +273,7 @@ class ChallengeListCubit extends Cubit<ChallengeListState> {
     emit(state.copyWith(
       selectedStatus: 'all',
       clearChallengeType: true,
+      selectedPartnerIds: const [],
       searchQuery: '',
     ));
     loadChallenges();

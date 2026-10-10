@@ -26,8 +26,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _fetch() async {
-    await _cubit.fetchCustomerDetails();
+  Future<void> _fetch({bool forceRefresh = false}) async {
+    await _cubit.fetchCustomerDetails(forceRefresh: forceRefresh);
     await _cubit.fetchConstChoices();
   }
 
@@ -35,11 +35,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return BlocListener<AppCubit, AppState>(
       listenWhen: (previous, current) {
-        return previous.currentUser?.access != current.currentUser?.access;
+        return previous.currentUser?.access != current.currentUser?.access ||
+            previous.currentUser?.customer?.id != current.currentUser?.customer?.id;
       },
       listener: (context, appState) {
         if (appState.currentUser != null) {
-          _fetch();
+          _fetch(forceRefresh: true);
         }
       },
       child: BlocBuilder<AppCubit, AppState>(
@@ -628,6 +629,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         _buildFitnessAnalyticsCard(
                                           customerDetails,
                                         ),
+                                        _buildPersonalRecordsCard(),
                                         () {
                                           Membership? activeMembership;
                                           if (customerDetails.memberships !=
@@ -2243,6 +2245,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildPersonalRecordsCard() {
+    return Container(
+      margin: const EdgeInsets.only(top: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => const PersonalRecordsScreen(),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF1F3F5),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.history_rounded,
+                      color: Color(0xFF343A40),
+                      size: 22,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'Personal Records',
+                    style: AppStyles.text16Px.poppins.w600.copyWith(
+                      color: const Color(0xFF212529),
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Color(0xFF343A40),
+                  size: 24,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMembershipCard(Membership? membership) {
     if (membership == null) {
       return Column(
@@ -2846,6 +2919,20 @@ class _ProfileShimmerLoading extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Personal Records Shimmer
+        Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
           ),
         ),
         const SizedBox(height: 20),

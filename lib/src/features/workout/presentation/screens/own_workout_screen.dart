@@ -6,6 +6,8 @@ import 'package:customer_mobile_app/src/features/workout/presentation/components
 import 'package:customer_mobile_app/src/features/workout/presentation/components/workout_feedback_banner.dart';
 import 'package:customer_mobile_app/src/features/workout/workout.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
+import 'package:customer_mobile_app/src/features/dashboard/logic/dashboard/dashboard_cubit.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_sound_helper.dart';
 
 class OwnWorkoutScreen extends StatefulWidget {
   final bool isNewSession;
@@ -39,6 +41,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   final Set<String> _removingExerciseIds = {};
   final Set<int> _addingSetExerciseIndices = {};
   final Set<int> _completingSetIds = {};
+  WorkoutSetFeedbackResult? _topFeedback;
+  Timer? _topFeedbackTimer;
   final Map<String, WorkoutSetFeedbackResult> _activeFeedbacks = {};
   final Map<String, Timer> _feedbackTimers = {};
 
@@ -67,6 +71,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
 
   @override
   void dispose() {
+    _topFeedbackTimer?.cancel();
     for (final timer in _feedbackTimers.values) {
       timer.cancel();
     }
@@ -2228,6 +2233,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                     ),
                   ),
 
+                  // Top PR / Feedback Banner
+                  _buildTopFeedbackBanner(),
+
                   // Scrollable Content or Empty State
                   if (state.isLoadingActiveSession)
                     const Expanded(
@@ -2442,6 +2450,22 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         isLoading: _isFinishing,
                         onSlideComplete: () async {
                           if (_isFinishing) return;
+
+                          if (!widget.isPresetCreation) {
+                            final missedCount =
+                                _countUncompletedSets(state.exercises);
+                            if (missedCount > 0) {
+                              final shouldProceed =
+                                  await _showIncompleteSetsReminderDialog(
+                                context,
+                                state.exercises,
+                                missedCount,
+                              );
+                              if (shouldProceed != true) return;
+                              if (!mounted) return;
+                            }
+                          }
+
                           await _showFinishDialog(context, state);
                         },
                       ),
@@ -2456,347 +2480,843 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     );
   }
 
-  Future<void> _showFinishDialog(
-    BuildContext context,
-    WorkoutState state,
-  ) async {
-    final dialogTitleController = TextEditingController(
-      text:
-          _titleController.text.trim().isNotEmpty
-              ? _titleController.text.trim()
-              : (widget.isPresetCreation ? '' : state.sessionTitle),
-    );
-    final formKey = GlobalKey<FormState>();
-    bool isSubmitting = false;
-    String? errorMessage;
+  bool _checkHasActiveGym() {
+    try {
+      final dashCubit = context.read<DashboardCubit>();
+      return dashCubit.hasActiveGym;
+    } catch (_) {}
 
-    await showDialog<void>(
+    try {
+      final dashCubit = Feggy.read<DashboardCubit>();
+      if (dashCubit != null) {
+        return dashCubit.hasActiveGym;
+      }
+    } catch (_) {}
+
+    final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
+    if (currentUser?.customer != null) {
+      final c = currentUser!.customer!;
+      if (c.isActiveMember == true &&
+          (c.organizationId != null || c.assignedFitnessCenter != null)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  int _countUncompletedSets(List<Map<String, dynamic>> exercises) {
+    var count = 0;
+    for (final exercise in exercises) {
+      final sets = (exercise['sets'] as List<dynamic>?) ?? [];
+      for (final set in sets) {
+        if (set is Map) {
+          final isChecked = set['checked'] as bool? ?? false;
+          if (!isChecked) {
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  Future<bool?> _showIncompleteSetsReminderDialog(
+    BuildContext context,
+    List<Map<String, dynamic>> exercises,
+    int missedCount,
+  ) {
+    final missedExercises = <({String name, int count})>[];
+    for (final exercise in exercises) {
+      final sets = (exercise['sets'] as List<dynamic>?) ?? [];
+      var count = 0;
+      for (final set in sets) {
+        if (set is Map) {
+          final isChecked = set['checked'] as bool? ?? false;
+          if (!isChecked) {
+            count++;
+          }
+        }
+      }
+      if (count > 0) {
+        missedExercises.add((
+          name: exercise['name']?.toString() ?? 'Exercise',
+          count: count,
+        ));
+      }
+    }
+
+    return showDialog<bool>(
       context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (dialogContext, setDialogState) {
-            return PopScope(
-              canPop: !isSubmitting,
-              child: AlertDialog(
-                backgroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                title: Text(
-                  widget.isPresetCreation ? 'Save Preset' : 'Finish Workout',
-                  style: const TextStyle(
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFE53935),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Incomplete Sets',
+                  style: TextStyle(
                     fontFamily: 'Poppins',
                     fontWeight: FontWeight.w600,
                     fontSize: 18,
                     color: Color(0xFF212121),
                   ),
                 ),
-                content: Form(
-                  key: formKey,
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You have $missedCount uncompleted set${missedCount > 1 ? 's' : ''}. '
+                'Did you forget to tick them?',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  color: Color(0xFF4B5563),
+                  height: 1.4,
+                ),
+              ),
+              if (missedExercises.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.isPresetCreation
-                            ? 'Enter a name for this preset:'
-                            : 'Enter a name for this workout session:',
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 14,
-                          color: Color(0xFF666666),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: dialogTitleController,
-                        enabled: !isSubmitting,
-                        autofocus: true,
-                        onChanged: (val) {
-                          if (errorMessage != null) {
-                            setDialogState(() {
-                              errorMessage = null;
-                            });
-                          }
-                        },
-                        style: const TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 15,
-                          color: Color(0xFF212121),
-                        ),
-                        decoration: InputDecoration(
-                          hintText:
-                              widget.isPresetCreation
-                                  ? 'e.g., Leg Day'
-                                  : 'e.g., Chest Day',
-                          hintStyle: const TextStyle(
-                            fontFamily: 'Poppins',
-                            fontSize: 15,
-                            color: Color(0xFFCCCCCC),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 10,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(
-                              color: Color(0xFFDDDDDD),
+                      ...missedExercises.take(3).map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2.5),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.circle,
+                                    size: 6,
+                                    color: Color(0xFFE53935),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${item.name}: ${item.count} set${item.count > 1 ? 's' : ''}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF374151),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: AppColors.primary),
-                          ),
-                          errorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Colors.red),
-                          ),
-                          focusedErrorBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: const BorderSide(color: Colors.red),
-                          ),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'Name is required';
-                          }
-                          return null;
-                        },
-                      ),
-                      if (errorMessage != null) ...[
-                        const SizedBox(height: 10),
+                      if (missedExercises.length > 3) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          errorMessage!,
+                          '+ ${missedExercises.length - 3} more exercise(s)',
                           style: const TextStyle(
                             fontFamily: 'Poppins',
-                            fontSize: 12,
-                            color: Colors.red,
-                            fontWeight: FontWeight.w500,
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-                actions: [
-                  TextButton(
-                    onPressed:
-                        isSubmitting
-                            ? null
-                            : () => Navigator.pop(dialogContext),
-                    child: const Text(
-                      'Cancel',
-                      style: TextStyle(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w500,
-                        fontSize: 14,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                  ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.primary,
-                      disabledForegroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-                    ),
-                    onPressed:
-                        isSubmitting
-                            ? null
-                            : () async {
-                              if (!formKey.currentState!.validate()) {
-                                return;
-                              }
-                              final enteredTitle =
-                                  dialogTitleController.text.trim();
-
-                              setDialogState(() {
-                                isSubmitting = true;
-                              });
-
-                              try {
-                                if (widget.isPresetCreation) {
-                                  // Format exercises for Preset API
-                                  final exercisesList =
-                                      <Map<String, dynamic>>[];
-                                  for (
-                                    var i = 0;
-                                    i < state.exercises.length;
-                                    i++
-                                  ) {
-                                    final ex = state.exercises[i];
-                                    final setsList = <Map<String, dynamic>>[];
-                                    final rawSets = ex['sets'] as List? ?? [];
-                                    for (var j = 0; j < rawSets.length; j++) {
-                                      final s =
-                                          rawSets[j] as Map<String, dynamic>;
-                                      setsList.add({
-                                        'set_number': s['setNum'] ?? (j + 1),
-                                        'reps':
-                                            double.tryParse(
-                                              s['reps']?.toString() ?? '',
-                                            )?.round() ??
-                                            15,
-                                        'weight':
-                                            double.tryParse(
-                                              s['kg']?.toString() ?? '',
-                                            ) ??
-                                            10.0,
-                                      });
-                                    }
-                                    exercisesList.add({
-                                      'workout_id':
-                                          int.tryParse(
-                                            ex['id']?.toString() ?? '',
-                                          ) ??
-                                          0,
-                                      'name': ex['title']?.toString() ?? '',
-                                      'muscle_group':
-                                          ex['subtitle']
-                                              ?.toString()
-                                              .split('/')
-                                              .first
-                                              .trim() ??
-                                          '',
-                                      'order_index': i,
-                                      'sets': setsList,
-                                    });
-                                  }
-
-                                  final cubit =
-                                      widget.presetCubit ??
-                                      context.read<PresetCubit>();
-                                  bool success = false;
-                                  if (widget.presetToEdit != null) {
-                                    success = await cubit.updatePreset(
-                                      presetId: widget.presetToEdit!.id,
-                                      title: enteredTitle,
-                                      exercises: exercisesList,
-                                    );
-                                  } else {
-                                    success = await cubit.createPreset(
-                                      title: enteredTitle,
-                                      exercises: exercisesList,
-                                    );
-                                  }
-
-                                  if (success && context.mounted) {
-                                    setState(() {
-                                      _isFinishing = true;
-                                    });
-                                    Navigator.pop(
-                                      dialogContext,
-                                    ); // close dialog
-                                    Navigator.pop(context); // close screen
-                                  } else if (!success && context.mounted) {
-                                    setDialogState(() {
-                                      isSubmitting = false;
-                                      errorMessage =
-                                          cubit.state.errorMessage ??
-                                          'Failed to save preset. Please try again.';
-                                    });
-                                  }
-                                } else {
-                                  setState(() {
-                                    _isFinishing = true;
-                                  });
-                                  final res = await _cubit.finishSession(
-                                    title: enteredTitle,
-                                  );
-                                  res.fold(
-                                    (error) {
-                                      if (context.mounted) {
-                                        setDialogState(() {
-                                          isSubmitting = false;
-                                          errorMessage = error.msg;
-                                        });
-                                        setState(() {
-                                          _isFinishing = false;
-                                        });
-                                      }
-                                    },
-                                    (success) {
-                                      if (context.mounted) {
-                                        Navigator.pop(
-                                          dialogContext,
-                                        ); // close dialog
-                                        final Map<String, dynamic> sessionMap =
-                                            success is Map<String, dynamic>
-                                                ? Map<String, dynamic>.from(
-                                                  success,
-                                                )
-                                                : <String, dynamic>{};
-                                        if (_elapsedSeconds > 0) {
-                                          sessionMap['elapsed_seconds'] =
-                                              _elapsedSeconds;
-                                        }
-                                        Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute<bool>(
-                                            builder:
-                                                (context) =>
-                                                    WorkoutAchievementScreen(
-                                                      sessionData: sessionMap,
-                                                      fallbackTitle:
-                                                          enteredTitle,
-                                                    ),
-                                          ),
-                                        );
-                                      }
-                                    },
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  setDialogState(() {
-                                    isSubmitting = false;
-                                  });
-                                  setState(() {
-                                    _isFinishing = false;
-                                  });
-                                }
-                              }
-                            },
-                    child:
-                        isSubmitting
-                            ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                            : Text(
-                              widget.isPresetCreation ? 'Save' : 'Finish',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                  ),
-                ],
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               ),
-            );
-          },
+              child: const Text(
+                'Review Sets',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Finish Anyway',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
+  }
+
+  Future<void> _showFinishDialog(
+    BuildContext context,
+    WorkoutState state,
+  ) async {
+    final bool hasActiveGym = _checkHasActiveGym();
+    final dialogTitleController = TextEditingController(
+      text:
+          _titleController.text.trim().isNotEmpty
+              ? _titleController.text.trim()
+              : (widget.isPresetCreation ? '' : state.sessionTitle),
+    );
+    final gymNameController = TextEditingController();
+    String selectedLocation = 'Home';
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+    String? errorMessage;
+
+    Widget buildLocationOption({
+      required String label,
+      required IconData icon,
+      required bool isSelected,
+      required VoidCallback? onTap,
+    }) {
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withOpacity(0.08)
+                  : const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.primary
+                    : const Color(0xFFE5E7EB),
+                width: isSelected ? 1.6 : 1.0,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 19,
+                  color: isSelected
+                      ? AppColors.primary
+                      : const Color(0xFF6B7280),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: isSelected
+                        ? AppColors.primary
+                        : const Color(0xFF374151),
+                  ),
+                ),
+                if (isSelected) ...[
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.check_circle_rounded,
+                    size: 15,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (dialogContext, setDialogState) {
+              return PopScope(
+                canPop: !isSubmitting,
+                child: AlertDialog(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  title: Text(
+                    widget.isPresetCreation ? 'Save Preset' : 'Finish Workout',
+                    style: const TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
+                      color: Color(0xFF212121),
+                    ),
+                  ),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    child: SingleChildScrollView(
+                      child: Form(
+                        key: formKey,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.isPresetCreation
+                                  ? 'Enter a name for this preset:'
+                                  : 'Enter a name for this workout session:',
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 14,
+                                color: Color(0xFF666666),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextFormField(
+                              controller: dialogTitleController,
+                              enabled: !isSubmitting,
+                              autofocus: true,
+                              onChanged: (val) {
+                                if (errorMessage != null) {
+                                  setDialogState(() {
+                                    errorMessage = null;
+                                  });
+                                }
+                              },
+                              style: const TextStyle(
+                                fontFamily: 'Poppins',
+                                fontWeight: FontWeight.w500,
+                                fontSize: 15,
+                                color: Color(0xFF212121),
+                              ),
+                              decoration: InputDecoration(
+                                hintText:
+                                    widget.isPresetCreation
+                                        ? 'e.g., Leg Day'
+                                        : 'e.g., Chest Day',
+                                hintStyle: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 15,
+                                  color: Color(0xFFCCCCCC),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(
+                                    color: Color(0xFFDDDDDD),
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: BorderSide(color: AppColors.primary),
+                                ),
+                                errorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: Colors.red),
+                                ),
+                                focusedErrorBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                  borderSide: const BorderSide(color: Colors.red),
+                                ),
+                              ),
+                              validator: (val) {
+                                if (val == null || val.trim().isEmpty) {
+                                  return 'Name is required';
+                                }
+                                return null;
+                              },
+                            ),
+                            if (!widget.isPresetCreation && !hasActiveGym) ...[
+                              const SizedBox(height: 18),
+                              const Text(
+                                'Where did you work out?',
+                                style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 14,
+                                  color: Color(0xFF666666),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: buildLocationOption(
+                                      label: 'Home',
+                                      icon: Icons.home_rounded,
+                                      isSelected: selectedLocation == 'Home',
+                                      onTap: isSubmitting
+                                          ? null
+                                          : () {
+                                              setDialogState(() {
+                                                selectedLocation = 'Home';
+                                                errorMessage = null;
+                                              });
+                                            },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: buildLocationOption(
+                                      label: 'Gym',
+                                      icon: Icons.fitness_center_rounded,
+                                      isSelected: selectedLocation == 'Gym',
+                                      onTap: isSubmitting
+                                          ? null
+                                          : () {
+                                              setDialogState(() {
+                                                selectedLocation = 'Gym';
+                                                errorMessage = null;
+                                              });
+                                            },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (selectedLocation == 'Gym') ...[
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Gym Name',
+                                  style: TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontSize: 13,
+                                    color: Color(0xFF666666),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                TextFormField(
+                                  controller: gymNameController,
+                                  enabled: !isSubmitting,
+                                  textCapitalization: TextCapitalization.words,
+                                  onChanged: (val) {
+                                    if (errorMessage != null) {
+                                      setDialogState(() {
+                                        errorMessage = null;
+                                      });
+                                    }
+                                  },
+                                  style: const TextStyle(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 14,
+                                    color: Color(0xFF212121),
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter gym name (e.g., Gold\'s Gym)',
+                                    hintStyle: const TextStyle(
+                                      fontFamily: 'Poppins',
+                                      fontSize: 13,
+                                      color: Color(0xFFCCCCCC),
+                                    ),
+                                    prefixIcon: Icon(
+                                      Icons.fitness_center_outlined,
+                                      size: 18,
+                                      color: AppColors.primary.withOpacity(0.8),
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(
+                                        color: Color(0xFFDDDDDD),
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                    errorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: const BorderSide(
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ),
+                                  validator: (val) {
+                                    if (!hasActiveGym &&
+                                        selectedLocation == 'Gym' &&
+                                        (val == null || val.trim().isEmpty)) {
+                                      return 'Gym name is required';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ],
+                            if (errorMessage != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                errorMessage!,
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontSize: 12,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+                  actions: [
+                    TextButton(
+                      onPressed:
+                          isSubmitting
+                              ? null
+                              : () => Navigator.pop(dialogContext),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 14,
+                          color: Color(0xFF888888),
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.primary,
+                        disabledForegroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                      onPressed:
+                          isSubmitting
+                              ? null
+                              : () async {
+                                if (!formKey.currentState!.validate()) {
+                                  return;
+                                }
+
+                                if (!widget.isPresetCreation) {
+                                  unawaited(WorkoutSoundHelper.playRandomFinishSound());
+                                }
+
+                                final enteredTitle =
+                                    dialogTitleController.text.trim();
+
+                                setDialogState(() {
+                                  isSubmitting = true;
+                                });
+
+                                try {
+                                  if (widget.isPresetCreation) {
+                                    // Format exercises for Preset API
+                                    final exercisesList =
+                                        <Map<String, dynamic>>[];
+                                    for (
+                                      var i = 0;
+                                      i < state.exercises.length;
+                                      i++
+                                    ) {
+                                      final ex = state.exercises[i];
+                                      final setsList = <Map<String, dynamic>>[];
+                                      final rawSets = ex['sets'] as List? ?? [];
+                                      for (var j = 0; j < rawSets.length; j++) {
+                                        final s =
+                                            rawSets[j] as Map<String, dynamic>;
+                                        setsList.add({
+                                          'set_number': s['setNum'] ?? (j + 1),
+                                          'reps':
+                                              double.tryParse(
+                                                s['reps']?.toString() ?? '',
+                                              )?.round() ??
+                                              15,
+                                          'weight':
+                                              double.tryParse(
+                                                s['kg']?.toString() ?? '',
+                                              ) ??
+                                              10.0,
+                                        });
+                                      }
+                                      exercisesList.add({
+                                        'workout_id':
+                                            int.tryParse(
+                                              ex['id']?.toString() ?? '',
+                                            ) ??
+                                            0,
+                                        'name': ex['title']?.toString() ?? '',
+                                        'muscle_group':
+                                            ex['subtitle']
+                                                ?.toString()
+                                                .split('/')
+                                                .first
+                                                .trim() ??
+                                            '',
+                                        'order_index': i,
+                                        'sets': setsList,
+                                      });
+                                    }
+
+                                    final cubit =
+                                        widget.presetCubit ??
+                                        context.read<PresetCubit>();
+                                    bool success = false;
+                                    if (widget.presetToEdit != null) {
+                                      success = await cubit.updatePreset(
+                                        presetId: widget.presetToEdit!.id,
+                                        title: enteredTitle,
+                                        exercises: exercisesList,
+                                      );
+                                    } else {
+                                      success = await cubit.createPreset(
+                                        title: enteredTitle,
+                                        exercises: exercisesList,
+                                      );
+                                    }
+
+                                    if (success && context.mounted) {
+                                      setState(() {
+                                        _isFinishing = true;
+                                      });
+                                      Navigator.pop(
+                                        dialogContext,
+                                      ); // close dialog
+                                      Navigator.pop(context); // close screen
+                                    } else if (!success && context.mounted) {
+                                      setDialogState(() {
+                                        isSubmitting = false;
+                                        errorMessage =
+                                            cubit.state.errorMessage ??
+                                            'Failed to save preset. Please try again.';
+                                      });
+                                    }
+                                  } else {
+                                    setState(() {
+                                      _isFinishing = true;
+                                    });
+                                    final res = await _cubit.finishSession(
+                                      title: enteredTitle,
+                                    );
+                                    res.fold(
+                                      (error) {
+                                        if (context.mounted) {
+                                          setDialogState(() {
+                                            isSubmitting = false;
+                                            errorMessage = error.msg;
+                                          });
+                                          setState(() {
+                                            _isFinishing = false;
+                                          });
+                                        }
+                                      },
+                                      (success) {
+                                        if (context.mounted) {
+                                          Navigator.pop(
+                                            dialogContext,
+                                          ); // close dialog
+                                          final Map<String, dynamic> sessionMap =
+                                              success is Map<String, dynamic>
+                                                  ? Map<String, dynamic>.from(
+                                                    success,
+                                                  )
+                                                  : <String, dynamic>{};
+                                          if (_elapsedSeconds > 0) {
+                                            sessionMap['elapsed_seconds'] =
+                                                _elapsedSeconds;
+                                          }
+                                          if (!hasActiveGym) {
+                                            sessionMap['workout_location'] =
+                                                selectedLocation;
+                                            if (selectedLocation == 'Gym' &&
+                                                gymNameController
+                                                    .text
+                                                    .trim()
+                                                    .isNotEmpty) {
+                                              final enteredGymName =
+                                                  gymNameController.text.trim();
+                                              sessionMap['gym_name'] =
+                                                  enteredGymName;
+
+                                              // Submit gym lead to backend (only for non-active gym members)
+                                              final currentUser =
+                                                  Feggy.read<AppCubit>()
+                                                      ?.state
+                                                      .currentUser;
+                                              final userId =
+                                                  currentUser?.customer?.id ??
+                                                  currentUser?.id ??
+                                                  0;
+                                              final userName = [
+                                                currentUser?.firstName,
+                                                currentUser?.lastName,
+                                              ]
+                                                  .where(
+                                                    (s) =>
+                                                        s != null &&
+                                                        s.trim().isNotEmpty,
+                                                  )
+                                                  .join(' ')
+                                                  .trim();
+                                              final displayName =
+                                                  userName.isNotEmpty
+                                                      ? userName
+                                                      : (currentUser
+                                                              ?.mobileNumber ??
+                                                          'User');
+
+                                              WorkoutRepository().postGymLead(
+                                                gymName: enteredGymName,
+                                                userId: userId,
+                                                userName: displayName,
+                                              ).then((res) {
+                                                res.fold(
+                                                  (err) => debugPrint(
+                                                    '⚠️ Gym lead submission error: ${err.msg}',
+                                                  ),
+                                                  (_) => debugPrint(
+                                                    '✅ Gym lead submitted successfully: $enteredGymName',
+                                                  ),
+                                                );
+                                              });
+                                            }
+                                          }
+                                          debugPrint(
+                                            '🏋️ Workout finished: location=${hasActiveGym ? "Active Gym" : selectedLocation}, gym=${!hasActiveGym && selectedLocation == "Gym" ? gymNameController.text.trim() : "N/A"}',
+                                          );
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute<bool>(
+                                              builder:
+                                                  (context) =>
+                                                      WorkoutAchievementScreen(
+                                                        sessionData: sessionMap,
+                                                        fallbackTitle:
+                                                            enteredTitle,
+                                                        gymName:
+                                                            !hasActiveGym &&
+                                                                    selectedLocation ==
+                                                                        'Gym' &&
+                                                                    gymNameController
+                                                                        .text
+                                                                        .trim()
+                                                                        .isNotEmpty
+                                                                ? gymNameController
+                                                                    .text
+                                                                    .trim()
+                                                                : null,
+                                                      ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    setDialogState(() {
+                                      isSubmitting = false;
+                                    });
+                                    setState(() {
+                                      _isFinishing = false;
+                                    });
+                                  }
+                                }
+                              },
+                      child:
+                          isSubmitting
+                              ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                              : Text(
+                                widget.isPresetCreation ? 'Save' : 'Finish',
+                                style: const TextStyle(
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      );
   }
 
   void _showSwapDialog(int currentIndex, Map<String, dynamic> currentExercise) {
@@ -3795,16 +4315,17 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         );
 
                                     if (feedback != null) {
+                                      _topFeedbackTimer?.cancel();
                                       setState(() {
                                         _activeFeedbacks[setKey] = feedback;
+                                        _topFeedback = feedback;
                                       });
-                                      _feedbackTimers[setKey] = Timer(
-                                        const Duration(seconds: 3),
+                                      _topFeedbackTimer = Timer(
+                                        const Duration(milliseconds: 3800),
                                         () {
                                           if (mounted) {
                                             setState(() {
-                                              _activeFeedbacks.remove(setKey);
-                                              _feedbackTimers.remove(setKey);
+                                              _topFeedback = null;
                                             });
                                           }
                                         },
@@ -3815,8 +4336,12 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                       });
                                     }
                                   } else {
+                                    if (_topFeedback != null) {
+                                      _topFeedbackTimer?.cancel();
+                                    }
                                     setState(() {
                                       _activeFeedbacks.remove(setKey);
+                                      _topFeedback = null;
                                     });
                                   }
 
@@ -3969,32 +4494,50 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     );
   }
 
-  Widget _buildFeedbackBanner(int exerciseIndex, int setIndex) {
-    final setKey = '${exerciseIndex}_$setIndex';
-    final feedback = _activeFeedbacks[setKey];
-
+  Widget _buildTopFeedbackBanner() {
     return AnimatedSize(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 200),
+        duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, animation) {
           return FadeTransition(
             opacity: animation,
-            child: SizeTransition(
-              sizeFactor: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, -0.2),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
               child: child,
             ),
           );
         },
-        child: feedback == null
-            ? const SizedBox.shrink(key: ValueKey('empty_banner'))
-            : WorkoutFeedbackBanner(
-                key: ValueKey('feedback_banner_$setKey'),
-                feedback: feedback,
+        child: _topFeedback == null
+            ? const SizedBox.shrink(key: ValueKey('empty_top_feedback'))
+            : Container(
+                key: const ValueKey('active_top_feedback'),
+                padding: const EdgeInsets.only(bottom: 6),
+                child: WorkoutFeedbackBanner(
+                  feedback: _topFeedback!,
+                  onDismiss: () {
+                    _topFeedbackTimer?.cancel();
+                    setState(() {
+                      _topFeedback = null;
+                    });
+                  },
+                ),
               ),
       ),
     );
+  }
+
+  Widget _buildFeedbackBanner(int exerciseIndex, int setIndex) {
+    return const SizedBox.shrink();
   }
 
   Widget _buildOutlineRedButton({

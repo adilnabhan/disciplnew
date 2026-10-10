@@ -23,6 +23,13 @@ class _HomeChallengeSectionState extends State<HomeChallengeSection> {
   }
 
   @override
+  void reassemble() {
+    super.reassemble();
+    _timer?.cancel();
+    _startAutoScroll();
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
     _scrollController.dispose();
@@ -30,7 +37,7 @@ class _HomeChallengeSectionState extends State<HomeChallengeSection> {
   }
 
   void _startAutoScroll() {
-    _timer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (!_isAutoScrolling ||
           !_scrollController.hasClients ||
           _cardWidth == 0) {
@@ -54,7 +61,7 @@ class _HomeChallengeSectionState extends State<HomeChallengeSection> {
 
       _scrollController.animateTo(
         nextScroll,
-        duration: const Duration(milliseconds: 600),
+        duration: const Duration(milliseconds: 420),
         curve: Curves.easeInOut,
       );
     });
@@ -75,13 +82,8 @@ class _HomeChallengeSectionState extends State<HomeChallengeSection> {
 
         return LayoutBuilder(
           builder: (context, constraints) {
-            final hasMultiple = challenges.length > 1;
             const separatorWidth = 10.0;
-            // When multiple challenges exist, show a 22px peek of the next card
-            final cardWidth =
-                hasMultiple
-                    ? (constraints.maxWidth - 32.0)
-                    : constraints.maxWidth;
+            final cardWidth = constraints.maxWidth;
             _cardWidth = cardWidth;
 
             return Column(

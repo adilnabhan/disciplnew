@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_sound_helper.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
@@ -1851,6 +1852,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           raduis: 12,
           ontap: () async {
             if (_isFinishing) return;
+            unawaited(WorkoutSoundHelper.playRandomFinishSound());
             setState(() {
               _isFinishing = true;
             });

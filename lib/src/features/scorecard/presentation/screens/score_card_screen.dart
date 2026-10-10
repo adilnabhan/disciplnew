@@ -1083,8 +1083,6 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     }
 
     final int streak = member.streak ?? 0;
-    final int rankChangeVal = member.rankChange ?? 0;
-    final String rankChangeType = member.rankChangeType?.toLowerCase() ?? '';
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 3),
@@ -1108,36 +1106,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               ),
             ),
           ),
-
-          // Rank Change Indicator
-          if (rankChangeVal > 0)
-            SizedBox(
-              width: 20,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    rankChangeType == 'up' ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                    color: rankChangeType == 'up' ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                    size: 18,
-                  ),
-                  Text(
-                    '$rankChangeVal',
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.w700,
-                      color: rankChangeType == 'up' ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                      fontFamily: 'Poppins',
-                      height: 0.8,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const SizedBox(width: 20),
-
-          const SizedBox(width: 4),
+          const SizedBox(width: 12),
 
           // Avatar
           Container(

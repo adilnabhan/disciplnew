@@ -11,6 +11,8 @@ import 'package:gal/gal.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/repositories/workout_repository.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/repositories/customer_details_repository.dart';
 import 'package:customer_mobile_app/src/features/profile/domain/models/customer_details_model.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_points_helper.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/workout_points_arrow_animation.dart';
 
 class WorkoutAchievementScreen extends StatefulWidget {
   const WorkoutAchievementScreen({
@@ -40,6 +42,9 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
   bool _isCapturing = false;
   Map<String, dynamic>? _fullSessionData;
   CustomerDetailsModel? _customerDetails;
+  WorkoutPointsBreakdown? _pointsBreakdown;
+  bool _showRisingArrow = false;
+  bool _hasFetchedFromApi = false;
   final GlobalKey _cardKey = GlobalKey();
 
   Future<File?> _captureCardImage() async {
@@ -193,6 +198,110 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
     _loadWorkoutCount();
     _loadFullSessionDetails();
     _loadCustomerDetails();
+    _updatePointsBreakdown();
+  }
+
+  void _updatePointsBreakdown() {
+    // If API already provided points data, do not overwrite with fallback calculations
+    if (_hasFetchedFromApi) return;
+
+    final session = _fullSessionData ?? widget.sessionData;
+    // Only evaluate if the session payload explicitly contains points data from backend
+    final hasExplicitPoints = session.containsKey('is_point') ||
+        session.containsKey('is_points') ||
+        session.containsKey('points_data') ||
+        session.containsKey('workout_points') ||
+        session.containsKey('earned_points') ||
+        session.containsKey('points') ||
+        session.containsKey('point');
+
+    if (!hasExplicitPoints) {
+      // Do not invent dummy points before API responds!
+      return;
+    }
+
+    final breakdown = WorkoutPointsBreakdown.fromSessionData(
+      sessionData: session,
+    );
+    print('═══════════════════════════════════════════════════════════');
+    print('📊 [WORKOUT POINTS STATUS]');
+    print('   is_point (hasPoints): ${breakdown.hasPoints}');
+    print('   points awarded: ${breakdown.totalPoints}');
+    print('   showRisingArrow animation: ${breakdown.hasPoints}');
+    if (session.containsKey('is_point')) {
+      print('   direct payload is_point: ${session['is_point']}');
+    }
+    print('═══════════════════════════════════════════════════════════');
+    if (mounted) {
+      setState(() {
+        _pointsBreakdown = breakdown;
+        _showRisingArrow = breakdown.hasPoints;
+      });
+    }
+  }
+
+  Future<void> _fetchPointsFromApi(int? sessionId) async {
+    // If backend finish payload already included is_point explicitly, respect it
+    if (widget.sessionData.containsKey('is_point') ||
+        _fullSessionData?.containsKey('is_point') == true) {
+      final existingIsPoint =
+          widget.sessionData['is_point'] ?? _fullSessionData?['is_point'];
+      print(
+        'ℹ️ [WORKOUT POINTS] is_point already present in finish response: $existingIsPoint',
+      );
+      _hasFetchedFromApi = true;
+      _updatePointsBreakdown();
+      return;
+    }
+
+    print('🔍 [WORKOUT POINTS] Fetching points from API for session: $sessionId');
+    try {
+      final res = await WorkoutRepository().getWorkoutSessionPoints(
+        sessionId: sessionId,
+      );
+      res.fold(
+        (err) {
+          print('⚠️ [WORKOUT POINTS] API call failed: $err');
+          if (mounted) {
+            setState(() {
+              _hasFetchedFromApi = true;
+              _pointsBreakdown = const WorkoutPointsBreakdown(
+                totalPoints: 0,
+                hasPoints: false,
+              );
+              _showRisingArrow = false;
+            });
+          }
+        },
+        (data) {
+          print('🎉 [WORKOUT POINTS API RECEIVED]: $data');
+          if (mounted) {
+            final breakdown = WorkoutPointsBreakdown.fromApiResponse(data);
+            print(
+              '🎯 [WORKOUT POINTS RESULT]: is_point=${breakdown.hasPoints}, point=${breakdown.totalPoints}',
+            );
+            setState(() {
+              _hasFetchedFromApi = true;
+              _pointsBreakdown = breakdown;
+              // ONLY show popup if backend confirms is_point == true!
+              _showRisingArrow = breakdown.hasPoints;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      print('❌ [WORKOUT POINTS API ERROR]: $e');
+      if (mounted) {
+        setState(() {
+          _hasFetchedFromApi = true;
+          _pointsBreakdown = const WorkoutPointsBreakdown(
+            totalPoints: 0,
+            hasPoints: false,
+          );
+          _showRisingArrow = false;
+        });
+      }
+    }
   }
 
   @override
@@ -321,6 +430,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
           sessionDetailsMap?['id'];
       final sessionId = int.tryParse(rawId?.toString() ?? '');
       if (sessionId != null) {
+        _fetchPointsFromApi(sessionId);
         final res = await WorkoutRepository().getSessionDetails(
           sessionId: sessionId,
         );
@@ -331,6 +441,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                 _fullSessionData = widget.sessionData;
                 _isLoadingDetails = false;
               });
+              _updatePointsBreakdown();
             }
           },
           (data) {
@@ -339,15 +450,18 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                 _fullSessionData = data;
                 _isLoadingDetails = false;
               });
+              _updatePointsBreakdown();
             }
           },
         );
       } else {
+        _fetchPointsFromApi(null);
         if (mounted) {
           setState(() {
             _fullSessionData = widget.sessionData;
             _isLoadingDetails = false;
           });
+          _updatePointsBreakdown();
         }
       }
     } catch (e) {
@@ -357,6 +471,7 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
           _fullSessionData = widget.sessionData;
           _isLoadingDetails = false;
         });
+        _updatePointsBreakdown();
       }
     }
   }
@@ -1185,6 +1300,23 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
                       ),
                     ),
                   ),
+
+                  // Animated Rising Red Arrow & Points Celebration
+                  if (_showRisingArrow &&
+                      _pointsBreakdown != null &&
+                      _pointsBreakdown!.hasPoints)
+                    Positioned.fill(
+                      child: WorkoutPointsRisingOverlay(
+                        breakdown: _pointsBreakdown!,
+                        onDismiss: () {
+                          if (mounted) {
+                            setState(() {
+                              _showRisingArrow = false;
+                            });
+                          }
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),

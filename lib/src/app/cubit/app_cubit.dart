@@ -111,6 +111,8 @@
 // }
 
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/repositories/customer_details_repository.dart';
+import 'package:customer_mobile_app/src/features/fitnesscenters/domain/respositories/fitnesscenter_repository.dart';
 
 part 'app_cubit.freezed.dart';
 part 'app_state.dart';
@@ -172,6 +174,8 @@ class AppCubit extends HydratedCubit<AppState> {
     try {
       WorkoutRepository().clearCalendarCache();
       AuthRepository.clearMemoryCache();
+      CustomerDetailsRepository().invalidateCache();
+      FitnesscenterRepository().clearMemoryCache();
     } catch (e) {
       print('⚠️ Repository cache clear error: $e');
     }

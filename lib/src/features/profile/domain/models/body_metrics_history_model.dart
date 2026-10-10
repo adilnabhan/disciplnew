@@ -1,0 +1,265 @@
+import 'package:flutter/foundation.dart';
+
+@immutable
+class BodyMetricsHistoryResponse {
+  const BodyMetricsHistoryResponse({
+    required this.status,
+    required this.data,
+  });
+
+  factory BodyMetricsHistoryResponse.fromJson(Map<String, dynamic> json) {
+    final dataMap = json['data'] is Map<String, dynamic>
+        ? json['data'] as Map<String, dynamic>
+        : (json['data'] is Map
+            ? Map<String, dynamic>.from(json['data'] as Map)
+            : json);
+
+    return BodyMetricsHistoryResponse(
+      status: json['status']?.toString() ?? '',
+      data: BodyMetricsHistoryData.fromJson(dataMap),
+    );
+  }
+
+  final String status;
+  final BodyMetricsHistoryData data;
+}
+
+@immutable
+class BodyMetricsHistoryData {
+  const BodyMetricsHistoryData({
+    this.userId,
+    this.customerId,
+    this.userName,
+    this.gender,
+    this.age,
+    this.heightCm,
+    this.currentWeightKg,
+    this.timeframe = 'all',
+    this.metrics = const BodyMetricsMap(),
+  });
+
+  factory BodyMetricsHistoryData.fromJson(Map<String, dynamic> json) {
+    final metricsMap = json['metrics'] is Map
+        ? Map<String, dynamic>.from(json['metrics'] as Map)
+        : <String, dynamic>{};
+
+    return BodyMetricsHistoryData(
+      userId: json['user_id'],
+      customerId: json['customer_id'],
+      userName: json['user_name']?.toString(),
+      gender: json['gender']?.toString(),
+      age: int.tryParse(json['age']?.toString() ?? ''),
+      heightCm: double.tryParse(json['height_cm']?.toString() ?? ''),
+      currentWeightKg:
+          double.tryParse(json['current_weight_kg']?.toString() ?? ''),
+      timeframe: json['timeframe']?.toString() ?? 'all',
+      metrics: BodyMetricsMap.fromJson(metricsMap),
+    );
+  }
+
+  final dynamic userId;
+  final dynamic customerId;
+  final String? userName;
+  final String? gender;
+  final int? age;
+  final double? heightCm;
+  final double? currentWeightKg;
+  final String timeframe;
+  final BodyMetricsMap metrics;
+
+  /// Whether there is at least one metric that has recorded values or history
+  bool get hasAnyData =>
+      metrics.bmi != null ||
+      metrics.bmr != null ||
+      metrics.bodyFat != null ||
+      metrics.waistHipRatio != null ||
+      metrics.waistHeightRatio != null;
+
+  /// Returns metrics ordered by user's specification:
+  /// 1. BMI, 2. BMR, 3. Body Fat, 4. Waist Hip Ratio, 5. Waist Height Ratio
+  List<BodyMetricItem> get orderedMetrics {
+    final list = <BodyMetricItem>[];
+    if (metrics.bmi != null) list.add(metrics.bmi!);
+    if (metrics.bmr != null) list.add(metrics.bmr!);
+    if (metrics.bodyFat != null) list.add(metrics.bodyFat!);
+    if (metrics.waistHipRatio != null) list.add(metrics.waistHipRatio!);
+    if (metrics.waistHeightRatio != null) list.add(metrics.waistHeightRatio!);
+    return list;
+  }
+}
+
+@immutable
+class BodyMetricsMap {
+  const BodyMetricsMap({
+    this.bmi,
+    this.bmr,
+    this.bodyFat,
+    this.waistHipRatio,
+    this.waistHeightRatio,
+  });
+
+  factory BodyMetricsMap.fromJson(Map<String, dynamic> json) {
+    BodyMetricItem? parseItem(dynamic raw) {
+      if (raw is Map) {
+        return BodyMetricItem.fromJson(Map<String, dynamic>.from(raw));
+      }
+      return null;
+    }
+
+    return BodyMetricsMap(
+      bmi: parseItem(json['bmi']),
+      bmr: parseItem(json['bmr']),
+      bodyFat: parseItem(json['body_fat'] ?? json['bodyFat']),
+      waistHipRatio: parseItem(
+        json['waist_hip_ratio'] ?? json['waistHipRatio'] ?? json['whr'],
+      ),
+      waistHeightRatio: parseItem(
+        json['waist_height_ratio'] ??
+            json['waistHeightRatio'] ??
+            json['whtr'] ??
+            json['waist_hip_height'],
+      ),
+    );
+  }
+
+  final BodyMetricItem? bmi;
+  final BodyMetricItem? bmr;
+  final BodyMetricItem? bodyFat;
+  final BodyMetricItem? waistHipRatio;
+  final BodyMetricItem? waistHeightRatio;
+}
+
+@immutable
+class BodyMetricItem {
+  const BodyMetricItem({
+    required this.metricKey,
+    required this.title,
+    required this.subtitle,
+    required this.currentValue,
+    this.unit = '',
+    this.delta,
+    this.deltaFormatted,
+    this.deltaDirection,
+    this.sinceDate,
+    this.sinceText,
+    this.status,
+    this.statusBadge,
+    this.statusColor,
+    this.rangeText,
+    this.insight,
+    this.chartMeta,
+    this.history = const [],
+  });
+
+  factory BodyMetricItem.fromJson(Map<String, dynamic> json) {
+    final historyList = <BodyMetricHistoryPoint>[];
+    if (json['history'] is List) {
+      for (final item in json['history'] as List) {
+        if (item is Map) {
+          historyList.add(
+            BodyMetricHistoryPoint.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          );
+        }
+      }
+    }
+
+    BodyMetricChartMeta? chartMeta;
+    if (json['chart_meta'] is Map) {
+      chartMeta = BodyMetricChartMeta.fromJson(
+        Map<String, dynamic>.from(json['chart_meta'] as Map),
+      );
+    }
+
+    final curVal = (json['current_value'] as num?)?.toDouble() ??
+        (json['value'] as num?)?.toDouble() ??
+        0.0;
+
+    return BodyMetricItem(
+      metricKey: json['metric_key']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      subtitle: json['subtitle']?.toString() ?? '',
+      currentValue: curVal,
+      unit: json['unit']?.toString() ?? '',
+      delta: (json['delta'] as num?)?.toDouble(),
+      deltaFormatted: json['delta_formatted']?.toString(),
+      deltaDirection: json['delta_direction']?.toString(),
+      sinceDate: json['since_date']?.toString(),
+      sinceText: json['since_text']?.toString(),
+      status: json['status']?.toString(),
+      statusBadge: json['status_badge']?.toString() ?? json['status']?.toString(),
+      statusColor: json['status_color']?.toString(),
+      rangeText: json['range_text']?.toString(),
+      insight: json['insight']?.toString(),
+      chartMeta: chartMeta,
+      history: historyList,
+    );
+  }
+
+  final String metricKey;
+  final String title;
+  final String subtitle;
+  final double currentValue;
+  final String unit;
+  final double? delta;
+  final String? deltaFormatted;
+  final String? deltaDirection;
+  final String? sinceDate;
+  final String? sinceText;
+  final String? status;
+  final String? statusBadge;
+  final String? statusColor;
+  final String? rangeText;
+  final String? insight;
+  final BodyMetricChartMeta? chartMeta;
+  final List<BodyMetricHistoryPoint> history;
+
+  bool get isIncrease =>
+      deltaDirection?.toLowerCase() == 'up' || (delta != null && delta! > 0);
+}
+
+@immutable
+class BodyMetricChartMeta {
+  const BodyMetricChartMeta({
+    this.minValue,
+    this.maxValue,
+    this.healthyMin,
+    this.healthyMax,
+  });
+
+  factory BodyMetricChartMeta.fromJson(Map<String, dynamic> json) {
+    return BodyMetricChartMeta(
+      minValue: (json['min_value'] as num?)?.toDouble(),
+      maxValue: (json['max_value'] as num?)?.toDouble(),
+      healthyMin: (json['healthy_min'] as num?)?.toDouble(),
+      healthyMax: (json['healthy_max'] as num?)?.toDouble(),
+    );
+  }
+
+  final double? minValue;
+  final double? maxValue;
+  final double? healthyMin;
+  final double? healthyMax;
+}
+
+@immutable
+class BodyMetricHistoryPoint {
+  const BodyMetricHistoryPoint({
+    required this.date,
+    required this.value,
+    this.rawDate,
+  });
+
+  factory BodyMetricHistoryPoint.fromJson(Map<String, dynamic> json) {
+    return BodyMetricHistoryPoint(
+      date: json['date']?.toString() ?? '',
+      rawDate: json['raw_date']?.toString(),
+      value: (json['value'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+
+  final String date;
+  final String? rawDate;
+  final double value;
+}

@@ -65,7 +65,7 @@ class __AllChallengesScreenContentState
             baseColor: Colors.grey.shade300,
             highlightColor: Colors.grey.shade100,
             child: Container(
-              height: 180,
+              height: 225,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
@@ -79,6 +79,7 @@ class __AllChallengesScreenContentState
 
   Widget _buildEmptyState(BuildContext context, ChallengeListState state) {
     final hasActiveFilter = (state.selectedStatus != 'all') ||
+        state.selectedPartnerIds.isNotEmpty ||
         (state.selectedChallengeType != null &&
             state.selectedChallengeType!.isNotEmpty) ||
         state.searchQuery.trim().isNotEmpty;
@@ -279,12 +280,13 @@ class __AllChallengesScreenContentState
 
 
           // Challenges Section Header (Dynamic title reflecting current filter)
-          Padding(
+            Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: BlocBuilder<ChallengeListCubit, ChallengeListState>(
               buildWhen: (prev, curr) =>
                   prev.selectedStatus != curr.selectedStatus ||
                   prev.selectedChallengeType != curr.selectedChallengeType ||
+                  prev.selectedPartnerIds != curr.selectedPartnerIds ||
                   prev.challenges.length != curr.challenges.length,
               builder: (context, state) {
                 String title;
@@ -301,7 +303,23 @@ class __AllChallengesScreenContentState
                     title = 'All Challenges';
                 }
 
-                if (state.selectedChallengeType != null &&
+                if (state.selectedPartnerIds.isNotEmpty) {
+                  if (state.selectedPartnerIds.length == 1) {
+                    String? pName;
+                    for (final p in state.partners) {
+                      if (p.id == state.selectedPartnerIds.first) {
+                        pName = p.name;
+                        break;
+                      }
+                    }
+                    if (pName != null && pName.isNotEmpty) {
+                      title = '$title • $pName';
+                    }
+                  } else {
+                    title =
+                        '$title • ${state.selectedPartnerIds.length} Partners';
+                  }
+                } else if (state.selectedChallengeType != null &&
                     state.selectedChallengeType!.isNotEmpty) {
                   final typeName = state.selectedChallengeType == 'lucky_draw'
                       ? 'Lucky Draw'
@@ -314,6 +332,7 @@ class __AllChallengesScreenContentState
                 }
 
                 final hasActiveFilter = (state.selectedStatus != 'all') ||
+                    state.selectedPartnerIds.isNotEmpty ||
                     (state.selectedChallengeType != null &&
                         state.selectedChallengeType!.isNotEmpty);
 

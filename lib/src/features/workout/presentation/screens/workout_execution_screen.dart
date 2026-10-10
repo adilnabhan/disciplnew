@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/models/workout_model.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/slide_to_finish_button.dart';
+import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_sound_helper.dart';
 
 class WorkoutExecutionScreen extends StatefulWidget {
   final WorkoutModel workoutModel;
@@ -148,6 +150,18 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                 child: SlideToFinishButton(
                   text: 'Slide to Finish',
                   onSlideComplete: () async {
+                    final missedCount = _countUncompletedSets(_exercises);
+                    if (missedCount > 0) {
+                      final shouldProceed =
+                          await _showIncompleteSetsReminderDialog(
+                        context,
+                        _exercises,
+                        missedCount,
+                      );
+                      if (shouldProceed != true) return;
+                      if (!mounted) return;
+                    }
+
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder:
@@ -176,7 +190,10 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                                 ),
                               ),
                               TextButton(
-                                onPressed: () => Navigator.pop(context, true),
+                                onPressed: () {
+                                  unawaited(WorkoutSoundHelper.playRandomFinishSound());
+                                  Navigator.pop(context, true);
+                                },
                                 child: const Text(
                                   'Finish',
                                   style: TextStyle(
@@ -1116,6 +1133,203 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
           color: textColor,
         ),
       ),
+    );
+  }
+
+  int _countUncompletedSets(List<Map<String, dynamic>> exercises) {
+    var count = 0;
+    for (final exercise in exercises) {
+      final sets = (exercise['sets'] as List<dynamic>?) ?? [];
+      for (final set in sets) {
+        if (set is Map) {
+          final isChecked = set['checked'] as bool? ?? false;
+          if (!isChecked) {
+            count++;
+          }
+        }
+      }
+    }
+    return count;
+  }
+
+  Future<bool?> _showIncompleteSetsReminderDialog(
+    BuildContext context,
+    List<Map<String, dynamic>> exercises,
+    int missedCount,
+  ) {
+    final missedExercises = <({String name, int count})>[];
+    for (final exercise in exercises) {
+      final sets = (exercise['sets'] as List<dynamic>?) ?? [];
+      var count = 0;
+      for (final set in sets) {
+        if (set is Map) {
+          final isChecked = set['checked'] as bool? ?? false;
+          if (!isChecked) {
+            count++;
+          }
+        }
+      }
+      if (count > 0) {
+        missedExercises.add((
+          name: exercise['name']?.toString() ?? 'Exercise',
+          count: count,
+        ));
+      }
+    }
+
+    return showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          contentPadding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFE53935),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Incomplete Sets',
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    color: Color(0xFF212121),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You have $missedCount uncompleted set${missedCount > 1 ? 's' : ''}. '
+                'Did you forget to tick them?',
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 14,
+                  color: Color(0xFF4B5563),
+                  height: 1.4,
+                ),
+              ),
+              if (missedExercises.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E7EB)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...missedExercises.take(3).map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2.5),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.circle,
+                                    size: 6,
+                                    color: Color(0xFFE53935),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${item.name}: ${item.count} set${item.count > 1 ? 's' : ''}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontFamily: 'Poppins',
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF374151),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      if (missedExercises.length > 3) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '+ ${missedExercises.length - 3} more exercise(s)',
+                          style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            fontSize: 11,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+              child: const Text(
+                'Review Sets',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Finish Anyway',
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

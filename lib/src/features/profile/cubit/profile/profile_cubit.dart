@@ -6,8 +6,8 @@ part 'profile_cubit.freezed.dart';
 class ProfileCubit extends Cubit<ProfileState> {
   ProfileCubit() : super(const ProfileState());
 
-  Future<void> fetchCustomerDetails() async {
-    if (state.customerDetails.isNone()) {
+  Future<void> fetchCustomerDetails({bool forceRefresh = false}) async {
+    if (forceRefresh || state.customerDetails.isNone()) {
       emit(state.copyWith(customerDetails: none()));
     }
     final id = Feggy.read<AppCubit>()?.state.currentUser?.customer?.id;
@@ -19,7 +19,10 @@ class ProfileCubit extends Cubit<ProfileState> {
       );
       return;
     }
-    final response = await CustomerDetailsRepository().customerDetails(id: id);
+    final response = await CustomerDetailsRepository().customerDetails(
+      id: id,
+      forceRefresh: forceRefresh,
+    );
     emit(state.copyWith(customerDetails: some(response)));
   }
 

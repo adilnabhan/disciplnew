@@ -18,19 +18,32 @@ final class FitnesscenterRepository {
   // Caching variables
   FitnesscenterCategoriesModel? _cachedCategories;
   ListFitnesscenterModel? _cachedListFitnesscenter;
-  
-  FitnesscenterCategoriesModel? get cachedCategories => _cachedCategories;
-  ListFitnesscenterModel? get cachedListFitnesscenter => _cachedListFitnesscenter;
 
-  final Map<int, List<FitnesscenterMembershipPlansModel>> _cachedMembershipPlans = {};
+  FitnesscenterCategoriesModel? get cachedCategories => _cachedCategories;
+  ListFitnesscenterModel? get cachedListFitnesscenter =>
+      _cachedListFitnesscenter;
+
+  final Map<int, List<FitnesscenterMembershipPlansModel>>
+  _cachedMembershipPlans = {};
   final Map<int, FitnesscenterDetailsModel> _cachedDetails = {};
   final Map<int, FitnessCenterReviewsModel> _cachedReviews = {};
 
   FitnesscenterDetailsModel? getCachedDetails(int id) => _cachedDetails[id];
-  void cacheDetails(int id, FitnesscenterDetailsModel details) => _cachedDetails[id] = details;
+  void cacheDetails(int id, FitnesscenterDetailsModel details) =>
+      _cachedDetails[id] = details;
 
   FitnessCenterReviewsModel? getCachedReviews(int id) => _cachedReviews[id];
-  void cacheReviews(int id, FitnessCenterReviewsModel reviews) => _cachedReviews[id] = reviews;
+  void cacheReviews(int id, FitnessCenterReviewsModel reviews) =>
+      _cachedReviews[id] = reviews;
+
+  /// Clears in-memory cache on logout or account switch
+  void clearMemoryCache() {
+    _cachedCategories = null;
+    _cachedListFitnesscenter = null;
+    _cachedMembershipPlans.clear();
+    _cachedDetails.clear();
+    _cachedReviews.clear();
+  }
 
   final Dio _dio = DioClient().dio;
 
@@ -85,8 +98,11 @@ final class FitnesscenterRepository {
         ),
         onSuccess:
             (res) => _handleMapResponse(res, (json) {
-              if (json.containsKey('data') && json['data'] is Map<String, dynamic>) {
-                return FitnesscenterDetailsModel.fromJson(json['data'] as Map<String, dynamic>);
+              if (json.containsKey('data') &&
+                  json['data'] is Map<String, dynamic>) {
+                return FitnesscenterDetailsModel.fromJson(
+                  json['data'] as Map<String, dynamic>,
+                );
               }
               return FitnesscenterDetailsModel.fromJson(json);
             }),
@@ -121,10 +137,7 @@ final class FitnesscenterRepository {
               FitnesscenterMembershipPlansModel.fromJson,
             ),
       );
-      response.fold(
-        (_) => null,
-        (plans) => _cachedMembershipPlans[id] = plans,
-      );
+      response.fold((_) => null, (plans) => _cachedMembershipPlans[id] = plans);
       return response;
     } on ApiException catch (e) {
       return left(e);
@@ -146,7 +159,8 @@ final class FitnesscenterRepository {
   /// @apiSuccess {FitnesscenterCategoriesModel} response Success response
   Future<Either<ApiException, FitnesscenterCategoriesModel>>
   fitnesscenterCategories({Map<String, dynamic>? queryParameters}) async {
-    if (_cachedCategories != null && (queryParameters == null || queryParameters.isEmpty)) {
+    if (_cachedCategories != null &&
+        (queryParameters == null || queryParameters.isEmpty)) {
       return right(_cachedCategories!);
     }
     try {
@@ -160,14 +174,11 @@ final class FitnesscenterRepository {
             (res) =>
                 _handleMapResponse(res, FitnesscenterCategoriesModel.fromJson),
       );
-      response.fold(
-        (_) => null,
-        (categories) {
-          if (queryParameters == null || queryParameters.isEmpty) {
-            _cachedCategories = categories;
-          }
-        },
-      );
+      response.fold((_) => null, (categories) {
+        if (queryParameters == null || queryParameters.isEmpty) {
+          _cachedCategories = categories;
+        }
+      });
       return response;
     } on ApiException catch (e) {
       return left(e);
@@ -195,7 +206,10 @@ final class FitnesscenterRepository {
     try {
       final response = await Feggy.async(
         call: _dio.get<dynamic>(
-          nextUrl ?? (allGyms ? ApiUris.listAllFitnesscenter : ApiUris.listFitnesscenter),
+          nextUrl ??
+              (allGyms
+                  ? ApiUris.listAllFitnesscenter
+                  : ApiUris.listFitnesscenter),
           options: _options,
           queryParameters: nextUrl != null ? null : queryParameters,
         ),
@@ -205,12 +219,10 @@ final class FitnesscenterRepository {
 
       // Cache initial load (no pagination, no active search query, no specific category filtered)
       if (nextUrl == null &&
-          (queryParameters['search'] == null || (queryParameters['search'] as String).isEmpty) &&
+          (queryParameters['search'] == null ||
+              (queryParameters['search'] as String).isEmpty) &&
           queryParameters['category_id'] == null) {
-        response.fold(
-          (_) => null,
-          (r) => _cachedListFitnesscenter = r,
-        );
+        response.fold((_) => null, (r) => _cachedListFitnesscenter = r);
       }
 
       return response;
@@ -248,30 +260,40 @@ final class FitnesscenterRepository {
 
       if (response.statusCode == 200 && response.data != null) {
         List<dynamic> results = [];
-        if (response.data is Map && (response.data as Map).containsKey('results')) {
+        if (response.data is Map &&
+            (response.data as Map).containsKey('results')) {
           results = (response.data as Map)['results'] as List? ?? [];
         } else if (response.data is List) {
           results = response.data as List;
         }
 
-        final trainers = results.map((item) {
-          final map = Map<String, dynamic>.from(item as Map);
-          return GymTrainer.fromApiJson({
-            'id': map['id'] ?? map['trainer_id'] ?? map['user_id'],
-            'full_name': map['name'] ?? '${map['first_name'] ?? ''} ${map['last_name'] ?? ''}'.trim(),
-            'user_type': 'Trainer',
-            'bio': map['bio'],
-            'profile_image': map['profile_image'] ?? map['profile_picture'],
-            'experience_years': (map['experience_years'] as num?)?.toInt(),
-            'specializations': map['specialties'] ?? map['specializations'],
-            'gender': map['gender'],
-            'email': map['email'],
-            'mobile': map['mobile_number'] ?? map['phone_number'] ?? map['whatsapp_number'],
-            'place': (map['gym_affiliations'] is List && (map['gym_affiliations'] as List).isNotEmpty)
-                ? (map['gym_affiliations'] as List).first.toString()
-                : null,
-          });
-        }).toList();
+        final trainers =
+            results.map((item) {
+              final map = Map<String, dynamic>.from(item as Map);
+              return GymTrainer.fromApiJson({
+                'id': map['id'] ?? map['trainer_id'] ?? map['user_id'],
+                'full_name':
+                    map['name'] ??
+                    '${map['first_name'] ?? ''} ${map['last_name'] ?? ''}'
+                        .trim(),
+                'user_type': 'Trainer',
+                'bio': map['bio'],
+                'profile_image': map['profile_image'] ?? map['profile_picture'],
+                'experience_years': (map['experience_years'] as num?)?.toInt(),
+                'specializations': map['specialties'] ?? map['specializations'],
+                'gender': map['gender'],
+                'email': map['email'],
+                'mobile':
+                    map['mobile_number'] ??
+                    map['phone_number'] ??
+                    map['whatsapp_number'],
+                'place':
+                    (map['gym_affiliations'] is List &&
+                            (map['gym_affiliations'] as List).isNotEmpty)
+                        ? (map['gym_affiliations'] as List).first.toString()
+                        : null,
+              });
+            }).toList();
 
         return right(trainers);
       }

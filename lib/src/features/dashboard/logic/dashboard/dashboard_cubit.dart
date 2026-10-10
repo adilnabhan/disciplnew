@@ -32,11 +32,34 @@ class DashboardCubit extends Cubit<DashboardState> {
       },
       (either) => either.fold(
         (error) => false,
-        (activeMembership) =>
-            activeMembership != null &&
-            (activeMembership.isActive == true ||
-                activeMembership.organization != null ||
-                activeMembership.id != null),
+        (activeMembership) {
+          if (activeMembership == null) return false;
+          final bool isPending =
+              activeMembership.status?.toLowerCase() == 'pending';
+          final now = DateTime.now();
+          final localEndDate = activeMembership.endDate?.toLocal();
+          final remainingDays = isPending
+              ? 0
+              : (localEndDate != null
+                  ? DateTime(
+                        localEndDate.year,
+                        localEndDate.month,
+                        localEndDate.day,
+                      )
+                      .difference(
+                        DateTime(now.year, now.month, now.day),
+                      )
+                      .inDays
+                  : 0);
+          final bool isExpired = !isPending &&
+              (activeMembership.status?.toLowerCase() == 'expired' ||
+                  remainingDays < 0);
+          if (isExpired || isPending) return false;
+
+          return (activeMembership.isActive == true ||
+              activeMembership.organization != null ||
+              activeMembership.id != null);
+        },
       ),
     );
   }

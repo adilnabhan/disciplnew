@@ -2,7 +2,6 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 
 import 'package:customer_mobile_app/src/features/challenges/domain/models/challenge_list_model.dart';
 import 'package:customer_mobile_app/src/features/challenges/cubit/challenge_list_cubit.dart';
-import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_winners_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_winner_certificate_screen.dart';
 import 'package:customer_mobile_app/src/features/challenges/presentation/screens/challenge_details_screen.dart';
 
@@ -158,14 +157,13 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
     final challenge = widget.challenge;
     final thumbUrl = challenge.thumbnailUrl;
     final hasImg = thumbUrl != null && thumbUrl.isNotEmpty;
-    final category = challenge.categoryDisplay ?? challenge.category;
     final typeText =
         challenge.challengeType?.isNotEmpty == true
             ? challenge.challengeType!.toUpperCase()
             : 'LUCKY DRAW';
 
     return SizedBox(
-      height: 96,
+      height: 125,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
@@ -200,7 +198,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
           ),
 
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -443,21 +441,21 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
     }
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 6, 14, 4),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
       child: Row(
         children: [
           if (displayMembers.isNotEmpty)
             SizedBox(
-              height: 30,
-              width: (displayMembers.length * 20.0) + 10,
+              height: 32,
+              width: (displayMembers.length * 21.0) + 11,
               child: Stack(
                 children: List.generate(displayMembers.length, (i) {
                   final m = displayMembers[i];
                   return Positioned(
-                    left: i * 20.0,
+                    left: i * 21.0,
                     child: Container(
-                      width: 30,
-                      height: 30,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 1.5),
@@ -594,7 +592,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
                       }
                     },
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
               decoration: BoxDecoration(
                 color: btnBg,
                 borderRadius: BorderRadius.circular(22),
@@ -613,7 +611,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (prefixWidget != null) prefixWidget!,
+                  if (prefixWidget != null) prefixWidget,
                   Text(
                     btnText,
                     style: AppStyles.text13Px.poppins.w600.copyWith(
@@ -745,7 +743,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
           }
         },
         child: Container(
-          height: 40,
+          height: 46,
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -778,7 +776,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
 
     if (footerType == 'ended') {
       return Container(
-        height: 40,
+        height: 46,
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         decoration: BoxDecoration(
@@ -828,7 +826,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
         },
         child: Container(
           width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(14, 6, 14, 6),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
           decoration: BoxDecoration(
             color: const Color(0xFFFFF7ED),
             borderRadius: roundedBottom,
@@ -926,7 +924,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
     final secsLeft = secs % 60;
 
     return Container(
-      height: 44,
+      height: 48,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(color: themeColor, borderRadius: roundedBottom),
@@ -975,7 +973,7 @@ class _ChallengeItemCardState extends State<ChallengeItemCard> {
       children: [
         Container(
           width: 32,
-          height: 26,
+          height: 28,
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.18),
             borderRadius: BorderRadius.circular(7),

@@ -5,3 +5,5 @@ export 'Life_style_edit_screen.dart';
 export 'your_health.dart';
 export 'faq_screen.dart';
 export 'customer_membership_details_screen.dart';
+export 'personal_records_screen.dart';
+export 'personal_record_details_screen.dart';

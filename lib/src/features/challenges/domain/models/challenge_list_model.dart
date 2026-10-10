@@ -22,6 +22,31 @@ class ChallengeBrand {
 }
 
 @immutable
+class ChallengePartner {
+  final int id;
+  final String name;
+  final String? logo;
+
+  const ChallengePartner({
+    required this.id,
+    required this.name,
+    this.logo,
+  });
+
+  factory ChallengePartner.fromJson(Map<String, dynamic> json) {
+    return ChallengePartner(
+      id: json['id'] as int? ?? 0,
+      name: (json['name'] ?? json['brand_name'] ?? '') as String,
+      logo: (json['logo'] ?? json['brand_logo']) as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'name': name, 'logo': logo};
+  }
+}
+
+@immutable
 class ChallengeJoinedMember {
   final int? id;
   final String? profileImage;
