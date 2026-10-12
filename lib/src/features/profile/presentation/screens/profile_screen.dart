@@ -2,6 +2,7 @@ import 'package:shimmer/shimmer.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:intl/intl.dart';
 import 'package:customer_mobile_app/core/extensions/typography_extension.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/models/body_matrix_model.dart';
 import 'pages/pages.dart';
 import 'body_matrix_screen.dart';
 
@@ -14,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   late final ProfileCubit _cubit;
+  BodyMatrixModel? _bodyMatrix;
 
   @override
   void initState() {
@@ -29,6 +31,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetch({bool forceRefresh = false}) async {
     await _cubit.fetchCustomerDetails(forceRefresh: forceRefresh);
     await _cubit.fetchConstChoices();
+    _fetchBodyMatrix();
+  }
+
+  Future<void> _fetchBodyMatrix() async {
+    final res = await CustomerDetailsRepository().fetchBodyMatrix();
+    if (!mounted) return;
+    res.fold(
+      (error) {
+        print('[ProfileScreen] Fetch body matrix failed: ${error.msg}');
+      },
+      (matrix) {
+        print('[ProfileScreen] Body matrix loaded: BMI=${matrix.bmiValue}, BF=${matrix.bodyFatPercentage}');
+        setState(() {
+          _bodyMatrix = matrix;
+        });
+      },
+    );
   }
 
   @override
@@ -1354,6 +1373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 Dialogs.showSnack(
                                   msg: 'Body metrics updated successfully!',
                                 );
+                                _fetch();
                               },
                             ),
                           );
@@ -1789,106 +1809,108 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildFitnessAnalyticsCard(CustomerDetailsModel customerDetails) {
-    int age = 0;
-    if (customerDetails.dateOfBirth != null) {
-      age = DateTime.now().year - customerDetails.dateOfBirth!.year;
+  Color _resolveBmiCategoryColor(String category, double? val) {
+    final c = category.toLowerCase();
+    if (c.contains('under')) return Colors.orange;
+    if (c.contains('normal')) return const Color(0xFF40C057);
+    if (c.contains('over')) return Colors.orange.shade700;
+    if (c.contains('obese')) return Colors.red;
+    if (val != null) {
+      if (val < 18.5) return Colors.orange;
+      if (val < 25.0) return const Color(0xFF40C057);
+      if (val < 30.0) return Colors.orange.shade700;
+      return Colors.red;
     }
+    return Colors.grey;
+  }
 
-    double? bmi;
-    double? bf;
+  Color _resolveBfCategoryColor(String category, double? val) {
+    final c = category.toLowerCase();
+    if (c.contains('low') || c.contains('essential')) return const Color(0xFF2F6FED);
+    if (c.contains('athletic')) return const Color(0xFF00A896);
+    if (c.contains('fitness')) return const Color(0xFF80C23A);
+    if (c.contains('average') && !c.contains('above')) return const Color(0xFFF9B824);
+    if (c.contains('above') || c.contains('high')) return const Color(0xFFFA5252);
+    if (val != null) {
+      if (val < 6.0) return const Color(0xFF2F6FED);
+      if (val < 14.0) return const Color(0xFF00A896);
+      if (val < 18.0) return const Color(0xFF80C23A);
+      if (val < 25.0) return const Color(0xFFF9B824);
+      return const Color(0xFFFA5252);
+    }
+    return Colors.grey;
+  }
+
+  Widget _buildFitnessAnalyticsCard(CustomerDetailsModel customerDetails) {
+    // 1. BMI directly from API
+    final double? bmiVal = _bodyMatrix?.bmiValue ??
+        (customerDetails.bmi != null
+            ? double.tryParse(customerDetails.bmi.toString())
+            : null);
+    final String bmiStr = bmiVal != null ? bmiVal.toStringAsFixed(1) : '-';
+
     String bmiCategory = '-';
-    Color categoryColor = Colors.grey;
-
-    final heightVal = double.tryParse(customerDetails.height ?? '');
-    final weightVal = double.tryParse(customerDetails.weight ?? '');
-
-    if (heightVal != null && weightVal != null && heightVal > 0) {
-      final heightInMeters = heightVal / 100;
-      bmi = weightVal / (heightInMeters * heightInMeters);
-
-      if (bmi < 18.5) {
+    if (_bodyMatrix?.bmiLabel != null && _bodyMatrix!.bmiLabel!.isNotEmpty) {
+      bmiCategory = _bodyMatrix!.bmiLabel!;
+    } else if (_bodyMatrix?.bmiCategory != null &&
+        _bodyMatrix!.bmiCategory!.isNotEmpty) {
+      bmiCategory = _bodyMatrix!.bmiCategory!;
+    } else if (bmiVal != null) {
+      if (bmiVal < 18.5) {
         bmiCategory = 'Underweight';
-        categoryColor = Colors.orange;
-      } else if (bmi < 25.0) {
+      } else if (bmiVal < 25.0) {
         bmiCategory = 'Normal';
-        categoryColor = const Color(0xFF40C057);
-      } else if (bmi < 30.0) {
+      } else if (bmiVal < 30.0) {
         bmiCategory = 'Overweight';
-        categoryColor = Colors.orange.shade700;
       } else {
         bmiCategory = 'Obese';
-        categoryColor = Colors.red;
-      }
-
-      final gender = customerDetails.gender?.toString().toLowerCase() ?? 'male';
-      if (age > 0) {
-        if (gender.startsWith('f')) {
-          bf = (1.20 * bmi) + (0.23 * age) - 5.4;
-        } else {
-          bf = (1.20 * bmi) + (0.23 * age) - 16.2;
-        }
       }
     }
+    final Color categoryColor = _resolveBmiCategoryColor(bmiCategory, bmiVal);
 
-    // Fallbacks from model if calculation didn't run but model has it
-    if (bmi == null && customerDetails.bmi != null) {
-      bmi = double.tryParse(customerDetails.bmi.toString());
-      if (bmi != null) {
-        if (bmi < 18.5) {
-          bmiCategory = 'Underweight';
-          categoryColor = Colors.orange;
-        } else if (bmi < 25.0) {
-          bmiCategory = 'Normal';
-          categoryColor = const Color(0xFF40C057);
-        } else if (bmi < 30.0) {
-          bmiCategory = 'Overweight';
-          categoryColor = Colors.orange.shade700;
-        } else {
-          bmiCategory = 'Obese';
-          categoryColor = Colors.red;
-        }
-      }
-    }
-    if (bf == null && customerDetails.bfPercentage != null) {
+    // 2. Body Fat directly from API
+    double? bfVal = _bodyMatrix?.bodyFatPercentage;
+    if (bfVal == null && customerDetails.bfPercentage != null) {
       final rawBf = customerDetails.bfPercentage;
       if (rawBf is num) {
-        bf = rawBf.toDouble();
+        bfVal = rawBf.toDouble();
       } else if (rawBf is String) {
-        bf = double.tryParse(rawBf);
+        bfVal = double.tryParse(rawBf);
       }
     }
-
-    final bmiStr = bmi != null ? bmi.toStringAsFixed(1) : '-';
-    final bfStr = bf != null ? bf.toStringAsFixed(1) : '-';
+    final String bfStr = bfVal != null ? bfVal.toStringAsFixed(1) : '-';
 
     String bfCategory = '-';
-    Color bfCategoryColor = Colors.grey;
-
-    if (bf != null) {
-      if (bf < 2.0) {
+    if (_bodyMatrix?.bodyFatCategory != null &&
+        _bodyMatrix!.bodyFatCategory!.isNotEmpty) {
+      bfCategory = _bodyMatrix!.bodyFatCategory!;
+    } else if (bfVal != null) {
+      if (bfVal < 2.0) {
         bfCategory = 'Low';
-        bfCategoryColor = const Color(0xFF2F6FED);
-      } else if (bf < 6.0) {
+      } else if (bfVal < 6.0) {
         bfCategory = 'Essential';
-        bfCategoryColor = const Color(0xFF2F6FED);
-      } else if (bf < 14.0) {
+      } else if (bfVal < 14.0) {
         bfCategory = 'Athletic';
-        bfCategoryColor = const Color(0xFF00A896);
-      } else if (bf < 18.0) {
+      } else if (bfVal < 18.0) {
         bfCategory = 'Fitness';
-        bfCategoryColor = const Color(0xFF80C23A);
-      } else if (bf < 25.0) {
+      } else if (bfVal < 25.0) {
         bfCategory = 'Average';
-        bfCategoryColor = const Color(0xFFF9B824);
       } else {
         bfCategory = 'Above Average';
-        bfCategoryColor = const Color(0xFFFA5252);
       }
     }
+    final Color bfCategoryColor = _resolveBfCategoryColor(bfCategory, bfVal);
 
-    final heightStr = _formatHeight(customerDetails.height);
-    final weightStr = _formatWeight(customerDetails.weight);
+    final heightStr = _formatHeight(
+      _bodyMatrix?.heightCm != null
+          ? _bodyMatrix!.heightCm!.toString()
+          : customerDetails.height,
+    );
+    final weightStr = _formatWeight(
+      _bodyMatrix?.weightKg != null
+          ? _bodyMatrix!.weightKg!.toString()
+          : customerDetails.weight,
+    );
 
     String updatedDateStr = '-';
     if (customerDetails.modified != null) {
@@ -1914,7 +1936,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: BodyMatrixScreen(customerDetails: customerDetails),
           ),
         ),
-      );
+      ).then((_) {
+        _fetch();
+      });
     };
 
     return Column(
@@ -1974,7 +1998,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  if (bmi != null) ...[
+                                  if (bmiCategory != '-') ...[
                                     Icon(
                                       Icons.circle,
                                       color: categoryColor,
@@ -2051,7 +2075,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  if (bf != null) ...[
+                                  if (bfCategory != '-') ...[
                                     Icon(
                                       Icons.circle,
                                       color: bfCategoryColor,

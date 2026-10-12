@@ -912,6 +912,15 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                               setSheetState(() {
                                 _removingExerciseIds.add(exerciseKey);
                               });
+                              print('========================================');
+                              print('DEBUG [REMOVE BUTTON TAPPED]:');
+                              print('Target exercise title: ${item['title']}, id: ${item['id']}');
+                              print('Exercise key: $exerciseKey');
+                              print('Current exercises count: ${_cubit.state.exercises.length}');
+                              for (int i = 0; i < _cubit.state.exercises.length; i++) {
+                                final ex = _cubit.state.exercises[i];
+                                print('  [$i] id: ${ex['id']}, workout_log_id: ${ex['workout_log_id']}, title: ${ex['title']}');
+                              }
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text('Removing exercise...'),
@@ -931,15 +940,20 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                               (item['title'] ?? '')
                                                   .toLowerCase(),
                                     );
+                                print('Matched removeIndex: $removeIndex');
                                 if (removeIndex != -1) {
-                                  await Future.wait([
-                                    _cubit.deleteExercise(removeIndex),
-                                    Future.delayed(
-                                      const Duration(milliseconds: 350),
-                                    ),
-                                  ]);
+                                  await _cubit.deleteExercise(removeIndex);
+                                  await Future.delayed(
+                                    const Duration(milliseconds: 200),
+                                  );
+                                  print('DEBUG [REMOVE BUTTON]: Deletion complete. Remaining: ${_cubit.state.exercises.length}');
+                                } else {
+                                  print('⚠️ [REMOVE BUTTON]: No matching index found in cubit exercises!');
                                 }
+                              } catch (e, stack) {
+                                print('❌ [REMOVE BUTTON ERROR]: $e\n$stack');
                               } finally {
+                                print('========================================');
                                 if (mounted) {
                                   setSheetState(() {
                                     _removingExerciseIds.remove(exerciseKey);

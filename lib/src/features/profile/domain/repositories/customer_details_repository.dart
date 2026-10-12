@@ -621,6 +621,10 @@ final class CustomerDetailsRepository {
       );
 
       final statusCode = response.statusCode ?? 0;
+      print('=== [BODY MATRIX API RAW DATA] ===');
+      print('Status Code: $statusCode');
+      print('Response Data: ${response.data}');
+      print('==================================');
       if (statusCode == 200 && response.data != null) {
         final dataMap = response.data is Map
             ? Map<String, dynamic>.from(response.data as Map)

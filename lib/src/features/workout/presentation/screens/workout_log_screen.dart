@@ -1735,8 +1735,8 @@ class _DayTile extends StatelessWidget {
       bgColor = AppColors.primary;
       dayNameColor = Colors.white.withValues(alpha: 0.9);
       dayNumColor = Colors.white;
-      dotColor = Colors.white;
-      showDot = true;
+      dotColor = _getWorkoutDotColor(status);
+      showDot = status != WorkoutDayStatus.none;
       boxShadow = [
         BoxShadow(
           color: AppColors.primary.withValues(alpha: 0.28),
@@ -1817,6 +1817,9 @@ class _DayTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: dotColor,
+                  border: (selected && status == WorkoutDayStatus.missed)
+                      ? Border.all(color: Colors.white, width: 0.8)
+                      : null,
                 ),
               )
             else
@@ -1930,7 +1933,7 @@ class _WorkoutCard extends StatelessWidget {
           },
           behavior: HitTestBehavior.opaque,
           child: Container(
-            height: isMentorGiven ? null : (isCompleted ? 140 : 100),
+            height: isMentorGiven ? null : 140,
             width: double.infinity,
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(

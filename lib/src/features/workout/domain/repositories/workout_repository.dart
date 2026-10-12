@@ -902,24 +902,33 @@ final class WorkoutRepository {
     required int logId,
   }) async {
     try {
-      return await Feggy.async(
-        call: _dio.delete<dynamic>(
-          ApiUris.deleteWorkoutLog(logId),
-          options: Options(headers: {'X-Platform': platformSource}),
-        ),
-        onSuccess: (res) {
-          if (res.statusCode == 200 ||
-              res.statusCode == 204 ||
-              res.statusCode == 201) {
-            return right(null);
-          }
-          return left(const ApiException.unknown());
-        },
+      final uri = ApiUris.deleteWorkoutLog(logId);
+      print('🗑️ [API REQUEST] DELETE $uri (logId: $logId)');
+      final res = await _dio.delete<dynamic>(
+        uri,
+        options: Options(headers: {'X-Platform': platformSource}),
       );
-    } on ApiException catch (e) {
-      return left(e);
+      print('📥 [API RESPONSE] DELETE $uri - Status: ${res.statusCode}, Body: ${res.data}');
+      if (res.statusCode == 200 ||
+          res.statusCode == 204 ||
+          res.statusCode == 201) {
+        return right(null);
+      }
+      return left(const ApiException.unknown());
+    } on DioException catch (e) {
+      print('❌ [API ERROR] DELETE workout-log DioException: status: ${e.response?.statusCode}, body: ${e.response?.data}, error: $e');
+      if (e.response?.data != null) {
+        final data = e.response!.data;
+        if (data is Map && data.isNotEmpty) {
+          final errorMsg = data['error'] ?? data['detail'] ?? data['message'];
+          if (errorMsg != null) {
+            return left(ApiException.unknown(msg: errorMsg.toString()));
+          }
+        }
+      }
+      return left(ApiException.unknown(msg: e.message ?? 'Failed to delete workout log'));
     } catch (e) {
-      debugPrint(e.toString());
+      print('❌ [API ERROR] DELETE workout-log Exception: $e');
       return left(const ApiException.unknown());
     }
   }

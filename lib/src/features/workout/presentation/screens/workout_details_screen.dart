@@ -3,6 +3,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_sound_helper.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/slide_to_finish_button.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
@@ -549,6 +550,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           }
           final status =
               _sessionData!['status']?.toString().toUpperCase() ?? 'COMPLETED';
+          final isEditable = _checkIsEditable(_sessionData!);
           return Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
             appBar: AppBar(
@@ -586,7 +588,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             ),
             body: _buildContent(_sessionData!),
             bottomNavigationBar:
-                status != 'COMPLETED' ? _buildFinishButton() : null,
+                status != 'COMPLETED'
+                    ? _buildFinishButton()
+                    : (isEditable ? _buildUpdateButton() : null),
           );
         }
 
@@ -635,6 +639,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             }
             final status =
                 data['status']?.toString().toUpperCase() ?? 'COMPLETED';
+            final isEditable = _checkIsEditable(data);
             return Scaffold(
               backgroundColor: const Color(0xFFF8F9FA),
               appBar: AppBar(
@@ -672,7 +677,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
               ),
               body: _buildContent(data),
               bottomNavigationBar:
-                  status != 'COMPLETED' ? _buildFinishButton() : null,
+                  status != 'COMPLETED'
+                      ? _buildFinishButton()
+                      : (isEditable ? _buildUpdateButton() : null),
             );
           },
         );
@@ -726,6 +733,26 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     );
   }
 
+  bool _checkIsEditable(Map<String, dynamic> data) {
+    final status = data['status']?.toString().toUpperCase() ?? 'COMPLETED';
+    if (status != 'COMPLETED') return true;
+
+    final bool isVerified =
+        widget.isVerified ?? (data['is_verified'] as bool?) ?? false;
+    if (isVerified) return false;
+
+    final completedAt = data['completed_at']?.toString();
+    if (completedAt == null || completedAt.isEmpty) return false;
+
+    try {
+      final completedTime = DateTime.parse(completedAt).toLocal();
+      final difference = DateTime.now().difference(completedTime);
+      return difference.inMinutes.abs() < 60;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Widget _buildContent(Map<String, dynamic> data) {
     final title = data['title']?.toString() ?? widget.fallbackTitle;
     final dateStr =
@@ -748,16 +775,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
     final bool isVerified =
         widget.isVerified ?? (data['is_verified'] as bool?) ?? false;
 
-    bool isEditable = status != 'COMPLETED';
-    if (!isEditable && completedAt != null && !isVerified) {
-      try {
-        final completedTime = DateTime.parse(completedAt).toLocal();
-        final difference = DateTime.now().difference(completedTime);
-        if (difference.inMinutes.abs() < 60) {
-          isEditable = true;
-        }
-      } catch (_) {}
-    }
+    final bool isEditable = _checkIsEditable(data);
 
     final duration =
         widget.startTimer
@@ -1834,7 +1852,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -1843,16 +1861,25 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
       child: SafeArea(
         top: false,
-        child: Button.filled(
+        child: SlideToFinishButton(
+          text: 'Slide to finish',
           isLoading: _isFinishing,
-          size: const Size(double.infinity, 48),
-          title: 'Finish Workout',
-          style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
-          icon: const Icon(Icons.check, color: Colors.white, size: 20),
-          raduis: 12,
-          ontap: () async {
+          onSlideComplete: () async {
             if (_isFinishing) return;
-            unawaited(WorkoutSoundHelper.playRandomFinishSound());
+
+            final logs = _sessionData?['logs'] as List? ?? [];
+            final setCounts = _countSets(logs);
+            if (setCounts.total > 0 && setCounts.completed == 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Complete at least one set before finishing the workout.',
+                  ),
+                ),
+              );
+              return;
+            }
+
             setState(() {
               _isFinishing = true;
             });
@@ -1862,16 +1889,19 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
             );
             res.fold(
               (error) {
-                setState(() {
-                  _isFinishing = false;
-                });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to finish workout: ${error.msg}'),
-                  ),
-                );
+                if (mounted) {
+                  setState(() {
+                    _isFinishing = false;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to finish workout: ${error.msg}'),
+                    ),
+                  );
+                }
               },
               (data) {
+                unawaited(WorkoutSoundHelper.playRandomFinishSound());
                 final dateStr =
                     _sessionData?['session_date']?.toString() ??
                     _sessionData?['started_at']?.toString();
@@ -1897,32 +1927,60 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   );
                 }
 
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Workout finished successfully!'),
-                  ),
-                );
-                final Map<String, dynamic> sessionMap =
-                    data is Map<String, dynamic>
-                        ? Map<String, dynamic>.from(data)
-                        : <String, dynamic>{};
-                sessionMap['id'] ??= widget.sessionId;
-                sessionMap['session_id'] ??= widget.sessionId;
-                widget.onRefresh?.call();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute<bool>(
-                    builder:
-                        (context) => WorkoutAchievementScreen(
-                          sessionData: sessionMap,
-                          fallbackTitle: widget.fallbackTitle,
-                          trainerName: widget.trainerName,
-                        ),
-                  ),
-                );
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Workout finished successfully!'),
+                    ),
+                  );
+                  final Map<String, dynamic> sessionMap =
+                      data is Map<String, dynamic>
+                          ? Map<String, dynamic>.from(data)
+                          : <String, dynamic>{};
+                  sessionMap['id'] ??= widget.sessionId;
+                  sessionMap['session_id'] ??= widget.sessionId;
+                  widget.onRefresh?.call();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute<bool>(
+                      builder:
+                          (context) => WorkoutAchievementScreen(
+                            sessionData: sessionMap,
+                            fallbackTitle: widget.fallbackTitle,
+                            trainerName: widget.trainerName,
+                          ),
+                    ),
+                  );
+                }
               },
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUpdateButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.only(left: 20, right: 20, top: 12, bottom: 20),
+      child: SafeArea(
+        top: false,
+        child: Button.filled(
+          size: const Size(double.infinity, 48),
+          title: 'Update',
+          style: AppStyles.text16Px.poppins.w600.copyWith(color: Colors.white),
+          raduis: 12,
+          ontap: () => Navigator.pop(context),
         ),
       ),
     );

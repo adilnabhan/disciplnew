@@ -20,320 +20,301 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
   bool _aboutWhrExpanded = false;
   bool _aboutWhtrExpanded = false;
 
-  late final TextEditingController _heightController;
-  late final TextEditingController _weightController;
-  final FocusNode _heightFocusNode = FocusNode();
-  final FocusNode _weightFocusNode = FocusNode();
-
-  String? _currentHeight;
-  String? _currentWeight;
-  String? _currentNeck;
-  String? _currentWaist;
-  String? _currentHip;
+  bool _isLoading = true;
+  String? _errorMessage;
   BodyMatrixModel? _bodyMatrix;
 
-  double? get _whr {
-    if (_bodyMatrix?.whrRatio != null) return _bodyMatrix!.whrRatio;
-    final waist = _currentWaist != null ? double.tryParse(_currentWaist!) : null;
-    final hip = _currentHip != null ? double.tryParse(_currentHip!) : null;
-    if (waist == null || hip == null || waist <= 0 || hip <= 0) return null;
-    return waist / hip;
-  }
-
-  double? get _whtr {
-    if (_bodyMatrix?.whtrRatio != null) return _bodyMatrix!.whtrRatio;
-    final waist = _currentWaist != null ? double.tryParse(_currentWaist!) : null;
-    final hVal = _currentHeight != null ? double.tryParse(_currentHeight!) : null;
-    if (waist == null || hVal == null || waist <= 0 || hVal <= 0) return null;
-    return waist / hVal;
-  }
+  double? get _whr => _bodyMatrix?.whrRatio;
+  double? get _whtr => _bodyMatrix?.whtrRatio;
+  double? get _bmi => _bodyMatrix?.bmiValue;
+  double? get _bmr => _bodyMatrix?.bmrValue;
+  double? get _bf => _bodyMatrix?.bodyFatPercentage;
 
   @override
   void initState() {
     super.initState();
-    _currentHeight = widget.customerDetails.height;
-    _currentWeight = widget.customerDetails.weight;
-    _heightController = TextEditingController(text: _currentHeight ?? '');
-    _weightController = TextEditingController(text: _currentWeight ?? '');
-
-    _heightFocusNode.addListener(() {
-      if (!_heightFocusNode.hasFocus) {
-        _saveMetrics();
-      }
-    });
-    _weightFocusNode.addListener(() {
-      if (!_weightFocusNode.hasFocus) {
-        _saveMetrics();
-      }
-    });
-
-    CustomerDetailsRepository().fetchBodyMatrix().then((res) {
-      res.fold((_) => null, (matrix) {
-        if (mounted) {
-          setState(() {
-            _bodyMatrix = matrix;
-            if (matrix.heightCm != null) _currentHeight = _formatNum(matrix.heightCm!);
-            if (matrix.weightKg != null) _currentWeight = _formatNum(matrix.weightKg!);
-            if (matrix.neckCm != null) _currentNeck = _formatNum(matrix.neckCm!);
-            if (matrix.waistCm != null) _currentWaist = _formatNum(matrix.waistCm!);
-            if (matrix.hipCm != null) _currentHip = _formatNum(matrix.hipCm!);
-          });
-        }
-      });
-    });
-
-    CustomerDetailsRepository().fetchBodyMeasurements().then((res) {
-      res.fold((_) => null, (data) {
-        if (data.latest != null && mounted) {
-          setState(() {
-            if (data.latest!.neckCm != null) {
-              _currentNeck = _formatNum(data.latest!.neckCm!);
-            }
-            if (data.latest!.waistCm != null) {
-              _currentWaist = _formatNum(data.latest!.waistCm!);
-            }
-            if (data.latest!.hipsCm != null) {
-              _currentHip = _formatNum(data.latest!.hipsCm!);
-            }
-          });
-        }
-      });
-    });
+    _fetchBodyMatrix();
   }
 
-  @override
-  void dispose() {
-    _heightController.dispose();
-    _weightController.dispose();
-    _heightFocusNode.dispose();
-    _weightFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _saveMetrics() {
-    final hStr = _heightController.text.trim();
-    final wStr = _weightController.text.trim();
-
-    final hVal = double.tryParse(hStr);
-    final wVal = double.tryParse(wStr);
-
-    if (hVal == null || wVal == null || hVal <= 0 || wVal <= 0) {
-      return;
-    }
-
-    final details = context.read<ProfileCubit>().state.customerDetails.fold(
-      () => widget.customerDetails,
-      (either) => either.fold((_) => widget.customerDetails, (r) => r),
-    );
-
-    if (hStr == details.height && wStr == details.weight) {
-      return;
-    }
-
+  Future<void> _fetchBodyMatrix() async {
     setState(() {
-      _currentHeight = hStr;
-      _currentWeight = wStr;
+      _isLoading = true;
+      _errorMessage = null;
     });
 
-    context.read<ProfileCubit>().updateHealthProfile(
-          bloodGroup: details.bloodGroup ?? '',
-          height: hStr,
-          weight: wStr,
-        );
+    final res = await CustomerDetailsRepository().fetchBodyMatrix();
+    if (!mounted) return;
+
+    res.fold(
+      (error) {
+        print('=== [BODY MATRIX FETCH ERROR] ===');
+        print('Error message: ${error.msg}');
+        print('=================================');
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              error.msg.isNotEmpty ? error.msg : 'Failed to fetch body matrix.';
+        });
+      },
+      (matrix) {
+        print('=== [BODY MATRIX MODEL VALUES] ===');
+        print('BMI: ${matrix.bmiValue} | Category: ${matrix.bmiCategory} | Label: ${matrix.bmiLabel}');
+        print('BMR: ${matrix.bmrValue} ${matrix.bmrUnit}');
+        print('Body Fat: ${matrix.bodyFatPercentage}% | Category: ${matrix.bodyFatCategory}');
+        print('WHR: ${matrix.whrRatio} | Category: ${matrix.whrCategory}');
+        print('WHtR: ${matrix.whtrRatio} | Category: ${matrix.whtrCategory}');
+        print('Inputs: Height=${matrix.heightCm}cm, Weight=${matrix.weightKg}kg, Neck=${matrix.neckCm}cm, Waist=${matrix.waistCm}cm, Hip=${matrix.hipCm}cm');
+        print('==================================');
+        setState(() {
+          _isLoading = false;
+          _bodyMatrix = matrix;
+        });
+      },
+    );
   }
 
-  double? _bf(CustomerDetailsModel details) {
-    if (_bodyMatrix?.bodyFatPercentage != null) return _bodyMatrix!.bodyFatPercentage;
-    final hasEdited = _currentHeight != details.height ||
-        _currentWeight != details.weight;
-
-    if (!hasEdited) {
-      final raw = details.bfPercentage;
-      if (raw != null) {
-        if (raw is num) return raw.toDouble();
-        if (raw is String) {
-          final parsed = double.tryParse(raw);
-          if (parsed != null) return parsed;
-        }
-      }
-    }
-
-    final bmiVal = _bmi;
-    final dob = details.dateOfBirth;
-    if (bmiVal == null || dob == null) return 16.4;
-
-    final age = DateTime.now().year - dob.year;
-    final gender = details.gender?.toString().toLowerCase() ?? 'male';
-
-    if (gender.startsWith('f')) {
-      return (1.20 * bmiVal) + (0.23 * age) - 5.4;
-    } else {
-      return (1.20 * bmiVal) + (0.23 * age) - 16.2;
-    }
-  }
-
-  Map<String, dynamic> _bfInfo(CustomerDetailsModel details) {
-    final val = _bf(details);
+  Map<String, dynamic> _bfInfo() {
+    final val = _bf;
+    final cat = _bodyMatrix?.bodyFatCategory;
     if (val == null) {
       return {
         'value': null,
-        'label': '--',
-        'subtext': 'Body fat percentage not set.',
+        'label': cat != null && cat.isNotEmpty ? cat : '-',
+        'subtext': '-',
         'color': const Color(0xFF868E96),
         'fraction': 0.0,
       };
     }
-    String label;
-    String subtext;
-    Color color;
+    final label = cat != null && cat.isNotEmpty ? cat : _resolveBfCategory(val);
+    final color = _resolveBfColor(label, val);
     double fraction;
     if (val < 2.0) {
-      label = 'Low';
-      subtext = 'Below Essential threshold (2%)';
-      color = const Color(0xFF2F6FED);
       fraction = 0.0;
     } else if (val < 6.0) {
-      label = 'Essential';
-      subtext = '${(6.0 - val).toStringAsFixed(1)}% below Athletic threshold (6%)';
-      color = const Color(0xFF2F6FED);
       fraction = 0.2 * (val - 2.0) / (6.0 - 2.0);
     } else if (val < 14.0) {
-      label = 'Athletic';
-      subtext = '${(14.0 - val).toStringAsFixed(1)}% below Fitness threshold (14%)';
-      color = const Color(0xFF00A896);
       fraction = 0.2 + 0.2 * (val - 6.0) / (14.0 - 6.0);
     } else if (val < 18.0) {
-      label = 'Fitness';
-      subtext = '${(18.0 - val).toStringAsFixed(1)}% below Average threshold (18%)';
-      color = const Color(0xFF80C23A);
       fraction = 0.4 + 0.2 * (val - 14.0) / (18.0 - 14.0);
     } else if (val < 25.0) {
-      label = 'Average';
-      subtext = '${(25.0 - val).toStringAsFixed(1)}% below Above Average threshold (25%)';
-      color = const Color(0xFFF9B824);
       fraction = 0.6 + 0.2 * (val - 18.0) / (25.0 - 18.0);
     } else {
-      label = 'Above Average';
-      subtext = 'Above Average body fat levels';
-      color = const Color(0xFFFA5252);
       fraction = 0.8 + 0.2 * (val - 25.0).clamp(0.0, 20.0) / 20.0;
     }
     return {
       'value': val,
       'label': label,
-      'subtext': subtext,
+      'subtext': 'Estimated body fat composition indicator',
       'color': color,
       'fraction': fraction.clamp(0.0, 1.0),
     };
   }
 
-  // ── Computed values ────────────────────────────────────────────────────────
-  double? get _bmi {
-    final h = double.tryParse(_currentHeight ?? '');
-    final w = double.tryParse(_currentWeight ?? '');
-    if (h != null && w != null && h > 0 && w > 0) {
-      return w / pow(h / 100, 2);
-    }
-    if (_bodyMatrix?.bmiValue != null) return _bodyMatrix!.bmiValue;
-    return null;
+  String _resolveBfCategory(double val) {
+    if (val < 2.0) return 'Low';
+    if (val < 6.0) return 'Essential';
+    if (val < 14.0) return 'Athletic';
+    if (val < 18.0) return 'Fitness';
+    if (val < 25.0) return 'Average';
+    return 'Above Average';
   }
 
-  double? get _bmr {
-    final h = double.tryParse(_currentHeight ?? '');
-    final w = double.tryParse(_currentWeight ?? '');
-    final dob = widget.customerDetails.dateOfBirth;
-    if (h != null && w != null && h > 0 && w > 0 && dob != null) {
-      final age = DateTime.now().year - dob.year;
-      final gender =
-          widget.customerDetails.gender?.toString().toLowerCase() ?? 'male';
-      if (gender.startsWith('f')) {
-        return 447.593 + (9.247 * w) + (3.098 * h) - (4.330 * age);
-      }
-      return 88.362 + (13.397 * w) + (4.799 * h) - (5.677 * age);
+  Color _resolveBfColor(String label, double? val) {
+    final l = label.toLowerCase();
+    if (l.contains('low') || l.contains('essential')) return const Color(0xFF2F6FED);
+    if (l.contains('athletic')) return const Color(0xFF00A896);
+    if (l.contains('fitness')) return const Color(0xFF80C23A);
+    if (l.contains('average') && !l.contains('above')) return const Color(0xFFF9B824);
+    if (l.contains('above') || l.contains('high')) return const Color(0xFFFA5252);
+    if (val != null) {
+      if (val < 6.0) return const Color(0xFF2F6FED);
+      if (val < 14.0) return const Color(0xFF00A896);
+      if (val < 18.0) return const Color(0xFF80C23A);
+      if (val < 25.0) return const Color(0xFFF9B824);
+      return const Color(0xFFFA5252);
     }
-    if (_bodyMatrix?.bmrValue != null) return _bodyMatrix!.bmrValue;
-    return null;
+    return const Color(0xFF868E96);
   }
 
   // ── BMI helpers ────────────────────────────────────────────────────────────
-  _BmiCategory get _bmiCategory {
+  String get _bmiLabel {
+    if (_bodyMatrix?.bmiLabel != null && _bodyMatrix!.bmiLabel!.isNotEmpty) {
+      return _bodyMatrix!.bmiLabel!;
+    }
+    if (_bodyMatrix?.bmiCategory != null &&
+        _bodyMatrix!.bmiCategory!.isNotEmpty) {
+      return _bodyMatrix!.bmiCategory!;
+    }
     final b = _bmi;
-    if (b == null) return _BmiCategory.normal;
-    if (b < 18.5) return _BmiCategory.underweight;
-    if (b < 25.0) return _BmiCategory.normal;
-    if (b < 30.0) return _BmiCategory.overweight;
-    return _BmiCategory.obese;
+    if (b == null) return '-';
+    if (b < 18.5) return 'Underweight';
+    if (b < 25.0) return 'Normal';
+    if (b < 30.0) return 'Overweight';
+    return 'Obese';
   }
 
   Color get _bmiColor {
-    switch (_bmiCategory) {
-      case _BmiCategory.underweight:
-        return Colors.blue;
-      case _BmiCategory.normal:
-        return const Color(0xFF2CB67D);
-      case _BmiCategory.overweight:
-        return Colors.orange;
-      case _BmiCategory.obese:
-        return Colors.red;
+    final b = _bmi;
+    final lbl = _bmiLabel.toLowerCase();
+    if (lbl.contains('under')) return Colors.blue;
+    if (lbl.contains('normal')) return const Color(0xFF2CB67D);
+    if (lbl.contains('over')) return Colors.orange;
+    if (lbl.contains('obese')) return Colors.red;
+    if (b != null) {
+      if (b < 18.5) return Colors.blue;
+      if (b < 25.0) return const Color(0xFF2CB67D);
+      if (b < 30.0) return Colors.orange;
+      return Colors.red;
     }
-  }
-
-  String get _bmiLabel {
-    switch (_bmiCategory) {
-      case _BmiCategory.underweight:
-        return 'Underweight';
-      case _BmiCategory.normal:
-        return 'Normal';
-      case _BmiCategory.overweight:
-        return 'Overweight';
-      case _BmiCategory.obese:
-        return 'Obese';
-    }
+    return const Color(0xFF868E96);
   }
 
   String get _bmiSubtext {
     final b = _bmi;
-    if (b == null) return '';
-    switch (_bmiCategory) {
-      case _BmiCategory.underweight:
-        final diff = (18.5 - b).toStringAsFixed(1);
-        return '$diff below Normal threshold (18.5)';
-      case _BmiCategory.normal:
-        final diff = (25.0 - b).toStringAsFixed(1);
-        return '$diff below Overweight threshold (25.0)';
-      case _BmiCategory.overweight:
-        final diff = (30.0 - b).toStringAsFixed(1);
-        return '$diff below Obese threshold (30.0)';
-      case _BmiCategory.obese:
-        final diff = (b - 30.0).toStringAsFixed(1);
-        return '$diff above Obese threshold (30.0)';
+    if (b == null) return '-';
+    if (b < 18.5) {
+      final diff = (18.5 - b).toStringAsFixed(1);
+      return '$diff below Normal threshold (18.5)';
+    } else if (b < 25.0) {
+      final diff = (25.0 - b).toStringAsFixed(1);
+      return '$diff below Overweight threshold (25.0)';
+    } else if (b < 30.0) {
+      final diff = (30.0 - b).toStringAsFixed(1);
+      return '$diff below Obese threshold (30.0)';
+    } else {
+      final diff = (b - 30.0).toStringAsFixed(1);
+      return '$diff above Obese threshold (30.0)';
     }
   }
 
-  // Position on the scale bar [0..1] mapped non-linearly to BMI categories
   double get _bmiFraction {
-    final b = _bmi ?? 22.0;
+    final b = _bmi;
+    if (b == null) return 0.0;
     if (b <= 15.0) return 0.0;
     if (b >= 40.0) return 1.0;
 
     if (b < 18.5) {
-      // Underweight segment: 15.0 to 18.5 maps to 0.0 to 0.25
       return 0.0 + 0.25 * (b - 15.0) / (18.5 - 15.0);
     } else if (b < 25.0) {
-      // Normal segment: 18.5 to 25.0 maps to 0.25 to 0.50
       return 0.25 + 0.25 * (b - 18.5) / (25.0 - 18.5);
     } else if (b < 30.0) {
-      // Overweight segment: 25.0 to 30.0 maps to 0.50 to 0.75
       return 0.50 + 0.25 * (b - 25.0) / (30.0 - 25.0);
     } else {
-      // Obese segment: 30.0 to 40.0 maps to 0.75 to 1.0
       return 0.75 + 0.25 * (b - 30.0) / (40.0 - 30.0);
     }
+  }
+
+  Color _resolveRatioColor(String label) {
+    final l = label.toLowerCase();
+    if (l.contains('excellent') || l.contains('low risk')) {
+      return const Color(0xFF2E7D32);
+    }
+    if (l.contains('healthy')) return const Color(0xFF43A047);
+    if (l.contains('average') || l.contains('moderate')) {
+      return const Color(0xFFFB8C00);
+    }
+    if (l.contains('high')) return const Color(0xFFE53935);
+    return const Color(0xFF9CA3AF);
   }
 
   String _formatNum(num v) {
     if (v == v.toInt()) return '${v.toInt()}';
     return v.toStringAsFixed(1);
+  }
+
+  Widget _buildErrorView(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFEEEE),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.error_outline_rounded,
+                color: Color(0xFFE53935),
+                size: 36,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Failed to Load Body Matrix',
+            style: AppStyles.text18Px.poppins.w700.copyWith(
+              color: const Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            message.isNotEmpty
+                ? message
+                : 'Unable to retrieve your body metrics. Please try again.',
+            textAlign: TextAlign.center,
+            style: AppStyles.text13Px.poppins.w400.copyWith(
+              color: const Color(0xFF6B7280),
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _fetchBodyMatrix,
+            icon: const Icon(Icons.refresh_rounded, size: 18),
+            label: Text(
+              'Try Again',
+              style: AppStyles.text14Px.poppins.w600,
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              elevation: 0,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFE5E7EB),
+      highlightColor: const Color(0xFFF3F4F6),
+      child: Column(
+        children: [
+          for (var i = 0; i < 3; i++) ...[
+            Container(
+              height: 180,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+            if (i < 2) const SizedBox(height: 16),
+          ],
+        ],
+      ),
+    );
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -349,17 +330,6 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
           ),
         );
 
-        if (!_heightFocusNode.hasFocus &&
-            _heightController.text != (details.height ?? '')) {
-          _heightController.text = details.height ?? '';
-          _currentHeight = details.height;
-        }
-        if (!_weightFocusNode.hasFocus &&
-            _weightController.text != (details.weight ?? '')) {
-          _weightController.text = details.weight ?? '';
-          _currentWeight = details.weight;
-        }
-
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6F9),
           appBar: AppBar(
@@ -373,38 +343,54 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                   .copyWith(color: AppColors.textDark),
             ),
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 4),
-                Text(
-                  'Health Matrix',
-                  style: AppStyles.text20Px.poppins.w700
-                      .copyWith(color: AppColors.textDark),
-                ),
-                const SizedBox(height: 14),
-                _buildTabBar(),
-                const SizedBox(height: 18),
-                if (_selectedTabIndex == 0) ...[
-                  _buildBmiCard(),
-                  const SizedBox(height: 16),
-                  _buildBmrCard(),
-                  const SizedBox(height: 16),
-                  _buildBodyFatCard(details),
-                  const SizedBox(height: 16),
-                  _buildRatioCardsRow(details),
-                  const SizedBox(height: 16),
-                  _buildMetricsCard(),
-                  const SizedBox(height: 24),
-                  _buildDisclaimer(),
-                  const SizedBox(height: 32),
-                ] else ...[
-                  BodyMatrixHistoryView(customerDetails: details),
-                  const SizedBox(height: 32),
+          body: RefreshIndicator(
+            onRefresh: () async {
+              if (_selectedTabIndex == 0) {
+                await _fetchBodyMatrix();
+              }
+            },
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 4),
+                  Text(
+                    'Health Matrix',
+                    style: AppStyles.text20Px.poppins.w700
+                        .copyWith(color: AppColors.textDark),
+                  ),
+                  const SizedBox(height: 14),
+                  _buildTabBar(),
+                  const SizedBox(height: 18),
+                  if (_selectedTabIndex == 0) ...[
+                    if (_isLoading)
+                      _buildLoadingSkeleton()
+                    else if (_errorMessage != null)
+                      _buildErrorView(_errorMessage!)
+                    else if (_bodyMatrix == null)
+                      _buildErrorView('No body matrix data available.')
+                    else ...[
+                      _buildBmiCard(),
+                      const SizedBox(height: 16),
+                      _buildBmrCard(),
+                      const SizedBox(height: 16),
+                      _buildBodyFatCard(),
+                      const SizedBox(height: 16),
+                      _buildRatioCardsRow(details),
+                      const SizedBox(height: 16),
+                      _buildMetricsCard(),
+                      const SizedBox(height: 24),
+                      _buildDisclaimer(),
+                      const SizedBox(height: 32),
+                    ],
+                  ] else ...[
+                    BodyMatrixHistoryView(customerDetails: details),
+                    const SizedBox(height: 32),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );
@@ -495,7 +481,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
   // ── BMI Card ───────────────────────────────────────────────────────────────
   Widget _buildBmiCard() {
     final bmiVal = _bmi;
-    final bmiStr = bmiVal != null ? bmiVal.toStringAsFixed(1) : '--';
+    final bmiStr = bmiVal != null ? bmiVal.toStringAsFixed(1) : '-';
 
     return Container(
       decoration: BoxDecoration(
@@ -660,7 +646,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      _bmi != null ? _bmi!.toStringAsFixed(1) : '--',
+                      _bmi != null ? _bmi!.toStringAsFixed(1) : '-',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -808,7 +794,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
               RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
               (m) => '${m[1]},',
             )
-        : '--';
+        : '-';
 
     return Container(
       decoration: BoxDecoration(
@@ -888,12 +874,13 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                       height: 1.0,
                     ),
                   ),
-                  TextSpan(
-                    text: '  kcal/day',
-                    style: AppStyles.text14Px.poppins.w500.copyWith(
-                      color: const Color(0xFF868E96),
+                  if (bmrVal != null)
+                    TextSpan(
+                      text: '  ${_bodyMatrix?.bmrUnit ?? "kcal/day"}',
+                      style: AppStyles.text14Px.poppins.w500.copyWith(
+                        color: const Color(0xFF868E96),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -928,6 +915,15 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                       '(moderate 3–5 days/wk)'),
                   _buildActivityRow(
                       '💪 Active', bmrVal * 1.725, '(hard 6–7 days/wk)'),
+                ] else ...[
+                  _buildActivityRow(
+                      '🛋️ Sedentary', null, '(little/no exercise)'),
+                  _buildActivityRow('🚶 Light', null,
+                      '(light exercise 1–3 days/wk)'),
+                  _buildActivityRow('🏃 Moderate', null,
+                      '(moderate 3–5 days/wk)'),
+                  _buildActivityRow(
+                      '💪 Active', null, '(hard 6–7 days/wk)'),
                 ],
               ],
             ),
@@ -950,7 +946,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     );
   }
 
-  Widget _buildActivityRow(String label, double kcal, String note) {
+  Widget _buildActivityRow(String label, double? kcal, String note) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -962,7 +958,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                 .copyWith(color: AppColors.textDark),
           ),
           Text(
-            '${_formatNum(kcal)} kcal  ',
+            kcal != null ? '${_formatNum(kcal)} kcal  ' : '-  ',
             style: AppStyles.text12Px.poppins.w600
                 .copyWith(color: const Color(0xFFE65100)),
           ),
@@ -971,8 +967,8 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     );
   }
 
-  Widget _buildBodyFatCard(CustomerDetailsModel details) {
-    final info = _bfInfo(details);
+  Widget _buildBodyFatCard([CustomerDetailsModel? details]) {
+    final info = _bfInfo();
     final double? bfVal = info['value'] as double?;
     final String label = info['label'] as String;
     final String subtext = info['subtext'] as String;
@@ -1050,7 +1046,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
               text: TextSpan(
                 children: [
                   TextSpan(
-                    text: bfVal != null ? bfVal.toStringAsFixed(1) : '--',
+                    text: bfVal != null ? bfVal.toStringAsFixed(1) : '-',
                     style: AppStyles.text20Px.poppins.w700.copyWith(
                       fontSize: 52,
                       color: AppColors.textDark,
@@ -1069,7 +1065,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          if (bfVal != null)
+          if (bfVal != null || (label.isNotEmpty && label != '-'))
             Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1198,7 +1194,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                     ),
                     alignment: Alignment.center,
                     child: Text(
-                      bfVal != null ? '${bfVal.toStringAsFixed(1)}%' : '--',
+                      bfVal != null ? '${bfVal.toStringAsFixed(1)}%' : '-',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -1253,16 +1249,22 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
 
   // ── WHR Card ───────────────────────────────────────────────────────────────
   // ── Waist-to-Hip & Waist-to-Height Ratio Cards Row (Rich UI) ────────────
-  Widget _buildRatioCardsRow(CustomerDetailsModel details) {
+  Widget _buildRatioCardsRow([CustomerDetailsModel? details]) {
     final whrVal = _whr;
-    final whrStr = whrVal != null ? whrVal.toStringAsFixed(2) : '--';
-    final gender = (details.gender ?? 'male').toString().toLowerCase();
+    final whrStr = whrVal != null ? whrVal.toStringAsFixed(2) : '-';
+    final gender = ((_bodyMatrix?.gender ?? details?.gender) ?? 'male')
+        .toString()
+        .toLowerCase();
     final isFemale = gender.startsWith('f');
 
+    final apiWhrCategory = _bodyMatrix?.whrCategory;
     Color whrColor = const Color(0xFF9CA3AF);
-    String whrLabel = 'Add Data';
+    String whrLabel = '-';
 
-    if (whrVal != null) {
+    if (apiWhrCategory != null && apiWhrCategory.isNotEmpty) {
+      whrLabel = apiWhrCategory;
+      whrColor = _resolveRatioColor(apiWhrCategory);
+    } else if (whrVal != null) {
       if (isFemale) {
         if (whrVal < 0.80) {
           whrColor = const Color(0xFF2E7D32);
@@ -1295,12 +1297,16 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     }
 
     final whtrVal = _whtr;
-    final whtrStr = whtrVal != null ? whtrVal.toStringAsFixed(2) : '--';
+    final whtrStr = whtrVal != null ? whtrVal.toStringAsFixed(2) : '-';
 
     Color whtrColor = const Color(0xFF9CA3AF);
-    String whtrLabel = 'Add Data';
+    String whtrLabel = '-';
+    final apiWhtrCategory = _bodyMatrix?.whtrCategory;
 
-    if (whtrVal != null) {
+    if (apiWhtrCategory != null && apiWhtrCategory.isNotEmpty) {
+      whtrLabel = apiWhtrCategory;
+      whtrColor = _resolveRatioColor(apiWhtrCategory);
+    } else if (whtrVal != null) {
       if (whtrVal < 0.40) {
         whtrColor = const Color(0xFF2E7D32);
         whtrLabel = 'Low Risk';
@@ -2453,27 +2459,17 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
 
   // ── Metrics Card ───────────────────────────────────────────────────────────
   Widget _buildMetricsCard() {
-    final hVal = _currentHeight != null && _currentHeight!.isNotEmpty
-        ? double.tryParse(_currentHeight!)
-        : null;
-    final wVal = _currentWeight != null && _currentWeight!.isNotEmpty
-        ? double.tryParse(_currentWeight!)
-        : null;
-    final nVal = _currentNeck != null && _currentNeck!.isNotEmpty
-        ? double.tryParse(_currentNeck!)
-        : null;
-    final waistVal = _currentWaist != null && _currentWaist!.isNotEmpty
-        ? double.tryParse(_currentWaist!)
-        : null;
-    final hipVal = _currentHip != null && _currentHip!.isNotEmpty
-        ? double.tryParse(_currentHip!)
-        : null;
+    final hVal = _bodyMatrix?.heightCm;
+    final wVal = _bodyMatrix?.weightKg;
+    final nVal = _bodyMatrix?.neckCm;
+    final waistVal = _bodyMatrix?.waistCm;
+    final hipVal = _bodyMatrix?.hipCm;
 
-    final hStr = hVal != null ? _formatNum(hVal) : '--';
-    final wStr = wVal != null ? _formatNum(wVal) : '--';
-    final nStr = nVal != null ? _formatNum(nVal) : '--';
-    final waistStr = waistVal != null ? _formatNum(waistVal) : '--';
-    final hipStr = hipVal != null ? _formatNum(hipVal) : '--';
+    final hStr = hVal != null ? _formatNum(hVal) : '-';
+    final wStr = wVal != null ? _formatNum(wVal) : '-';
+    final nStr = nVal != null ? _formatNum(nVal) : '-';
+    final waistStr = waistVal != null ? _formatNum(waistVal) : '-';
+    final hipStr = hipVal != null ? _formatNum(hipVal) : '-';
 
     return Container(
       decoration: BoxDecoration(
@@ -2578,6 +2574,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
     required String suffix,
     required VoidCallback onTap,
   }) {
+    final isDash = value == '-';
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -2614,12 +2611,14 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                           style: AppStyles.text14Px.poppins.w700
                               .copyWith(color: AppColors.textDark),
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          suffix,
-                          style: AppStyles.text12Px.poppins.w500
-                              .copyWith(color: const Color(0xFF868E96)),
-                        ),
+                        if (!isDash) ...[
+                          const SizedBox(width: 4),
+                          Text(
+                            suffix,
+                            style: AppStyles.text12Px.poppins.w500
+                                .copyWith(color: const Color(0xFF868E96)),
+                          ),
+                        ],
                       ],
                     ),
                   ],
@@ -2633,10 +2632,10 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
   }
 
   void _showBodyMetricsBottomSheet(BuildContext context) {
-    final existingHeight = double.tryParse(_currentHeight ?? '');
-    final existingWeight = double.tryParse(_currentWeight ?? '');
+    final existingHeight = _bodyMatrix?.heightCm ?? double.tryParse(widget.customerDetails.height ?? '');
+    final existingWeight = _bodyMatrix?.weightKg ?? double.tryParse(widget.customerDetails.weight ?? '');
     DateTime? selectedDob = widget.customerDetails.dateOfBirth;
-    final existingGender = widget.customerDetails.gender?.toString() ?? 'Male';
+    final existingGender = _bodyMatrix?.gender ?? widget.customerDetails.gender?.toString() ?? 'Male';
     final heightController = TextEditingController(
       text: existingHeight != null
           ? (existingHeight == existingHeight.toInt().toDouble()
@@ -2651,9 +2650,21 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
               : existingWeight.toStringAsFixed(1))
           : '',
     );
-    final neckController = TextEditingController(text: _currentNeck ?? '');
-    final waistController = TextEditingController(text: _currentWaist ?? '');
-    final hipController = TextEditingController(text: _currentHip ?? '');
+    final neckController = TextEditingController(
+      text: _bodyMatrix?.neckCm != null
+          ? _formatNum(_bodyMatrix!.neckCm!)
+          : '',
+    );
+    final waistController = TextEditingController(
+      text: _bodyMatrix?.waistCm != null
+          ? _formatNum(_bodyMatrix!.waistCm!)
+          : '',
+    );
+    final hipController = TextEditingController(
+      text: _bodyMatrix?.hipCm != null
+          ? _formatNum(_bodyMatrix!.hipCm!)
+          : '',
+    );
 
     String heightUnit = 'cm';
     String weightUnit = 'kg';
@@ -2933,6 +2944,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                                   Dialogs.showSnack(
                                     msg: 'Body metrics updated successfully!',
                                   );
+                                  _fetchBodyMatrix();
                                 },
                               ),
                             );
@@ -3079,18 +3091,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                                           extraBody: extraPayload,
                                         );
 
-                                        setState(() {
-                                          _currentHeight = heightStr;
-                                          _currentWeight = weightStr;
-                                          if (calculatedNeckStr != null) _currentNeck = calculatedNeckStr;
-                                          if (calculatedWaistStr != null) _currentWaist = calculatedWaistStr;
-                                          if (calculatedHipStr != null) _currentHip = calculatedHipStr;
-                                          _heightController.text = heightStr;
-                                          _weightController.text = weightStr;
-
-                                        });
-
-                                          if (neckVal != null || waistVal != null || hipVal != null) {
+                                        if (neckVal != null || waistVal != null || hipVal != null) {
                                             double? finalNeckCm;
                                             double? finalWaistCm;
                                             double? finalHipCm;

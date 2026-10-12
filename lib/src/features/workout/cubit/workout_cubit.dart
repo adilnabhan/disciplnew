@@ -723,13 +723,57 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   Future<void> deleteExercise(int exerciseIndex) async {
     if (exerciseIndex < 0 || exerciseIndex >= state.exercises.length) return;
 
+    final exerciseToDelete = state.exercises[exerciseIndex];
+    final logIdStr = exerciseToDelete['workout_log_id']?.toString();
+    final logId =
+        (logIdStr != null && logIdStr.isNotEmpty) ? int.tryParse(logIdStr) : null;
+
+    print('========================================');
+    print('DEBUG [DELETE EXERCISE CUBIT]:');
+    print('Index: $exerciseIndex');
+    print('Title: ${exerciseToDelete['title']}');
+    print('Exercise ID: ${exerciseToDelete['id']}');
+    print('WorkoutLogId: $logId');
+    print('========================================');
+
+    // 1. If persisted on the server, call deleteWorkoutLog endpoint
+    if (logId != null) {
+      print('DEBUG [DELETE EXERCISE]: Calling deleteWorkoutLog for logId: $logId');
+      final deleteResult =
+          await WorkoutRepository().deleteWorkoutLog(logId: logId);
+      deleteResult.fold(
+        (err) => print('❌ [DELETE EXERCISE FAILED]: ${err.msg}'),
+        (_) => print(
+          '✅ [DELETE EXERCISE SUCCEEDED]: logId $logId deleted from server',
+        ),
+      );
+    }
+
+    // 2. Remove locally from state.exercises
     final updatedExercises = List<Map<String, dynamic>>.from(
       state.exercises.map((e) => Map<String, dynamic>.from(e)),
     );
-    updatedExercises.removeAt(exerciseIndex);
+    final removeIdx = updatedExercises.indexWhere((e) =>
+        (logId != null &&
+            e['workout_log_id']?.toString() == logId.toString()) ||
+        (e['id'] != null &&
+            e['id'].toString() == exerciseToDelete['id']?.toString() &&
+            e['title'] == exerciseToDelete['title']));
+    if (removeIdx != -1) {
+      updatedExercises.removeAt(removeIdx);
+    } else if (exerciseIndex < updatedExercises.length) {
+      updatedExercises.removeAt(exerciseIndex);
+    }
     emit(state.copyWith(exercises: updatedExercises));
-    // Trigger background sync to update the session layout on the server
-    saveDraftSession(state.sessionTitle);
+
+    // 3. Trigger background sync to update session on the server
+    if (state.sessionId != null) {
+      final syncResult = await saveDraftSession(state.sessionTitle);
+      syncResult.fold(
+        (err) => print('❌ [SYNC AFTER DELETE ERROR]: ${err.msg}'),
+        (data) => print('✅ [SYNC AFTER DELETE SUCCESS]: Response: $data'),
+      );
+    }
   }
 
   Future<void> createCustomExercise({
