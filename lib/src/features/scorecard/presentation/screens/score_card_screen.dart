@@ -206,7 +206,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
 
                     // Leaderboard Card
                     _buildLeaderboardCard(state, data),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 96),
                   ],
                 ),
               ),

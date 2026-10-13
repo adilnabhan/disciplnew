@@ -147,7 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
-        padding: const EdgeInsets.only(bottom: 16, top: 16),
+        padding: const EdgeInsets.only(bottom: 96, top: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

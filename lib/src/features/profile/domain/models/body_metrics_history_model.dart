@@ -43,17 +43,28 @@ class BodyMetricsHistoryData {
         ? Map<String, dynamic>.from(json['metrics'] as Map)
         : <String, dynamic>{};
 
+    final heightCmVal = double.tryParse(json['height_cm']?.toString() ?? '') ??
+        double.tryParse(json['height']?.toString() ?? '');
+    final weightKgVal =
+        double.tryParse(json['current_weight_kg']?.toString() ?? '') ??
+            double.tryParse(json['weight']?.toString() ?? '') ??
+            double.tryParse(json['weight_kg']?.toString() ?? '');
+
     return BodyMetricsHistoryData(
       userId: json['user_id'],
       customerId: json['customer_id'],
       userName: json['user_name']?.toString(),
       gender: json['gender']?.toString(),
       age: int.tryParse(json['age']?.toString() ?? ''),
-      heightCm: double.tryParse(json['height_cm']?.toString() ?? ''),
-      currentWeightKg:
-          double.tryParse(json['current_weight_kg']?.toString() ?? ''),
+      heightCm: heightCmVal,
+      currentWeightKg: weightKgVal,
       timeframe: json['timeframe']?.toString() ?? 'all',
-      metrics: BodyMetricsMap.fromJson(metricsMap),
+      metrics: BodyMetricsMap.fromJson(
+        metricsMap,
+        rootJson: json,
+        rootHeightCm: heightCmVal,
+        rootWeightKg: weightKgVal,
+      ),
     );
   }
 
@@ -73,15 +84,19 @@ class BodyMetricsHistoryData {
       metrics.bmr != null ||
       metrics.bodyFat != null ||
       metrics.waistHipRatio != null ||
-      metrics.waistHeightRatio != null;
+      metrics.waistHeightRatio != null ||
+      metrics.weight != null ||
+      metrics.height != null;
 
   /// Returns metrics ordered by user's specification:
-  /// 1. BMI, 2. BMR, 3. Body Fat, 4. Waist Hip Ratio, 5. Waist Height Ratio
+  /// 1. BMI, 2. BMR, 3. Body Fat, 4. Weight, 5. Height, 6. Waist Hip Ratio, 7. Waist Height Ratio
   List<BodyMetricItem> get orderedMetrics {
     final list = <BodyMetricItem>[];
     if (metrics.bmi != null) list.add(metrics.bmi!);
     if (metrics.bmr != null) list.add(metrics.bmr!);
     if (metrics.bodyFat != null) list.add(metrics.bodyFat!);
+    if (metrics.weight != null) list.add(metrics.weight!);
+    if (metrics.height != null) list.add(metrics.height!);
     if (metrics.waistHipRatio != null) list.add(metrics.waistHipRatio!);
     if (metrics.waistHeightRatio != null) list.add(metrics.waistHeightRatio!);
     return list;
@@ -96,14 +111,136 @@ class BodyMetricsMap {
     this.bodyFat,
     this.waistHipRatio,
     this.waistHeightRatio,
+    this.height,
+    this.weight,
   });
 
-  factory BodyMetricsMap.fromJson(Map<String, dynamic> json) {
-    BodyMetricItem? parseItem(dynamic raw) {
+  factory BodyMetricsMap.fromJson(
+    Map<String, dynamic> json, {
+    Map<String, dynamic>? rootJson,
+    double? rootHeightCm,
+    double? rootWeightKg,
+  }) {
+    BodyMetricItem? parseItem(
+      dynamic raw, {
+      String? defaultKey,
+      String? defaultTitle,
+      String? defaultSubtitle,
+      String? defaultUnit,
+      double? fallbackValue,
+    }) {
       if (raw is Map) {
-        return BodyMetricItem.fromJson(Map<String, dynamic>.from(raw));
+        final map = Map<String, dynamic>.from(raw);
+        final item = BodyMetricItem.fromJson(map);
+        return BodyMetricItem(
+          metricKey: item.metricKey.isNotEmpty
+              ? item.metricKey
+              : (defaultKey ?? ''),
+          title: item.title.isNotEmpty ? item.title : (defaultTitle ?? ''),
+          subtitle: item.subtitle.isNotEmpty
+              ? item.subtitle
+              : (defaultSubtitle ?? ''),
+          currentValue: item.currentValue != 0.0
+              ? item.currentValue
+              : (fallbackValue ?? 0.0),
+          unit: item.unit.isNotEmpty ? item.unit : (defaultUnit ?? ''),
+          delta: item.delta,
+          deltaFormatted: item.deltaFormatted,
+          deltaDirection: item.deltaDirection,
+          sinceDate: item.sinceDate,
+          sinceText: item.sinceText,
+          status: item.status,
+          statusBadge: item.statusBadge,
+          statusColor: item.statusColor,
+          rangeText: item.rangeText,
+          insight: item.insight,
+          chartMeta: item.chartMeta,
+          history: item.history,
+        );
+      } else if (raw is List) {
+        final historyList = <BodyMetricHistoryPoint>[];
+        for (final item in raw) {
+          if (item is Map) {
+            historyList.add(
+              BodyMetricHistoryPoint.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            );
+          }
+        }
+        final curVal = historyList.isNotEmpty
+            ? historyList.last.value
+            : (fallbackValue ?? 0.0);
+        return BodyMetricItem(
+          metricKey: defaultKey ?? '',
+          title: defaultTitle ?? '',
+          subtitle: defaultSubtitle ?? '',
+          currentValue: curVal,
+          unit: defaultUnit ?? '',
+          history: historyList,
+        );
       }
       return null;
+    }
+
+    final heightRaw = json['height'] ??
+        json['height_history'] ??
+        json['height_cm'] ??
+        rootJson?['height_history'] ??
+        rootJson?['height'] ??
+        rootJson?['height_cm'];
+
+    final weightRaw = json['weight'] ??
+        json['weight_history'] ??
+        json['weight_kg'] ??
+        json['current_weight_kg'] ??
+        rootJson?['weight_history'] ??
+        rootJson?['weight'] ??
+        rootJson?['weight_kg'] ??
+        rootJson?['current_weight_kg'];
+
+    var parsedHeight = parseItem(
+      heightRaw,
+      defaultKey: 'height',
+      defaultTitle: 'Height',
+      defaultSubtitle: 'Stature history',
+      defaultUnit: 'cm',
+      fallbackValue: rootHeightCm,
+    );
+
+    if (parsedHeight == null && rootHeightCm != null && rootHeightCm > 0) {
+      parsedHeight = BodyMetricItem(
+        metricKey: 'height',
+        title: 'Height',
+        subtitle: 'Stature history',
+        currentValue: rootHeightCm,
+        unit: 'cm',
+        history: [
+          BodyMetricHistoryPoint(date: 'Current', value: rootHeightCm),
+        ],
+      );
+    }
+
+    var parsedWeight = parseItem(
+      weightRaw,
+      defaultKey: 'weight',
+      defaultTitle: 'Weight',
+      defaultSubtitle: 'Body weight history',
+      defaultUnit: 'kg',
+      fallbackValue: rootWeightKg,
+    );
+
+    if (parsedWeight == null && rootWeightKg != null && rootWeightKg > 0) {
+      parsedWeight = BodyMetricItem(
+        metricKey: 'weight',
+        title: 'Weight',
+        subtitle: 'Body weight history',
+        currentValue: rootWeightKg,
+        unit: 'kg',
+        history: [
+          BodyMetricHistoryPoint(date: 'Current', value: rootWeightKg),
+        ],
+      );
     }
 
     return BodyMetricsMap(
@@ -119,6 +256,8 @@ class BodyMetricsMap {
             json['whtr'] ??
             json['waist_hip_height'],
       ),
+      height: parsedHeight,
+      weight: parsedWeight,
     );
   }
 
@@ -127,6 +266,8 @@ class BodyMetricsMap {
   final BodyMetricItem? bodyFat;
   final BodyMetricItem? waistHipRatio;
   final BodyMetricItem? waistHeightRatio;
+  final BodyMetricItem? height;
+  final BodyMetricItem? weight;
 }
 
 @immutable

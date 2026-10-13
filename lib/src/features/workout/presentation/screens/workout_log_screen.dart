@@ -1171,7 +1171,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                               ),
                             ),
                             // Add spacing so the bottom list items aren't hidden behind the floating buttons
-                            const SizedBox(height: 130),
+                            const SizedBox(height: 260),
                           ],
                         ),
                       ),
@@ -1317,7 +1317,7 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
   // ── Bottom CTA ────────────────────────────────────────────────────────────
   Widget _buildStartButton() {
     return Padding(
-      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
+      padding: const EdgeInsets.only(left: 20, right: 20, bottom: 94),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1353,8 +1353,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
           Button.filled(
             size: const Size(double.infinity, 48),
             title: 'Start a preset',
-            buttonColor: Colors.white,
-            side: const BorderSide(color: Color(0xFFE5E7EB), width: 1),
+            buttonColor: const Color(0xFFFFF4F4),
+            side: const BorderSide(color: Color(0xFFF0B5B7), width: 1),
             style: AppStyles.text15Px.poppins.w500.copyWith(
               color: AppColors.textDark,
             ),

@@ -301,7 +301,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   index: currentIndex,
                   children: tabPages,
                 ),
-                extendBody: false,
+                extendBody: true,
                 bottomNavigationBar: SafeArea(
                   top: false,
                   child: Padding(

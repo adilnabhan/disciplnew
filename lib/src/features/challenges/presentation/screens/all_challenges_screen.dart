@@ -210,7 +210,7 @@ class __AllChallengesScreenContentState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
+      backgroundColor: AppColors.bgcolorgrey,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -419,9 +419,11 @@ class __AllChallengesScreenContentState
                   },
                   child: ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
+                    padding: const EdgeInsets.only(
+                      left: 16.0,
+                      right: 16.0,
+                      top: 8.0,
+                      bottom: 96.0,
                     ),
                     itemCount: state.challenges.length +
                         (state.isLoadingMore ? 1 : 0),

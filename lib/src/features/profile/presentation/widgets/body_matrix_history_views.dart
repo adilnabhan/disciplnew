@@ -1,6 +1,7 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
 
-/// Live API-connected Body Matrix History View.
+/// Live API-connected Body Matrix History View with a single big graph
+/// and a dropdown metric selector at the top.
 class BodyMatrixHistoryView extends StatefulWidget {
   const BodyMatrixHistoryView({
     required this.customerDetails,
@@ -17,6 +18,7 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
   bool _isLoading = true;
   String? _errorMessage;
   BodyMetricsHistoryData? _historyData;
+  String _selectedMetricKey = 'bmi';
 
   @override
   void initState() {
@@ -44,9 +46,74 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
         });
       },
       (data) {
+        var finalData = data;
+        final custHeight = double.tryParse(widget.customerDetails.height ?? '');
+        final custWeight = double.tryParse(widget.customerDetails.weight ?? '');
+
+        var heightMetric = data.metrics.height;
+        if (heightMetric == null && custHeight != null && custHeight > 0) {
+          heightMetric = BodyMetricItem(
+            metricKey: 'height',
+            title: 'Height',
+            subtitle: 'Stature history',
+            currentValue: custHeight,
+            unit: 'cm',
+            history: [
+              BodyMetricHistoryPoint(date: 'Current', value: custHeight),
+            ],
+          );
+        }
+
+        var weightMetric = data.metrics.weight;
+        if (weightMetric == null && custWeight != null && custWeight > 0) {
+          weightMetric = BodyMetricItem(
+            metricKey: 'weight',
+            title: 'Weight',
+            subtitle: 'Body weight history',
+            currentValue: custWeight,
+            unit: 'kg',
+            history: [
+              BodyMetricHistoryPoint(date: 'Current', value: custWeight),
+            ],
+          );
+        }
+
+        if (heightMetric != data.metrics.height ||
+            weightMetric != data.metrics.weight) {
+          finalData = BodyMetricsHistoryData(
+            userId: data.userId,
+            customerId: data.customerId,
+            userName: data.userName,
+            gender: data.gender,
+            age: data.age,
+            heightCm: data.heightCm ?? custHeight,
+            currentWeightKg: data.currentWeightKg ?? custWeight,
+            timeframe: data.timeframe,
+            metrics: BodyMetricsMap(
+              bmi: data.metrics.bmi,
+              bmr: data.metrics.bmr,
+              bodyFat: data.metrics.bodyFat,
+              waistHipRatio: data.metrics.waistHipRatio,
+              waistHeightRatio: data.metrics.waistHeightRatio,
+              height: heightMetric,
+              weight: weightMetric,
+            ),
+          );
+        }
+
         setState(() {
           _isLoading = false;
-          _historyData = data;
+          _historyData = finalData;
+          final available = finalData.orderedMetrics;
+          if (available.isNotEmpty) {
+            final exists = available.any((m) =>
+                _normalizeMetricKey(m.metricKey) ==
+                _normalizeMetricKey(_selectedMetricKey));
+            if (!exists) {
+              _selectedMetricKey =
+                  _normalizeMetricKey(available.first.metricKey);
+            }
+          }
         });
       },
     );
@@ -68,26 +135,187 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
     }
 
     final metrics = data.orderedMetrics;
+    final activeKey = _normalizeMetricKey(_selectedMetricKey);
+    final selectedMetric = metrics.firstWhere(
+      (m) => _normalizeMetricKey(m.metricKey) == activeKey,
+      orElse: () => metrics.first,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < metrics.length; i++) ...[
-          _buildMetricCard(metrics[i]),
-          if (i < metrics.length - 1) const SizedBox(height: 16),
-        ],
+        _buildMetricSelectorDropdown(metrics),
+        const SizedBox(height: 16),
+        _buildMetricCard(selectedMetric),
       ],
     );
   }
 
+  Widget _buildMetricSelectorDropdown(List<BodyMetricItem> metrics) {
+    final activeKey = _normalizeMetricKey(_selectedMetricKey);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: metrics.any((m) => _normalizeMetricKey(m.metricKey) == activeKey)
+              ? activeKey
+              : _normalizeMetricKey(metrics.first.metricKey),
+          isExpanded: true,
+          itemHeight: 56,
+          icon: const Icon(
+            Icons.keyboard_arrow_down_rounded,
+            color: Color(0xFF4B5563),
+            size: 24,
+          ),
+          dropdownColor: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          elevation: 6,
+          items: metrics.map((item) {
+            final (color, bgColor, icon) = _resolveMetricStyle(item.metricKey);
+            final title = item.title.isNotEmpty
+                ? item.title
+                : _resolveDefaultTitle(item.metricKey);
+            final subtitle = item.subtitle.isNotEmpty
+                ? item.subtitle
+                : _resolveDefaultSubtitle(item.metricKey);
+            final itemKey = _normalizeMetricKey(item.metricKey);
+            final isSelected = itemKey == activeKey;
+
+            return DropdownMenuItem<String>(
+              value: itemKey,
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Icon(icon, color: color, size: 19),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          style: AppStyles.text14Px.poppins.w600.copyWith(
+                            color: isSelected
+                                ? color
+                                : const Color(0xFF111827),
+                          ),
+                        ),
+                        if (subtitle.isNotEmpty)
+                          Text(
+                            subtitle,
+                            style: AppStyles.text11Px.poppins.w400.copyWith(
+                              color: const Color(0xFF6B7280),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(Icons.check_circle_rounded, color: color, size: 20),
+                ],
+              ),
+            );
+          }).toList(),
+          selectedItemBuilder: (context) {
+            return metrics.map((item) {
+              final (color, bgColor, icon) =
+                  _resolveMetricStyle(item.metricKey);
+              final title = item.title.isNotEmpty
+                  ? item.title
+                  : _resolveDefaultTitle(item.metricKey);
+              final subtitle = item.subtitle.isNotEmpty
+                  ? item.subtitle
+                  : _resolveDefaultSubtitle(item.metricKey);
+
+              return Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: bgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Icon(icon, color: color, size: 19),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          title,
+                          style: AppStyles.text15Px.poppins.w700.copyWith(
+                            color: const Color(0xFF111827),
+                          ),
+                        ),
+                        if (subtitle.isNotEmpty)
+                          Text(
+                            subtitle,
+                            style: AppStyles.text11Px.poppins.w400.copyWith(
+                              color: const Color(0xFF6B7280),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }).toList();
+          },
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedMetricKey = val;
+              });
+            }
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _buildMetricCard(BodyMetricItem metric) {
-    final (themeColor, themeBgColor, icon) = _resolveMetricStyle(metric.metricKey);
+    final (themeColor, themeBgColor, icon) =
+        _resolveMetricStyle(metric.metricKey);
     final (minY, maxY, yLabels, decimals, isInt) =
         _resolveChartLimits(metric.metricKey, metric);
 
     final isIncrease = metric.isIncrease;
     final isFavorable = metric.metricKey == 'bmr' ? isIncrease : !isIncrease;
-    final trendColor = isFavorable ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+    final trendColor =
+        isFavorable ? const Color(0xFF10B981) : const Color(0xFFEF4444);
 
     final badgeColor = _parseHexColor(metric.statusColor, trendColor);
     final badgeBgColor = badgeColor.withValues(alpha: 0.12);
@@ -96,6 +324,11 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
 
     final chartPoints = metric.history.map((e) => e.value).toList();
     final chartDates = metric.history.map((e) => e.date).toList();
+
+    final defaultUnit = _resolveDefaultUnit(metric.metricKey);
+    final unit = metric.unit.isNotEmpty
+        ? metric.unit
+        : (defaultUnit.isNotEmpty ? defaultUnit : null);
 
     return BodyMatrixHistoryCard(
       title: metric.title.isNotEmpty
@@ -107,8 +340,9 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
       icon: icon,
       themeColor: themeColor,
       themeBgColor: themeBgColor,
-      currentValue: _formatCurrentValue(metric.metricKey, metric.currentValue),
-      unit: metric.unit.isNotEmpty ? metric.unit : null,
+      currentValue:
+          _formatCurrentValue(metric.metricKey, metric.currentValue),
+      unit: unit,
       deltaValue: metric.deltaFormatted ??
           (metric.delta != null
               ? '${metric.delta! > 0 ? "↑ " : "↓ "}${metric.delta!.abs().toStringAsFixed(decimals)}'
@@ -120,7 +354,8 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
       badgeBgColor: badgeBgColor,
       rangeLabel: rangeLabel,
       rangeValue: rangeValue,
-      sinceText: metric.sinceText ?? (metric.sinceDate != null ? 'since ${metric.sinceDate}' : ''),
+      sinceText: metric.sinceText ??
+          (metric.sinceDate != null ? 'since ${metric.sinceDate}' : ''),
       chartPoints: chartPoints,
       chartDates: chartDates,
       yAxisLabels: yLabels,
@@ -132,8 +367,18 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
     );
   }
 
+  String _normalizeMetricKey(String key) {
+    final k = key.toLowerCase().trim().replaceAll('-', '_');
+    if (k == 'bodyfat') return 'body_fat';
+    if (k == 'whr') return 'waist_hip_ratio';
+    if (k == 'whtr' || k == 'waist_hip_height') return 'waist_height_ratio';
+    if (k == 'weight_kg' || k == 'body_weight') return 'weight';
+    if (k == 'height_cm') return 'height';
+    return k;
+  }
+
   (Color, Color, IconData) _resolveMetricStyle(String key) {
-    final normalized = key.toLowerCase().replaceAll('-', '_');
+    final normalized = _normalizeMetricKey(key);
     switch (normalized) {
       case 'bmi':
         return (
@@ -148,22 +393,30 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
           Icons.local_fire_department_rounded,
         );
       case 'body_fat':
-      case 'bodyfat':
         return (
           const Color(0xFF00A896), // Teal matching Present Condition
           const Color(0xFFE0F2F1),
           Icons.percent_rounded,
         );
+      case 'weight':
+        return (
+          const Color(0xFF0284C7), // Sky/Azure blue matching weight
+          const Color(0xFFE0F2FE),
+          Icons.scale_rounded,
+        );
+      case 'height':
+        return (
+          const Color(0xFF10B981), // Emerald green matching stature
+          const Color(0xFFECFDF5),
+          Icons.height_rounded,
+        );
       case 'waist_hip_ratio':
-      case 'whr':
         return (
           const Color(0xFFFF5252), // Coral red matching Present Condition
           const Color(0xFFFFF0F2),
           Icons.accessibility_new_rounded,
         );
       case 'waist_height_ratio':
-      case 'whtr':
-      case 'waist_hip_height':
         return (
           const Color(0xFF7C3AED), // Purple/violet palette matching ratios
           const Color(0xFFF5F3FF),
@@ -179,56 +432,76 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
   }
 
   String _resolveDefaultTitle(String key) {
-    final normalized = key.toLowerCase().replaceAll('-', '_');
+    final normalized = _normalizeMetricKey(key);
     switch (normalized) {
       case 'bmi':
         return 'BMI';
       case 'bmr':
         return 'BMR';
       case 'body_fat':
-      case 'bodyfat':
         return 'Body Fat';
+      case 'weight':
+        return 'Weight';
+      case 'height':
+        return 'Height';
       case 'waist_hip_ratio':
-      case 'whr':
-        return 'Waist Hip Ratio';
+        return 'Waist-to-Hip Ratio';
       case 'waist_height_ratio':
-      case 'whtr':
-        return 'Waist Height Ratio';
+        return 'Waist-to-Height Ratio';
       default:
         return key;
     }
   }
 
   String _resolveDefaultSubtitle(String key) {
-    final normalized = key.toLowerCase().replaceAll('-', '_');
+    final normalized = _normalizeMetricKey(key);
     switch (normalized) {
       case 'bmi':
         return 'Body Mass Index';
       case 'bmr':
         return 'Basal Metabolic Rate';
       case 'body_fat':
-      case 'bodyfat':
         return 'Body Fat Percentage';
+      case 'weight':
+        return 'Body Weight History';
+      case 'height':
+        return 'Stature History';
       case 'waist_hip_ratio':
-      case 'whr':
         return 'Fat distribution indicator';
       case 'waist_height_ratio':
-      case 'whtr':
-        return 'Waist-to-height central obesity ratio';
+        return 'Central obesity indicator';
+      default:
+        return '';
+    }
+  }
+
+  String _resolveDefaultUnit(String key) {
+    final normalized = _normalizeMetricKey(key);
+    switch (normalized) {
+      case 'bmr':
+        return 'kcal/day';
+      case 'body_fat':
+        return '%';
+      case 'weight':
+        return 'kg';
+      case 'height':
+        return 'cm';
       default:
         return '';
     }
   }
 
   String _formatCurrentValue(String metricKey, double value) {
-    final normalized = metricKey.toLowerCase().replaceAll('-', '_');
+    final normalized = _normalizeMetricKey(metricKey);
     if (normalized == 'bmr') {
       return NumberFormat('#,###').format(value.round());
     } else if (normalized == 'waist_hip_ratio' ||
-        normalized == 'whr' ||
-        normalized == 'waist_height_ratio' ||
-        normalized == 'whtr') {
+        normalized == 'waist_height_ratio') {
       return value.toStringAsFixed(2);
+    } else if (normalized == 'height') {
+      return value == value.roundToDouble()
+          ? value.toInt().toString()
+          : value.toStringAsFixed(1);
     } else {
       return value.toStringAsFixed(1);
     }
@@ -271,7 +544,7 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
     String metricKey,
     BodyMetricItem metric,
   ) {
-    final normalized = metricKey.toLowerCase().replaceAll('-', '_');
+    final normalized = _normalizeMetricKey(metricKey);
     if (metric.history.isEmpty) {
       return (0, 100, const [0, 25, 50, 75, 100], 0, true);
     }
@@ -288,8 +561,13 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
     }
 
     if (minVal == maxVal) {
-      minVal = (minVal * 0.9).floorToDouble();
-      maxVal = (maxVal * 1.1).ceilToDouble();
+      if (minVal == 0) {
+        minVal = 0;
+        maxVal = 10;
+      } else {
+        minVal = (minVal * 0.9).floorToDouble();
+        maxVal = (maxVal * 1.1).ceilToDouble();
+      }
     }
 
     int decimals;
@@ -299,16 +577,24 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
       isInt = true;
       minVal = (minVal / 100).floor() * 100.0;
       maxVal = (maxVal / 100).ceil() * 100.0;
-    } else if (normalized == 'bmi' || normalized == 'body_fat' || normalized == 'bodyfat') {
+    } else if (normalized == 'bmi' ||
+        normalized == 'body_fat' ||
+        normalized == 'weight') {
       decimals = 1;
       isInt = minVal == minVal.toInt() && maxVal == maxVal.toInt();
-      minVal = minVal.floorToDouble();
-      maxVal = maxVal.ceilToDouble();
+      minVal = (minVal - 1).floorToDouble();
+      maxVal = (maxVal + 1).ceilToDouble();
+    } else if (normalized == 'height') {
+      decimals = 0;
+      isInt = true;
+      minVal = (minVal - 5).floorToDouble();
+      maxVal = (maxVal + 5).ceilToDouble();
     } else {
       decimals = 2;
       isInt = false;
-      minVal = double.parse(minVal.toStringAsFixed(2));
-      maxVal = double.parse(maxVal.toStringAsFixed(2));
+      minVal = double.parse(
+          (minVal - 0.05).clamp(0, double.infinity).toStringAsFixed(2));
+      maxVal = double.parse((maxVal + 0.05).toStringAsFixed(2));
     }
 
     final step = (maxVal - minVal) / 4;
@@ -327,16 +613,21 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
       highlightColor: const Color(0xFFF3F4F6),
       child: Column(
         children: [
-          for (var i = 0; i < 3; i++) ...[
-            Container(
-              height: 220,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-              ),
+          Container(
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
             ),
-            if (i < 2) const SizedBox(height: 16),
-          ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            height: 380,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+            ),
+          ),
         ],
       ),
     );
@@ -491,7 +782,7 @@ class BodyMatrixHistoryViewState extends State<BodyMatrixHistoryView> {
   }
 }
 
-/// Individual Card Widget for History Metric
+/// Single Big Card Widget for History Metric
 class BodyMatrixHistoryCard extends StatelessWidget {
   const BodyMatrixHistoryCard({
     required this.title,
@@ -550,7 +841,8 @@ class BodyMatrixHistoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final trendColor = isFavorable ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+    final trendColor =
+        isFavorable ? const Color(0xFF10B981) : const Color(0xFFEF4444);
 
     return Container(
       decoration: BoxDecoration(
@@ -572,17 +864,17 @@ class BodyMatrixHistoryCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
                   color: themeBgColor,
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Center(
-                  child: Icon(icon, color: themeColor, size: 22),
+                  child: Icon(icon, color: themeColor, size: 24),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,71 +885,74 @@ class BodyMatrixHistoryCard extends StatelessWidget {
                         color: const Color(0xFF111827),
                       ),
                     ),
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle,
-                      style: AppStyles.text12Px.poppins.w400.copyWith(
-                        color: const Color(0xFF6B7280),
+                    if (subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: AppStyles.text12Px.poppins.w400.copyWith(
+                          color: const Color(0xFF6B7280),
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFF374151),
-                size: 22,
-              ),
+              if (badgeLabel.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: badgeBgColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    badgeLabel,
+                    style: AppStyles.text11Px.poppins.w600.copyWith(
+                      color: badgeColor,
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 18),
 
-          // ── Main Content: Stats & Line Chart ──
+          // ── Main Stats Row ──
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left Column: Values & Badge
-              SizedBox(
-                width: 118,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            currentValue,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: AppStyles.text28Px.poppins.w800.copyWith(
-                              color: const Color(0xFF111827),
-                              letterSpacing: -0.5,
-                              height: 1.1,
-                            ),
-                          ),
-                          if (unit != null && unit!.isNotEmpty) ...[
-                            const SizedBox(width: 4),
-                            Text(
-                              unit!,
-                              maxLines: 1,
-                              softWrap: false,
-                              style: AppStyles.text11Px.poppins.w500.copyWith(
-                                color: const Color(0xFF6B7280),
-                              ),
-                            ),
-                          ],
-                        ],
+              // Value & Trend
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        currentValue,
+                        style: AppStyles.text32Px.poppins.w800.copyWith(
+                          color: const Color(0xFF111827),
+                          letterSpacing: -0.5,
+                          height: 1.1,
+                        ),
                       ),
-                    ),
-                    if (deltaValue.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
+                      if (unit != null && unit!.isNotEmpty) ...[
+                        const SizedBox(width: 5),
+                        Text(
+                          unit!,
+                          style: AppStyles.text13Px.poppins.w500.copyWith(
+                            color: const Color(0xFF6B7280),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (deltaValue.isNotEmpty || sinceText.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        if (deltaValue.isNotEmpty) ...[
                           Icon(
                             isIncrease
                                 ? Icons.arrow_upward_rounded
@@ -668,108 +963,107 @@ class BodyMatrixHistoryCard extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             deltaValue,
-                            maxLines: 1,
-                            softWrap: false,
-                            style: AppStyles.text13Px.poppins.w700.copyWith(
+                            style: AppStyles.text12Px.poppins.w700.copyWith(
                               color: trendColor,
                             ),
                           ),
+                          const SizedBox(width: 6),
                         ],
-                      ),
-                    ],
-                    if (sinceText.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        sinceText,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: AppStyles.text10Px.poppins.w400.copyWith(
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: badgeBgColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        badgeLabel,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: AppStyles.text11Px.poppins.w600.copyWith(
-                          color: badgeColor,
-                        ),
-                      ),
-                    ),
-                    if (rangeLabel.isNotEmpty && rangeValue.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        rangeLabel,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: AppStyles.text10Px.poppins.w400.copyWith(
-                          color: const Color(0xFF9CA3AF),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        rangeValue,
-                        maxLines: 1,
-                        softWrap: false,
-                        style: AppStyles.text12Px.poppins.w600.copyWith(
-                          color: const Color(0xFF374151),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-
-              // Right Column: Line Chart
-              Expanded(
-                child: SizedBox(
-                  height: 145,
-                  child: chartPoints.isNotEmpty
-                      ? CustomPaint(
-                          size: const Size(double.infinity, 145),
-                          painter: _HistoryMetricChartPainter(
-                            points: chartPoints,
-                            dates: chartDates,
-                            yLabels: yAxisLabels,
-                            minY: minY,
-                            maxY: maxY,
-                            themeColor: themeColor,
-                            decimalPlaces: decimalPlaces,
-                            formatYAsInt: formatYAsInt,
-                          ),
-                        )
-                      : Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF9FAFB),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            'No timeline entries yet',
+                        if (sinceText.isNotEmpty)
+                          Text(
+                            sinceText,
                             style: AppStyles.text11Px.poppins.w400.copyWith(
                               color: const Color(0xFF9CA3AF),
                             ),
                           ),
-                        ),
-                ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
+              // Range Info
+              if (rangeLabel.isNotEmpty && rangeValue.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      rangeLabel,
+                      style: AppStyles.text11Px.poppins.w400.copyWith(
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      rangeValue,
+                      style: AppStyles.text13Px.poppins.w600.copyWith(
+                        color: const Color(0xFF374151),
+                      ),
+                    ),
+                  ],
+                ),
             ],
+          ),
+
+          const SizedBox(height: 18),
+
+          // ── Divider ──
+          Container(
+            height: 1,
+            color: const Color(0xFFF1F5F9),
+          ),
+          const SizedBox(height: 14),
+
+          // ── The Big Line Chart ──
+          SizedBox(
+            height: 220,
+            width: double.infinity,
+            child: chartPoints.isNotEmpty
+                ? CustomPaint(
+                    size: const Size(double.infinity, 220),
+                    painter: _HistoryMetricChartPainter(
+                      points: chartPoints,
+                      dates: chartDates,
+                      yLabels: yAxisLabels,
+                      minY: minY,
+                      maxY: maxY,
+                      themeColor: themeColor,
+                      decimalPlaces: decimalPlaces,
+                      formatYAsInt: formatYAsInt,
+                    ),
+                  )
+                : Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.show_chart_rounded,
+                          size: 32,
+                          color:
+                              const Color(0xFF9CA3AF).withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No timeline entries yet for $title',
+                          style: AppStyles.text12Px.poppins.w500.copyWith(
+                            color: const Color(0xFF9CA3AF),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
           ),
 
           // ── Insight / Tip Box (if available) ──
           if (insightText != null && insightText!.isNotEmpty) ...[
             const SizedBox(height: 16),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: themeBgColor.withValues(alpha: 0.55),
                 borderRadius: BorderRadius.circular(16),
@@ -805,7 +1099,7 @@ class BodyMatrixHistoryCard extends StatelessWidget {
   }
 }
 
-/// Custom line chart painter matching the design specifications
+/// Custom line chart painter matching the big chart design specifications
 class _HistoryMetricChartPainter extends CustomPainter {
   _HistoryMetricChartPainter({
     required this.points,
@@ -840,7 +1134,7 @@ class _HistoryMetricChartPainter extends CustomPainter {
           text: text,
           style: const TextStyle(
             color: Color(0xFF64748B),
-            fontSize: 9,
+            fontSize: 9.5,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -851,14 +1145,16 @@ class _HistoryMetricChartPainter extends CustomPainter {
       }
     }
 
-    final leftPadding = maxYLabelWidth + 8;
-    const rightPadding = 12.0;
-    const topPadding = 16.0;
-    const bottomPadding = 22.0;
+    final leftPadding = maxYLabelWidth + 10;
+    const rightPadding = 16.0;
+    const topPadding = 20.0;
+    const bottomPadding = 26.0;
 
     final chartWidth = size.width - leftPadding - rightPadding;
     final chartHeight = size.height - topPadding - bottomPadding;
     if (chartWidth <= 0 || chartHeight <= 0) return;
+
+    final range = (maxY - minY) == 0 ? 1.0 : (maxY - minY);
 
     // ── 1. Draw Grid Lines & Y-Axis Labels ──
     final gridPaint = Paint()
@@ -877,7 +1173,7 @@ class _HistoryMetricChartPainter extends CustomPainter {
     );
 
     for (final yVal in yLabels) {
-      final norm = (yVal - minY) / (maxY - minY);
+      final norm = (yVal - minY) / range;
       final y = topPadding + (1 - norm) * chartHeight;
 
       // Horizontal gridline
@@ -894,7 +1190,7 @@ class _HistoryMetricChartPainter extends CustomPainter {
           text: text,
           style: const TextStyle(
             color: Color(0xFF64748B),
-            fontSize: 9,
+            fontSize: 9.5,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -913,64 +1209,69 @@ class _HistoryMetricChartPainter extends CustomPainter {
       final x = points.length == 1
           ? leftPadding + chartWidth / 2
           : leftPadding + (i * (chartWidth / (points.length - 1)));
-      final norm = (points[i] - minY) / (maxY - minY);
+      final norm = (points[i] - minY) / range;
       final y = topPadding + (1 - norm) * chartHeight;
       pointOffsets.add(Offset(x, y));
     }
 
-    // ── 3. Draw Gradient Area Fill ──
-    final path = Path()..moveTo(pointOffsets.first.dx, pointOffsets.first.dy);
-    for (var i = 0; i < pointOffsets.length - 1; i++) {
-      path.lineTo(pointOffsets[i + 1].dx, pointOffsets[i + 1].dy);
+    // ── 3. Draw Area Gradient & Trend Line (if > 1 point) ──
+    if (pointOffsets.length > 1) {
+      final path = Path()
+        ..moveTo(pointOffsets.first.dx, pointOffsets.first.dy);
+      for (var i = 0; i < pointOffsets.length - 1; i++) {
+        path.lineTo(pointOffsets[i + 1].dx, pointOffsets[i + 1].dy);
+      }
+
+      final fillPath = Path.from(path)
+        ..lineTo(pointOffsets.last.dx, size.height - bottomPadding)
+        ..lineTo(pointOffsets.first.dx, size.height - bottomPadding)
+        ..close();
+
+      final fillPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            themeColor.withValues(alpha: 0.18),
+            themeColor.withValues(alpha: 0),
+          ],
+        ).createShader(
+            Rect.fromLTWH(0, topPadding, size.width, chartHeight));
+
+      canvas.drawPath(fillPath, fillPaint);
+
+      final linePaint = Paint()
+        ..color = themeColor
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.6
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+
+      canvas.drawPath(path, linePaint);
     }
 
-    final fillPath = Path.from(path)
-      ..lineTo(pointOffsets.last.dx, size.height - bottomPadding)
-      ..lineTo(pointOffsets.first.dx, size.height - bottomPadding)
-      ..close();
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          themeColor.withValues(alpha: 0.18),
-          themeColor.withValues(alpha: 0),
-        ],
-      ).createShader(Rect.fromLTWH(0, topPadding, size.width, chartHeight));
-
-    canvas.drawPath(fillPath, fillPaint);
-
-    // ── 4. Draw Trend Line ──
-    final linePaint = Paint()
-      ..color = themeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.4
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    canvas.drawPath(path, linePaint);
-
-    // ── 5. Draw Point Dots, Value Labels, and X Dates ──
+    // ── 4. Draw Point Dots, Value Labels, and X Dates ──
     for (var i = 0; i < pointOffsets.length; i++) {
       final pt = pointOffsets[i];
 
-      // Draw outer point dot
+      // Draw outer point dot & inner white center
       canvas
-        ..drawCircle(pt, 3.8, Paint()..color = themeColor)
-        ..drawCircle(pt, 1.6, Paint()..color = Colors.white);
+        ..drawCircle(pt, 4.2, Paint()..color = themeColor)
+        ..drawCircle(pt, 1.8, Paint()..color = Colors.white);
 
       // Data point value text directly above dot
       final valText = formatYAsInt && points[i] >= 1000
           ? NumberFormat('#,###').format(points[i])
-          : points[i].toStringAsFixed(decimalPlaces);
+          : (decimalPlaces == 0
+              ? points[i].round().toString()
+              : points[i].toStringAsFixed(decimalPlaces));
 
       final valPainter = TextPainter(
         text: TextSpan(
           text: valText,
           style: const TextStyle(
             color: Color(0xFF1E293B),
-            fontSize: 9.5,
+            fontSize: 10,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -991,7 +1292,7 @@ class _HistoryMetricChartPainter extends CustomPainter {
             text: dates[i],
             style: const TextStyle(
               color: Color(0xFF64748B),
-              fontSize: 9,
+              fontSize: 9.5,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -1021,6 +1322,7 @@ class _HistoryMetricChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _HistoryMetricChartPainter oldDelegate) {
     return oldDelegate.points != points ||
+        oldDelegate.dates != dates ||
         oldDelegate.themeColor != themeColor ||
         oldDelegate.minY != minY ||
         oldDelegate.maxY != maxY;
