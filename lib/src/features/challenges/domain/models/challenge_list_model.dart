@@ -178,6 +178,9 @@ class ChallengeModel {
   final int? remainingSeconds;
   final String? challengeTypeValue;
   final bool? isEndingSoon;
+  final String? gymName;
+  final String? gymLogo;
+  final String? gymLocation;
 
   const ChallengeModel({
     this.id,
@@ -200,6 +203,9 @@ class ChallengeModel {
     this.remainingSeconds,
     this.challengeTypeValue,
     this.isEndingSoon,
+    this.gymName,
+    this.gymLogo,
+    this.gymLocation,
   });
 
   /// Best available image URL: thumbnail first, then banner.
@@ -262,6 +268,22 @@ class ChallengeModel {
       remainingSeconds: json['remaining_seconds'] as int?,
       challengeTypeValue: json['challenge_type_value'] as String?,
       isEndingSoon: _parseBool(json['is_ending_soon']),
+      gymName: (json['gym_name'] ??
+          json['fitness_center_name'] ??
+          json['center_name'] ??
+          (json['gym'] is Map ? json['gym']['name'] ?? json['gym']['center_name'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['name'] ?? json['fitness_center']['center_name'] : null))?.toString(),
+      gymLogo: (json['gym_logo'] ??
+          json['fitness_center_logo'] ??
+          json['center_logo'] ??
+          (json['gym'] is Map ? json['gym']['logo'] ?? json['gym']['image'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['logo'] ?? json['fitness_center']['image'] : null))?.toString(),
+      gymLocation: (json['gym_location'] ??
+          json['gym_place'] ??
+          json['gym_city'] ??
+          json['fitness_center_location'] ??
+          (json['gym'] is Map ? json['gym']['place'] ?? json['gym']['city'] ?? json['gym']['location'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['place'] ?? json['fitness_center']['city'] ?? json['fitness_center']['location'] : null))?.toString(),
     );
   }
 
@@ -287,6 +309,9 @@ class ChallengeModel {
       'remaining_seconds': remainingSeconds,
       'challenge_type_value': challengeTypeValue,
       'is_ending_soon': isEndingSoon,
+      'gym_name': gymName,
+      'gym_logo': gymLogo,
+      'gym_location': gymLocation,
     };
   }
 }

@@ -8,6 +8,9 @@ class AllChallengeWinnersResponse {
   final int? totalWinners;
   final int? totalParticipants;
   final int? totalParticipantsCount;
+  final String? gymName;
+  final String? gymLogo;
+  final String? gymLocation;
   final List<ChallengeWinnerItem> winners;
 
   const AllChallengeWinnersResponse({
@@ -17,6 +20,9 @@ class AllChallengeWinnersResponse {
     this.totalWinners,
     this.totalParticipants,
     this.totalParticipantsCount,
+    this.gymName,
+    this.gymLogo,
+    this.gymLocation,
     this.winners = const [],
   });
 
@@ -28,6 +34,20 @@ class AllChallengeWinnersResponse {
       totalWinners: json['total_winners'] as int?,
       totalParticipants: json['total_participants'] as int? ?? json['total_participants_count'] as int?,
       totalParticipantsCount: json['total_participants_count'] as int? ?? json['total_participants'] as int?,
+      gymName: (json['gym_name'] ??
+          json['fitness_center_name'] ??
+          (json['gym'] is Map ? json['gym']['name'] ?? json['gym']['center_name'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['name'] ?? json['fitness_center']['center_name'] : null))?.toString(),
+      gymLogo: (json['gym_logo'] ??
+          json['fitness_center_logo'] ??
+          (json['gym'] is Map ? json['gym']['logo'] ?? json['gym']['image'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['logo'] ?? json['fitness_center']['image'] : null))?.toString(),
+      gymLocation: (json['gym_location'] ??
+          json['gym_place'] ??
+          json['gym_city'] ??
+          json['fitness_center_location'] ??
+          (json['gym'] is Map ? json['gym']['place'] ?? json['gym']['city'] ?? json['gym']['location'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['place'] ?? json['fitness_center']['city'] ?? json['fitness_center']['location'] : null))?.toString(),
       winners: (json['winners'] as List<dynamic>?)
               ?.map((e) => ChallengeWinnerItem.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -56,6 +76,9 @@ class ChallengeWinnerItem {
   final String? brandName;
   final String? brandLogo;
   final String? rewardImage;
+  final String? gymName;
+  final String? gymLogo;
+  final String? gymLocation;
 
   const ChallengeWinnerItem({
     this.id,
@@ -76,6 +99,9 @@ class ChallengeWinnerItem {
     this.brandName,
     this.brandLogo,
     this.rewardImage,
+    this.gymName,
+    this.gymLogo,
+    this.gymLocation,
   });
 
   factory ChallengeWinnerItem.fromJson(Map<String, dynamic> json) {
@@ -98,6 +124,22 @@ class ChallengeWinnerItem {
       brandName: json['brand_name'] as String?,
       brandLogo: json['brand_logo'] as String?,
       rewardImage: json['reward_image'] as String?,
+      gymName: (json['gym_name'] ??
+          json['fitness_center_name'] ??
+          json['center_name'] ??
+          (json['gym'] is Map ? json['gym']['name'] ?? json['gym']['center_name'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['name'] ?? json['fitness_center']['center_name'] : null))?.toString(),
+      gymLogo: (json['gym_logo'] ??
+          json['fitness_center_logo'] ??
+          json['center_logo'] ??
+          (json['gym'] is Map ? json['gym']['logo'] ?? json['gym']['image'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['logo'] ?? json['fitness_center']['image'] : null))?.toString(),
+      gymLocation: (json['gym_location'] ??
+          json['gym_place'] ??
+          json['gym_city'] ??
+          json['fitness_center_location'] ??
+          (json['gym'] is Map ? json['gym']['place'] ?? json['gym']['city'] ?? json['gym']['location'] : null) ??
+          (json['fitness_center'] is Map ? json['fitness_center']['place'] ?? json['fitness_center']['city'] ?? json['fitness_center']['location'] : null))?.toString(),
     );
   }
 }

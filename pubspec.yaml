@@ -179,6 +179,7 @@ flutter:
     - assets/images/png/vectors/appbar_onam.png
     - assets/images/png/vectors/No_workout-removebg-preview.png
     - assets/images/carousel_images/
+    - assets/images/others/
     - assets/fonts/
     - assets/Sounds/
 
@@ -258,3 +259,6 @@ flutter:
       fonts:
         - asset: assets/fonts/Star_filled.ttf
         - asset: assets/fonts/Star_out_black.ttf
+    - family: TitanOne
+      fonts:
+        - asset: assets/fonts/TitanOne-Regular.ttf

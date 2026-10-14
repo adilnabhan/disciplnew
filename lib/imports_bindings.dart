@@ -30,7 +30,7 @@ export 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
 //* User Interface
 export 'package:cached_network_image/cached_network_image.dart';
-export 'package:dio/dio.dart' show Dio, DioException, FormData, MultipartFile, Options;
+export 'package:dio/dio.dart' show Dio, DioException, FormData, MultipartFile, Options, ResponseType;
 export 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
 export 'package:flutter/foundation.dart' hide Category;
 export 'package:flutter/material.dart';

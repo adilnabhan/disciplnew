@@ -2,6 +2,7 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/models/challenge_list_model.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/repositories/challenge_repository.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/models/all_challenge_winners_model.dart';
+import 'package:customer_mobile_app/src/features/challenges/logic/challenge_winner_poster_service.dart';
 
 /// Personal winner certificate page — shown when the user wins a challenge.
 /// The existing [ChallengeWinnersScreen] (all winners list) is NOT affected.
@@ -19,6 +20,7 @@ class ChallengeWinnerCertificateScreen extends StatefulWidget {
 
 class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertificateScreen> {
   bool _isLoading = true;
+  bool _isProcessingPoster = false;
   String? _errorMessage;
   ChallengeWinnerItem? _winner;
 
@@ -45,7 +47,42 @@ class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertif
       if (mounted) {
         setState(() {
           if (response.winners.isNotEmpty) {
-            _winner = response.winners.first;
+            final first = response.winners.first;
+            _winner = ChallengeWinnerItem(
+              id: first.id,
+              challengeId: first.challengeId,
+              challengeName: first.challengeName,
+              userId: first.userId,
+              userName: first.userName,
+              profilePic: first.profilePic,
+              date: first.date,
+              awardedAt: first.awardedAt,
+              selectionMethod: first.selectionMethod,
+              selectionMethodDisplay: first.selectionMethodDisplay,
+              prize: first.prize,
+              prizeTitle: first.prizeTitle,
+              rank: first.rank,
+              isPublished: first.isPublished,
+              isPrizeDistributed: first.isPrizeDistributed,
+              brandName: first.brandName,
+              brandLogo: first.brandLogo,
+              rewardImage: first.rewardImage,
+              gymName: (first.gymName?.isNotEmpty ?? false)
+                  ? first.gymName
+                  : (response.gymName?.isNotEmpty ?? false)
+                      ? response.gymName
+                      : widget.challenge.gymName,
+              gymLogo: (first.gymLogo?.isNotEmpty ?? false)
+                  ? first.gymLogo
+                  : (response.gymLogo?.isNotEmpty ?? false)
+                      ? response.gymLogo
+                      : widget.challenge.gymLogo,
+              gymLocation: (first.gymLocation?.isNotEmpty ?? false)
+                  ? first.gymLocation
+                  : (response.gymLocation?.isNotEmpty ?? false)
+                      ? response.gymLocation
+                      : widget.challenge.gymLocation,
+            );
           }
           _isLoading = false;
         });
@@ -132,7 +169,12 @@ class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertif
                       themeColor,
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 18),
+
+                    // ── Download & Share Buttons (UI only) ────────────
+                    _buildActionButtons(context, themeColor),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -462,6 +504,109 @@ class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertif
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ── Download & Share Buttons ──────────────────────────────────────────────
+  Widget _buildActionButtons(BuildContext context, Color themeColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.file_download_outlined,
+              label: 'Download',
+              isLoading: _isProcessingPoster,
+              onTap: () async {
+                if (_isProcessingPoster) return;
+                setState(() => _isProcessingPoster = true);
+                try {
+                  await ChallengeWinnerPosterService.instance.handleDownload(
+                    context: context,
+                    challenge: widget.challenge,
+                    winner: _winner,
+                  );
+                } finally {
+                  if (mounted) setState(() => _isProcessingPoster = false);
+                }
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildActionButton(
+              icon: Icons.share_outlined,
+              label: 'Share',
+              isLoading: _isProcessingPoster,
+              onTap: () async {
+                if (_isProcessingPoster) return;
+                setState(() => _isProcessingPoster = true);
+                try {
+                  await ChallengeWinnerPosterService.instance.handleShare(
+                    context: context,
+                    challenge: widget.challenge,
+                    winner: _winner,
+                  );
+                } finally {
+                  if (mounted) setState(() => _isProcessingPoster = false);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isLoading = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: isLoading ? null : onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          height: 48,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: const Color(0xFFE5E7EB),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: const Color(0xFF1F2937),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: const Color(0xFF1F2937),
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
