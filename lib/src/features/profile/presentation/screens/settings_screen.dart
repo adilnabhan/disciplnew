@@ -4,6 +4,7 @@ import 'package:customer_mobile_app/src/features/profile/presentation/screens/pa
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/fitness_details_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/contact_support_screen.dart';
 import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/faq_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/screens/pages/report_bugs_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -188,6 +189,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       title: 'Privacy Policy',
                       onTap: () => _launchUrl('https://thediscipl.com/privacy-policy'),
                     ),
+                    _buildMenuItem(
+                      icon: Icons.bug_report_outlined,
+                      title: 'Report Bugs',
+                      iconSize: 26,
+                      onTap: () => context.push(const ReportBugsScreen()),
+                    ),
                   ]),
                   const SizedBox(height: 24),
 
@@ -336,6 +343,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                   title: 'Privacy Policy',
                                   onTap: () => _launchUrl('https://thediscipl.com/privacy-policy'),
                                 ),
+                                _buildMenuItem(
+                                  icon: Icons.bug_report_outlined,
+                                  title: 'Report Bugs',
+                                  iconSize: 26,
+                                  onTap: () => context.push(const ReportBugsScreen()),
+                                ),
                               ]),
                               const SizedBox(height: 24),
 
@@ -416,19 +429,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required VoidCallback onTap,
     bool isDestructive = false,
     bool applyColorFilter = true,
+    double? iconSize,
   }) {
     Widget leadingWidget;
+    final size = iconSize ?? 22.0;
     if (icon is IconData) {
       leadingWidget = Icon(
         icon,
         color: isDestructive ? Colors.red : const Color(0xFF212121),
-        size: 22,
+        size: size,
       );
     } else if (icon is String) {
       leadingWidget = SvgPicture.asset(
         icon,
-        width: 22,
-        height: 22,
+        width: size,
+        height: size,
         colorFilter: applyColorFilter
             ? ColorFilter.mode(
                 isDestructive ? Colors.red : const Color(0xFF212121),
@@ -437,12 +452,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             : null,
       );
     } else {
-      leadingWidget = const SizedBox(width: 22, height: 22);
+      leadingWidget = SizedBox(width: size, height: size);
     }
 
     return ListTile(
       onTap: onTap,
-      leading: leadingWidget,
+      leading: SizedBox(
+        width: 26,
+        height: 26,
+        child: Center(child: leadingWidget),
+      ),
       title: Text(
         title,
         style: AppStyles.text14Px.poppins.w500.copyWith(

@@ -34,6 +34,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
   late final TextEditingController _titleController;
   late final FocusNode _titleFocusNode;
   bool _isFinishing = false;
+  bool _titleHasError = false;
   Timer? _timer;
   int _elapsedSeconds = 0;
   final Map<String, FocusNode> _setKgFocusNodes = {};
@@ -56,6 +57,9 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     );
     _titleController = TextEditingController();
     _titleFocusNode = FocusNode();
+    _titleFocusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
 
     if (widget.isPresetCreation) {
       if (widget.presetToEdit != null) {
@@ -2126,39 +2130,104 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             // Title
                             if (totalExercises > 0)
                               Expanded(
-                                child: TextFormField(
-                                  controller: _titleController,
-                                  focusNode: _titleFocusNode,
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 18,
-                                    color: Color(0xFF212121),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  height: 42,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
                                   ),
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        widget.isPresetCreation
-                                            ? 'Enter preset name'
-                                            : 'Enter session name',
-                                    hintStyle: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 18,
-                                      color: Color(0xFFCCCCCC),
+                                  decoration: BoxDecoration(
+                                    color: _titleHasError
+                                        ? const Color(0xFFFFF0F0)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: _titleHasError
+                                          ? Colors.red
+                                          : (_titleFocusNode.hasFocus
+                                              ? AppColors.primary
+                                              : const Color(0xFFD1D5DB)),
+                                      width: (_titleHasError || _titleFocusNode.hasFocus) ? 1.6 : 1.2,
                                     ),
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
+                                    boxShadow: const [
+                                      BoxShadow(
+                                        color: Color(0x0A000000),
+                                        blurRadius: 4,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
                                   ),
-                                  onChanged: (v) {
-                                    EasyDebounce.debounce(
-                                      'workout_title_debouncer',
-                                      const Duration(milliseconds: 600),
-                                      () {
-                                        _cubit.updateSessionTitle(v);
-                                      },
-                                    );
-                                  },
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Expanded(
+                                        child: TextFormField(
+                                          controller: _titleController,
+                                          focusNode: _titleFocusNode,
+                                          textInputAction: TextInputAction.done,
+                                          onFieldSubmitted: (_) => _titleFocusNode.unfocus(),
+                                          style: const TextStyle(
+                                            fontFamily: 'Poppins',
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                            color: Color(0xFF212121),
+                                          ),
+                                          decoration: InputDecoration(
+                                            hintText:
+                                                widget.isPresetCreation
+                                                    ? 'Enter preset name'
+                                                    : 'Enter session name',
+                                            hintStyle: TextStyle(
+                                              fontFamily: 'Poppins',
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 15,
+                                              color: _titleHasError
+                                                  ? Colors.red.withOpacity(0.8)
+                                                  : const Color(0xFF888888),
+                                            ),
+                                            filled: false,
+                                            fillColor: Colors.transparent,
+                                            hoverColor: Colors.transparent,
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            disabledBorder: InputBorder.none,
+                                            errorBorder: InputBorder.none,
+                                            focusedErrorBorder: InputBorder.none,
+                                            isDense: true,
+                                            contentPadding: EdgeInsets.zero,
+                                          ),
+                                          onChanged: (v) {
+                                            if (_titleHasError && v.trim().isNotEmpty) {
+                                              setState(() {
+                                                _titleHasError = false;
+                                              });
+                                            }
+                                            EasyDebounce.debounce(
+                                              'workout_title_debouncer',
+                                              const Duration(milliseconds: 600),
+                                              () {
+                                                _cubit.updateSessionTitle(v);
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      GestureDetector(
+                                        onTap: () => _titleFocusNode.requestFocus(),
+                                        child: Icon(
+                                          Icons.edit_outlined,
+                                          size: 18,
+                                          color: _titleHasError
+                                              ? Colors.red
+                                              : (_titleFocusNode.hasFocus
+                                                  ? AppColors.primary
+                                                  : const Color(0xFF888888)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                           ],
@@ -2465,6 +2534,26 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                         onSlideComplete: () async {
                           if (_isFinishing) return;
 
+                          final enteredTitle = _titleController.text.trim();
+                          if (enteredTitle.isEmpty) {
+                            setState(() {
+                              _titleHasError = true;
+                            });
+                            _titleFocusNode.requestFocus();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  widget.isPresetCreation
+                                      ? 'Please enter preset name at the top'
+                                      : 'Please enter session name at the top',
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 3),
+                              ),
+                            );
+                            return;
+                          }
+
                           if (!widget.isPresetCreation) {
                             final missedCount =
                                 _countUncompletedSets(state.exercises);
@@ -2480,7 +2569,11 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                             }
                           }
 
-                          await _showFinishDialog(context, state);
+                          await _finishWorkoutDirectly(
+                            context,
+                            state,
+                            enteredTitle,
+                          );
                         },
                       ),
                     ),
@@ -2715,622 +2808,141 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     );
   }
 
-  Future<void> _showFinishDialog(
+  Future<void> _finishWorkoutDirectly(
     BuildContext context,
     WorkoutState state,
+    String enteredTitle,
   ) async {
     final bool hasActiveGym = _checkHasActiveGym();
-    final dialogTitleController = TextEditingController(
-      text:
-          _titleController.text.trim().isNotEmpty
-              ? _titleController.text.trim()
-              : (widget.isPresetCreation ? '' : state.sessionTitle),
-    );
-    final gymNameController = TextEditingController();
-    String selectedLocation = 'Home';
-    final formKey = GlobalKey<FormState>();
-    bool isSubmitting = false;
-    String? errorMessage;
+    const String selectedLocation = 'Home';
 
-    Widget buildLocationOption({
-      required String label,
-      required IconData icon,
-      required bool isSelected,
-      required VoidCallback? onTap,
-    }) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primary.withOpacity(0.08)
-                  : const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : const Color(0xFFE5E7EB),
-                width: isSelected ? 1.6 : 1.0,
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 19,
-                  color: isSelected
-                      ? AppColors.primary
-                      : const Color(0xFF6B7280),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected
-                        ? AppColors.primary
-                        : const Color(0xFF374151),
-                  ),
-                ),
-                if (isSelected) ...[
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.check_circle_rounded,
-                    size: 15,
-                    color: AppColors.primary,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
+    if (!widget.isPresetCreation) {
+      unawaited(WorkoutSoundHelper.playRandomFinishSound());
     }
 
-    await showDialog<void>(
-        context: context,
-        barrierDismissible: true,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (dialogContext, setDialogState) {
-              return PopScope(
-                canPop: !isSubmitting,
-                child: AlertDialog(
-                  backgroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  title: Text(
-                    widget.isPresetCreation ? 'Save Preset' : 'Finish Workout',
-                    style: const TextStyle(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18,
-                      color: Color(0xFF212121),
-                    ),
-                  ),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: SingleChildScrollView(
-                      child: Form(
-                        key: formKey,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.isPresetCreation
-                                  ? 'Enter a name for this preset:'
-                                  : 'Enter a name for this workout session:',
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontSize: 14,
-                                color: Color(0xFF666666),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            TextFormField(
-                              controller: dialogTitleController,
-                              enabled: !isSubmitting,
-                              autofocus: true,
-                              onChanged: (val) {
-                                if (errorMessage != null) {
-                                  setDialogState(() {
-                                    errorMessage = null;
-                                  });
-                                }
-                              },
-                              style: const TextStyle(
-                                fontFamily: 'Poppins',
-                                fontWeight: FontWeight.w500,
-                                fontSize: 15,
-                                color: Color(0xFF212121),
-                              ),
-                              decoration: InputDecoration(
-                                hintText:
-                                    widget.isPresetCreation
-                                        ? 'e.g., Leg Day'
-                                        : 'e.g., Chest Day',
-                                hintStyle: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 15,
-                                  color: Color(0xFFCCCCCC),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 10,
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(
-                                    color: Color(0xFFDDDDDD),
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(color: AppColors.primary),
-                                ),
-                                errorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.red),
-                                ),
-                                focusedErrorBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: const BorderSide(color: Colors.red),
-                                ),
-                              ),
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) {
-                                  return 'Name is required';
-                                }
-                                return null;
-                              },
-                            ),
-                            if (!widget.isPresetCreation && !hasActiveGym) ...[
-                              const SizedBox(height: 18),
-                              const Text(
-                                'Where did you work out?',
-                                style: TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 14,
-                                  color: Color(0xFF666666),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: buildLocationOption(
-                                      label: 'Home',
-                                      icon: Icons.home_rounded,
-                                      isSelected: selectedLocation == 'Home',
-                                      onTap: isSubmitting
-                                          ? null
-                                          : () {
-                                              setDialogState(() {
-                                                selectedLocation = 'Home';
-                                                errorMessage = null;
-                                              });
-                                            },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: buildLocationOption(
-                                      label: 'Gym',
-                                      icon: Icons.fitness_center_rounded,
-                                      isSelected: selectedLocation == 'Gym',
-                                      onTap: isSubmitting
-                                          ? null
-                                          : () {
-                                              setDialogState(() {
-                                                selectedLocation = 'Gym';
-                                                errorMessage = null;
-                                              });
-                                            },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (selectedLocation == 'Gym') ...[
-                                const SizedBox(height: 14),
-                                const Text(
-                                  'Gym Name',
-                                  style: TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontSize: 13,
-                                    color: Color(0xFF666666),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextFormField(
-                                  controller: gymNameController,
-                                  enabled: !isSubmitting,
-                                  textCapitalization: TextCapitalization.words,
-                                  onChanged: (val) {
-                                    if (errorMessage != null) {
-                                      setDialogState(() {
-                                        errorMessage = null;
-                                      });
-                                    }
-                                  },
-                                  style: const TextStyle(
-                                    fontFamily: 'Poppins',
-                                    fontWeight: FontWeight.w500,
-                                    fontSize: 14,
-                                    color: Color(0xFF212121),
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter gym name (e.g., Gold\'s Gym)',
-                                    hintStyle: const TextStyle(
-                                      fontFamily: 'Poppins',
-                                      fontSize: 13,
-                                      color: Color(0xFFCCCCCC),
-                                    ),
-                                    prefixIcon: Icon(
-                                      Icons.fitness_center_outlined,
-                                      size: 18,
-                                      color: AppColors.primary.withOpacity(0.8),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 10,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFFDDDDDD),
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    errorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                    focusedErrorBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: const BorderSide(
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                  ),
-                                  validator: (val) {
-                                    if (!hasActiveGym &&
-                                        selectedLocation == 'Gym' &&
-                                        (val == null || val.trim().isEmpty)) {
-                                      return 'Gym name is required';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                            ],
-                            if (errorMessage != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                errorMessage!,
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontSize: 12,
-                                  color: Colors.red,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-                  actions: [
-                    TextButton(
-                      onPressed:
-                          isSubmitting
-                              ? null
-                              : () => Navigator.pop(dialogContext),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                          color: Color(0xFF888888),
-                        ),
-                      ),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        disabledBackgroundColor: AppColors.primary,
-                        disabledForegroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                      ),
-                      onPressed:
-                          isSubmitting
-                              ? null
-                              : () async {
-                                if (!formKey.currentState!.validate()) {
-                                  return;
-                                }
+    setState(() {
+      _isFinishing = true;
+    });
 
-                                if (!widget.isPresetCreation) {
-                                  unawaited(WorkoutSoundHelper.playRandomFinishSound());
-                                }
+    try {
+      if (widget.isPresetCreation) {
+        // Format exercises for Preset API
+        final exercisesList = <Map<String, dynamic>>[];
+        for (var i = 0; i < state.exercises.length; i++) {
+          final ex = state.exercises[i];
+          final setsList = <Map<String, dynamic>>[];
+          final rawSets = ex['sets'] as List? ?? [];
+          for (var j = 0; j < rawSets.length; j++) {
+            final s = rawSets[j] as Map<String, dynamic>;
+            setsList.add({
+              'set_number': s['setNum'] ?? (j + 1),
+              'reps':
+                  double.tryParse(s['reps']?.toString() ?? '')?.round() ?? 15,
+              'weight': double.tryParse(s['kg']?.toString() ?? '') ?? 10.0,
+            });
+          }
+          exercisesList.add({
+            'workout_id': int.tryParse(ex['id']?.toString() ?? '') ?? 0,
+            'name': ex['title']?.toString() ?? '',
+            'muscle_group':
+                ex['subtitle']?.toString().split('/').first.trim() ?? '',
+            'order_index': i,
+            'sets': setsList,
+          });
+        }
 
-                                final enteredTitle =
-                                    dialogTitleController.text.trim();
+        final cubit = widget.presetCubit ?? context.read<PresetCubit>();
+        bool success = false;
+        if (widget.presetToEdit != null) {
+          success = await cubit.updatePreset(
+            presetId: widget.presetToEdit!.id,
+            title: enteredTitle,
+            exercises: exercisesList,
+          );
+        } else {
+          success = await cubit.createPreset(
+            title: enteredTitle,
+            exercises: exercisesList,
+          );
+        }
 
-                                setDialogState(() {
-                                  isSubmitting = true;
-                                });
-
-                                try {
-                                  if (widget.isPresetCreation) {
-                                    // Format exercises for Preset API
-                                    final exercisesList =
-                                        <Map<String, dynamic>>[];
-                                    for (
-                                      var i = 0;
-                                      i < state.exercises.length;
-                                      i++
-                                    ) {
-                                      final ex = state.exercises[i];
-                                      final setsList = <Map<String, dynamic>>[];
-                                      final rawSets = ex['sets'] as List? ?? [];
-                                      for (var j = 0; j < rawSets.length; j++) {
-                                        final s =
-                                            rawSets[j] as Map<String, dynamic>;
-                                        setsList.add({
-                                          'set_number': s['setNum'] ?? (j + 1),
-                                          'reps':
-                                              double.tryParse(
-                                                s['reps']?.toString() ?? '',
-                                              )?.round() ??
-                                              15,
-                                          'weight':
-                                              double.tryParse(
-                                                s['kg']?.toString() ?? '',
-                                              ) ??
-                                              10.0,
-                                        });
-                                      }
-                                      exercisesList.add({
-                                        'workout_id':
-                                            int.tryParse(
-                                              ex['id']?.toString() ?? '',
-                                            ) ??
-                                            0,
-                                        'name': ex['title']?.toString() ?? '',
-                                        'muscle_group':
-                                            ex['subtitle']
-                                                ?.toString()
-                                                .split('/')
-                                                .first
-                                                .trim() ??
-                                            '',
-                                        'order_index': i,
-                                        'sets': setsList,
-                                      });
-                                    }
-
-                                    final cubit =
-                                        widget.presetCubit ??
-                                        context.read<PresetCubit>();
-                                    bool success = false;
-                                    if (widget.presetToEdit != null) {
-                                      success = await cubit.updatePreset(
-                                        presetId: widget.presetToEdit!.id,
-                                        title: enteredTitle,
-                                        exercises: exercisesList,
-                                      );
-                                    } else {
-                                      success = await cubit.createPreset(
-                                        title: enteredTitle,
-                                        exercises: exercisesList,
-                                      );
-                                    }
-
-                                    if (success && context.mounted) {
-                                      setState(() {
-                                        _isFinishing = true;
-                                      });
-                                      Navigator.pop(
-                                        dialogContext,
-                                      ); // close dialog
-                                      Navigator.pop(context); // close screen
-                                    } else if (!success && context.mounted) {
-                                      setDialogState(() {
-                                        isSubmitting = false;
-                                        errorMessage =
-                                            cubit.state.errorMessage ??
-                                            'Failed to save preset. Please try again.';
-                                      });
-                                    }
-                                  } else {
-                                    setState(() {
-                                      _isFinishing = true;
-                                    });
-                                    final res = await _cubit.finishSession(
-                                      title: enteredTitle,
-                                    );
-                                    res.fold(
-                                      (error) {
-                                        if (context.mounted) {
-                                          setDialogState(() {
-                                            isSubmitting = false;
-                                            errorMessage = error.msg;
-                                          });
-                                          setState(() {
-                                            _isFinishing = false;
-                                          });
-                                        }
-                                      },
-                                      (success) {
-                                        if (context.mounted) {
-                                          Navigator.pop(
-                                            dialogContext,
-                                          ); // close dialog
-                                          final Map<String, dynamic> sessionMap =
-                                              success is Map<String, dynamic>
-                                                  ? Map<String, dynamic>.from(
-                                                    success,
-                                                  )
-                                                  : <String, dynamic>{};
-                                          if (_elapsedSeconds > 0) {
-                                            sessionMap['elapsed_seconds'] =
-                                                _elapsedSeconds;
-                                          }
-                                          if (!hasActiveGym) {
-                                            sessionMap['workout_location'] =
-                                                selectedLocation;
-                                            if (selectedLocation == 'Gym' &&
-                                                gymNameController
-                                                    .text
-                                                    .trim()
-                                                    .isNotEmpty) {
-                                              final enteredGymName =
-                                                  gymNameController.text.trim();
-                                              sessionMap['gym_name'] =
-                                                  enteredGymName;
-
-                                              // Submit gym lead to backend (only for non-active gym members)
-                                              final currentUser =
-                                                  Feggy.read<AppCubit>()
-                                                      ?.state
-                                                      .currentUser;
-                                              final userId =
-                                                  currentUser?.customer?.id ??
-                                                  currentUser?.id ??
-                                                  0;
-                                              final userName = [
-                                                currentUser?.firstName,
-                                                currentUser?.lastName,
-                                              ]
-                                                  .where(
-                                                    (s) =>
-                                                        s != null &&
-                                                        s.trim().isNotEmpty,
-                                                  )
-                                                  .join(' ')
-                                                  .trim();
-                                              final displayName =
-                                                  userName.isNotEmpty
-                                                      ? userName
-                                                      : (currentUser
-                                                              ?.mobileNumber ??
-                                                          'User');
-
-                                              WorkoutRepository().postGymLead(
-                                                gymName: enteredGymName,
-                                                userId: userId,
-                                                userName: displayName,
-                                              ).then((res) {
-                                                res.fold(
-                                                  (err) => debugPrint(
-                                                    '⚠️ Gym lead submission error: ${err.msg}',
-                                                  ),
-                                                  (_) => debugPrint(
-                                                    '✅ Gym lead submitted successfully: $enteredGymName',
-                                                  ),
-                                                );
-                                              });
-                                            }
-                                          }
-                                          debugPrint(
-                                            '🏋️ Workout finished: location=${hasActiveGym ? "Active Gym" : selectedLocation}, gym=${!hasActiveGym && selectedLocation == "Gym" ? gymNameController.text.trim() : "N/A"}',
-                                          );
-                                          Navigator.pushReplacement(
-                                            context,
-                                            MaterialPageRoute<bool>(
-                                              builder:
-                                                  (context) =>
-                                                      WorkoutAchievementScreen(
-                                                        sessionData: sessionMap,
-                                                        fallbackTitle:
-                                                            enteredTitle,
-                                                        gymName:
-                                                            !hasActiveGym &&
-                                                                    selectedLocation ==
-                                                                        'Gym' &&
-                                                                    gymNameController
-                                                                        .text
-                                                                        .trim()
-                                                                        .isNotEmpty
-                                                                ? gymNameController
-                                                                    .text
-                                                                    .trim()
-                                                                : null,
-                                                      ),
-                                            ),
-                                          );
-                                        }
-                                      },
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    setDialogState(() {
-                                      isSubmitting = false;
-                                    });
-                                    setState(() {
-                                      _isFinishing = false;
-                                    });
-                                  }
-                                }
-                              },
-                      child:
-                          isSubmitting
-                              ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
-                                  ),
-                                ),
-                              )
-                              : Text(
-                                widget.isPresetCreation ? 'Save' : 'Finish',
-                                style: const TextStyle(
-                                  fontFamily: 'Poppins',
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                    ),
-                  ],
+        if (success && context.mounted) {
+          Navigator.pop(context); // close screen
+        } else if (!success && context.mounted) {
+          setState(() {
+            _isFinishing = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                cubit.state.errorMessage ??
+                    'Failed to save preset. Please try again.',
+              ),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } else {
+        final res = await _cubit.finishSession(
+          title: enteredTitle,
+        );
+        res.fold(
+          (error) {
+            if (context.mounted) {
+              setState(() {
+                _isFinishing = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(error.msg),
+                  backgroundColor: Colors.red,
                 ),
               );
-            },
-          );
-        },
-      );
+            }
+          },
+          (success) {
+            if (context.mounted) {
+              final Map<String, dynamic> sessionMap =
+                  success is Map<String, dynamic>
+                      ? Map<String, dynamic>.from(success)
+                      : <String, dynamic>{};
+              if (_elapsedSeconds > 0) {
+                sessionMap['elapsed_seconds'] = _elapsedSeconds;
+              }
+              if (!hasActiveGym) {
+                sessionMap['workout_location'] = selectedLocation;
+              }
+              debugPrint(
+                '🏋️ Workout finished: location=\${hasActiveGym ? "Active Gym" : selectedLocation}',
+              );
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute<bool>(
+                  builder:
+                      (context) => WorkoutAchievementScreen(
+                        sessionData: sessionMap,
+                        fallbackTitle: enteredTitle,
+                        gymName: null,
+                      ),
+                ),
+              );
+            }
+          },
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        setState(() {
+          _isFinishing = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error finishing workout: \$e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showSwapDialog(int currentIndex, Map<String, dynamic> currentExercise) {

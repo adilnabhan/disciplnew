@@ -1,5 +1,6 @@
 import 'package:customer_mobile_app/core/network/dio_client.dart';
 import 'package:customer_mobile_app/imports_bindings.dart';
+import 'package:customer_mobile_app/src/features/scorecard/domain/models/point_history_model.dart';
 import 'package:customer_mobile_app/src/features/scorecard/domain/models/score_card_model.dart';
 import 'package:dio/dio.dart';
 
@@ -52,6 +53,39 @@ final class ScoreCardRepository {
       return left(e);
     } catch (e) {
       debugPrint('Error fetching score card: $e');
+      return left(const ApiException.unknown());
+    }
+  }
+
+  Future<Either<ApiException, PointHistoryResponseModel>> getPointHistory({
+    int page = 1,
+    int pageSize = 20,
+    String? category,
+    String? type,
+  }) async {
+    try {
+      final Map<String, dynamic> qParams = {
+        'page': page,
+        'page_size': pageSize,
+      };
+      if (category != null && category.isNotEmpty && category != 'all') {
+        qParams['category'] = category;
+      }
+      if (type != null && type.isNotEmpty && type != 'all') {
+        qParams['type'] = type;
+      }
+      return await Feggy.async(
+        call: _dio.get<dynamic>(
+          ApiUris.pointHistory,
+          queryParameters: qParams,
+          options: Options(headers: {'X-Platform': platformSource}).token,
+        ),
+        onSuccess: (res) => _handleMapResponse(res, PointHistoryResponseModel.fromJson),
+      );
+    } on ApiException catch (e) {
+      return left(e);
+    } catch (e) {
+      debugPrint('Error fetching point history: $e');
       return left(const ApiException.unknown());
     }
   }

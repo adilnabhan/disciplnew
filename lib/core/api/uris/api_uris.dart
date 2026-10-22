@@ -48,6 +48,7 @@ final class ApiUris {
   static final assignedGymTrainers = '${_v1}customer/gym-trainers/';
   static final trainerPremiumList = '${_v1}customer/trainers/premium-list/';
   static final scoreCard = '${_v1}customer/score-card/';
+  static final pointHistory = '${_v1}social/point-history/';
   static String gymScoreCard(int gymId) =>
       '${_v1}customer/gyms/$gymId/score-card/';
   static final personalRecords = '${_v1}customer/personal-records/';
@@ -57,6 +58,10 @@ final class ApiUris {
       '${_v1}customer/personal-records/exercise/$workoutId/';
   static String personalRecordUserExercise(dynamic userId, dynamic workoutId) =>
       '${_v1}customer/personal-records/$userId/exercise/$workoutId/';
+
+  ///============================= Bug Report =============================\\\
+  static final bugReport = '${_v1}user/bug-report/';
+  static String bugReportDetail(int id) => '${_v1}user/bug-reports/$id/';
 
   ///============================= Home & Banners =============================\\\
   static final home = '${_v1}customer/customer-homepage/';

@@ -4,6 +4,7 @@ import 'package:customer_mobile_app/src/features/workout/domain/domain.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/screens/workout_achievement_screen.dart';
 import 'package:customer_mobile_app/src/features/workout/domain/helpers/workout_sound_helper.dart';
 import 'package:customer_mobile_app/src/features/workout/presentation/components/slide_to_finish_button.dart';
+import 'package:customer_mobile_app/src/features/workout/presentation/components/workout_feedback_banner.dart';
 
 class WorkoutDetailsScreen extends StatefulWidget {
   const WorkoutDetailsScreen({
@@ -37,6 +38,8 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
   final Set<int> _completingSetIds = {};
   Timer? _detailsTimer;
   int _elapsedSeconds = 0;
+  WorkoutSetFeedbackResult? _topFeedback;
+  Timer? _topFeedbackTimer;
 
   @override
   void initState() {
@@ -47,6 +50,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
 
   @override
   void dispose() {
+    _topFeedbackTimer?.cancel();
     _detailsTimer?.cancel();
     for (final timer in _debounceTimers.values) {
       timer.cancel();
@@ -76,9 +80,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         final diff = now.difference(startLocal);
         final elapsed = diff.inSeconds;
         if (elapsed >= 0) {
-          setState(() {
-            _elapsedSeconds = elapsed;
-          });
+          _elapsedSeconds = elapsed;
           _startTimer();
           return;
         }
@@ -111,6 +113,9 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           .then((res) {
             res.fold((_) => null, (data) {
               if (mounted) {
+                if (widget.startTimer) {
+                  _syncTimer(data);
+                }
                 setState(() {
                   _sessionData = data;
                 });
@@ -586,7 +591,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                 ),
               ),
             ),
-            body: _buildContent(_sessionData!),
+            body: _buildScaffoldBody(_sessionData!),
             bottomNavigationBar:
                 status != 'COMPLETED'
                     ? _buildFinishButton()
@@ -675,7 +680,7 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   ),
                 ),
               ),
-              body: _buildContent(data),
+              body: _buildScaffoldBody(data),
               bottomNavigationBar:
                   status != 'COMPLETED'
                       ? _buildFinishButton()
@@ -684,6 +689,65 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildTopFeedbackBanner() {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (child, animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, -0.3),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutCubic,
+                ),
+              ),
+              child: child,
+            ),
+          );
+        },
+        child: _topFeedback == null
+            ? const SizedBox.shrink(key: ValueKey('empty_top_feedback'))
+            : Container(
+                key: const ValueKey('active_top_feedback'),
+                padding: const EdgeInsets.only(bottom: 6),
+                child: WorkoutFeedbackBanner(
+                  feedback: _topFeedback!,
+                  onDismiss: () {
+                    _topFeedbackTimer?.cancel();
+                    setState(() {
+                      _topFeedback = null;
+                    });
+                  },
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildScaffoldBody(Map<String, dynamic> data) {
+    return Stack(
+      children: [
+        _buildContent(data),
+        Positioned(
+          top: 8,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            ignoring: _topFeedback == null,
+            child: _buildTopFeedbackBanner(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1773,21 +1837,70 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                 onTap: () async {
                                   final setLogId = set['id'] as int?;
                                   if (setLogId != null) {
-                                    if (_completingSetIds.contains(setLogId))
+                                    if (_completingSetIds.contains(setLogId)) {
                                       return;
+                                    }
+                                    final willComplete = !isCompleted;
                                     setState(() {
                                       _completingSetIds.add(setLogId);
-                                      set['is_completed'] = !isCompleted;
+                                      set['is_completed'] = willComplete;
                                     });
+
+                                    if (willComplete) {
+                                      final setForEval =
+                                          Map<String, dynamic>.from(set);
+                                      setForEval['kg'] =
+                                          set['weight_kg']?.toString() ??
+                                          set['kg']?.toString() ??
+                                          set['target_weight']?.toString() ??
+                                          '';
+                                      setForEval['reps'] =
+                                          set['reps']?.toString() ??
+                                          set['target_reps']?.toString() ??
+                                          '';
+                                      setForEval['previous'] =
+                                          set['previous']?.toString() ?? '';
+
+                                      final feedback =
+                                          WorkoutFeedbackEvaluator.evaluateFeedback(
+                                            set: setForEval,
+                                            exercise: log,
+                                          );
+
+                                      if (feedback != null) {
+                                        _topFeedbackTimer?.cancel();
+                                        setState(() {
+                                          _topFeedback = feedback;
+                                        });
+                                        _topFeedbackTimer = Timer(
+                                          const Duration(milliseconds: 3800),
+                                          () {
+                                            if (mounted) {
+                                              setState(() {
+                                                _topFeedback = null;
+                                              });
+                                            }
+                                          },
+                                        );
+                                      }
+                                    } else {
+                                      _topFeedbackTimer?.cancel();
+                                      setState(() {
+                                        _topFeedback = null;
+                                      });
+                                    }
+
                                     final res = await WorkoutRepository()
                                         .updateSetLog(
                                           setLogId: setLogId,
-                                          isCompleted: !isCompleted,
+                                          isCompleted: willComplete,
                                         );
                                     res.fold((error) {
                                       setState(() {
                                         set['is_completed'] = isCompleted;
+                                        _topFeedback = null;
                                       });
+                                      _topFeedbackTimer?.cancel();
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(

@@ -7,3 +7,5 @@ export 'faq_screen.dart';
 export 'customer_membership_details_screen.dart';
 export 'personal_records_screen.dart';
 export 'personal_record_details_screen.dart';
+export 'contact_support_screen.dart';
+export 'report_bugs_screen.dart';

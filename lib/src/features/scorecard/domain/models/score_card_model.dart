@@ -24,12 +24,21 @@ class GymScoreCardModel {
         loc = json['location'] as String;
       } else if (json['location'] is Map<String, dynamic>) {
         final locMap = json['location'] as Map<String, dynamic>;
-        final city = locMap['city'] ?? locMap['place'] ?? locMap['area'] ?? locMap['address'] ?? locMap['name'];
+        final city =
+            locMap['city'] ??
+            locMap['place'] ??
+            locMap['area'] ??
+            locMap['address'] ??
+            locMap['name'];
         final state = locMap['state'];
-        loc = [city, state].where((e) => e != null && e.toString().isNotEmpty).join(', ');
+        loc = [
+          city,
+          state,
+        ].where((e) => e != null && e.toString().isNotEmpty).join(', ');
       }
     }
-    loc ??= json['address']?.toString() ??
+    loc ??=
+        json['address']?.toString() ??
         json['city']?.toString() ??
         json['place']?.toString() ??
         json['area']?.toString() ??
@@ -38,20 +47,26 @@ class GymScoreCardModel {
 
     return GymScoreCardModel(
       id: json['id'] as int?,
-      name: json['name'] as String? ?? json['center_name'] as String? ?? json['title'] as String?,
-      logo: json['logo'] as String? ?? json['image'] as String? ?? json['photo'] as String?,
+      name:
+          json['name'] as String? ??
+          json['center_name'] as String? ??
+          json['title'] as String?,
+      logo:
+          json['logo'] as String? ??
+          json['image'] as String? ??
+          json['photo'] as String?,
       place: json['place'] as String?,
       location: loc ?? json['place'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'logo': logo,
-        'place': place,
-        'location': location,
-      };
+    'id': id,
+    'name': name,
+    'logo': logo,
+    'place': place,
+    'location': location,
+  };
 }
 
 @immutable
@@ -60,11 +75,7 @@ class ScoreCardPeriodModel {
   final String? startDate;
   final String? endDate;
 
-  const ScoreCardPeriodModel({
-    this.type,
-    this.startDate,
-    this.endDate,
-  });
+  const ScoreCardPeriodModel({this.type, this.startDate, this.endDate});
 
   factory ScoreCardPeriodModel.fromJson(Map<String, dynamic> json) {
     return ScoreCardPeriodModel(
@@ -75,10 +86,10 @@ class ScoreCardPeriodModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'start_date': startDate,
-        'end_date': endDate,
-      };
+    'type': type,
+    'start_date': startDate,
+    'end_date': endDate,
+  };
 
   String get formattedRange {
     if (startDate == null || endDate == null) return '';
@@ -136,17 +147,17 @@ class ScoreCardUserModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'user_id': userId,
-        'customer_id': customerId,
-        'name': name,
-        'profile_image': profileImage,
-        'rank': rank,
-        'points': points,
-        'streak': streak,
-        'previous_rank': previousRank,
-        'rank_change': rankChange,
-        'rank_change_type': rankChangeType,
-      };
+    'user_id': userId,
+    'customer_id': customerId,
+    'name': name,
+    'profile_image': profileImage,
+    'rank': rank,
+    'points': points,
+    'streak': streak,
+    'previous_rank': previousRank,
+    'rank_change': rankChange,
+    'rank_change_type': rankChangeType,
+  };
 }
 
 @immutable
@@ -166,15 +177,46 @@ class UserRankTier {
   static const List<UserRankTier> tiers = [
     UserRankTier(name: 'Recruit', emoji: '🟢', minScore: 0, maxScore: 499),
     UserRankTier(name: 'Warrior', emoji: '⚔️', minScore: 500, maxScore: 1499),
-    UserRankTier(name: 'Gladiator', emoji: '🛡️', minScore: 1500, maxScore: 2999),
+    UserRankTier(
+      name: 'Gladiator',
+      emoji: '🛡️',
+      minScore: 1500,
+      maxScore: 2999,
+    ),
     UserRankTier(name: 'Spartan', emoji: '🏛️', minScore: 3000, maxScore: 4999),
     UserRankTier(name: 'Titan', emoji: '🔥', minScore: 5000, maxScore: 7499),
-    UserRankTier(name: 'Conqueror', emoji: '👑', minScore: 7500, maxScore: 9999),
+    UserRankTier(
+      name: 'Conqueror',
+      emoji: '👑',
+      minScore: 7500,
+      maxScore: 9999,
+    ),
     UserRankTier(name: 'Legend', emoji: '⭐', minScore: 10000, maxScore: 14999),
-    UserRankTier(name: 'Champion', emoji: '💎', minScore: 15000, maxScore: 19999),
+    UserRankTier(
+      name: 'Champion',
+      emoji: '💎',
+      minScore: 15000,
+      maxScore: 19999,
+    ),
     UserRankTier(name: 'Elite', emoji: '🏆', minScore: 20000, maxScore: 29999),
-    UserRankTier(name: 'Mythic', emoji: '👑', minScore: 30000, maxScore: 99999999),
+    UserRankTier(
+      name: 'Mythic',
+      emoji: '👑',
+      minScore: 30000,
+      maxScore: 99999999,
+    ),
   ];
+
+  static UserRankTier? getTierByName(String? name) {
+    if (name == null || name.trim().isEmpty) return null;
+    final clean = name.trim().toLowerCase();
+    for (final tier in tiers) {
+      if (tier.name.toLowerCase() == clean) {
+        return tier;
+      }
+    }
+    return null;
+  }
 
   static UserRankTier getTierForScore(int score) {
     if (score < 0) score = 0;
@@ -194,7 +236,11 @@ class UserRankTier {
     return null;
   }
 
-  static double calculateProgress(int currentScore, UserRankTier current, UserRankTier? next) {
+  static double calculateProgress(
+    int currentScore,
+    UserRankTier current,
+    UserRankTier? next,
+  ) {
     if (next == null) return 100.0;
     final int min = current.minScore;
     final int nextMin = next.minScore;
@@ -240,18 +286,24 @@ class CategoryBreakdownModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'attendance': attendance,
-        'consistency': consistency,
-        'workout': workout,
-        'verification': verification,
-        'steps': steps,
-        'inspiration': inspiration,
-        'challenge': challenge,
-        'penalties': penalties,
-      };
+    'attendance': attendance,
+    'consistency': consistency,
+    'workout': workout,
+    'verification': verification,
+    'steps': steps,
+    'inspiration': inspiration,
+    'challenge': challenge,
+    'penalties': penalties,
+  };
 
   int get totalEarned =>
-      attendance + consistency + workout + verification + steps + inspiration + challenge;
+      attendance +
+      consistency +
+      workout +
+      verification +
+      steps +
+      inspiration +
+      challenge;
 }
 
 @immutable
@@ -281,12 +333,12 @@ class ScoreTransactionModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'category': category,
-        'points': points,
-        'description': description,
-        'date': date,
-      };
+    'id': id,
+    'category': category,
+    'points': points,
+    'description': description,
+    'date': date,
+  };
 }
 
 @immutable
@@ -350,14 +402,23 @@ class MyPositionModel {
       previousRank: json['previous_rank'] as int?,
       rankChange: json['rank_change'] as int?,
       rankChangeType: json['rank_change_type'] as String?,
-      points: json['points'] as int? ?? json['current_points'] as int? ?? json['current_score'] as int?,
-      currentPoints: json['current_points'] as int? ?? json['points'] as int? ?? json['current_score'] as int?,
+      points:
+          json['points'] as int? ??
+          json['current_points'] as int? ??
+          json['current_score'] as int?,
+      currentPoints:
+          json['current_points'] as int? ??
+          json['points'] as int? ??
+          json['current_score'] as int?,
       previousPoints: json['previous_points'] as int?,
       pointsChange: json['points_change'] as int?,
       pointsChangeType: json['points_change_type'] as String?,
       streak: json['streak'] as int? ?? json['streak_days'] as int?,
       totalMembers: json['total_members'] as int?,
-      currentRankName: json['current_rank'] is String ? json['current_rank'] as String : json['rank_name'] as String?,
+      currentRankName:
+          json['current_rank'] is String
+              ? json['current_rank'] as String
+              : json['rank_name'] as String?,
       rankEmoji: json['rank_emoji'] as String?,
       nextRank: json['next_rank'] as String?,
       nextRankEmoji: json['next_rank_emoji'] as String?,
@@ -367,42 +428,49 @@ class MyPositionModel {
       restDaysCount: json['rest_days_count'] as int?,
       totalEarnedScore: json['total_earned_score'] as int?,
       totalPenaltyScore: json['total_penalty_score'] as int?,
-      categoryBreakdown: json['category_breakdown'] != null
-          ? CategoryBreakdownModel.fromJson(json['category_breakdown'] as Map<String, dynamic>)
-          : null,
-      recentTransactions: (json['recent_transactions'] as List<dynamic>?)
-              ?.map((e) => ScoreTransactionModel.fromJson(e as Map<String, dynamic>))
+      categoryBreakdown:
+          json['category_breakdown'] != null
+              ? CategoryBreakdownModel.fromJson(
+                json['category_breakdown'] as Map<String, dynamic>,
+              )
+              : null,
+      recentTransactions:
+          (json['recent_transactions'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    ScoreTransactionModel.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           const [],
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'rank': rank,
-        'current_rank': currentRank,
-        'previous_rank': previousRank,
-        'rank_change': rankChange,
-        'rank_change_type': rankChangeType,
-        'points': points,
-        'current_points': currentPoints,
-        'previous_points': previousPoints,
-        'points_change': pointsChange,
-        'points_change_type': pointsChangeType,
-        'streak': streak,
-        'total_members': totalMembers,
-        'current_rank_name': currentRankName,
-        'rank_emoji': rankEmoji,
-        'next_rank': nextRank,
-        'next_rank_emoji': nextRankEmoji,
-        'next_rank_score': nextRankScore,
-        'remaining_score_to_next_rank': remainingScoreToNextRank,
-        'progress_percentage': progressPercentage,
-        'rest_days_count': restDaysCount,
-        'total_earned_score': totalEarnedScore,
-        'total_penalty_score': totalPenaltyScore,
-        'category_breakdown': categoryBreakdown?.toJson(),
-        'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
-      };
+    'rank': rank,
+    'current_rank': currentRank,
+    'previous_rank': previousRank,
+    'rank_change': rankChange,
+    'rank_change_type': rankChangeType,
+    'points': points,
+    'current_points': currentPoints,
+    'previous_points': previousPoints,
+    'points_change': pointsChange,
+    'points_change_type': pointsChangeType,
+    'streak': streak,
+    'total_members': totalMembers,
+    'current_rank_name': currentRankName,
+    'rank_emoji': rankEmoji,
+    'next_rank': nextRank,
+    'next_rank_emoji': nextRankEmoji,
+    'next_rank_score': nextRankScore,
+    'remaining_score_to_next_rank': remainingScoreToNextRank,
+    'progress_percentage': progressPercentage,
+    'rest_days_count': restDaysCount,
+    'total_earned_score': totalEarnedScore,
+    'total_penalty_score': totalPenaltyScore,
+    'category_breakdown': categoryBreakdown?.toJson(),
+    'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
+  };
 }
 
 @immutable
@@ -462,22 +530,22 @@ class PodiumMemberModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'rank': rank,
-        'user_id': userId,
-        'customer_id': customerId,
-        'name': name,
-        'profile_image': profileImage,
-        'points': points,
-        'current_points': currentPoints,
-        'previous_points': previousPoints,
-        'points_change': pointsChange,
-        'points_change_type': pointsChangeType,
-        'streak': streak,
-        'previous_rank': previousRank,
-        'rank_change': rankChange,
-        'rank_change_type': rankChangeType,
-        'is_current_user': isCurrentUser,
-      };
+    'rank': rank,
+    'user_id': userId,
+    'customer_id': customerId,
+    'name': name,
+    'profile_image': profileImage,
+    'points': points,
+    'current_points': currentPoints,
+    'previous_points': previousPoints,
+    'points_change': pointsChange,
+    'points_change_type': pointsChangeType,
+    'streak': streak,
+    'previous_rank': previousRank,
+    'rank_change': rankChange,
+    'rank_change_type': rankChangeType,
+    'is_current_user': isCurrentUser,
+  };
 }
 
 @immutable
@@ -537,22 +605,22 @@ class LeaderboardMemberModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'rank': rank,
-        'user_id': userId,
-        'customer_id': customerId,
-        'name': name,
-        'profile_image': profileImage,
-        'points': points,
-        'current_points': currentPoints,
-        'previous_points': previousPoints,
-        'points_change': pointsChange,
-        'points_change_type': pointsChangeType,
-        'streak': streak,
-        'previous_rank': previousRank,
-        'rank_change': rankChange,
-        'rank_change_type': rankChangeType,
-        'is_current_user': isCurrentUser,
-      };
+    'rank': rank,
+    'user_id': userId,
+    'customer_id': customerId,
+    'name': name,
+    'profile_image': profileImage,
+    'points': points,
+    'current_points': currentPoints,
+    'previous_points': previousPoints,
+    'points_change': pointsChange,
+    'points_change_type': pointsChangeType,
+    'streak': streak,
+    'previous_rank': previousRank,
+    'rank_change': rankChange,
+    'rank_change_type': rankChangeType,
+    'is_current_user': isCurrentUser,
+  };
 }
 
 @immutable
@@ -585,13 +653,13 @@ class ScoreCardPaginationModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'page': page,
-        'page_size': pageSize,
-        'total_members': totalMembers,
-        'total_pages': totalPages,
-        'has_next': hasNext,
-        'has_previous': hasPrevious,
-      };
+    'page': page,
+    'page_size': pageSize,
+    'total_members': totalMembers,
+    'total_pages': totalPages,
+    'has_next': hasNext,
+    'has_previous': hasPrevious,
+  };
 }
 
 @immutable
@@ -645,17 +713,25 @@ class ScoreCardResponseModel {
   });
 
   factory ScoreCardResponseModel.fromJson(Map<String, dynamic> json) {
-    final catBreakdown = json['category_breakdown'] != null
-        ? CategoryBreakdownModel.fromJson(json['category_breakdown'] as Map<String, dynamic>)
-        : null;
-    final transactions = (json['recent_transactions'] as List<dynamic>?)
-            ?.map((e) => ScoreTransactionModel.fromJson(e as Map<String, dynamic>))
+    final catBreakdown =
+        json['category_breakdown'] != null
+            ? CategoryBreakdownModel.fromJson(
+              json['category_breakdown'] as Map<String, dynamic>,
+            )
+            : null;
+    final transactions =
+        (json['recent_transactions'] as List<dynamic>?)
+            ?.map(
+              (e) => ScoreTransactionModel.fromJson(e as Map<String, dynamic>),
+            )
             .toList() ??
         const [];
 
     MyPositionModel? pos;
     if (json['my_position'] != null) {
-      pos = MyPositionModel.fromJson(json['my_position'] as Map<String, dynamic>);
+      pos = MyPositionModel.fromJson(
+        json['my_position'] as Map<String, dynamic>,
+      );
     } else if (json['current_score'] != null ||
         json['current_rank'] != null ||
         json['customer_id'] != null) {
@@ -679,22 +755,43 @@ class ScoreCardResponseModel {
 
     return ScoreCardResponseModel(
       hasActiveGym: json['has_active_gym'] as bool? ?? false,
-      gym: json['gym'] != null ? GymScoreCardModel.fromJson(json['gym'] as Map<String, dynamic>) : null,
-      period: json['period'] != null ? ScoreCardPeriodModel.fromJson(json['period'] as Map<String, dynamic>) : null,
-      me: json['me'] != null ? ScoreCardUserModel.fromJson(json['me'] as Map<String, dynamic>) : null,
+      gym:
+          json['gym'] != null
+              ? GymScoreCardModel.fromJson(json['gym'] as Map<String, dynamic>)
+              : null,
+      period:
+          json['period'] != null
+              ? ScoreCardPeriodModel.fromJson(
+                json['period'] as Map<String, dynamic>,
+              )
+              : null,
+      me:
+          json['me'] != null
+              ? ScoreCardUserModel.fromJson(json['me'] as Map<String, dynamic>)
+              : null,
       myPosition: pos,
-      podium: (json['podium'] as List<dynamic>?)
-              ?.map((e) => PodiumMemberModel.fromJson(e as Map<String, dynamic>))
+      podium:
+          (json['podium'] as List<dynamic>?)
+              ?.map(
+                (e) => PodiumMemberModel.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           const [],
-      leaderboard: (json['leaderboard'] as List<dynamic>?)
-              ?.map((e) => LeaderboardMemberModel.fromJson(e as Map<String, dynamic>))
+      leaderboard:
+          (json['leaderboard'] as List<dynamic>?)
+              ?.map(
+                (e) =>
+                    LeaderboardMemberModel.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           const [],
       totalMembers: json['total_members'] as int? ?? 0,
-      pagination: json['pagination'] != null
-          ? ScoreCardPaginationModel.fromJson(json['pagination'] as Map<String, dynamic>)
-          : null,
+      pagination:
+          json['pagination'] != null
+              ? ScoreCardPaginationModel.fromJson(
+                json['pagination'] as Map<String, dynamic>,
+              )
+              : null,
       currentRank: json['current_rank'] as String?,
       rankEmoji: json['rank_emoji'] as String?,
       nextRank: json['next_rank'] as String?,
@@ -712,27 +809,27 @@ class ScoreCardResponseModel {
   }
 
   Map<String, dynamic> toJson() => {
-        'has_active_gym': hasActiveGym,
-        'gym': gym?.toJson(),
-        'period': period?.toJson(),
-        'me': me?.toJson(),
-        'my_position': myPosition?.toJson(),
-        'podium': podium.map((e) => e.toJson()).toList(),
-        'leaderboard': leaderboard.map((e) => e.toJson()).toList(),
-        'total_members': totalMembers,
-        'pagination': pagination?.toJson(),
-        'current_rank': currentRank,
-        'rank_emoji': rankEmoji,
-        'next_rank': nextRank,
-        'next_rank_emoji': nextRankEmoji,
-        'next_rank_score': nextRankScore,
-        'remaining_score_to_next_rank': remainingScoreToNextRank,
-        'progress_percentage': progressPercentage,
-        'streak_days': streakDays,
-        'rest_days_count': restDaysCount,
-        'total_earned_score': totalEarnedScore,
-        'total_penalty_score': totalPenaltyScore,
-        'category_breakdown': categoryBreakdown?.toJson(),
-        'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
-      };
+    'has_active_gym': hasActiveGym,
+    'gym': gym?.toJson(),
+    'period': period?.toJson(),
+    'me': me?.toJson(),
+    'my_position': myPosition?.toJson(),
+    'podium': podium.map((e) => e.toJson()).toList(),
+    'leaderboard': leaderboard.map((e) => e.toJson()).toList(),
+    'total_members': totalMembers,
+    'pagination': pagination?.toJson(),
+    'current_rank': currentRank,
+    'rank_emoji': rankEmoji,
+    'next_rank': nextRank,
+    'next_rank_emoji': nextRankEmoji,
+    'next_rank_score': nextRankScore,
+    'remaining_score_to_next_rank': remainingScoreToNextRank,
+    'progress_percentage': progressPercentage,
+    'streak_days': streakDays,
+    'rest_days_count': restDaysCount,
+    'total_earned_score': totalEarnedScore,
+    'total_penalty_score': totalPenaltyScore,
+    'category_breakdown': categoryBreakdown?.toJson(),
+    'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
+  };
 }

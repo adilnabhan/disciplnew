@@ -3,16 +3,28 @@ import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/scorecard/domain/models/score_card_model.dart';
 
 class ScoreCardHowItWorksSheet extends StatefulWidget {
-  const ScoreCardHowItWorksSheet({super.key, this.currentScore});
+  const ScoreCardHowItWorksSheet({
+    super.key,
+    this.currentScore,
+    this.currentRankName,
+  });
 
   final int? currentScore;
+  final String? currentRankName;
 
-  static void show(BuildContext context, {int? currentScore}) {
+  static void show(
+    BuildContext context, {
+    int? currentScore,
+    String? currentRankName,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => ScoreCardHowItWorksSheet(currentScore: currentScore),
+      builder: (ctx) => ScoreCardHowItWorksSheet(
+        currentScore: currentScore,
+        currentRankName: currentRankName,
+      ),
     );
   }
 
@@ -183,14 +195,36 @@ class _ScoreCardHowItWorksSheetState extends State<ScoreCardHowItWorksSheet>
         const SizedBox(height: 16),
 
         Text(
-          '7 Point Categories',
+          'Point Categories',
           style: AppStyles.text16Px.poppins.w700.copyWith(
             color: const Color(0xFF1E1E1E),
           ),
         ),
         const SizedBox(height: 10),
 
-        // 1. Workouts
+        // 1. Profile Details
+        _buildCategoryCard(
+          icon: '👤',
+          title: 'Profile Details',
+          cap: 'Max 210 pts',
+          items: [
+            _buildItemRow('Profile Photo', '+100 pts'),
+            _buildItemRow('Full Name', '+10 pts'),
+            _buildItemRow('Gender', '+10 pts'),
+            _buildItemRow('Date of Birth', '+10 pts'),
+            _buildItemRow('Height', '+10 pts'),
+            _buildItemRow('Weight', '+10 pts'),
+            _buildItemRow('Activity Level', '+10 pts'),
+            _buildItemRow('Fitness Goal', '+10 pts'),
+            _buildItemRow('Target Weight', '+10 pts'),
+            _buildItemRow('Waist', '+10 pts'),
+            _buildItemRow('Hip', '+10 pts'),
+            _buildItemRow('Experience Level', '+10 pts'),
+          ],
+          note: 'Rule: Earned when users add these details to their profile. Deducted if removed.',
+        ),
+
+        // 2. Workouts
         _buildCategoryCard(
           icon: '🏋️',
           title: 'Workout Points',
@@ -413,7 +447,8 @@ class _ScoreCardHowItWorksSheetState extends State<ScoreCardHowItWorksSheet>
   // ==================== TAB 3: 10 RANKS & BADGES ====================
   Widget _buildRanksTab() {
     final int userScore = widget.currentScore ?? 0;
-    final currentTier = UserRankTier.getTierForScore(userScore);
+    final currentTier = UserRankTier.getTierByName(widget.currentRankName) ??
+        UserRankTier.getTierForScore(userScore);
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -653,7 +688,7 @@ class _ScoreCardHowItWorksSheetState extends State<ScoreCardHowItWorksSheet>
           ),
           const SizedBox(height: 8),
           Text(
-            'Points are accumulated daily across workouts, streaks, attendance, steps, trainer verification, community, and events.',
+            'Points are accumulated across profile details, workouts, streaks, attendance, and trainer verification.',
             style: AppStyles.text12Px.poppins.w400.copyWith(
               color: Colors.white.withOpacity(0.9),
               height: 1.4,

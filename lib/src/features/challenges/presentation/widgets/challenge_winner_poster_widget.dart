@@ -303,9 +303,10 @@ class ChallengeWinnerPosterWidget extends StatelessWidget {
   }
 
   Widget _buildUrlOrFallback(String? url, BoxFit fit, Widget? fallback) {
-    if (url != null && url.trim().isNotEmpty) {
+    final cleanUrl = url?.trim();
+    if (cleanUrl != null && cleanUrl.isNotEmpty && cleanUrl.toLowerCase() != 'null') {
       return CachedNetworkImage(
-        imageUrl: url.trim(),
+        imageUrl: cleanUrl,
         fit: fit,
         fadeInDuration: Duration.zero,
         fadeOutDuration: Duration.zero,
@@ -365,13 +366,15 @@ class ChallengeWinnerPosterWidget extends StatelessWidget {
         bytes: winnerAvatarBytes,
         url: winnerAvatarUrl,
         fit: BoxFit.cover,
-        fallback: const ColoredBox(
-          color: Color(0xFFE5E7EB),
-          child: Center(
-            child: Icon(
-              Icons.person_rounded,
-              size: 110,
-              color: Color(0xFF9CA3AF),
+        fallback: const SizedBox.expand(
+          child: ColoredBox(
+            color: Color(0xFFE5E7EB),
+            child: Center(
+              child: Icon(
+                Icons.person_rounded,
+                size: 110,
+                color: Color(0xFF9CA3AF),
+              ),
             ),
           ),
         ),

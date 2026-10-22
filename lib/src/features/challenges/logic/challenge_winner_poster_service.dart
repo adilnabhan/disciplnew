@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:customer_mobile_app/imports_bindings.dart';
 import 'package:customer_mobile_app/src/features/challenges/domain/models/all_challenge_winners_model.dart';
@@ -21,7 +22,7 @@ class ChallengeWinnerPosterService {
   /// Helper to fetch raw image bytes from URL cleanly without logger spam.
   /// Returns null if URL is empty, invalid, or fetch fails.
   Future<Uint8List?> _fetchImageBytes(String? url) async {
-    if (url == null || url.trim().isEmpty) return null;
+    if (url == null || url.trim().isEmpty || url.trim().toLowerCase() == 'null') return null;
     try {
       final uri = Uri.parse(url.trim());
       final request = await _httpClient.getUrl(uri);
@@ -74,12 +75,19 @@ class ChallengeWinnerPosterService {
       final assignedGym = currentUser?.customer?.assignedFitnessCenter;
 
       // ── Winner Details ──────────────────────────────────────────────────────
-      final fullName = '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
-      final winnerName = (winner?.userName?.isNotEmpty ?? false)
-          ? winner!.userName!
-          : (fullName.isNotEmpty ? fullName : 'Lucky Winner');
+      final rawWinnerName = winner?.userName?.trim();
+      final winnerName = (rawWinnerName != null && rawWinnerName.isNotEmpty)
+          ? rawWinnerName
+          : 'Lucky Winner';
 
-      final winnerAvatarUrl = winner?.profilePic ?? currentUser?.profilePicture?.toString();
+      // Only use the winner's actual profile pic. Never fall back to currentUser profile pic,
+      // which would incorrectly place the downloading person's photo on the winner poster.
+      final rawWinnerPic = winner?.profilePic?.trim();
+      final String? winnerAvatarUrl = (rawWinnerPic != null &&
+              rawWinnerPic.isNotEmpty &&
+              rawWinnerPic.toLowerCase() != 'null')
+          ? rawWinnerPic
+          : null;
 
       // ── Partner & Gym Details ───────────────────────────────────────────────
       final partnerName = challenge.brand?.name ?? winner?.brandName ?? 'Sponsor';
@@ -153,7 +161,9 @@ class ChallengeWinnerPosterService {
           precacheTasks.add(
             precacheImage(MemoryImage(winnerAvatarBytes), context).catchError((_) {}),
           );
-        } else if (winnerAvatarUrl != null && winnerAvatarUrl.isNotEmpty) {
+        } else if (winnerAvatarUrl != null &&
+            winnerAvatarUrl.isNotEmpty &&
+            winnerAvatarUrl.toLowerCase() != 'null') {
           precacheTasks.add(
             precacheImage(CachedNetworkImageProvider(winnerAvatarUrl), context).catchError((_) {}),
           );
@@ -195,47 +205,76 @@ class ChallengeWinnerPosterService {
       }
 
       // ── Offscreen Composition via OverlayEntry ──────────────────────────────
+      // To ensure that Impeller (used on real iOS & Android release builds)
+      // and Skia do NOT cull or clip the offscreen poster, we place it within
+      // the visible screen bounds at 0.001 opacity. This forces Flutter and
+      // the GPU compositor to fully lay out and paint all layers, while remaining
+      // 100% invisible to the user.
       final posterKey = GlobalKey();
       final overlay = Overlay.of(context, rootOverlay: true);
 
       overlayEntry = OverlayEntry(
-        builder: (ctx) => Positioned(
-          left: -9999, // Render outside visible screen
-          top: -9999,
-          child: Material(
-            type: MaterialType.transparency,
-            child: Directionality(
-              textDirection: TextDirection.ltr,
-              child: RepaintBoundary(
-                key: posterKey,
-                child: ChallengeWinnerPosterWidget(
-                  themeColor: themeColor,
-                  winnerName: winnerName,
-                  winnerAvatarUrl: winnerAvatarUrl,
-                  winnerAvatarBytes: winnerAvatarBytes,
-                  partnerName: partnerName,
-                  partnerLogoUrl: partnerLogoUrl,
-                  partnerLogoBytes: partnerLogoBytes,
-                  partnerLocation: partnerLocation,
-                  gymName: resolvedGymName,
-                  gymLogoUrl: resolvedGymLogoUrl,
-                  gymLogoBytes: gymLogoBytes,
-                  gymLocation: resolvedGymLocation,
-                  participationDate: participationDate,
-                  prizeName: prizeName,
-                  prizeImageUrl: prizeImageUrl,
-                  prizeImageBytes: prizeImageBytes,
+        builder: (ctx) {
+          final screenSize = MediaQuery.of(ctx).size;
+          final scale = (screenSize.width / 540.0).clamp(0.1, 1.0);
+          return Positioned(
+            left: 0,
+            top: 0,
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0.001,
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.topLeft,
+                      child: RepaintBoundary(
+                        key: posterKey,
+                        child: ChallengeWinnerPosterWidget(
+                          themeColor: themeColor,
+                          winnerName: winnerName,
+                          winnerAvatarUrl: winnerAvatarUrl,
+                          winnerAvatarBytes: winnerAvatarBytes,
+                          partnerName: partnerName,
+                          partnerLogoUrl: partnerLogoUrl,
+                          partnerLogoBytes: partnerLogoBytes,
+                          partnerLocation: partnerLocation,
+                          gymName: resolvedGymName,
+                          gymLogoUrl: resolvedGymLogoUrl,
+                          gymLogoBytes: gymLogoBytes,
+                          gymLocation: resolvedGymLocation,
+                          participationDate: participationDate,
+                          prizeName: prizeName,
+                          prizeImageUrl: prizeImageUrl,
+                          prizeImageBytes: prizeImageBytes,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        },
       );
 
       overlay.insert(overlayEntry);
 
-      // Wait for complete layout, image decoding, and painting
-      await Future<void>.delayed(const Duration(milliseconds: 350));
+      // ── Synchronize Frame Rendering ─────────────────────────────────────────
+      // In release mode, boundary.debugNeedsPaint is stripped (always returns false).
+      // We must explicitly register a post-frame callback and schedule a frame so
+      // the engine completes the build, layout, and raster phases.
+      final completer = Completer<void>();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!completer.isCompleted) completer.complete();
+      });
+      WidgetsBinding.instance.scheduleFrame();
+      await completer.future;
+
+      // Ensure all memory images and layer caches have finalized painting
+      await Future<void>.delayed(const Duration(milliseconds: 250));
 
       final boundary = posterKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) {
@@ -243,24 +282,31 @@ class ChallengeWinnerPosterService {
         return null;
       }
 
-      if (boundary.debugNeedsPaint) {
-        await Future<void>.delayed(const Duration(milliseconds: 100));
-      }
-
       // Render at pixelRatio 2.667 -> 540x960 * 2.667 = exactly 1440x2560 pixels!
-      ui.Image image;
-      try {
-        image = await boundary.toImage(pixelRatio: 2.667);
-      } catch (e) {
-        debugPrint('Poster 2.667x failed ($e), falling back to 2x');
+      // Fallback gracefully across resolutions if GPU texture memory is constrained.
+      ui.Image? image;
+      const pixelRatios = [2.667, 2.0, 1.5, 1.0];
+      for (final ratio in pixelRatios) {
         try {
-          image = await boundary.toImage(pixelRatio: 2);
-        } catch (_) {
-          image = await boundary.toImage(pixelRatio: 1.5);
+          image = await boundary.toImage(pixelRatio: ratio);
+          if (image != null) break;
+        } catch (e) {
+          debugPrint('ChallengeWinnerPosterService: toImage at ${ratio}x failed: $e');
         }
       }
 
-      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (image == null) {
+        debugPrint('ChallengeWinnerPosterService: Failed to render image from boundary');
+        return null;
+      }
+
+      ByteData? byteData;
+      try {
+        byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      } finally {
+        image.dispose(); // Prevent GPU texture memory leaks under Impeller
+      }
+
       if (byteData == null) return null;
 
       final pngBytes = byteData.buffer.asUint8List();
@@ -268,7 +314,7 @@ class ChallengeWinnerPosterService {
       final file = File(
         '${tempDir.path}/discipl_winner_${challenge.id ?? 0}_${DateTime.now().millisecondsSinceEpoch}.png',
       );
-      await file.writeAsBytes(pngBytes);
+      await file.writeAsBytes(pngBytes, flush: true);
       debugPrint('ChallengeWinnerPosterService: Saved poster (${pngBytes.length} bytes) to ${file.path}');
       return file;
     } catch (e, stack) {
@@ -299,44 +345,64 @@ class ChallengeWinnerPosterService {
         return;
       }
 
-      var hasAccess = await Gal.hasAccess();
-      if (!hasAccess) {
-        hasAccess = await Gal.requestAccess();
+      bool saved = false;
+
+      // 1. Check or request gallery access via Gal
+      bool hasAccess = false;
+      try {
+        hasAccess = await Gal.hasAccess();
+        if (!hasAccess) {
+          hasAccess = await Gal.requestAccess();
+        }
+      } catch (e) {
+        debugPrint('Gal access check error: $e');
       }
 
+      // 2. On Android, if Gal permission is not yet confirmed, fallback to permission_handler
       if (!hasAccess && Platform.isAndroid) {
-        final storageStatus = await Permission.storage.request();
-        if (storageStatus.isGranted) {
-          hasAccess = true;
-        } else {
+        try {
           final photosStatus = await Permission.photos.request();
           if (photosStatus.isGranted) {
             hasAccess = true;
+          } else {
+            final storageStatus = await Permission.storage.request();
+            if (storageStatus.isGranted) {
+              hasAccess = true;
+            }
           }
+        } catch (_) {}
+      }
+
+      // 3. Attempt to save via Gal.putImage, then Gal.putImageBytes
+      try {
+        await Gal.putImage(file.path);
+        saved = true;
+      } catch (e1) {
+        debugPrint('Gal.putImage failed ($e1), attempting Gal.putImageBytes...');
+        try {
+          final bytes = await file.readAsBytes();
+          await Gal.putImageBytes(bytes, name: 'discipl_winner_${challenge.id ?? 0}');
+          saved = true;
+        } catch (e2) {
+          debugPrint('Gal.putImageBytes failed: $e2');
         }
       }
 
-      if (hasAccess) {
-        await Gal.putImage(file.path);
+      if (saved) {
         await Dialogs.showSnack(msg: 'Winner poster saved to Gallery! 📥');
       } else {
-        // Fallback attempt for Android 10+ MediaStore direct save
-        try {
-          await Gal.putImage(file.path);
-          await Dialogs.showSnack(msg: 'Winner poster saved to Gallery! 📥');
-        } catch (_) {
-          // If gallery access failed, offer sharing as graceful alternative
-          await Dialogs.showSnack(msg: 'Opening share sheet...');
-          if (context.mounted) {
-            final box = context.findRenderObject() as RenderBox?;
-            final sharePositionOrigin =
-                box != null ? box.localToGlobal(Offset.zero) & box.size : null;
-            await Share.shareXFiles(
-              [XFile(file.path, mimeType: 'image/png')],
-              text: 'Winner of the ${challenge.name ?? 'Discipl'} Challenge! 🏆',
-              sharePositionOrigin: sharePositionOrigin,
-            );
-          }
+        // Fallback: If gallery direct save could not be completed, open the system share sheet
+        // so the user can easily save to Photos / Files or share directly.
+        await Dialogs.showSnack(msg: 'Saved image! Opening options...');
+        if (context.mounted) {
+          final box = context.findRenderObject() as RenderBox?;
+          final sharePositionOrigin =
+              box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+          await Share.shareXFiles(
+            [XFile(file.path, mimeType: 'image/png')],
+            text: 'Winner of the ${challenge.name ?? 'Discipl'} Challenge! 🏆',
+            sharePositionOrigin: sharePositionOrigin,
+          );
         }
       }
     } catch (e) {

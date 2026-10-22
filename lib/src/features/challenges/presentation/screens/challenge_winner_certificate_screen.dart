@@ -316,6 +316,11 @@ class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertif
   // ── Winner Profile ─────────────────────────────────────────────────────────
 
   Widget _buildWinnerProfile(String? profileImage, String name) {
+    final cleanProfile = profileImage?.trim();
+    final bool hasValidProfile = cleanProfile != null &&
+        cleanProfile.isNotEmpty &&
+        cleanProfile.toLowerCase() != 'null';
+
     return Column(
       children: [
         Container(
@@ -333,9 +338,9 @@ class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertif
             ],
           ),
           child: ClipOval(
-            child: profileImage != null && profileImage.isNotEmpty
+            child: hasValidProfile
                 ? CachedNetworkImage(
-                    imageUrl: profileImage,
+                    imageUrl: cleanProfile,
                     fit: BoxFit.cover,
                     memCacheWidth: 180,
                     memCacheHeight: 180,
@@ -359,9 +364,13 @@ class _ChallengeWinnerCertificateScreenState extends State<ChallengeWinnerCertif
   }
 
   Widget _avatarFallback() {
-    return ColoredBox(
-      color: const Color(0xFFE5E7EB),
-      child: const Icon(Icons.person_rounded, color: Color(0xFF9CA3AF), size: 40),
+    return const SizedBox.expand(
+      child: ColoredBox(
+        color: Color(0xFFE5E7EB),
+        child: Center(
+          child: Icon(Icons.person_rounded, color: Color(0xFF9CA3AF), size: 40),
+        ),
+      ),
     );
   }
 

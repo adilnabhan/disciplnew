@@ -5,6 +5,7 @@ import 'package:customer_mobile_app/src/features/profile/presentation/screens/se
 import 'package:customer_mobile_app/src/features/scorecard/domain/models/score_card_model.dart';
 import 'package:customer_mobile_app/src/features/scorecard/logic/score_card_cubit.dart';
 import 'package:customer_mobile_app/src/features/scorecard/logic/score_card_state.dart';
+import 'package:customer_mobile_app/src/features/scorecard/presentation/screens/points_history_screen.dart';
 import 'package:customer_mobile_app/src/features/scorecard/presentation/widgets/score_card_how_it_works_sheet.dart';
 
 class ScoreCardScreen extends StatefulWidget {
@@ -69,14 +70,17 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                 ...options.map((opt) {
                   final isSelected = currentSelection == opt['value'];
                   return ListTile(
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    tileColor: isSelected
-                        ? AppColors.primary.withOpacity(0.08)
-                        : Colors.transparent,
+                    tileColor:
+                        isSelected
+                            ? AppColors.primary.withOpacity(0.08)
+                            : Colors.transparent,
                     title: Text(
                       opt['label']!,
                       style: AppStyles.text14Px.poppins.copyWith(
@@ -85,10 +89,13 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                             isSelected ? FontWeight.w600 : FontWeight.w400,
                       ),
                     ),
-                    trailing: isSelected
-                        ? const Icon(Icons.check_circle_rounded,
-                            color: AppColors.primary)
-                        : null,
+                    trailing:
+                        isSelected
+                            ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
+                            : null,
                     onTap: () {
                       Navigator.pop(ctx);
                       _cubit.changeTimeframe(opt['value']!);
@@ -104,11 +111,20 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
   }
 
   void _showHowItWorksSheet(BuildContext context) {
-    final currentScore = _cubit.state.data?.myPosition?.points ??
-        _cubit.state.data?.myPosition?.currentPoints ??
-        _cubit.state.data?.me?.points ??
+    final data = _cubit.state.data;
+    final currentScore =
+        data?.myPosition?.points ??
+        data?.myPosition?.currentPoints ??
+        data?.me?.points ??
         0;
-    ScoreCardHowItWorksSheet.show(context, currentScore: currentScore);
+    final currentRankName =
+        data?.myPosition?.currentRankName ??
+        data?.currentRank;
+    ScoreCardHowItWorksSheet.show(
+      context,
+      currentScore: currentScore,
+      currentRankName: currentRankName,
+    );
   }
 
   @override
@@ -131,6 +147,29 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             ),
           ),
           actions: [
+            Center(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  context.push(const PointsHistoryScreen());
+                },
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEFF1F4),
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(
+                    Icons.history_rounded,
+                    size: 22,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
             Center(
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -187,8 +226,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                 physics: const AlwaysScrollableScrollPhysics(
                   parent: BouncingScrollPhysics(),
                 ),
-                padding:
-                    const EdgeInsets.fromLTRB(16, 4, 16, 10),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -239,8 +277,10 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               behavior: HitTestBehavior.opaque,
               onTap: () => _showTimeframePicker(context, state.timeframe),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 38, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 38,
+                  vertical: 11,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFEFF1F4),
                   borderRadius: BorderRadius.circular(30),
@@ -319,22 +359,13 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Rank 2 (Left - Silver)
-          Expanded(
-            flex: 10,
-            child: _buildPodiumRank2(rank2),
-          ),
+          Expanded(flex: 10, child: _buildPodiumRank2(rank2)),
 
           // Rank 1 (Center - Gold)
-          Expanded(
-            flex: 13,
-            child: _buildPodiumRank1(rank1),
-          ),
+          Expanded(flex: 13, child: _buildPodiumRank1(rank1)),
 
           // Rank 3 (Right - Bronze)
-          Expanded(
-            flex: 10,
-            child: _buildPodiumRank3(rank3),
-          ),
+          Expanded(flex: 10, child: _buildPodiumRank3(rank3)),
         ],
       ),
     );
@@ -466,10 +497,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               height: 68,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFF59E0B),
-                  width: 3.5,
-                ),
+                border: Border.all(color: const Color(0xFFF59E0B), width: 3.5),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFFF59E0B).withOpacity(0.38),
@@ -493,9 +521,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                 child: const SizedBox(
                   width: 24,
                   height: 20,
-                  child: CustomPaint(
-                    painter: _CrownPainter(),
-                  ),
+                  child: CustomPaint(painter: _CrownPainter()),
                 ),
               ),
             ),
@@ -567,11 +593,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFDE047),
-                Color(0xFFFACC15),
-                Color(0xFFEAB308),
-              ],
+              colors: [Color(0xFFFDE047), Color(0xFFFACC15), Color(0xFFEAB308)],
             ),
           ),
           alignment: Alignment.center,
@@ -707,17 +729,18 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
     final String currentUserName =
         '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
-    final String? currentUserPic = currentUser?.profilePicture is String &&
-            (currentUser?.profilePicture as String).isNotEmpty
-        ? currentUser?.profilePicture as String
-        : null;
+    final String? currentUserPic =
+        currentUser?.profilePicture is String &&
+                (currentUser?.profilePicture as String).isNotEmpty
+            ? currentUser?.profilePicture as String
+            : null;
 
     final int rank = myPos?.rank ?? myPos?.currentRank ?? me?.rank ?? 0;
-    final int points =
-        myPos?.points ?? myPos?.currentPoints ?? me?.points ?? 0;
-    final String name = (me?.name != null && me!.name!.isNotEmpty)
-        ? me.name!
-        : (currentUserName.isNotEmpty ? currentUserName : 'You');
+    final int points = myPos?.points ?? myPos?.currentPoints ?? me?.points ?? 0;
+    final String name =
+        (me?.name != null && me!.name!.isNotEmpty)
+            ? me.name!
+            : (currentUserName.isNotEmpty ? currentUserName : 'You');
     final String? profilePic = me?.profileImage ?? currentUserPic;
 
     // Rank tier & progress to next tier
@@ -734,17 +757,23 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
     final String? nextTierEmoji =
         myPos?.nextRankEmoji ?? data.nextRankEmoji ?? nextTier?.emoji;
     final int nextMinScore =
-        myPos?.nextRankScore ?? data.nextRankScore ?? (nextTier?.minScore ?? 500);
+        myPos?.nextRankScore ??
+        data.nextRankScore ??
+        (nextTier?.minScore ?? 500);
 
-    final int remainingPts = myPos?.remainingScoreToNextRank ??
+    final int remainingPts =
+        myPos?.remainingScoreToNextRank ??
         data.remainingScoreToNextRank ??
-        (nextTier != null ? (nextTier.minScore - points).clamp(0, nextTier.minScore) : 0);
+        (nextTier != null
+            ? (nextTier.minScore - points).clamp(0, nextTier.minScore)
+            : 0);
 
-    final double progressFraction = (nextTier != null)
-        ? ((points - currentTier.minScore) /
-                (nextMinScore - currentTier.minScore))
-            .clamp(0.0, 1.0)
-        : 1.0;
+    final double progressFraction =
+        (nextTier != null)
+            ? ((points - currentTier.minScore) /
+                    (nextMinScore - currentTier.minScore))
+                .clamp(0.0, 1.0)
+            : 1.0;
     final int progressPercent = (progressFraction * 100).round();
 
     return Container(
@@ -787,7 +816,10 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                 height: 40,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                  border: Border.all(
+                    color: const Color(0xFFFDE68A),
+                    width: 1.5,
+                  ),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(100),
@@ -821,7 +853,10 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 6,
+                          ),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFDE68A),
                             borderRadius: BorderRadius.circular(20),
@@ -841,50 +876,47 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
 
               // Streak Card
               Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFCE4EC),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text('🔥', style: TextStyle(fontSize: 14)),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${myPos?.streak ?? me?.streak ?? 0}',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFFDC2626),
-                              fontFamily: 'Poppins',
-                              height: 1.0,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 1),
-                      Text(
-                        'Streak',
-                        style: AppStyles.text9Px.poppins.w600.copyWith(
-                          color: const Color(0xFF6B7280),
-                        ),
-                      ),
-                    ],
-                  ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFCE4EC),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('🔥', style: TextStyle(fontSize: 14)),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${myPos?.streak ?? me?.streak ?? 0}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Color(0xFFDC2626),
+                            fontFamily: 'Poppins',
+                            height: 1.0,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      'Streak',
+                      style: AppStyles.text9Px.poppins.w600.copyWith(
+                        color: const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
 
           // Divider
           const SizedBox(height: 12),
-          Container(
-            height: 1,
-            color: const Color(0xFFFDE68A).withOpacity(0.6),
-          ),
+          Container(height: 1, color: const Color(0xFFFDE68A).withOpacity(0.6)),
           const SizedBox(height: 10),
 
           // Rank & Next Rank Header
@@ -894,10 +926,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    currentTierEmoji,
-                    style: const TextStyle(fontSize: 14),
-                  ),
+                  Text(currentTierEmoji, style: const TextStyle(fontSize: 14)),
                   const SizedBox(width: 5),
                   Text(
                     currentTierName,
@@ -927,7 +956,9 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               value: progressFraction,
               minHeight: 7,
               backgroundColor: const Color(0xFFFDE68A).withOpacity(0.5),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFF59E0B)),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFF59E0B),
+              ),
             ),
           ),
           const SizedBox(height: 6),
@@ -963,39 +994,46 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
 
   // ==================== LEADERBOARD CARD ====================
   Widget _buildLeaderboardCard(
-      ScoreCardState state, ScoreCardResponseModel data) {
+    ScoreCardState state,
+    ScoreCardResponseModel data,
+  ) {
     // Leaderboard list starts from rank 4 (ranks 1-3 are displayed in the podium)
     final Map<String, LeaderboardMemberModel> memberMap = {};
 
-    final sourceMembers = state.allLeaderboardMembers.isNotEmpty
-        ? state.allLeaderboardMembers
-        : data.leaderboard;
+    final sourceMembers =
+        state.allLeaderboardMembers.isNotEmpty
+            ? state.allLeaderboardMembers
+            : data.leaderboard;
 
     for (final m in sourceMembers) {
       // Exclude ranks 1, 2, and 3
       if (m.rank != null && m.rank! < 4) continue;
 
       // Also ensure members already in podium aren't duplicated
-      final isPodium = data.podium.any((p) =>
-          (p.userId != null && p.userId == m.userId) ||
-          (p.customerId != null && p.customerId == m.customerId) ||
-          (p.name != null &&
-              m.name != null &&
-              p.name!.trim().toLowerCase() == m.name!.trim().toLowerCase()));
+      final isPodium = data.podium.any(
+        (p) =>
+            (p.userId != null && p.userId == m.userId) ||
+            (p.customerId != null && p.customerId == m.customerId) ||
+            (p.name != null &&
+                m.name != null &&
+                p.name!.trim().toLowerCase() == m.name!.trim().toLowerCase()),
+      );
       if (isPodium) continue;
 
-      final key = (m.userId != null)
-          ? 'u_${m.userId}'
-          : ((m.customerId != null)
-              ? 'c_${m.customerId}'
-              : ((m.name != null && m.name!.isNotEmpty)
-                  ? 'n_${m.name}'
-                  : 'r_${m.rank}'));
+      final key =
+          (m.userId != null)
+              ? 'u_${m.userId}'
+              : ((m.customerId != null)
+                  ? 'c_${m.customerId}'
+                  : ((m.name != null && m.name!.isNotEmpty)
+                      ? 'n_${m.name}'
+                      : 'r_${m.rank}'));
       memberMap[key] = m;
     }
 
-    final allMembers = memberMap.values.toList()
-      ..sort((a, b) => (a.rank ?? 9999).compareTo(b.rank ?? 9999));
+    final allMembers =
+        memberMap.values.toList()
+          ..sort((a, b) => (a.rank ?? 9999).compareTo(b.rank ?? 9999));
 
     return Container(
       width: double.infinity,
@@ -1112,9 +1150,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
           Container(
             width: 36,
             height: 36,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-            ),
+            decoration: const BoxDecoration(shape: BoxShape.circle),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(100),
               child: _buildAvatar(member.profileImage, size: 36),
@@ -1162,9 +1198,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
           // Points
           Text(
             '$points pts',
-            style: AppStyles.text13Px.poppins.w700.copyWith(
-              color: pointsColor,
-            ),
+            style: AppStyles.text13Px.poppins.w700.copyWith(color: pointsColor),
           ),
         ],
       ),
@@ -1172,7 +1206,9 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
   }
 
   bool _checkIsCurrentUser(
-      LeaderboardMemberModel member, ScoreCardResponseModel data) {
+    LeaderboardMemberModel member,
+    ScoreCardResponseModel data,
+  ) {
     if (member.isCurrentUser) return true;
 
     final currentUser = Feggy.read<AppCubit>()?.state.currentUser;
@@ -1190,12 +1226,12 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
       return true;
     }
 
-    final myRank = data.myPosition?.rank ??
-        data.myPosition?.currentRank ??
-        data.me?.rank;
+    final myRank =
+        data.myPosition?.rank ?? data.myPosition?.currentRank ?? data.me?.rank;
     if (myRank != null && myRank > 0 && member.rank == myRank) {
       final appUserName =
-          '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'.trim();
+          '${currentUser?.firstName ?? ''} ${currentUser?.lastName ?? ''}'
+              .trim();
       final myName =
           data.me?.name ?? (appUserName.isNotEmpty ? appUserName : null);
       if (myName != null &&
@@ -1312,8 +1348,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
   Widget _buildEmptyLeaderboardWidget() {
     return Column(
       children: [
-        const Icon(Icons.emoji_events_outlined,
-            color: Colors.grey, size: 36),
+        const Icon(Icons.emoji_events_outlined, color: Colors.grey, size: 36),
         const SizedBox(height: 8),
         Text(
           'No leaderboard data yet.',
@@ -1361,8 +1396,11 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                color: AppColors.primary, size: 48),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.primary,
+              size: 48,
+            ),
             const SizedBox(height: 16),
             Text(
               'Unable to load Score Card',
@@ -1382,9 +1420,12 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             ElevatedButton.icon(
               onPressed: () => _cubit.fetchScoreCard(refresh: true),
               icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-              label: Text('Retry',
-                  style: AppStyles.text14Px.poppins.w600
-                      .copyWith(color: Colors.white)),
+              label: Text(
+                'Retry',
+                style: AppStyles.text14Px.poppins.w600.copyWith(
+                  color: Colors.white,
+                ),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
@@ -1457,9 +1498,10 @@ class _CrownPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
+    final paint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
 
     final path = Path();
     // 3-point crown with center peak tallest
@@ -1479,10 +1521,11 @@ class _CrownPainter extends CustomPainter {
 
     canvas.drawPath(path, paint);
 
-    final strokePaint = Paint()
-      ..color = const Color(0xFFD97706)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
+    final strokePaint =
+        Paint()
+          ..color = const Color(0xFFD97706)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
     canvas.drawPath(path, strokePaint);
   }
 
@@ -1503,9 +1546,10 @@ class _PodiumShadowPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurRadius);
+    final paint =
+        Paint()
+          ..color = color
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurRadius);
 
     final rect = Rect.fromCenter(
       center: Offset(size.width / 2, size.height / 2),

@@ -81,7 +81,10 @@ class WorkoutFeedbackEvaluator {
       return const WorkoutSetFeedbackResult(type: WorkoutFeedbackType.firstTime);
     }
 
-    final currentWeight = double.tryParse(set['kg']?.toString() ?? '0') ?? 0.0;
+    final currentWeight = double.tryParse(
+          set['kg']?.toString() ?? set['weight_kg']?.toString() ?? '0',
+        ) ??
+        0.0;
     final currentReps = double.tryParse(set['reps']?.toString() ?? '0') ?? 0.0;
 
     final weightType = (exercise['weight_type']?.toString() ?? 'KG')
