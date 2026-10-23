@@ -164,6 +164,9 @@ dev_dependencies:
   #* for native splash
   flutter_native_splash: ^2.4.6
 
+  flutter_test:
+    sdk: flutter
+
 flutter:
   uses-material-design: true
   generate: true

@@ -457,7 +457,7 @@ class _FitnessCentersListingScreenState
       return BlocListener<DashboardCubit, DashboardState>(
         bloc: dashboardCubit,
         listener: (context, dashboardState) {
-          if (dashboardState.navIndex == 2) {
+          if (dashboardState.navIndex == 3) {
             _initializeLocationFlow();
           }
         },

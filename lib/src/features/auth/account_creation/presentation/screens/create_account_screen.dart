@@ -588,7 +588,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
             () => null,
             (either) => either.fold(
               (error) {
-                Dialogs.showSnack(msg: error.msg);
+                Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your details. Please check the required fields.'));
               },
               (success) {
                 _nextStep();

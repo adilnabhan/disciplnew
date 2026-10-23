@@ -12,6 +12,45 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   String? startedAt;
   final bool isPresetCreation;
 
+  // Pagination state
+  int _libraryPage = 1;
+  int _customPage = 1;
+  bool _hasMoreLibrary = true;
+  bool _hasMoreCustom = true;
+  bool _isLoadingLibrary = false;
+  bool _isLoadingCustom = false;
+  bool _isLoadingMoreLibrary = false;
+  bool _isLoadingMoreCustom = false;
+
+  // Cached full-result lists in case backend returns all items without server pagination
+  List<Map<String, String>> _allFilteredLibrary = [];
+  List<Map<String, String>> _allFilteredCustom = [];
+
+  // Active query parameters for pagination
+  String? _currentLibrarySearch;
+  String? _currentLibraryMajorMuscle;
+  dynamic _currentLibrarySubMuscle;
+  dynamic _currentLibraryEquipment;
+  String? _currentLibraryType;
+  String? _currentLibrarySort;
+  String? _currentLibrarySource;
+
+  String? _currentCustomSearch;
+  String? _currentCustomMajorMuscle;
+  dynamic _currentCustomSubMuscle;
+  dynamic _currentCustomEquipment;
+  String? _currentCustomType;
+  String? _currentCustomSort;
+
+  int get libraryPage => _libraryPage;
+  int get customPage => _customPage;
+  bool get hasMoreLibrary => _hasMoreLibrary;
+  bool get hasMoreCustom => _hasMoreCustom;
+  bool get isLoadingLibrary => _isLoadingLibrary;
+  bool get isLoadingCustom => _isLoadingCustom;
+  bool get isLoadingMoreLibrary => _isLoadingMoreLibrary;
+  bool get isLoadingMoreCustom => _isLoadingMoreCustom;
+
   WorkoutCubit({
     bool startFresh = false,
     PresetModel? presetToStart,
@@ -29,12 +68,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
   Future<void> _init(bool startFresh, PresetModel? presetToStart) async {
     emit(state.copyWith(isLoadingActiveSession: true));
     try {
-      await Future.wait([
-        loadMuscleClassification(),
-        loadLibraryExercises(),
-        loadCustomExercises(),
-        loadLookups(),
-      ]);
+      await loadLookups();
       if (isPresetCreation) {
         emit(state.copyWith(isLoadingActiveSession: false));
         return;
@@ -1037,13 +1071,36 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     String? type,
     String? sort,
     String? source,
+    int page = 1,
+    int limit = 10,
+    bool isLoadMore = false,
   }) async {
     print(
-      'DEBUG: loadLibraryExercises() called with search: $search, majorMuscle: $majorMuscle, subMuscle: $subMuscle, source: $source',
+      'DEBUG: loadLibraryExercises() called with search: $search, majorMuscle: $majorMuscle, subMuscle: $subMuscle, source: $source, page: $page, limit: $limit',
     );
+    _libraryPage = page;
+    _currentLibrarySearch = search;
+    _currentLibraryMajorMuscle = majorMuscle;
+    _currentLibrarySubMuscle = subMuscle ?? muscleGroup;
+    _currentLibraryEquipment = equipment;
+    _currentLibraryType = type;
+    _currentLibrarySort = sort;
+    _currentLibrarySource = source;
+
+    _isLoadingLibrary = true;
+    _hasMoreLibrary = true;
+    _isLoadingMoreLibrary = false;
+    _allFilteredLibrary = [];
+
+    // Clear list to prevent showing stale results while loading new query/filter
+    emit(state.copyWith(libraryExercises: []));
+
     final queryParams = <String, dynamic>{};
     final sourceVal = (source != null && source.isNotEmpty) ? source : 'library';
     queryParams['source'] = sourceVal;
+    queryParams['page'] = page;
+    queryParams['limit'] = limit;
+    queryParams['page_size'] = limit;
 
     if (search != null && search.trim().isNotEmpty) {
       queryParams['search'] = search.trim();
@@ -1066,7 +1123,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       queryParams['sort'] = sort.trim();
     }
 
-    final isSearching = queryParams.length > 1;
+    final isSearching = queryParams.length > 4;
 
     final response = await WorkoutRepository().getExerciseLibrary(
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
@@ -1075,10 +1132,12 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       (error) {
         print('DEBUG: Error loading library exercises: $error');
         debugPrint('Error loading library exercises: ${error.msg}');
+        _isLoadingLibrary = false;
+        _hasMoreLibrary = false;
       },
       (exercisesList) {
         print(
-          'DEBUG: Successfully loaded ${exercisesList.length} exercises from API!',
+          'DEBUG: Successfully loaded ${exercisesList.length} library exercises from API!',
         );
         final mappedList =
             exercisesList.map((model) {
@@ -1094,10 +1153,131 @@ class WorkoutCubit extends Cubit<WorkoutState> {
                 'source': model.source ?? '',
               };
             }).toList();
-        if (!isSearching) {
-          _allLibraryExercises = mappedList;
+
+        if (!isSearching && mappedList.isNotEmpty) {
+          for (final item in mappedList) {
+            if (!_allLibraryExercises.any((e) => e['id'] == item['id'])) {
+              _allLibraryExercises.add(item);
+            }
+          }
         }
-        emit(state.copyWith(libraryExercises: mappedList));
+
+        if (mappedList.length > limit) {
+          // Backend returned full list without server-side pagination!
+          // Slice first 10 items for display and cache rest for loadMore
+          _allFilteredLibrary = mappedList;
+          final slice = _allFilteredLibrary.take(limit).toList();
+          _hasMoreLibrary = _allFilteredLibrary.length > slice.length;
+          _isLoadingLibrary = false;
+          emit(state.copyWith(libraryExercises: slice));
+        } else {
+          // Server paginated properly or returned <= 10 items
+          _allFilteredLibrary = [];
+          _hasMoreLibrary = mappedList.length >= limit;
+          _isLoadingLibrary = false;
+          emit(state.copyWith(libraryExercises: mappedList));
+        }
+      },
+    );
+  }
+
+  Future<void> loadMoreLibraryExercises() async {
+    if (_isLoadingMoreLibrary || !_hasMoreLibrary || _isLoadingLibrary) {
+      return;
+    }
+
+    _isLoadingMoreLibrary = true;
+
+    // 1. If backend returned full dataset, slice the next 10 locally
+    if (_allFilteredLibrary.isNotEmpty) {
+      final currentCount = state.libraryExercises.length;
+      final nextCount = currentCount + 10;
+      final slice = _allFilteredLibrary.take(nextCount).toList();
+      _hasMoreLibrary = _allFilteredLibrary.length > slice.length;
+      _libraryPage = _libraryPage + 1;
+      _isLoadingMoreLibrary = false;
+      emit(state.copyWith(libraryExercises: slice));
+      return;
+    }
+
+    // 2. Otherwise request next page from server
+    final nextPage = _libraryPage + 1;
+    final queryParams = <String, dynamic>{
+      'source': (_currentLibrarySource != null && _currentLibrarySource!.isNotEmpty)
+          ? _currentLibrarySource!
+          : 'library',
+      'page': nextPage,
+      'limit': 10,
+      'page_size': 10,
+    };
+
+    if (_currentLibrarySearch != null && _currentLibrarySearch!.trim().isNotEmpty) {
+      queryParams['search'] = _currentLibrarySearch!.trim();
+    }
+    if (_currentLibraryMajorMuscle != null &&
+        _currentLibraryMajorMuscle!.trim().isNotEmpty &&
+        _currentLibraryMajorMuscle!.trim() != 'All') {
+      queryParams['major_muscle'] = _currentLibraryMajorMuscle!.trim();
+    }
+    if (_currentLibrarySubMuscle != null &&
+        _currentLibrarySubMuscle.toString().trim().isNotEmpty &&
+        _currentLibrarySubMuscle.toString().trim() != 'All') {
+      queryParams['sub_muscle'] = _currentLibrarySubMuscle;
+    }
+    if (_currentLibraryEquipment != null &&
+        _currentLibraryEquipment.toString().trim().isNotEmpty &&
+        _currentLibraryEquipment.toString().trim() != 'All') {
+      queryParams['equipment'] = _currentLibraryEquipment;
+    }
+    if (_currentLibraryType != null &&
+        _currentLibraryType!.trim().isNotEmpty &&
+        _currentLibraryType!.trim() != 'All') {
+      queryParams['type'] = _currentLibraryType!.trim();
+    }
+    if (_currentLibrarySort != null && _currentLibrarySort!.trim().isNotEmpty) {
+      queryParams['sort'] = _currentLibrarySort!.trim();
+    }
+
+    final response = await WorkoutRepository().getExerciseLibrary(
+      queryParameters: queryParams,
+    );
+
+    response.fold(
+      (error) {
+        _isLoadingMoreLibrary = false;
+        _hasMoreLibrary = false;
+      },
+      (exercisesList) {
+        if (exercisesList.isEmpty) {
+          _hasMoreLibrary = false;
+        } else {
+          final newMapped = exercisesList.map((model) {
+            final formattedSub = model.subtitle ??
+                '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}';
+            return {
+              'id': (model.id ?? '').toString(),
+              'title': model.name ?? '',
+              'subtitle': formattedSub,
+              'video_url': model.videoUrl?.toString() ?? '',
+              'track_by': model.trackBy ?? 'rep',
+              'major_muscle': model.majorMuscle ?? '',
+              'source': model.source ?? '',
+            };
+          }).toList();
+
+          for (final item in newMapped) {
+            if (!_allLibraryExercises.any((e) => e['id'] == item['id'])) {
+              _allLibraryExercises.add(item);
+            }
+          }
+
+          _libraryPage = nextPage;
+          _hasMoreLibrary = newMapped.length >= 10;
+          emit(state.copyWith(
+            libraryExercises: [...state.libraryExercises, ...newMapped],
+          ));
+        }
+        _isLoadingMoreLibrary = false;
       },
     );
   }
@@ -1109,13 +1289,34 @@ class WorkoutCubit extends Cubit<WorkoutState> {
     dynamic equipment,
     String? type,
     String? sort,
+    int page = 1,
+    int limit = 10,
+    bool isLoadMore = false,
   }) async {
     print(
-      'DEBUG: loadCustomExercises() called with search: $search, majorMuscle: $majorMuscle',
+      'DEBUG: loadCustomExercises() called with search: $search, majorMuscle: $majorMuscle, page: $page, limit: $limit',
     );
+    _customPage = page;
+    _currentCustomSearch = search;
+    _currentCustomMajorMuscle = majorMuscle;
+    _currentCustomSubMuscle = subMuscle;
+    _currentCustomEquipment = equipment;
+    _currentCustomType = type;
+    _currentCustomSort = sort;
+
+    _isLoadingCustom = true;
+    _hasMoreCustom = true;
+    _isLoadingMoreCustom = false;
+    _allFilteredCustom = [];
+
+    emit(state.copyWith(customExercises: []));
+
     final queryParams = <String, dynamic>{
       'source': 'custom',
       'custom_only': true,
+      'page': page,
+      'limit': limit,
+      'page_size': limit,
     };
 
     if (search != null && search.trim().isNotEmpty) {
@@ -1137,7 +1338,7 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       queryParams['sort'] = sort.trim();
     }
 
-    final isSearching = queryParams.length > 2;
+    final isSearching = queryParams.length > 5;
 
     final response = await WorkoutRepository().getExerciseLibrary(
       queryParameters: queryParams,
@@ -1147,6 +1348,8 @@ class WorkoutCubit extends Cubit<WorkoutState> {
       (error) {
         print('DEBUG: Error loading custom exercises: $error');
         debugPrint('Error loading custom exercises: ${error.msg}');
+        _isLoadingCustom = false;
+        _hasMoreCustom = false;
       },
       (exercisesList) {
         print(
@@ -1166,10 +1369,125 @@ class WorkoutCubit extends Cubit<WorkoutState> {
                 'source': model.source ?? '',
               };
             }).toList();
-        if (!isSearching) {
-          _allCustomExercises = mappedList;
+
+        if (!isSearching && mappedList.isNotEmpty) {
+          for (final item in mappedList) {
+            if (!_allCustomExercises.any((e) => e['id'] == item['id'])) {
+              _allCustomExercises.add(item);
+            }
+          }
         }
-        emit(state.copyWith(customExercises: mappedList));
+
+        if (mappedList.length > limit) {
+          _allFilteredCustom = mappedList;
+          final slice = _allFilteredCustom.take(limit).toList();
+          _hasMoreCustom = _allFilteredCustom.length > slice.length;
+          _isLoadingCustom = false;
+          emit(state.copyWith(customExercises: slice));
+        } else {
+          _allFilteredCustom = [];
+          _hasMoreCustom = mappedList.length >= limit;
+          _isLoadingCustom = false;
+          emit(state.copyWith(customExercises: mappedList));
+        }
+      },
+    );
+  }
+
+  Future<void> loadMoreCustomExercises() async {
+    if (_isLoadingMoreCustom || !_hasMoreCustom || _isLoadingCustom) {
+      return;
+    }
+
+    _isLoadingMoreCustom = true;
+
+    if (_allFilteredCustom.isNotEmpty) {
+      final currentCount = state.customExercises.length;
+      final nextCount = currentCount + 10;
+      final slice = _allFilteredCustom.take(nextCount).toList();
+      _hasMoreCustom = _allFilteredCustom.length > slice.length;
+      _customPage = _customPage + 1;
+      _isLoadingMoreCustom = false;
+      emit(state.copyWith(customExercises: slice));
+      return;
+    }
+
+    final nextPage = _customPage + 1;
+    final queryParams = <String, dynamic>{
+      'source': 'custom',
+      'custom_only': true,
+      'page': nextPage,
+      'limit': 10,
+      'page_size': 10,
+    };
+
+    if (_currentCustomSearch != null && _currentCustomSearch!.trim().isNotEmpty) {
+      queryParams['search'] = _currentCustomSearch!.trim();
+    }
+    if (_currentCustomMajorMuscle != null &&
+        _currentCustomMajorMuscle!.trim().isNotEmpty &&
+        _currentCustomMajorMuscle!.trim() != 'All') {
+      queryParams['major_muscle'] = _currentCustomMajorMuscle!.trim();
+    }
+    if (_currentCustomSubMuscle != null &&
+        _currentCustomSubMuscle.toString().trim().isNotEmpty &&
+        _currentCustomSubMuscle.toString().trim() != 'All') {
+      queryParams['sub_muscle'] = _currentCustomSubMuscle;
+    }
+    if (_currentCustomEquipment != null &&
+        _currentCustomEquipment.toString().trim().isNotEmpty &&
+        _currentCustomEquipment.toString().trim() != 'All') {
+      queryParams['equipment'] = _currentCustomEquipment;
+    }
+    if (_currentCustomType != null &&
+        _currentCustomType!.trim().isNotEmpty &&
+        _currentCustomType!.trim() != 'All') {
+      queryParams['type'] = _currentCustomType!.trim();
+    }
+    if (_currentCustomSort != null && _currentCustomSort!.trim().isNotEmpty) {
+      queryParams['sort'] = _currentCustomSort!.trim();
+    }
+
+    final response = await WorkoutRepository().getExerciseLibrary(
+      queryParameters: queryParams,
+    );
+
+    response.fold(
+      (error) {
+        _isLoadingMoreCustom = false;
+        _hasMoreCustom = false;
+      },
+      (exercisesList) {
+        if (exercisesList.isEmpty) {
+          _hasMoreCustom = false;
+        } else {
+          final newMapped = exercisesList.map((model) {
+            final formattedSub = model.subtitle ??
+                '${model.muscleGroup ?? ''} / ${model.equipment ?? ''} / ${model.type ?? ''}';
+            return {
+              'id': (model.id ?? '').toString(),
+              'title': model.name ?? '',
+              'subtitle': formattedSub,
+              'video_url': model.videoUrl?.toString() ?? '',
+              'track_by': model.trackBy ?? 'rep',
+              'major_muscle': model.majorMuscle ?? '',
+              'source': model.source ?? '',
+            };
+          }).toList();
+
+          for (final item in newMapped) {
+            if (!_allCustomExercises.any((e) => e['id'] == item['id'])) {
+              _allCustomExercises.add(item);
+            }
+          }
+
+          _customPage = nextPage;
+          _hasMoreCustom = newMapped.length >= 10;
+          emit(state.copyWith(
+            customExercises: [...state.customExercises, ...newMapped],
+          ));
+        }
+        _isLoadingMoreCustom = false;
       },
     );
   }

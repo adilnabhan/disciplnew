@@ -154,6 +154,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   : const [
                       HomeScreen(),
                       WorkoutLogScreen(),
+                      ScoreCardScreen(),
                       FitnessCentersListingScreen(isFromBottomNav: true),
                       ProfileScreen(),
                     ];
@@ -166,7 +167,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       'Challenges', // 'Steps',
                       'Profile',
                     ]
-                  : ['Home', 'Workouts', 'Explore', 'Profile'];
+                  : [
+                      'Home',
+                      'Workouts',
+                      'Score Card',
+                      'Explore',
+                      'Profile',
+                    ];
 
               int currentIndex = state.navIndex;
               if (currentIndex >= tabPages.length) {
@@ -431,7 +438,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         iconWidget = const SizedBox.shrink();
                                     }
                                   } else {
-                                    // Regular Tab Icons (4 tabs: Home, Workouts, Explore, Profile)
+                                    // Regular Tab Icons (5 tabs: Home, Workouts, Score Card, Explore, Profile)
                                     switch (i) {
                                       case 0:
                                         iconWidget = SvgPicture.asset(
@@ -461,7 +468,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                           ),
                                         );
                                         break;
-                                      case 2:
+                                      case 2: // Score Card
+                                        iconWidget = SvgPicture.asset(
+                                          isSelected
+                                              ? 'assets/images/svg/icons/selected_scorecard.svg'
+                                              : 'assets/images/svg/icons/scorecard_notselected.svg',
+                                          width: 22,
+                                          height: 22,
+                                          colorFilter: isSelected
+                                              ? null
+                                              : const ColorFilter.mode(
+                                                  unselectedColor,
+                                                  BlendMode.srcIn,
+                                                ),
+                                        );
+                                        break;
+                                      case 3: // Explore
                                         iconWidget = SvgPicture.asset(
                                           isSelected
                                               ? 'assets/images/svg/icons/selected_explore.svg'
@@ -476,7 +498,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                                 ),
                                         );
                                         break;
-                                      case 3:
+                                      case 4: // Profile
                                         iconWidget = _buildProfileTabIcon(isSelected);
                                         break;
                                       default:

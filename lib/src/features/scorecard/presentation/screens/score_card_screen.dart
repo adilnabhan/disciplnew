@@ -6,6 +6,7 @@ import 'package:customer_mobile_app/src/features/scorecard/domain/models/score_c
 import 'package:customer_mobile_app/src/features/scorecard/logic/score_card_cubit.dart';
 import 'package:customer_mobile_app/src/features/scorecard/logic/score_card_state.dart';
 import 'package:customer_mobile_app/src/features/scorecard/presentation/screens/points_history_screen.dart';
+import 'package:customer_mobile_app/src/features/scorecard/presentation/widgets/non_active_gym_score_card_view.dart';
 import 'package:customer_mobile_app/src/features/scorecard/presentation/widgets/score_card_how_it_works_sheet.dart';
 
 class ScoreCardScreen extends StatefulWidget {
@@ -215,7 +216,12 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             }
 
             if (!data.hasActiveGym) {
-              return _buildNoActiveGymWidget(context);
+              return NonActiveGymScoreCardView(
+                state: state,
+                data: data,
+                onRefresh: () => _cubit.fetchScoreCard(refresh: true),
+                onInfoTap: () => _showHowItWorksSheet(context),
+              );
             }
 
             return RefreshIndicator(
@@ -1280,9 +1286,18 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
   }
 
   // ==================== NO ACTIVE GYM WIDGET ====================
-  Widget _buildNoActiveGymWidget(BuildContext context) {
+  Widget _buildNoActiveGymWidget(
+    BuildContext context, [
+    ScoreCardResponseModel? data,
+  ]) {
+    final userScore = data?.myPosition?.points ??
+        data?.myPosition?.currentPoints ??
+        data?.me?.points ??
+        data?.totalEarnedScore ??
+        0;
+
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -1290,7 +1305,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.08),
+                color: AppColors.primary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -1299,7 +1314,38 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
                 size: 56,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+            if (userScore > 0) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFFFDBA74),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.stars_rounded,
+                      size: 18,
+                      color: Color(0xFFEA580C),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Your Score: $userScore pts',
+                      style: AppStyles.text13Px.poppins.w700.copyWith(
+                        color: const Color(0xFFC2410C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             Text(
               'No Active Gym',
               style: AppStyles.text20Px.poppins.w700.copyWith(
@@ -1308,7 +1354,7 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Join a gym to see your Score Card and compete with other members.',
+              'Join a gym to see the leaderboard, streaks, and compete with other members.',
               textAlign: TextAlign.center,
               style: AppStyles.text14Px.poppins.w400.copyWith(
                 color: Colors.grey.shade600,
@@ -1321,6 +1367,11 @@ class _ScoreCardScreenState extends State<ScoreCardScreen> {
               height: 48,
               child: ElevatedButton(
                 onPressed: () {
+                  try {
+                    final dashboardCubit = context.read<DashboardCubit>();
+                    dashboardCubit.changeNav(index: 3);
+                    return;
+                  } catch (_) {}
                   context.push(const FitnessCentersListingScreen());
                 },
                 style: ElevatedButton.styleFrom(

@@ -161,7 +161,7 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -184,7 +184,7 @@ final class CustomerDetailsRepository {
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to update profile details. Please try again.'),
       );
     }
   }
@@ -243,7 +243,7 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -257,9 +257,11 @@ final class CustomerDetailsRepository {
           final msgStr = (val is List && val.isNotEmpty)
               ? val.first.toString()
               : val.toString();
-          return left(ApiException.unknown(msg: '$firstKey: $msgStr'));
+          final safeMsg = AppErrorHandler.formatUserFriendlyMessage(msgStr, fallback: 'Invalid input provided.');
+          return left(ApiException.unknown(msg: safeMsg));
         } else if (data is String && data.isNotEmpty) {
-          return left(ApiException.unknown(msg: data));
+          final safeMsg = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Unable to process profile update.');
+          return left(ApiException.unknown(msg: safeMsg));
         }
       }
 
@@ -270,7 +272,7 @@ final class CustomerDetailsRepository {
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to update profile details. Please try again.'),
       );
     }
   }
@@ -304,7 +306,7 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -321,7 +323,7 @@ final class CustomerDetailsRepository {
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to update profile details. Please try again.'),
       );
     }
   }
@@ -376,13 +378,14 @@ final class CustomerDetailsRepository {
               : val.toString();
           return left(ApiException.unknown(msg: msgStr));
         } else if (data is String && data.isNotEmpty) {
-          return left(ApiException.unknown(msg: data));
+          final safeMsg = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Unable to process profile update.');
+          return left(ApiException.unknown(msg: safeMsg));
         }
       }
 
       return left(
         ApiException.unknown(
-          msg: e.message ?? "Couldn't update your email. Please try again.",
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: "Couldn't update your email. Please try again."),
         ),
       );
     } catch (e) {
@@ -421,7 +424,7 @@ final class CustomerDetailsRepository {
       );
       return response;
     } catch (e) {
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to fetch professions list. Please try again.'));
     }
   }
 
@@ -475,7 +478,8 @@ final class CustomerDetailsRepository {
               : val.toString();
           return left(ApiException.unknown(msg: msgStr));
         } else if (data is String && data.isNotEmpty) {
-          return left(ApiException.unknown(msg: data));
+          final safeMsg = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Unable to process profile update.');
+          return left(ApiException.unknown(msg: safeMsg));
         }
       }
 
@@ -536,7 +540,7 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -549,9 +553,11 @@ final class CustomerDetailsRepository {
           final msgStr = (val is List && val.isNotEmpty)
               ? val.first.toString()
               : val.toString();
-          return left(ApiException.unknown(msg: '$firstKey: $msgStr'));
+          final safeMsg = AppErrorHandler.formatUserFriendlyMessage(msgStr, fallback: 'Invalid input provided.');
+          return left(ApiException.unknown(msg: safeMsg));
         } else if (data is String && data.isNotEmpty) {
-          return left(ApiException.unknown(msg: data));
+          final safeMsg = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Unable to process profile update.');
+          return left(ApiException.unknown(msg: safeMsg));
         }
       }
       return left(
@@ -560,7 +566,7 @@ final class CustomerDetailsRepository {
         ),
       );
     } catch (e) {
-      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+      return left(ApiException.unknown(msg: 'Unable to update profile details. Please try again.'));
     }
   }
 
@@ -595,7 +601,7 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -606,7 +612,7 @@ final class CustomerDetailsRepository {
         ),
       );
     } catch (e) {
-      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+      return left(ApiException.unknown(msg: 'Unable to update profile details. Please try again.'));
     }
   }
 
@@ -634,7 +640,7 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -645,7 +651,7 @@ final class CustomerDetailsRepository {
         ),
       );
     } catch (e) {
-      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+      return left(ApiException.unknown(msg: 'Unable to update profile details. Please try again.'));
     }
   }
 
@@ -690,18 +696,18 @@ final class CustomerDetailsRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to complete request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
       print('fetch body metrics history dio error -- $e');
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Failed to fetch body metrics history.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Failed to fetch body metrics history.'),
         ),
       );
     } catch (e) {
-      return left(ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'));
+      return left(ApiException.unknown(msg: 'Unable to update profile details. Please try again.'));
     }
   }
 }

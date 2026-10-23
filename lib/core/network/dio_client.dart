@@ -40,7 +40,11 @@ class CurlLoggerInterceptor extends Interceptor {
     final url = options.uri.toString();
 
     final headers = options.headers.entries
-        .map((e) => '-H "${e.key}: ${e.value}"')
+        .map((e) {
+          final isSensitive = e.key.toLowerCase() == 'authorization' || e.key.toLowerCase() == 'cookie';
+          final val = isSensitive ? '[REDACTED]' : e.value;
+          return '-H "${e.key}: $val"';
+        })
         .join(' \\\n  ');
 
     var data = "";

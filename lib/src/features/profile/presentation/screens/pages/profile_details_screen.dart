@@ -1,14 +1,20 @@
 import 'package:customer_mobile_app/imports_bindings.dart';
-import 'package:customer_mobile_app/src/features/auth/login/domain/repositories/auth_repository.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/helpers/profile_photo_reward_helper.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/models/profile_completion_model.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/repositories/profile_completion_repository.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/helpers/profile_reward_navigation_helper.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/widgets/profile_photo_reward_success_dialog.dart';
 
 class ProfileDetailsScreen extends StatefulWidget {
   const ProfileDetailsScreen({
     required this.customerDetailsModel,
     super.key,
     this.choicesModel,
+    this.autoOpenImagePicker = false,
   });
   final ConstantChoicesModel? choicesModel;
   final CustomerDetailsModel customerDetailsModel;
+  final bool autoOpenImagePicker;
 
   @override
   State<ProfileDetailsScreen> createState() => _ProfileDetailsScreenState();
@@ -21,11 +27,39 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   XFile? _pickedImage;
   List<Profession> _professions = [];
   String? _customProfession;
+  bool _didUploadPhoto = false;
+  bool _hasShownSuccessDialog = false;
+
+  void _openImagePicker() {
+    final existingPic = widget.customerDetailsModel.profilePicture?.toString();
+    final bool hasExistingPic = existingPic != null &&
+        existingPic.isNotEmpty &&
+        existingPic != 'null';
+
+    ImagePickerDialog(
+      hasImage: _pickedImage != null || hasExistingPic,
+      onPickedImage: (image) {
+        if (mounted) {
+          setState(() {
+            _pickedImage = image;
+          });
+        }
+      },
+    ).show(context);
+  }
 
   @override
   void initState() {
     _profileCubit = context.read<ProfileCubit>();
     _customProfession = widget.customerDetailsModel.otherProfession;
+
+    if (widget.autoOpenImagePicker) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _openImagePicker();
+        }
+      });
+    }
 
     _personalDetails = [
       /// ----------------------------------------
@@ -458,6 +492,8 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
 
       final currentEmail = widget.customerDetailsModel.email?.trim() ?? '';
 
+      _didUploadPhoto = _pickedImage != null;
+
       _profileCubit.updateProfileDetails(
         firstName: firstName ?? '',
         lastName: lastName ?? '',
@@ -482,13 +518,54 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         state.updateProfileDetails?.fold(
           () => null,
           (t) => t.fold(
-            (l) => Dialogs.showSnack(
-              msg: l.msg.isNotEmpty
-                  ? l.msg
-                  : "Couldn't update profile details. Please try again.",
-            ),
-            (r) {
-              Navigator.pop(context);
+            (l) {
+              _didUploadPhoto = false;
+              Dialogs.showSnack(
+                msg: AppErrorHandler.formatUserFriendlyMessage(
+                  l.msg,
+                  fallback: "Couldn't update profile details. Please try again.",
+                ),
+              );
+            },
+            (r) async {
+              if (_didUploadPhoto && !_hasShownSuccessDialog) {
+                _didUploadPhoto = false;
+                try {
+                  final repo = ProfileCompletionRepository();
+                  final completionRes = await repo.getProfileCompletion();
+
+                  ProfileCompletionModel? completionData;
+                  completionRes.fold((_) {}, (d) => completionData = d);
+
+                  if (completionData != null &&
+                      ProfilePhotoRewardHelper.isRewardConfirmedAwarded(
+                        completionData,
+                      ) &&
+                      mounted) {
+                    _hasShownSuccessDialog = true;
+                    final reward = completionData!.profilePhotoReward!;
+                    await ProfilePhotoRewardSuccessDialog.show(
+                      context,
+                      reward: reward,
+                      onViewScoreCard: () {
+                        Navigator.of(context).pop();
+                        ProfileRewardNavigationHelper.navigateToScoreCard(
+                          context,
+                        );
+                      },
+                      onDone: () {
+                        Navigator.of(context).pop();
+                      },
+                    );
+                    return;
+                  }
+                } catch (e) {
+                  debugPrint('⚠️ Error verifying reward after upload: $e');
+                }
+              }
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
           ),
         );

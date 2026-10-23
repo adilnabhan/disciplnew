@@ -17,7 +17,7 @@ class ReviewsAndRatingCubit extends Cubit<ReviewsAndRatingState> {
       await response.fold(
         (l) {
           emit(state.copyWith(fitnessCenterReviews: (data: state.fitnessCenterReviews.data, isPagination: false)));
-          return Dialogs.showSnack(msg: l.msg);
+          return Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to load reviews. Please check your network.'));
         },
         (r) {
           final combinedReviews = [...?reviews?.results?.reviews, ...?r.results?.reviews];

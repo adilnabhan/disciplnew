@@ -127,7 +127,9 @@ class AppCubit extends HydratedCubit<AppState> {
   // ---------------- USER ----------------
 
   void addUser(LoginSuccessModel user) {
-    print('DEBUG LOG: Login success. User ID: ${user.customer?.id}, Access Token: ${user.access}');
+    if (kDebugMode) {
+      debugPrint('Login success. Customer ID: ${user.customer?.id}');
+    }
     LocalStorageService().saveUser(user);
     emit(state.copyWith(currentUser: user));
   }
@@ -351,9 +353,9 @@ class AppCubit extends HydratedCubit<AppState> {
           );
         },
         (data) {
-          print('✅ AppCubit: Token refresh API success.');
-          print('🔑 New Access Token: ${data['access']}');
-          print('🔄 New Refresh Token: ${data['refresh']}');
+          if (kDebugMode) {
+            debugPrint('AppCubit: Token refresh API success.');
+          }
 
           final access = data['access']?.toString();
           final refresh = data['refresh']?.toString();

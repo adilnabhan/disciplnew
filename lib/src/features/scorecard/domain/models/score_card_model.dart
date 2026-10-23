@@ -251,6 +251,88 @@ class UserRankTier {
 }
 
 @immutable
+class WayToEarnPointsModel {
+  final String title;
+  final String description;
+  final String points;
+  final int rewardPoints;
+  final String icon;
+  final String action;
+
+  const WayToEarnPointsModel({
+    required this.title,
+    required this.description,
+    required this.points,
+    required this.rewardPoints,
+    required this.icon,
+    required this.action,
+  });
+
+  factory WayToEarnPointsModel.fromJson(Map<String, dynamic> json) {
+    return WayToEarnPointsModel(
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      points: json['points'] as String? ?? '',
+      rewardPoints: (json['reward_points'] as num?)?.toInt() ?? 0,
+      icon: json['icon'] as String? ?? '',
+      action: json['action'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'title': title,
+    'description': description,
+    'points': points,
+    'reward_points': rewardPoints,
+    'icon': icon,
+    'action': action,
+  };
+
+  static const List<WayToEarnPointsModel> defaultWays = [
+    WayToEarnPointsModel(
+      title: 'Log Daily Workouts',
+      description: 'Log your daily workout session to earn points',
+      points: '+10 pts',
+      rewardPoints: 10,
+      icon: 'workout',
+      action: 'open_workouts',
+    ),
+    WayToEarnPointsModel(
+      title: 'Maintain Daily Streak',
+      description: 'Keep up your consecutive workout days for bonus points',
+      points: '+10 pts',
+      rewardPoints: 10,
+      icon: 'streak',
+      action: 'open_workouts',
+    ),
+    WayToEarnPointsModel(
+      title: 'Trainer Verification',
+      description: 'Get your workout verified by your trainer',
+      points: '+15 pts',
+      rewardPoints: 15,
+      icon: 'verified',
+      action: 'open_workouts',
+    ),
+    WayToEarnPointsModel(
+      title: 'Daily Step Goals',
+      description: 'Hit 5,000 to 20,000+ daily steps milestone',
+      points: 'Up to +50 pts',
+      rewardPoints: 50,
+      icon: 'steps',
+      action: 'open_activity',
+    ),
+    WayToEarnPointsModel(
+      title: 'Complete Your Profile',
+      description: 'Upload a profile photo and fill in your details',
+      points: 'Up to +100 pts',
+      rewardPoints: 100,
+      icon: 'profile',
+      action: 'open_profile',
+    ),
+  ];
+}
+
+@immutable
 class CategoryBreakdownModel {
   final int attendance;
   final int consistency;
@@ -686,6 +768,10 @@ class ScoreCardResponseModel {
   final int? totalPenaltyScore;
   final CategoryBreakdownModel? categoryBreakdown;
   final List<ScoreTransactionModel> recentTransactions;
+  final int? currentScore;
+  final int? workoutsCompleted;
+  final String? rankName;
+  final List<WayToEarnPointsModel> waysToEarnPoints;
 
   const ScoreCardResponseModel({
     required this.hasActiveGym,
@@ -710,7 +796,84 @@ class ScoreCardResponseModel {
     this.totalPenaltyScore,
     this.categoryBreakdown,
     this.recentTransactions = const [],
+    this.currentScore,
+    this.workoutsCompleted,
+    this.rankName,
+    this.waysToEarnPoints = WayToEarnPointsModel.defaultWays,
   });
+
+  int get displayScore =>
+      currentScore ??
+      myPosition?.points ??
+      myPosition?.currentPoints ??
+      me?.points ??
+      totalEarnedScore ??
+      0;
+
+  int get displayStreak =>
+      streakDays ??
+      myPosition?.streak ??
+      me?.streak ??
+      0;
+
+  int get displayWorkoutsCompleted => workoutsCompleted ?? 0;
+
+  int get displayNextRankScore {
+    if (nextRankScore != null && nextRankScore! > 0) return nextRankScore!;
+    if (myPosition?.nextRankScore != null && myPosition!.nextRankScore! > 0) {
+      return myPosition!.nextRankScore!;
+    }
+    final currentT = UserRankTier.getTierByName(displayCurrentRank) ??
+        UserRankTier.getTierForScore(displayScore);
+    final nextT = UserRankTier.getTierByName(displayNextRank) ??
+        UserRankTier.getNextTier(currentT);
+    return nextT?.minScore ?? 500;
+  }
+
+  int get displayRemainingScore {
+    if (remainingScoreToNextRank != null && remainingScoreToNextRank! > 0) {
+      return remainingScoreToNextRank!;
+    }
+    if (myPosition?.remainingScoreToNextRank != null &&
+        myPosition!.remainingScoreToNextRank! > 0) {
+      return myPosition!.remainingScoreToNextRank!;
+    }
+    final target = displayNextRankScore;
+    final current = displayScore;
+    return (target - current).clamp(0, target);
+  }
+
+  double get displayProgressPercentage {
+    if (progressPercentage != null && progressPercentage! > 0) {
+      return progressPercentage!;
+    }
+    if (myPosition?.progressPercentage != null &&
+        myPosition!.progressPercentage! > 0) {
+      return myPosition!.progressPercentage!;
+    }
+    final currentT = UserRankTier.getTierByName(displayCurrentRank) ??
+        UserRankTier.getTierForScore(displayScore);
+    final nextT = UserRankTier.getTierByName(displayNextRank) ??
+        UserRankTier.getNextTier(currentT);
+    return UserRankTier.calculateProgress(displayScore, currentT, nextT);
+  }
+
+  String? get displayCurrentRank =>
+      currentRank ?? rankName ?? myPosition?.currentRankName;
+
+  String? get displayRankEmoji =>
+      rankEmoji ?? myPosition?.rankEmoji;
+
+  String? get displayNextRank =>
+      nextRank ?? myPosition?.nextRank;
+
+  String? get displayNextRankEmoji =>
+      nextRankEmoji ?? myPosition?.nextRankEmoji;
+
+  List<WayToEarnPointsModel> get displayWaysToEarnPoints =>
+      waysToEarnPoints.isNotEmpty
+          ? waysToEarnPoints
+          : WayToEarnPointsModel.defaultWays;
 
   factory ScoreCardResponseModel.fromJson(Map<String, dynamic> json) {
     final catBreakdown =
@@ -805,6 +968,22 @@ class ScoreCardResponseModel {
       totalPenaltyScore: json['total_penalty_score'] as int?,
       categoryBreakdown: catBreakdown,
       recentTransactions: transactions,
+      currentScore: (json['current_score'] ??
+              json['points'] ??
+              json['period_points'] ??
+              json['lifetime_score']) as int?,
+      workoutsCompleted: (json['workouts_completed'] ??
+          (json['me'] is Map
+              ? (json['me'] as Map<String, dynamic>)['workouts_completed']
+              : null)) as int?,
+      rankName: (json['rank_name'] ??
+          json['tier_rank'] ??
+          json['current_rank']) as String?,
+      waysToEarnPoints: (json['ways_to_earn_points'] as List<dynamic>?)
+              ?.map((e) =>
+                  WayToEarnPointsModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          WayToEarnPointsModel.defaultWays,
     );
   }
 
@@ -831,5 +1010,6 @@ class ScoreCardResponseModel {
     'total_penalty_score': totalPenaltyScore,
     'category_breakdown': categoryBreakdown?.toJson(),
     'recent_transactions': recentTransactions.map((e) => e.toJson()).toList(),
+    'ways_to_earn_points': waysToEarnPoints.map((e) => e.toJson()).toList(),
   };
 }

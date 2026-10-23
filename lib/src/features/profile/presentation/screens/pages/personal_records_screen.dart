@@ -45,10 +45,7 @@ class _PersonalRecordsScreenState extends State<PersonalRecordsScreen> {
       (failure) {
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              failure.msg.isNotEmpty
-                  ? failure.msg
-                  : 'Unable to fetch personal records.';
+          _errorMessage = AppErrorHandler.formatUserFriendlyMessage(failure.msg, fallback: 'Unable to fetch personal records. Please try again.');
         });
       },
       (data) {

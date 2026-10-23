@@ -553,7 +553,7 @@
 //               () => null,
 //               (either) => either.fold(
 //                 (error) {
-//                   Dialogs.showSnack(msg: error.msg);
+//                   Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your health information. Please try again.'));
 //                 },
 //                 (success) {
 //                   context.read<ProfileCubit>().fetchCustomerDetails();
@@ -631,7 +631,7 @@
 //               () => null,
 //               (either) => either.fold(
 //                 (error) {
-//                   Dialogs.showSnack(msg: error.msg);
+//                   Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your health information. Please try again.'));
 //                 },
 //                 (success) {
 //                   context.read<ProfileCubit>().fetchCustomerDetails();
@@ -708,7 +708,7 @@
 //               () => null,
 //               (either) => either.fold(
 //                 (error) {
-//                   Dialogs.showSnack(msg: error.msg);
+//                   Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your health information. Please try again.'));
 //                 },
 //                 (success) {
 //                   context.read<ProfileCubit>().fetchCustomerDetails();
@@ -1266,7 +1266,7 @@ class EditHealthStyle extends StatelessWidget {
               () => null,
               (either) => either.fold(
                 (error) {
-                  Dialogs.showSnack(msg: error.msg);
+                  Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your health information. Please try again.'));
                 },
                 (success) {
                   context.read<ProfileCubit>().fetchCustomerDetails();
@@ -1341,7 +1341,7 @@ class _EditTargetGoalsState extends State<EditTargetGoals> {
           () => null,
           (either) => either.fold(
             (error) {
-              Dialogs.showSnack(msg: error.msg);
+              Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your health information. Please try again.'));
             },
             (success) {
               Dialogs.showSnack(msg: 'Target goals updated successfully');
@@ -1436,7 +1436,7 @@ class EditLifeStyle extends StatelessWidget {
               () => null,
               (either) => either.fold(
                 (error) {
-                  Dialogs.showSnack(msg: error.msg);
+                  Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Unable to save your health information. Please try again.'));
                 },
                 (success) {
                   context.read<ProfileCubit>().fetchCustomerDetails();

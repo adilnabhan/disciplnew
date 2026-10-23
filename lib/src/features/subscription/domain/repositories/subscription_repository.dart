@@ -96,7 +96,7 @@ final class SubscriptionRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected response from server. Code: $statusCode',
+          msg: 'Unable to initiate payment. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -118,12 +118,12 @@ final class SubscriptionRepository {
 
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to initiate payment. Please try again.'),
         ),
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to initiate payment. Please try again.'),
       );
     }
   }

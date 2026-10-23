@@ -52,8 +52,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
         print('=================================');
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              error.msg.isNotEmpty ? error.msg : 'Failed to fetch body matrix.';
+          _errorMessage = AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Failed to fetch body matrix. Please try again.');
         });
       },
       (matrix) {
@@ -2934,9 +2933,7 @@ class _BodyMatrixScreenState extends State<BodyMatrixScreen> {
                                 (error) {
                                   Navigator.of(sheetContext).pop();
                                   Dialogs.showSnack(
-                                    msg: error.msg.isNotEmpty
-                                        ? error.msg
-                                        : 'Failed to update metrics. Try again.',
+                                    msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Failed to update metrics. Please try again.'),
                                   );
                                 },
                                 (_) {

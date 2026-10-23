@@ -159,8 +159,8 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         }
       }
     } catch (e) {
-      print('DEBUG DOWNLOAD ERROR: $e');
-      Dialogs.showSnack(msg: 'Download failed: $e');
+      debugPrint('DOWNLOAD ERROR: $e');
+      Dialogs.showSnack(msg: 'Unable to save your workout summary card. Please check storage permissions.');
     } finally {
       if (mounted) setState(() => _isCapturing = false);
     }
@@ -183,10 +183,10 @@ class _WorkoutAchievementScreenState extends State<WorkoutAchievementScreen> {
         text: text ?? 'Check out my workout on Discipl! 💪 #discipl',
         sharePositionOrigin: sharePositionOrigin,
       );
-      print('DEBUG SHARE RESULT: ${result.status}');
+      debugPrint('SHARE RESULT: ${result.status}');
     } catch (e) {
-      print('DEBUG SHARE ERROR: $e');
-      Dialogs.showSnack(msg: 'Share failed: $e');
+      debugPrint('SHARE ERROR: $e');
+      Dialogs.showSnack(msg: 'Unable to share your workout summary. Please try again.');
     } finally {
       if (mounted) setState(() => _isCapturing = false);
     }

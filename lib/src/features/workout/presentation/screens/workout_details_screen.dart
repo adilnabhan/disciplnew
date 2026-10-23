@@ -139,7 +139,14 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         res.fold((error) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to update set: ${error.msg}')),
+              SnackBar(
+                content: Text(
+                  AppErrorHandler.formatUserFriendlyMessage(
+                    error.msg,
+                    fallback: 'Failed to update set. Please try again.',
+                  ),
+                ),
+              ),
             );
           }
         }, (_) => null);
@@ -183,7 +190,14 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
         (error) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to add set: ${error.msg}')),
+              SnackBar(
+                content: Text(
+                  AppErrorHandler.formatUserFriendlyMessage(
+                    error.msg,
+                    fallback: 'Failed to add set. Please try again.',
+                  ),
+                ),
+              ),
             );
           }
         },
@@ -218,7 +232,14 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
       (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete set: ${error.msg}')),
+            SnackBar(
+              content: Text(
+                AppErrorHandler.formatUserFriendlyMessage(
+                  error.msg,
+                  fallback: 'Failed to delete set. Please try again.',
+                ),
+              ),
+            ),
           );
         }
       },
@@ -635,7 +656,12 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                 ),
               ),
             ),
-            body: _buildErrorState('Error loading details: ${error.msg}'),
+            body: _buildErrorState(
+              AppErrorHandler.formatUserFriendlyMessage(
+                error.msg,
+                fallback: 'Unable to load workout details. Please try again.',
+              ),
+            ),
           ),
           (data) {
             _sessionData = data;
@@ -1906,7 +1932,10 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                                       ).showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Failed to update set: ${error.msg}',
+                                            AppErrorHandler.formatUserFriendlyMessage(
+                                              error.msg,
+                                              fallback: 'Failed to update set. Please try again.',
+                                            ),
                                           ),
                                         ),
                                       );
@@ -2008,13 +2037,18 @@ class _WorkoutDetailsScreenState extends State<WorkoutDetailsScreen> {
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Failed to finish workout: ${error.msg}'),
+                      content: Text(
+                        AppErrorHandler.formatUserFriendlyMessage(
+                          error.msg,
+                          fallback: 'Failed to finish workout. Please check your connection.',
+                        ),
+                      ),
                     ),
                   );
                 }
               },
               (data) {
-                unawaited(WorkoutSoundHelper.playRandomFinishSound());
+                unawaited(WorkoutSoundHelper.playFinishSound());
                 final dateStr =
                     _sessionData?['session_date']?.toString() ??
                     _sessionData?['started_at']?.toString();

@@ -400,9 +400,7 @@ class ProfileCubit extends Cubit<ProfileState> {
 
     response.fold(
       (error) {
-        final errorMsg = error.msg.isNotEmpty
-            ? error.msg
-            : "Couldn't update your email. Please try again.";
+        final errorMsg = AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: "Couldn't update your email. Please try again.");
         Dialogs.showSnack(msg: errorMsg);
         emit(
           state.copyWith(

@@ -47,7 +47,7 @@ class _AaddReviewScreenState extends State<AaddReviewScreen> {
             () {},
             (t) => t.fold(
               (l) {
-                Dialogs.showSnack(msg: l.msg);
+                Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to submit review. Please try again.'));
               },
               (r) {
                 context.pushAndRemoveUntil(const DashboardScreen());

@@ -46,7 +46,7 @@ class __SubscriptionPlanChooseScreenState
         state.payment?.fold(() {}, (either) {
           either.fold(
             (error) {
-              Dialogs.showSnack(msg: error.msg);
+              Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Payment failed. Please try again.'));
             },
             (razorpayOrder) async {
               context.read<AppCubit>().updateOrganizationId(_cubit.orgId);

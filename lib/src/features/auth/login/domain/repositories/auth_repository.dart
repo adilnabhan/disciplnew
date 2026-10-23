@@ -147,7 +147,7 @@ final class AuthRepository {
             final firstKey = data.keys.first;
 
             // Take first error message
-            message = data[firstKey][0].toString();
+            message = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Invalid verification code. Please try again.');
 
             return left(ApiException.unknown(msg: message));
           }
@@ -155,7 +155,7 @@ final class AuthRepository {
 
         // String message = "Something went wrong";
         // if (data is Map<String, dynamic> && data.values.isNotEmpty) {
-        //   message = data.values.first.toString();
+        //   message = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Authentication failed. Please check your details.');
         //   print('errro---${data.values.first.toString()}');
         // } else if (data is String) {
         //   message = data;
@@ -208,7 +208,7 @@ final class AuthRepository {
   //         final data = res.data;
   //         String message = "Something went wrong";
   //         if (data is Map<String, dynamic> && data.values.isNotEmpty) {
-  //           message = data.values.first.toString();
+  //           message = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Authentication failed. Please check your details.');
   //           print('error---$message');
   //         } else if (data is String) {
   //           message = data;
@@ -248,7 +248,7 @@ final class AuthRepository {
         final data = res.data;
         String message = "Something went wrong";
         if (data is Map<String, dynamic> && data.values.isNotEmpty) {
-          message = data.values.first.toString();
+          message = AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Authentication failed. Please check your details.');
           print('errro---${data.values.first.toString()}');
         } else if (data is String) {
           message = data;

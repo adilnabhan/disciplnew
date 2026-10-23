@@ -60,12 +60,24 @@ final class WorkoutRepository {
     Response<dynamic> res,
     T Function(Map<String, dynamic>) fromJson,
   ) {
-    if (res.statusCode == 200 && res.data != null && res.data is List) {
-      return right(
-        (res.data as List)
-            .map((e) => fromJson(e as Map<String, dynamic>))
-            .toList(),
-      );
+    if (res.statusCode == 200 && res.data != null) {
+      if (res.data is List) {
+        return right(
+          (res.data as List)
+              .map((e) => fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      } else if (res.data is Map<String, dynamic>) {
+        final map = res.data as Map<String, dynamic>;
+        final dynamic list = map['results'] ?? map['data'] ?? map['exercises'];
+        if (list is List) {
+          return right(
+            list
+                .map((e) => fromJson(e as Map<String, dynamic>))
+                .toList(),
+          );
+        }
+      }
     }
     return left(const ApiException.unknown());
   }
@@ -487,7 +499,8 @@ final class WorkoutRepository {
           }
         }
       }
-      return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
+      final safeMsg = AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to finish workout. Please try again.');
+      return left(ApiException.unknown(msg: safeMsg));
     } catch (e) {
       debugPrint(e.toString());
       return left(const ApiException.unknown());
@@ -602,7 +615,8 @@ final class WorkoutRepository {
           }
         }
       }
-      return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
+      final safeMsg = AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to finish workout. Please try again.');
+      return left(ApiException.unknown(msg: safeMsg));
     } catch (e) {
       debugPrint(e.toString());
       return left(const ApiException.unknown());
@@ -865,7 +879,8 @@ final class WorkoutRepository {
           }
         }
       }
-      return left(ApiException.unknown(msg: e.message ?? 'Something went wrong.'));
+      final safeMsg = AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to finish workout. Please try again.');
+      return left(ApiException.unknown(msg: safeMsg));
     } catch (e) {
       debugPrint(e.toString());
       return left(const ApiException.unknown());
@@ -926,7 +941,8 @@ final class WorkoutRepository {
           }
         }
       }
-      return left(ApiException.unknown(msg: e.message ?? 'Failed to delete workout log'));
+      final safeMsg = AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to delete workout set. Please try again.');
+      return left(ApiException.unknown(msg: safeMsg));
     } catch (e) {
       print('❌ [API ERROR] DELETE workout-log Exception: $e');
       return left(const ApiException.unknown());

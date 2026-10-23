@@ -49,7 +49,7 @@ class _VerifyOtpScreenState extends State<_VerifyOtpScreen> {
           () => null,
           (t) => t.fold(
             (l) {
-              Dialogs.showSnack(msg: l.msg);
+              Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to resend code. Please try again in a moment.'));
             },
             (r) {
               context.read<VerifyOtpCubit>().startResentOtpTimer();
@@ -87,7 +87,7 @@ class _VerifyOtpScreenState extends State<_VerifyOtpScreen> {
               if ((r?.customer?.profileCompleteness ?? 0) >= 3) {
                 context.read<AppCubit>().addUser(r!);
                 if (r?.customer?.organizationId == null) {
-                  context.pushAndRemoveUntil(const DashboardScreen(navIndex: 2));
+                  context.pushAndRemoveUntil(const DashboardScreen(navIndex: 3));
                 } else {
                   context.pushAndRemoveUntil(const DashboardScreen());
                 }
@@ -267,7 +267,7 @@ class _VerifyOtpScreenState extends State<_VerifyOtpScreen> {
                     ),
                     if (error != null)
                       Text(
-                        error.msg,
+                        AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Invalid verification code. Please try again.'),
                         style: AppStyles.text14Px.poppins.w400.error,
                       ).pOnly(top: 12),
                   ],

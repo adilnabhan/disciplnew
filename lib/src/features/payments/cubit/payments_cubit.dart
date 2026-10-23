@@ -37,7 +37,7 @@ class PaymentsCubit extends Cubit<PaymentsState> {
               ),
             ),
           );
-          return Dialogs.showSnack(msg: l.msg);
+          return Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to load payment history.'));
         },
         (r) {
           final data = r.copyWith(
@@ -75,7 +75,7 @@ class PaymentsCubit extends Cubit<PaymentsState> {
     // Handle result
     await response.fold(
           (l) {
-        Dialogs.showSnack(msg: l.msg);
+        Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to load payment details.'));
         emit(
           state.copyWith(
             paymentHistoryDetails: (data: some(left(l))),

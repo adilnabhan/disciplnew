@@ -103,7 +103,7 @@ final class BugReportRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Failed to submit bug report. Code: $statusCode',
+          msg: 'Unable to submit bug report. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -120,15 +120,15 @@ final class BugReportRepository {
           final msgStr = (val is List && val.isNotEmpty)
               ? val.first.toString()
               : val.toString();
-          return left(ApiException.unknown(msg: '$firstKey: $msgStr'));
+          return left(ApiException.unknown(msg: AppErrorHandler.formatUserFriendlyMessage(msgStr, fallback: 'Invalid bug report details.')));
         } else if (data is String && data.isNotEmpty) {
-          return left(ApiException.unknown(msg: data));
+          return left(ApiException.unknown(msg: AppErrorHandler.extractSafeValidationMessage(data, fallback: 'Unable to submit bug report.')));
         }
       }
-      return left(ApiException.unknown(msg: e.message ?? 'Network error occurred'));
+      return left(ApiException.unknown(msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Network error occurred while submitting report.')));
     } catch (e) {
       debugPrint('BugReportRepository submit unknown error: $e');
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to complete bug report request. Please try again.'));
     }
   }
 
@@ -180,15 +180,15 @@ final class BugReportRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Failed to fetch bug reports. Code: $statusCode',
+          msg: 'Unable to fetch bug reports. Please try again later.',
         ),
       );
     } on DioException catch (e) {
       debugPrint('BugReportRepository get error: $e');
-      return left(ApiException.unknown(msg: e.message ?? 'Network error occurred'));
+      return left(ApiException.unknown(msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Network error occurred while submitting report.')));
     } catch (e) {
       debugPrint('BugReportRepository get unknown error: $e');
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to complete bug report request. Please try again.'));
     }
   }
 
@@ -209,14 +209,14 @@ final class BugReportRepository {
       }
       return left(
         ApiException.unknown(
-          msg: 'Failed to delete bug report. Code: $statusCode',
+          msg: 'Unable to delete bug report. Please try again later.',
         ),
       );
     } on DioException catch (e) {
       debugPrint('BugReportRepository delete error: $e');
-      return left(ApiException.unknown(msg: e.message ?? 'Network error occurred'));
+      return left(ApiException.unknown(msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Network error occurred while submitting report.')));
     } catch (e) {
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to complete bug report request. Please try again.'));
     }
   }
 }

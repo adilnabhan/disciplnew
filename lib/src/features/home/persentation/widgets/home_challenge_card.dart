@@ -665,12 +665,13 @@ class HomeChallengeCard extends StatelessWidget {
                             challenge.id!,
                           );
                           if (context.mounted) {
-                            final message =
-                                response.message ??
-                                response.error ??
-                                (response.status
-                                    ? 'Successfully joined ${challenge.name}!'
-                                    : 'Failed to join challenge.');
+                            final message = response.status
+                                ? (response.message ??
+                                    'Successfully joined ${challenge.name}!')
+                                : AppErrorHandler.formatUserFriendlyMessage(
+                                    response.message ?? response.error,
+                                    fallback: 'Failed to join challenge. Please try again.',
+                                  );
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(message),

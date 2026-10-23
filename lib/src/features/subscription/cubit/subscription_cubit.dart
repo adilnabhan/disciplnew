@@ -187,7 +187,7 @@ class SubscriptionCubit extends Cubit<SubscriptionState> {
         isPaymentLoading: false,
         payment: some(
           left(
-            ApiException.notFound(msg: response.message ?? 'Payment Failed'),
+            ApiException.unknown(msg: AppErrorHandler.formatUserFriendlyMessage(response.message, fallback: 'Payment was cancelled or failed. Please try again.')),
           ),
         ),
       ),

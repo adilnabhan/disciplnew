@@ -55,7 +55,7 @@ class __SentOtpScreenState extends State<_SentOtpScreen> {
           () => null,
           (t) => t.fold(
             (l) {
-              Dialogs.showSnack(msg: l.msg);
+              Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Sign in failed. Please try again.'));
             },
             (r) {
               // context.push(VerifyOtpScreen(phone: _phoneController.text, ));
@@ -154,7 +154,7 @@ class __SentOtpScreenState extends State<_SentOtpScreen> {
                           ),
                           if (error != null)
                             Text(
-                              error.msg,
+                              AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Please enter a valid phone number.'),
                               style: AppStyles.text14Px.poppins.w400.error,
                             ).pOnly(top: 8),
                         ],

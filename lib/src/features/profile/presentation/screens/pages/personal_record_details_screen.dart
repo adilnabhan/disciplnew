@@ -70,10 +70,7 @@ class _PersonalRecordDetailsScreenState
       (failure) {
         setState(() {
           _isLoading = false;
-          _errorMessage =
-              failure.msg.isNotEmpty
-                  ? failure.msg
-                  : 'Unable to fetch exercise PR details.';
+          _errorMessage = AppErrorHandler.formatUserFriendlyMessage(failure.msg, fallback: 'Unable to fetch exercise details. Please try again.');
         });
       },
       (data) {

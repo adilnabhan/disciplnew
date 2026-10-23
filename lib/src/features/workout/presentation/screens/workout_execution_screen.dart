@@ -191,7 +191,7 @@ class _WorkoutExecutionScreenState extends State<WorkoutExecutionScreen> {
                               ),
                               TextButton(
                                 onPressed: () {
-                                  unawaited(WorkoutSoundHelper.playRandomFinishSound());
+                                  unawaited(WorkoutSoundHelper.playFinishSound());
                                   Navigator.pop(context, true);
                                 },
                                 child: const Text(

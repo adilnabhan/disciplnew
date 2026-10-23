@@ -65,7 +65,7 @@ class DashboardCubit extends Cubit<DashboardState> {
   }
 
   void navigateToProfile() {
-    emit(state.copyWith(navIndex: hasActiveGym ? 4 : 3));
+    emit(state.copyWith(navIndex: 4));
   }
 
   //* Fetch active membership data

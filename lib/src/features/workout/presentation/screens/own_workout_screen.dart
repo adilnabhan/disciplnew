@@ -169,9 +169,63 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     String? selectedMajorMuscle;
     dynamic selectedSubMuscle;
     int currentTab = 0; // 0 = Library, 1 = You created
+    Timer? searchDebounceTimer;
+    final libraryScrollController = ScrollController();
+    final customScrollController = ScrollController();
 
     _cubit.loadMuscleClassification();
-    _cubit.loadLibraryExercises();
+    _cubit.loadLibraryExercises(page: 1, limit: 10);
+    _cubit.loadCustomExercises(page: 1, limit: 10);
+
+    void onLibraryScroll() {
+      if (libraryScrollController.hasClients &&
+          libraryScrollController.position.pixels >=
+              libraryScrollController.position.maxScrollExtent - 200) {
+        if (!_cubit.isLoadingMoreLibrary &&
+            _cubit.hasMoreLibrary &&
+            !_cubit.isLoadingLibrary) {
+          _cubit.loadMoreLibraryExercises();
+        }
+      }
+    }
+
+    void onCustomScroll() {
+      if (customScrollController.hasClients &&
+          customScrollController.position.pixels >=
+              customScrollController.position.maxScrollExtent - 200) {
+        if (!_cubit.isLoadingMoreCustom &&
+            _cubit.hasMoreCustom &&
+            !_cubit.isLoadingCustom) {
+          _cubit.loadMoreCustomExercises();
+        }
+      }
+    }
+
+    libraryScrollController.addListener(onLibraryScroll);
+    customScrollController.addListener(onCustomScroll);
+
+    void triggerSearch(String query) {
+      searchDebounceTimer?.cancel();
+      searchDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+        if (currentTab == 0) {
+          _cubit.loadLibraryExercises(
+            search: query,
+            majorMuscle: selectedMajorMuscle,
+            subMuscle: selectedSubMuscle,
+            page: 1,
+            limit: 10,
+          );
+        } else {
+          _cubit.loadCustomExercises(
+            search: query,
+            majorMuscle: selectedMajorMuscle,
+            subMuscle: selectedSubMuscle,
+            page: 1,
+            limit: 10,
+          );
+        }
+      });
+    }
 
     showModalBottomSheet(
       context: context,
@@ -237,17 +291,28 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                 setSheetState(() {
                                   searchQuery = v;
                                 });
+                                triggerSearch(v);
+                              },
+                              onSubmitted: (v) {
+                                searchDebounceTimer?.cancel();
+                                setSheetState(() {
+                                  searchQuery = v;
+                                });
                                 if (currentTab == 0) {
                                   _cubit.loadLibraryExercises(
-                                    search: searchQuery,
+                                    search: v,
                                     majorMuscle: selectedMajorMuscle,
                                     subMuscle: selectedSubMuscle,
+                                    page: 1,
+                                    limit: 10,
                                   );
                                 } else {
                                   _cubit.loadCustomExercises(
-                                    search: searchQuery,
+                                    search: v,
                                     majorMuscle: selectedMajorMuscle,
                                     subMuscle: selectedSubMuscle,
+                                    page: 1,
+                                    limit: 10,
                                   );
                                 }
                               },
@@ -309,6 +374,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                             size: 20,
                                           ),
                                           onPressed: () {
+                                            searchDebounceTimer?.cancel();
                                             searchController.clear();
                                             setSheetState(() {
                                               searchQuery = '';
@@ -319,6 +385,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                                 majorMuscle:
                                                     selectedMajorMuscle,
                                                 subMuscle: selectedSubMuscle,
+                                                page: 1,
+                                                limit: 10,
                                               );
                                             } else {
                                               _cubit.loadCustomExercises(
@@ -326,6 +394,8 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                                 majorMuscle:
                                                     selectedMajorMuscle,
                                                 subMuscle: selectedSubMuscle,
+                                                page: 1,
+                                                limit: 10,
                                               );
                                             }
                                           },
@@ -355,11 +425,15 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         setSheetState(() {
                                           currentTab = 0;
                                         });
-                                        _cubit.loadLibraryExercises(
-                                          search: searchQuery,
-                                          majorMuscle: selectedMajorMuscle,
-                                          subMuscle: selectedSubMuscle,
-                                        );
+                                        if (_cubit.state.libraryExercises.isEmpty) {
+                                          _cubit.loadLibraryExercises(
+                                            search: searchQuery,
+                                            majorMuscle: selectedMajorMuscle,
+                                            subMuscle: selectedSubMuscle,
+                                            page: 1,
+                                            limit: 10,
+                                          );
+                                        }
                                       },
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -412,11 +486,15 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                         setSheetState(() {
                                           currentTab = 1;
                                         });
-                                        _cubit.loadCustomExercises(
-                                          search: searchQuery,
-                                          majorMuscle: selectedMajorMuscle,
-                                          subMuscle: selectedSubMuscle,
-                                        );
+                                        if (_cubit.state.customExercises.isEmpty) {
+                                          _cubit.loadCustomExercises(
+                                            search: searchQuery,
+                                            majorMuscle: selectedMajorMuscle,
+                                            subMuscle: selectedSubMuscle,
+                                            page: 1,
+                                            limit: 10,
+                                          );
+                                        }
                                       },
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -488,12 +566,16 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                   search: searchQuery,
                                   majorMuscle: selectedMajorMuscle,
                                   subMuscle: selectedSubMuscle,
+                                  page: 1,
+                                  limit: 10,
                                 );
                               } else {
                                 _cubit.loadCustomExercises(
                                   search: searchQuery,
                                   majorMuscle: selectedMajorMuscle,
                                   subMuscle: selectedSubMuscle,
+                                  page: 1,
+                                  limit: 10,
                                 );
                               }
                             },
@@ -512,14 +594,22 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                             setSheetState: setSheetState,
                                             localFilter: false,
                                             showCreateButton: false,
+                                            scrollController: libraryScrollController,
+                                            isLoading: _cubit.isLoadingLibrary,
+                                            isLoadingMore: _cubit.isLoadingMoreLibrary,
+                                            hasMore: _cubit.hasMoreLibrary,
                                           )
                                           : _buildExerciseTabList(
                                             context: sheetContext,
                                             exercises: state.customExercises,
                                             searchQuery: searchQuery,
                                             setSheetState: setSheetState,
-                                            localFilter: true,
+                                            localFilter: false,
                                             showCreateButton: true,
+                                            scrollController: customScrollController,
+                                            isLoading: _cubit.isLoadingCustom,
+                                            isLoadingMore: _cubit.isLoadingMoreCustom,
+                                            hasMore: _cubit.hasMoreCustom,
                                           ),
                                 ),
                                 if (currentTab == 1)
@@ -539,6 +629,10 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                               searchController.clear();
                                               searchQuery = '';
                                             });
+                                            _cubit.loadCustomExercises(
+                                              page: 1,
+                                              limit: 10,
+                                            );
                                           },
                                         );
                                       },
@@ -557,7 +651,12 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
           ),
         );
       },
-    );
+    ).whenComplete(() {
+      searchDebounceTimer?.cancel();
+      libraryScrollController.dispose();
+      customScrollController.dispose();
+      searchController.dispose();
+    });
   }
 
   Widget _buildMuscleGroupFilter({
@@ -782,35 +881,60 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     required StateSetter setSheetState,
     required bool localFilter,
     required bool showCreateButton,
+    required ScrollController scrollController,
+    required bool isLoading,
+    required bool isLoadingMore,
+    required bool hasMore,
   }) {
-    final lowercaseQuery = searchQuery.toLowerCase().trim();
-    final filteredList =
-        exercises.where((item) {
-          if (lowercaseQuery.isEmpty) return true;
-          final title = (item['title'] ?? '').toLowerCase();
-          final subtitle = (item['subtitle'] ?? '').toLowerCase();
-          return title.contains(lowercaseQuery) ||
-              subtitle.contains(lowercaseQuery);
-        }).toList();
-
-    if (filteredList.isEmpty) {
+    if (isLoading && exercises.isEmpty) {
       return const Center(
+        child: CircularProgressIndicator(
+          color: AppColors.primary,
+        ),
+      );
+    }
+
+    if (exercises.isEmpty) {
+      return Center(
         child: Text(
-          'No exercises found',
-          style: TextStyle(color: Colors.grey, fontSize: 14),
+          searchQuery.isNotEmpty
+              ? 'No exercises found for "$searchQuery"'
+              : 'No exercises found',
+          style: const TextStyle(
+            fontFamily: 'Poppins',
+            color: Colors.grey,
+            fontSize: 14,
+          ),
         ),
       );
     }
 
     return ListView.builder(
+      controller: scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.only(
         left: 24,
         right: 24,
         bottom: showCreateButton ? 84 : 24,
       ),
-      itemCount: filteredList.length,
+      itemCount: exercises.length + (isLoadingMore ? 1 : 0),
       itemBuilder: (itemContext, index) {
-        final item = filteredList[index];
+        if (index == exercises.length) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            alignment: Alignment.center,
+            child: const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary,
+              ),
+            ),
+          );
+        }
+
+        final item = exercises[index];
         final exerciseKey =
             (item['id'] != null && item['id']!.isNotEmpty)
                 ? item['id']!
@@ -1346,7 +1470,10 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           ).showSnackBar(
                                             SnackBar(
                                               content: Text(
-                                                'Failed to create: ${error.msg}',
+                                                AppErrorHandler.formatUserFriendlyMessage(
+                                                  error.msg,
+                                                  fallback: 'Failed to create muscle group. Please try again.',
+                                                ),
                                               ),
                                             ),
                                           );
@@ -1633,7 +1760,10 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
                                           ).showSnackBar(
                                             SnackBar(
                                               content: Text(
-                                                'Failed to create: ${error.msg}',
+                                                AppErrorHandler.formatUserFriendlyMessage(
+                                                  error.msg,
+                                                  fallback: 'Failed to create equipment. Please try again.',
+                                                ),
                                               ),
                                             ),
                                           );
@@ -2817,7 +2947,7 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
     const String selectedLocation = 'Home';
 
     if (!widget.isPresetCreation) {
-      unawaited(WorkoutSoundHelper.playRandomFinishSound());
+      unawaited(WorkoutSoundHelper.playFinishSound());
     }
 
     setState(() {
@@ -2894,7 +3024,12 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(error.msg),
+                  content: Text(
+                    AppErrorHandler.formatUserFriendlyMessage(
+                      error.msg,
+                      fallback: 'Could not finish workout. Please check your connection.',
+                    ),
+                  ),
                   backgroundColor: Colors.red,
                 ),
               );
@@ -2931,13 +3066,14 @@ class _OwnWorkoutScreenState extends State<OwnWorkoutScreen> {
         );
       }
     } catch (e) {
+      debugPrint('Error finishing workout: $e');
       if (context.mounted) {
         setState(() {
           _isFinishing = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error finishing workout: \$e'),
+          const SnackBar(
+            content: Text('Unable to finish workout. Please check your connection and try again.'),
             backgroundColor: Colors.red,
           ),
         );

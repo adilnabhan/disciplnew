@@ -112,7 +112,12 @@ class _WorkoutPreviewScreenState extends State<WorkoutPreviewScreen> {
           }
 
           return result!.fold(
-            (error) => _buildErrorState('Error loading details: ${error.msg}'),
+            (error) => _buildErrorState(
+              AppErrorHandler.formatUserFriendlyMessage(
+                error.msg,
+                fallback: 'Unable to load workout details. Please try again.',
+              ),
+            ),
             (data) {
               _sessionData = data;
               return _buildContent(data);

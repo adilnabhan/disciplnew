@@ -217,7 +217,7 @@ class ListFitnessCentersCubit extends Cubit<ListFitnessCentersState> {
               ),
             ),
           );
-          await Dialogs.showSnack(msg: l.msg);
+          await Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to load more fitness centers.'));
         },
         (r) async {
           if (isClosed) return;

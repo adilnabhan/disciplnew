@@ -75,7 +75,7 @@ final class ReviewsAndReatingRepository {
         } catch (e) {
           return left(
             ApiException.unknown(
-              msg: 'Failed to parse review response: ${e.toString()}',
+              msg: 'Unable to process review response. Please try again.',
             ),
           );
         }
@@ -83,7 +83,7 @@ final class ReviewsAndReatingRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected server response. Code: $statusCode',
+          msg: 'Unable to complete review request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -102,12 +102,12 @@ final class ReviewsAndReatingRepository {
 
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }
@@ -175,13 +175,13 @@ final class ReviewsAndReatingRepository {
       }
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       print('Update review general catch error → $e');
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }
@@ -290,13 +290,13 @@ final class ReviewsAndReatingRepository {
       }
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       print('Delete review general catch error → $e');
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }
@@ -379,12 +379,12 @@ final class ReviewsAndReatingRepository {
       }
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }
@@ -427,7 +427,7 @@ final class ReviewsAndReatingRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected server response. Code: $statusCode',
+          msg: 'Unable to complete review request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -445,12 +445,12 @@ final class ReviewsAndReatingRepository {
       }
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }
@@ -491,7 +491,7 @@ final class ReviewsAndReatingRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected server response. Code: $statusCode',
+          msg: 'Unable to complete review request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -509,12 +509,12 @@ final class ReviewsAndReatingRepository {
       }
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }
@@ -545,7 +545,7 @@ final class ReviewsAndReatingRepository {
 
       return left(
         ApiException.unknown(
-          msg: 'Unexpected server response. Code: $statusCode',
+          msg: 'Unable to complete review request. Please try again later.',
         ),
       );
     } on DioException catch (e) {
@@ -563,12 +563,12 @@ final class ReviewsAndReatingRepository {
       }
       return left(
         ApiException.unknown(
-          msg: e.message ?? 'Something went wrong during request.',
+          msg: AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to complete review request. Please try again.'),
         ),
       );
     } catch (e) {
       return left(
-        ApiException.unknown(msg: 'Unexpected error: ${e.toString()}'),
+        ApiException.unknown(msg: 'Unable to complete review request. Please try again.'),
       );
     }
   }

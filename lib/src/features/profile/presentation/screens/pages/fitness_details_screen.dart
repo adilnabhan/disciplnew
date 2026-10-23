@@ -248,7 +248,7 @@ class FitnessDetailsScreenState extends State<FitnessDetailsScreen> {
           () => null,
           (t) => t.fold(
             (l) {
-              Dialogs.showSnack(msg: l.msg);
+              Dialogs.showSnack(msg: AppErrorHandler.formatUserFriendlyMessage(l.msg, fallback: 'Unable to update health details. Please try again.'));
             },
             (r) {
               Dialogs.showSnack(msg: 'Health details updated successfully');

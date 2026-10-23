@@ -72,14 +72,11 @@ final class PersonalRecordsRepository {
       );
     } on DioException catch (e) {
       debugPrint('PersonalRecordsRepository fetchPersonalRecords dio error: $e');
-      final msg = e.response?.data is Map &&
-              (e.response?.data as Map)['message'] != null
-          ? (e.response?.data as Map)['message'].toString()
-          : (e.message ?? 'Failed to fetch personal records.');
+      final msg = AppErrorHandler.extractSafeMessage(e, fallback: 'Unable to fetch personal records. Please try again.');
       return left(ApiException.unknown(msg: msg));
     } catch (e) {
       debugPrint('PersonalRecordsRepository fetchPersonalRecords error: $e');
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to fetch personal records. Please try again.'));
     }
   }
 
@@ -132,7 +129,7 @@ final class PersonalRecordsRepository {
       return left(ApiException.unknown(msg: msg));
     } catch (e) {
       debugPrint('PersonalRecordsRepository fetchPersonalRecordDetail error: $e');
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to fetch personal records. Please try again.'));
     }
   }
 
@@ -172,7 +169,7 @@ final class PersonalRecordsRepository {
       return left(ApiException.unknown(msg: msg));
     } catch (e) {
       debugPrint('PersonalRecordsRepository logPersonalRecord error: $e');
-      return left(ApiException.unknown(msg: e.toString()));
+      return left(const ApiException.unknown(msg: 'Unable to fetch personal records. Please try again.'));
     }
   }
 }

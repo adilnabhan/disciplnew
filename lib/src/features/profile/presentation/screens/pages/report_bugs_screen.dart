@@ -132,9 +132,7 @@ class _ReportBugsScreenState extends State<ReportBugsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              error.msg.isNotEmpty
-                  ? error.msg
-                  : 'Failed to submit bug report. Please try again.',
+              AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Failed to submit bug report. Please try again.'),
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
@@ -215,7 +213,7 @@ class _ReportBugsScreenState extends State<ReportBugsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              error.msg.isNotEmpty ? error.msg : 'Failed to delete bug report.',
+              AppErrorHandler.formatUserFriendlyMessage(error.msg, fallback: 'Failed to delete bug report. Please try again.'),
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,

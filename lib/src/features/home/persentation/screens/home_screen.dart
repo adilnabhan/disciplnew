@@ -26,6 +26,9 @@ import 'package:customer_mobile_app/src/features/profile/presentation/screens/se
 import 'package:customer_mobile_app/src/features/home/persentation/screens/notifications_screen.dart';
 import 'package:customer_mobile_app/src/features/rewards/presentation/screens/rewards_screen.dart';
 import 'package:customer_mobile_app/src/features/scorecard/presentation/screens/score_card_screen.dart';
+import 'package:customer_mobile_app/src/features/profile/domain/helpers/profile_photo_reward_helper.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/widgets/profile_photo_reward_promo_dialog.dart';
+import 'package:customer_mobile_app/src/features/profile/presentation/widgets/profile_photo_reward_banner.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.activeMembership});
@@ -80,6 +83,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _checkProfilePhotoRewardPopup(ProfileCompletionState state) {
+    final bool isGuest = Feggy.read<AppCubit>()?.state.currentUser == null;
+    if (isGuest || !mounted) return;
+
+    final shouldShow = ProfilePhotoRewardHelper.shouldShowPromotionalPopup(
+      state.data,
+      hasSeenInSession: state.isRewardPopupDismissedInSession,
+      isGuest: isGuest,
+    );
+
+    if (shouldShow && !ProfilePhotoRewardPromoDialog.isShowing) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || ProfilePhotoRewardPromoDialog.isShowing) return;
+        ProfilePhotoRewardPromoDialog.show(
+          context,
+          completionData: state.data!,
+          onDismissed: () {
+            _profileCompletionCubit.dismissRewardPopup(callBackend: true);
+          },
+        );
+      });
+    }
+  }
+
   @override
   void dispose() {
     _dashboardCubit.close();
@@ -126,13 +153,23 @@ class _HomeScreenState extends State<HomeScreen> {
         BlocProvider.value(value: _profileCompletionCubit),
         BlocProvider.value(value: _homeChallengeCubit),
       ],
-      child: BlocListener<DashboardCubit, DashboardState>(
-        listenWhen:
-            (previous, current) =>
-                previous.navIndex != current.navIndex && current.navIndex == 0,
-        listener: (context, state) {
-          _profileCompletionCubit.fetchProfileCompletion();
-        },
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<DashboardCubit, DashboardState>(
+            listenWhen:
+                (previous, current) =>
+                    previous.navIndex != current.navIndex &&
+                    current.navIndex == 0,
+            listener: (context, state) {
+              _profileCompletionCubit.fetchProfileCompletion();
+            },
+          ),
+          BlocListener<ProfileCompletionCubit, ProfileCompletionState>(
+            listener: (context, state) {
+              _checkProfilePhotoRewardPopup(state);
+            },
+          ),
+        ],
         child: Scaffold(backgroundColor: bgColor, body: homeView()),
       ),
     );
@@ -231,6 +268,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               },
             ),
+
+            // Profile Photo Reward Banner
+            if (!isGuest) const ProfilePhotoRewardBanner(),
 
             // Profile Completion Banner
             if (!isGuest) const ProfileCompletionBanner(),
