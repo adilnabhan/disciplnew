@@ -558,6 +558,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         if (durationStr == '--:--' && workoutItem['duration'] != null) {
           durationStr = workoutItem['duration'].toString();
         }
+        final rawTrainerName = workoutItem['trainer_name']?.toString();
+        final rawTrainerPhoto = workoutItem['trainer_photo']?.toString() ??
+                                workoutItem['trainer_image']?.toString() ??
+                                workoutItem['trainer_profile_image']?.toString();
+
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -568,7 +573,8 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               hasImage: true,
               isCompleted: isCompleted,
               duration: durationStr,
-              trainerName: workoutItem['trainer_name']?.toString(),
+              trainerName: rawTrainerName,
+              trainerProfileImage: rawTrainerPhoto,
               onTap: () async {
                 final idVal = workoutItem['session_id'] ?? workoutItem['id'];
                 final sessionId =
@@ -1012,6 +1018,7 @@ class _WorkoutCard extends StatelessWidget {
     this.duration,
     this.onTap,
     this.trainerName,
+    this.trainerProfileImage,
   });
 
   final int index;
@@ -1022,6 +1029,7 @@ class _WorkoutCard extends StatelessWidget {
   final String? duration;
   final VoidCallback? onTap;
   final String? trainerName;
+  final String? trainerProfileImage;
 
   @override
   Widget build(BuildContext context) {
@@ -1111,12 +1119,31 @@ class _WorkoutCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Row(
                           children: [
-                            const Icon(
-                              Icons.person_outline_rounded,
-                              size: 12,
-                              color: Color(0xFF666666),
-                            ),
-                            const SizedBox(width: 4),
+                            if (trainerProfileImage != null && trainerProfileImage!.isNotEmpty)
+                              Container(
+                                width: 14,
+                                height: 14,
+                                margin: const EdgeInsets.only(right: 4),
+                                decoration: const BoxDecoration(shape: BoxShape.circle),
+                                clipBehavior: Clip.antiAlias,
+                                child: Image.network(
+                                  trainerProfileImage!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(
+                                    Icons.person_outline_rounded,
+                                    size: 12,
+                                    color: Color(0xFF666666),
+                                  ),
+                                ),
+                              )
+                            else ...[
+                              const Icon(
+                                Icons.person_outline_rounded,
+                                size: 12,
+                                color: Color(0xFF666666),
+                              ),
+                              const SizedBox(width: 4),
+                            ],
                             Expanded(
                               child: Text(
                                 trainerName!,
