@@ -931,8 +931,12 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
         final isPastDate = selectedDateOnly.isBefore(todayDate);
 
         final rawTrainerName = workoutItem['trainer_name']?.toString();
+        final rawTrainerPhoto = workoutItem['trainer_photo']?.toString() ??
+                                workoutItem['trainer_image']?.toString() ??
+                                workoutItem['trainer_profile_image']?.toString();
         final isTrainerSource =
-            workoutItem['source']?.toString().toLowerCase() == 'trainer';
+            workoutItem['source']?.toString().toLowerCase() == 'trainer' ||
+            (rawTrainerName != null && rawTrainerName.isNotEmpty);
 
         final isMissed = isMissedStatus || (isPastDate && !isCompleted);
         final isVerified = (workoutItem['is_verified'] as bool?) ?? false;
@@ -966,6 +970,11 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
                 ? rawTrainerName
                 : (isTrainerSource ? (fallbackTrainerName ?? 'Trainer') : null);
 
+        final effectiveTrainerPhoto =
+            (rawTrainerPhoto != null && rawTrainerPhoto.isNotEmpty)
+                ? rawTrainerPhoto
+                : (isTrainerSource ? _customerDetails?.assignedTrainer?['profile_image']?.toString() : null);
+
         logCards.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -982,11 +991,10 @@ class _WorkoutLogScreenState extends State<WorkoutLogScreen> {
               trainerName: effectiveTrainerName,
               isMembershipExpired: isExpired,
               gymLogo:
+                  workoutItem['gym_logo']?.toString() ??
                   _customerDetails?.assignedFitnessCenter?['logo']?.toString(),
               isLoadingGymLogo: _customerDetails == null,
-              trainerProfileImage:
-                  _customerDetails?.assignedTrainer?['profile_image']
-                      ?.toString(),
+              trainerProfileImage: effectiveTrainerPhoto,
               verificationStatus:
                   workoutItem['verification_status']?.toString() ??
                   workoutItem['verification']?.toString(),
